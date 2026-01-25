@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>reCAPTCHA Test</title>
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
+</head>
+<body>
+    <h1>reCAPTCHA Test Page</h1>
+    <p>Site Key: 6LcCmVUsAAAAAAvcQlUG4eUEJ5NxwNLXFju-vVoA</p>
+    <p>Check console for results...</p>
+    
+    <script>
+        console.log('Test: Starting reCAPTCHA load test');
+        
+        const siteKey = '6LcCmVUsAAAAAAvcQlUG4eUEJ5NxwNLXFju-vVoA';
+        
+        const script = document.createElement('script');
+        script.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}`;
+        script.async = true;
+        script.defer = true;
+        
+        script.onload = () => {
+            console.log('Test: Script loaded successfully');
+            
+            setTimeout(() => {
+                if (window.grecaptcha) {
+                    console.log('Test: grecaptcha is available!');
+                    
+                    window.grecaptcha.ready(() => {
+                        console.log('Test: grecaptcha.ready called');
+                        
+                        window.grecaptcha.execute(siteKey, { action: 'test' })
+                            .then(token => {
+                                console.log('Test: Token received:', token?.substring(0, 20) + '...');
+                            })
+                            .catch(err => {
+                                console.error('Test: Execute failed:', err);
+                            });
+                    });
+                } else {
+                    console.error('Test: grecaptcha not available');
+                }
+            }, 500);
+        };
+        
+        script.onerror = (e) => {
+            console.error('Test: Script failed to load:', e);
+            console.error('Test: Script URL was:', script.src);
+        };
+        
+        document.head.appendChild(script);
+    </script>
+</body>
+</html>
