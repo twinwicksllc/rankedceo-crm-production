@@ -27,7 +27,6 @@ export function RecaptchaProvider() {
     script.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}`
     script.async = true
     script.defer = true
-    script.crossOrigin = "anonymous"
     
     script.onload = () => {
       console.log('[RecaptchaProvider] Script loaded, waiting for grecaptcha...')
