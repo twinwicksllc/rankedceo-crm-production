@@ -1,92 +1,77 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import Link from 'next/link'
-import { 
-  LayoutDashboard, 
-  Users, 
-  Building2, 
-  DollarSign, 
-  Activity, 
-  Mail, 
-  FileText, 
-  BarChart3,
-  Settings,
-  LogOut,
-  Sparkles
-} from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import Link from 'next/link';
+import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
 
 export default async function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/login')
+    redirect('/login');
   }
 
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Contacts', href: '/contacts', icon: Users },
-    { name: 'Companies', href: '/companies', icon: Building2 },
-    { name: 'Deals', href: '/deals', icon: DollarSign },
-    { name: 'Activities', href: '/activities', icon: Activity },
-    { name: 'Campaigns', href: '/campaigns', icon: Mail },
-    { name: 'Forms', href: '/forms', icon: FileText },
-    { name: 'Reports', href: '/reports', icon: BarChart3 },
-    { name: 'AI Insights', href: '/ai-insights', icon: Sparkles },
-  ]
+    { name: 'Dashboard', href: '/dashboard', icon: '📊' },
+    { name: 'Contacts', href: '/contacts', icon: '👥' },
+    { name: 'Companies', href: '/companies', icon: '🏢' },
+    { name: 'Deals', href: '/deals', icon: '💰' },
+    { name: 'Pipelines', href: '/pipelines', icon: '📈' },
+    { name: 'Activities', href: '/activities', icon: '📋' },
+  ];
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
-        <div className="p-6 border-b border-gray-200">
-          <h1 className="text-2xl font-bold text-primary">RankedCEO</h1>
-          <p className="text-sm text-muted-foreground">CRM Platform</p>
-        </div>
-        
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          {navigation.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-gray-100 text-gray-700 hover:text-gray-900 transition-colors"
-            >
-              <item.icon className="h-5 w-5" />
-              {item.name}
+      <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200">
+        <div className="flex h-full flex-col">
+          {/* Logo */}
+          <div className="flex h-16 items-center px-6 border-b border-gray-200">
+            <Link href="/dashboard" className="flex items-center gap-2">
+              <span className="text-2xl">🏆</span>
+              <span className="text-xl font-bold text-gray-900">RankedCEO</span>
             </Link>
-          ))}
-        </nav>
+          </div>
 
-        <div className="p-4 border-t border-gray-200 space-y-2">
-          <Link
-            href="/settings"
-            className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-gray-100 text-gray-700 hover:text-gray-900 transition-colors"
-          >
-            <Settings className="h-5 w-5" />
-            Settings
-          </Link>
-          <form action="/api/auth/logout" method="POST">
-            <Button
-              type="submit"
-              variant="ghost"
-              className="w-full justify-start gap-3 text-gray-700 hover:text-gray-900"
-            >
-              <LogOut className="h-5 w-5" />
-              Logout
-            </Button>
-          </form>
+          {/* Navigation */}
+          <nav className="flex-1 px-3 py-4 space-y-1">
+            {navigation.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+              >
+                <span className="text-lg">{item.icon}</span>
+                {item.name}
+              </Link>
+            ))}
+          </nav>
+
+          {/* User Section */}
+          <div className="border-t border-gray-200 px-3 py-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-600 font-semibold">
+                {user.email?.[0].toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {user.email}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
-        {children}
+      <main className="pl-64">
+        <div className="p-8">
+          {children}
+        </div>
       </main>
     </div>
-  )
+  );
 }

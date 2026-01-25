@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -10,6 +10,16 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
+declare global {
+  interface Window {
+    grecaptcha?: {
+      enterprise?: {
+        execute: (siteKey: string, options: { action: string }) => Promise<string>
+      }
+    }
+  }
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
@@ -17,12 +27,49 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  const executeRecaptcha = async () => {
+    if (!window.grecaptcha?.enterprise) {
+      setError('reCAPTCHA not loaded. Please try again.')
+      return null
+    }
+
+    try {
+      const token = await window.grecaptcha.enterprise.execute(
+        '6LeaeFUsAAAAAKr8KyPJu0B5njqb3Ha_bqeUrWQ6',
+        { action: 'login' }
+      )
+      return token
+    } catch (err) {
+      console.error('reCAPTCHA error:', err)
+      setError('reCAPTCHA verification failed')
+      return null
+    }
+  }
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setLoading(true)
 
     try {
+      // Execute reCAPTCHA Enterprise
+      const token = await executeRecaptcha()
+      if (!token) {
+        throw new Error('reCAPTCHA verification failed')
+      }
+
+      // Verify token on server
+      const verifyResponse = await fetch('/api/auth/verify-recaptcha', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, action: 'login' }),
+      })
+
+      const verifyData = await verifyResponse.json()
+      if (!verifyResponse.ok || !verifyData.valid) {
+        throw new Error(verifyData.error || 'reCAPTCHA verification failed')
+      }
+
       const supabase = createClient()
       const { error } = await supabase.auth.signInWithPassword({
         email,

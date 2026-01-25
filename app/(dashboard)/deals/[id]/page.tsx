@@ -1,197 +1,196 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect, notFound } from 'next/navigation'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Edit, DollarSign, Calendar, TrendingUp, Building2, User } from 'lucide-react'
+import { notFound } from 'next/navigation';
+import { dealService } from '@/lib/services/deal-service';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { ActivityTimeline } from '@/components/activities/activity-timeline';
+import Link from 'next/link';
 
-export default async function DealDetailPage({ params }: { params: { id: string } }) {
-  const supabase = await createClient()
+export const dynamic = 'force-dynamic';
+
+async function getDealActivities(dealId: string) {
+  const response = await fetch(`/api/activities?deal_id=${dealId}`, {
+    cache: 'no-store',
+  });
   
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!response.ok) {
+    return [];
+  }
+  
+  return response.json();
+}
 
-  // Get user's account
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('account_id')
-    .eq('id', user.id)
-    .single()
+export default async function DealDetailPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const [deal, activities] = await Promise.all([
+    dealService.getDealById(params.id),
+    getDealActivities(params.id),
+  ]);
 
-  if (!profile?.account_id) {
-    return <div>No account found</div>
+  if (!deal) {
+    notFound();
   }
 
-  // Fetch deal with related data
-  const { data: deal, error } = await supabase
-    .from('deals')
-    .select(`
-      *,
-      contact:contacts(id, first_name, last_name, email, phone),
-      company:companies(id, name, website),
-      pipeline:pipelines(id, name)
-    `)
-    .eq('id', params.id)
-    .eq('account_id', profile.account_id)
-    .single()
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
 
-  if (error || !deal) {
-    notFound()
-  }
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  };
 
   const getStageColor = (stage: string) => {
     switch (stage) {
-      case 'lead': return 'bg-gray-100 text-gray-800'
-      case 'qualified': return 'bg-blue-100 text-blue-800'
-      case 'proposal': return 'bg-purple-100 text-purple-800'
-      case 'negotiation': return 'bg-orange-100 text-orange-800'
-      case 'won': return 'bg-green-100 text-green-800'
-      case 'lost': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'Lead':
+        return 'bg-gray-100 text-gray-800';
+      case 'Qualified':
+        return 'bg-blue-100 text-blue-800';
+      case 'Proposal':
+        return 'bg-purple-100 text-purple-800';
+      case 'Negotiation':
+        return 'bg-orange-100 text-orange-800';
+      case 'Won':
+        return 'bg-green-100 text-green-800';
+      case 'Lost':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
-  }
+  };
 
   return (
-    <div className="space-y-6 p-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/deals">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
+      <div className="flex justify-between items-start">
+        <div>
+          <Link href="/deals" className="text-blue-600 hover:underline text-sm">
+            ← Back to Deals
           </Link>
-          <div>
-            <h1 className="text-3xl font-bold">{deal.name}</h1>
-            <p className="text-muted-foreground mt-1">
-              Deal Details
-            </p>
+          <h1 className="text-2xl font-bold text-gray-900 mt-2">{deal.title}</h1>
+          <div className="flex items-center gap-3 mt-2">
+            <Badge className={getStageColor(deal.stage)}>
+              {deal.stage}
+            </Badge>
+            <span className="text-gray-600">
+              Created on {formatDate(deal.created_at)}
+            </span>
           </div>
         </div>
-        <Link href={`/deals/${deal.id}/edit`}>
-          <Button>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href={`/deals/${deal.id}/edit`}>
+            <Button variant="outline">Edit</Button>
+          </Link>
+          <Link href={`/activities/new?deal_id=${deal.id}`}>
+            <Button>+ Log Activity</Button>
+          </Link>
+        </div>
       </div>
 
-      {/* Deal Info */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Deal Information</h2>
-          
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Stage</p>
-              <Badge className={getStageColor(deal.stage)}>
-                {deal.stage}
-              </Badge>
+      {/* Deal Details */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Deal Information */}
+          <Card className="p-6">
+            <h3 className="font-semibold mb-4">Deal Information</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="text-sm text-gray-600">Value</div>
+                <div className="font-medium text-2xl">{formatCurrency(deal.value)}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-600">Win Probability</div>
+                <div className="font-medium">{deal.win_probability}%</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-600">Pipeline</div>
+                <div className="font-medium">
+                  {deal.pipeline_id ? (
+                    <Link href={`/pipelines/${deal.pipeline_id}`} className="text-blue-600 hover:underline">
+                      View Pipeline
+                    </Link>
+                  ) : 'N/A'}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-600">Expected Close Date</div>
+                <div className="font-medium">
+                  {deal.expected_close_date ? formatDate(deal.expected_close_date) : 'N/A'}
+                </div>
+              </div>
             </div>
+          </Card>
 
-            {deal.value && (
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Deal Value</p>
-                <p className="flex items-center gap-2 text-2xl font-bold">
-                  <DollarSign className="h-6 w-6" />
-                  ${deal.value.toLocaleString()}
-                </p>
-              </div>
-            )}
+          {/* Description */}
+          {deal.description && (
+            <Card className="p-6">
+              <h3 className="font-semibold mb-3">Description</h3>
+              <p className="text-gray-700 whitespace-pre-wrap">{deal.description}</p>
+            </Card>
+          )}
 
-            {deal.probability !== null && (
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Probability</p>
-                <p className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4" />
-                  {deal.probability}%
-                </p>
-              </div>
-            )}
+          {/* Activity Timeline */}
+          <ActivityTimeline
+            title="Activity History"
+            activities={activities}
+          />
+        </div>
 
-            {deal.expected_close_date && (
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Expected Close Date</p>
-                <p className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  {new Date(deal.expected_close_date).toLocaleDateString()}
-                </p>
-              </div>
-            )}
-
-            {deal.pipeline && (
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Pipeline</p>
-                <p>{deal.pipeline.name}</p>
-              </div>
-            )}
-
-            {deal.description && (
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Description</p>
-                <p className="text-sm whitespace-pre-wrap">{deal.description}</p>
-              </div>
-            )}
-          </div>
-        </Card>
-
+        {/* Sidebar */}
         <div className="space-y-6">
-          {/* Contact Info */}
-          {deal.contact && (
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Contact</h2>
-              <Link 
-                href={`/contacts/${deal.contact.id}`}
-                className="block hover:bg-muted/50 p-4 rounded-lg transition-colors"
-              >
-                <div className="flex items-start gap-3">
-                  <User className="h-5 w-5 mt-1" />
-                  <div>
-                    <p className="font-medium">
-                      {deal.contact.first_name} {deal.contact.last_name}
-                    </p>
-                    {deal.contact.email && (
-                      <p className="text-sm text-muted-foreground">
-                        {deal.contact.email}
-                      </p>
-                    )}
-                    {deal.contact.phone && (
-                      <p className="text-sm text-muted-foreground">
-                        {deal.contact.phone}
-                      </p>
-                    )}
-                  </div>
-                </div>
+          {/* Quick Actions */}
+          <Card className="p-6">
+            <h3 className="font-semibold mb-3">Quick Actions</h3>
+            <div className="space-y-2">
+              <Link href={`/activities/new?deal_id=${deal.id}&type=call`}>
+                <Button variant="outline" className="w-full justify-start">
+                  📞 Log Call
+                </Button>
               </Link>
-            </Card>
-          )}
+              <Link href={`/activities/new?deal_id=${deal.id}&type=meeting`}>
+                <Button variant="outline" className="w-full justify-start">
+                  📅 Schedule Meeting
+                </Button>
+              </Link>
+              <Link href={`/activities/new?deal_id=${deal.id}&type=email`}>
+                <Button variant="outline" className="w-full justify-start">
+                  📧 Send Email
+                </Button>
+              </Link>
+              <Link href={`/activities/new?deal_id=${deal.id}&type=task`}>
+                <Button variant="outline" className="w-full justify-start">
+                  ✅ Add Task
+                </Button>
+              </Link>
+            </div>
+          </Card>
 
-          {/* Company Info */}
-          {deal.company && (
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Company</h2>
-              <Link 
-                href={`/companies/${deal.company.id}`}
-                className="block hover:bg-muted/50 p-4 rounded-lg transition-colors"
-              >
-                <div className="flex items-start gap-3">
-                  <Building2 className="h-5 w-5 mt-1" />
-                  <div>
-                    <p className="font-medium">{deal.company.name}</p>
-                    {deal.company.website && (
-                      <p className="text-sm text-muted-foreground">
-                        {deal.company.website}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </Link>
-            </Card>
-          )}
+          {/* Metadata */}
+          <Card className="p-6">
+            <h3 className="font-semibold mb-3">Details</h3>
+            <div className="space-y-3">
+              <div>
+                <div className="text-sm text-gray-600">Created</div>
+                <div className="text-sm">{formatDate(deal.created_at)}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-600">Last Updated</div>
+                <div className="text-sm">{formatDate(deal.updated_at)}</div>
+              </div>
+            </div>
+          </Card>
         </div>
       </div>
     </div>
-  )
+  );
 }

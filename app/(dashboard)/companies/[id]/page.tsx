@@ -1,216 +1,180 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect, notFound } from 'next/navigation'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Edit, Globe, Phone, MapPin, Building2, Users } from 'lucide-react'
+import { notFound } from 'next/navigation';
+import { companyService } from '@/lib/services/company-service';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { ActivityTimeline } from '@/components/activities/activity-timeline';
+import Link from 'next/link';
 
-export default async function CompanyDetailPage({ params }: { params: { id: string } }) {
-  const supabase = await createClient()
+export const dynamic = 'force-dynamic';
+
+async function getCompanyActivities(companyId: string) {
+  const response = await fetch(`/api/activities?company_id=${companyId}`, {
+    cache: 'no-store',
+  });
   
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!response.ok) {
+    return [];
+  }
+  
+  return response.json();
+}
 
-  // Get user's account
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('account_id')
-    .eq('id', user.id)
-    .single()
+export default async function CompanyDetailPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const [company, activities] = await Promise.all([
+    companyService.getCompanyById(params.id),
+    getCompanyActivities(params.id),
+  ]);
 
-  if (!profile?.account_id) {
-    return <div>No account found</div>
+  if (!company) {
+    notFound();
   }
 
-  // Fetch company with contacts
-  const { data: company, error } = await supabase
-    .from('companies')
-    .select(`
-      *,
-      contacts (
-        id,
-        first_name,
-        last_name,
-        email,
-        job_title,
-        phone
-      )
-    `)
-    .eq('id', params.id)
-    .eq('account_id', profile.account_id)
-    .single()
-
-  if (error || !company) {
-    notFound()
-  }
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
 
   return (
-    <div className="space-y-6 p-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/companies">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
+      <div className="flex justify-between items-start">
+        <div>
+          <Link href="/companies" className="text-blue-600 hover:underline text-sm">
+            ← Back to Companies
           </Link>
-          <div>
-            <h1 className="text-3xl font-bold">{company.name}</h1>
-            <p className="text-muted-foreground mt-1">
-              Company Details
-            </p>
+          <h1 className="text-2xl font-bold text-gray-900 mt-2">{company.name}</h1>
+          <div className="flex items-center gap-3 mt-2">
+            <Badge className={
+              company.status === 'active' ? 'bg-green-100 text-green-800' : 
+              company.status === 'inactive' ? 'bg-gray-100 text-gray-800' : 
+              'bg-blue-100 text-blue-800'
+            }>
+              {company.status}
+            </Badge>
+            <span className="text-gray-600">
+              Added on {formatDate(company.created_at)}
+            </span>
           </div>
         </div>
-        <Link href={`/companies/${company.id}/edit`}>
-          <Button>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href={`/companies/${company.id}/edit`}>
+            <Button variant="outline">Edit</Button>
+          </Link>
+          <Link href={`/activities/new?company_id=${company.id}`}>
+            <Button>+ Log Activity</Button>
+          </Link>
+        </div>
       </div>
 
-      {/* Company Info */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Company Information</h2>
-          
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Status</p>
-              <Badge variant={company.status === 'active' ? 'default' : 'secondary'}>
-                {company.status || 'active'}
-              </Badge>
-            </div>
-
-            {company.website && (
+      {/* Company Details */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Company Information */}
+          <Card className="p-6">
+            <h3 className="font-semibold mb-4">Company Information</h3>
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Website</p>
-                <a 
-                  href={company.website} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-blue-600 hover:underline"
-                >
-                  <Globe className="h-4 w-4" />
-                  {company.website}
-                </a>
+                <div className="text-sm text-gray-600">Industry</div>
+                <div className="font-medium">{company.industry || 'N/A'}</div>
               </div>
-            )}
-
-            {company.phone && (
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Phone</p>
-                <a 
-                  href={`tel:${company.phone}`}
-                  className="flex items-center gap-2 hover:underline"
-                >
-                  <Phone className="h-4 w-4" />
-                  {company.phone}
-                </a>
-              </div>
-            )}
-
-            {company.industry && (
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Industry</p>
-                <p className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
-                  {company.industry}
-                </p>
-              </div>
-            )}
-
-            {company.company_size && (
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Company Size</p>
-                <p className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  {company.company_size} employees
-                </p>
-              </div>
-            )}
-
-            {(company.address || company.city || company.state || company.country) && (
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Address</p>
-                <div className="flex items-start gap-2">
-                  <MapPin className="h-4 w-4 mt-1" />
-                  <div>
-                    {company.address && <p>{company.address}</p>}
-                    <p>
-                      {[company.city, company.state, company.postal_code]
-                        .filter(Boolean)
-                        .join(', ')}
-                    </p>
-                    {company.country && <p>{company.country}</p>}
-                  </div>
+                <div className="text-sm text-gray-600">Website</div>
+                <div className="font-medium">
+                  {company.website ? (
+                    <a href={company.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                      {company.website}
+                    </a>
+                  ) : 'N/A'}
                 </div>
               </div>
-            )}
-
-            {company.notes && (
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Notes</p>
-                <p className="text-sm whitespace-pre-wrap">{company.notes}</p>
+              <div className="col-span-2">
+                <div className="text-sm text-gray-600">Address</div>
+                <div className="font-medium">
+                  {[company.address, company.city, company.state, company.zip_code, company.country]
+                    .filter(Boolean)
+                    .join(', ') || 'N/A'}
+                </div>
               </div>
-            )}
-          </div>
-        </Card>
+              <div>
+                <div className="text-sm text-gray-600">Phone</div>
+                <div className="font-medium">{company.phone || 'N/A'}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-600">Employee Count</div>
+                <div className="font-medium">{company.employee_count || 'N/A'}</div>
+              </div>
+            </div>
+          </Card>
 
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Contacts</h2>
-            <Link href={`/contacts/new?company_id=${company.id}`}>
-              <Button size="sm">Add Contact</Button>
-            </Link>
-          </div>
+          {/* Description */}
+          {company.description && (
+            <Card className="p-6">
+              <h3 className="font-semibold mb-3">Description</h3>
+              <p className="text-gray-700 whitespace-pre-wrap">{company.description}</p>
+            </Card>
+          )}
 
-          {!company.contacts || company.contacts.length === 0 ? (
-            <div className="text-center py-8">
-              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground mb-4">No contacts yet</p>
-              <Link href={`/contacts/new?company_id=${company.id}`}>
-                <Button size="sm">Add First Contact</Button>
+          {/* Activity Timeline */}
+          <ActivityTimeline
+            title="Activity History"
+            activities={activities}
+          />
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Quick Actions */}
+          <Card className="p-6">
+            <h3 className="font-semibold mb-3">Quick Actions</h3>
+            <div className="space-y-2">
+              <Link href={`/activities/new?company_id=${company.id}&type=call`}>
+                <Button variant="outline" className="w-full justify-start">
+                  📞 Log Call
+                </Button>
+              </Link>
+              <Link href={`/activities/new?company_id=${company.id}&type=meeting`}>
+                <Button variant="outline" className="w-full justify-start">
+                  📅 Schedule Meeting
+                </Button>
+              </Link>
+              <Link href={`/activities/new?company_id=${company.id}&type=email`}>
+                <Button variant="outline" className="w-full justify-start">
+                  📧 Send Email
+                </Button>
+              </Link>
+              <Link href={`/activities/new?company_id=${company.id}&type=task`}>
+                <Button variant="outline" className="w-full justify-start">
+                  ✅ Add Task
+                </Button>
               </Link>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {company.contacts.map((contact: any) => (
-                <Link
-                  key={contact.id}
-                  href={`/contacts/${contact.id}`}
-                  className="block p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="font-medium">
-                        {contact.first_name} {contact.last_name}
-                      </p>
-                      {contact.job_title && (
-                        <p className="text-sm text-muted-foreground">
-                          {contact.job_title}
-                        </p>
-                      )}
-                      {contact.email && (
-                        <p className="text-sm text-muted-foreground">
-                          {contact.email}
-                        </p>
-                      )}
-                      {contact.phone && (
-                        <p className="text-sm text-muted-foreground">
-                          {contact.phone}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </Link>
-              ))}
+          </Card>
+
+          {/* Metadata */}
+          <Card className="p-6">
+            <h3 className="font-semibold mb-3">Details</h3>
+            <div className="space-y-3">
+              <div>
+                <div className="text-sm text-gray-600">Created</div>
+                <div className="text-sm">{formatDate(company.created_at)}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-600">Last Updated</div>
+                <div className="text-sm">{formatDate(company.updated_at)}</div>
+              </div>
             </div>
-          )}
-        </Card>
+          </Card>
+        </div>
       </div>
     </div>
-  )
+  );
 }
