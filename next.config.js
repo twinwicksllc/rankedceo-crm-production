@@ -1,3 +1,5 @@
+const path = require('path')
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -5,8 +7,10 @@ const nextConfig = {
     domains: ['images.unsplash.com', 'images.pexels.com', 'images.unsplash.com'],
   },
   webpack: (config) => {
-    // TypeScript path aliases are automatically handled by Next.js
-    // No need for manual webpack configuration
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': path.resolve(__dirname),
+    }
     return config
   },
 }
