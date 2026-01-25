@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import Script from 'next/script'
 import './globals.css'
-import { RecaptchaProvider } from '@/components/recaptcha-provider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -15,12 +15,19 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+
   return (
     <html lang="en">
-      <body className={inter.className}>
-        <RecaptchaProvider />
-        {children}
-      </body>
+      <head>
+        {siteKey && (
+          <Script
+            src={`https://www.google.com/recaptcha/api.js?render=${siteKey}`}
+            strategy="afterInteractive"
+          />
+        )}
+      </head>
+      <body className={inter.className}>{children}</body>
     </html>
   )
 }

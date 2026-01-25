@@ -1,101 +1,23 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { useRecaptcha } from '@/lib/hooks/use-recaptcha'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { getRecaptchaSiteKey } from '@/lib/utils'
-
-declare global {
-  interface Window {
-    grecaptcha?: {
-      execute: (siteKey: string, options: { action: string }) => Promise<string>
-      ready: (callback: () => void) => void
-    }
-  }
-}
 
 export default function LoginPage() {
   const router = useRouter()
+  const { isReady, executeRecaptcha } = useRecaptcha()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-
-  const executeRecaptcha = async () => {
-    console.log('[Login] Executing reCAPTCHA...', {
-      hasGrecaptcha: !!window.grecaptcha,
-      timestamp: new Date().toISOString()
-    })
-
-    // Wait for grecaptcha to be available with retry logic
-    const waitForRecaptcha = (maxRetries = 10, delay = 200): Promise<boolean> => {
-      return new Promise((resolve) => {
-        let retries = 0
-        
-        const checkRecaptcha = () => {
-          retries++
-          console.log(`[Login] Checking for grecaptcha... Attempt ${retries}/${maxRetries}`)
-          
-          if (window.grecaptcha) {
-            console.log('[Login] grecaptcha found!')
-            resolve(true)
-            return
-          }
-          
-          if (retries >= maxRetries) {
-            console.error('[Login] grecaptcha not found after retries')
-            resolve(false)
-            return
-          }
-          
-          setTimeout(checkRecaptcha, delay)
-        }
-        
-        checkRecaptcha()
-      })
-    }
-
-    const isRecaptchaReady = await waitForRecaptcha()
-    
-    if (!isRecaptchaReady || !window.grecaptcha) {
-      console.error('[Login] Error: grecaptcha not loaded')
-      setError('reCAPTCHA not loaded. Please refresh the page and try again.')
-      return null
-    }
-
-    const grecaptcha = window.grecaptcha
-    return new Promise<string | null>((resolve) => {
-      grecaptcha.ready(async () => {
-        try {
-          console.log('[Login] grecaptcha.ready called, executing token...')
-          const token = await grecaptcha.execute(
-            getRecaptchaSiteKey(),
-            { action: 'login' }
-          )
-          console.log('[Login] Token received:', {
-            hasToken: !!token,
-            tokenLength: token?.length || 0,
-            timestamp: new Date().toISOString()
-          })
-          resolve(token)
-        } catch (err) {
-          console.error('[Login] reCAPTCHA execution error:', {
-            error: err,
-            message: (err as any)?.message,
-            timestamp: new Date().toISOString()
-          })
-          setError('reCAPTCHA verification failed')
-          resolve(null)
-        }
-      })
-    })
-  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -103,8 +25,12 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      // Execute reCAPTCHA Enterprise
-      const token = await executeRecaptcha()
+      if (!isReady) {
+        throw new Error('reCAPTCHA not loaded. Please refresh the page.')
+      }
+
+      // Execute reCAPTCHA
+      const token = await executeRecaptcha('login')
       if (!token) {
         throw new Error('reCAPTCHA verification failed')
       }
@@ -121,17 +47,19 @@ export default function LoginPage() {
         throw new Error(verifyData.error || 'reCAPTCHA verification failed')
       }
 
+      // Sign in with Supabase
       const supabase = createClient()
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
-      if (error) throw error
+      if (signInError) throw signInError
 
       router.push('/dashboard')
       router.refresh()
     } catch (err: any) {
+      console.error('[Login] Error:', err)
       setError(err.message || 'Failed to login')
     } finally {
       setLoading(false)
@@ -154,18 +82,26 @@ export default function LoginPage() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
+
+            {!isReady && (
+              <Alert>
+                <AlertDescription>Loading security verification...</AlertDescription>
+              </Alert>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder="name@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                disabled={loading}
+                disabled={loading || !isReady}
               />
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
@@ -174,14 +110,16 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                disabled={loading}
+                disabled={loading || !isReady}
               />
             </div>
           </CardContent>
+
           <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign In'}
+            <Button type="submit" className="w-full" disabled={loading || !isReady}>
+              {loading ? 'Signing in...' : 'Sign in'}
             </Button>
+
             <p className="text-sm text-center text-muted-foreground">
               Don't have an account?{' '}
               <Link href="/signup" className="text-primary hover:underline">
