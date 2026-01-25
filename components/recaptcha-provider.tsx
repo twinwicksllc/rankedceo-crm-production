@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 
 export function RecaptchaProvider() {
   const [loaded, setLoaded] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     // Don't reload if already loaded
@@ -18,34 +17,34 @@ export function RecaptchaProvider() {
     
     if (!siteKey) {
       console.error('[RecaptchaProvider] No site key found')
-      setError('No site key configured')
       return
     }
 
     console.log('[RecaptchaProvider] Loading reCAPTCHA with site key:', siteKey)
 
-    // Add global callback for when grecaptcha loads
-    ;(window as any).onRecaptchaLoad = () => {
-      console.log('[RecaptchaProvider] onRecaptchaLoad callback fired')
-      console.log('[RecaptchaProvider] grecaptcha object:', window.grecaptcha)
-      setLoaded(true)
-    }
-
-    // Create and append script with explicit load callback
+    // Create and append script WITHOUT onload parameter
     const script = document.createElement('script')
-    script.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}&onload=onRecaptchaLoad`
+    script.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}`
     script.async = true
     script.defer = true
-    script.crossOrigin = 'anonymous'
     
     script.onload = () => {
-      console.log('[RecaptchaProvider] Script tag onload fired')
+      console.log('[RecaptchaProvider] Script loaded, waiting for grecaptcha...')
+      
+      // Wait a bit for grecaptcha to initialize
+      setTimeout(() => {
+        if (window.grecaptcha) {
+          console.log('[RecaptchaProvider] grecaptcha is available!')
+          setLoaded(true)
+        } else {
+          console.error('[RecaptchaProvider] grecaptcha not available after script load')
+        }
+      }, 500)
     }
     
-    script.onerror = () => {
-      console.error('[RecaptchaProvider] Script onerror fired')
-      console.error('[RecaptchaProvider] Script URL:', script.src)
-      setError('Failed to load reCAPTCHA script')
+    script.onerror = (e) => {
+      console.error('[RecaptchaProvider] Failed to load reCAPTCHA script', e)
+      console.error('[RecaptchaProvider] Script URL was:', script.src)
     }
     
     document.head.appendChild(script)
@@ -53,7 +52,6 @@ export function RecaptchaProvider() {
     // Cleanup
     return () => {
       // Don't remove script as it might be needed by other components
-      delete (window as any).onRecaptchaLoad
     }
   }, [loaded])
 
