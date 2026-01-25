@@ -31,6 +31,13 @@ export class RecaptchaService {
     remoteIp,
   }: VerifyRecaptchaParams): Promise<RecaptchaVerifyResponse> {
     try {
+      console.log('[reCAPTCHA Service] Starting verification...', {
+        hasSecretKey: !!this.secretKey,
+        secretKeyLength: this.secretKey.length,
+        hasToken: !!token,
+        tokenLength: token.length
+      });
+
       // Build the verification URL
       const verificationUrl = new URL('https://www.google.com/recaptcha/api/siteverify');
       verificationUrl.searchParams.append('secret', this.secretKey);
@@ -40,22 +47,41 @@ export class RecaptchaService {
         verificationUrl.searchParams.append('remoteip', remoteIp);
       }
 
+      console.log('[reCAPTCHA Service] Sending request to Google...');
+      
       // Make the verification request
       const response = await fetch(verificationUrl.toString(), {
         method: 'POST',
       });
 
+      console.log('[reCAPTCHA Service] Response received:', {
+        status: response.status,
+        statusText: response.statusText
+      });
+
       const data: RecaptchaVerifyResponse = await response.json();
 
+      console.log('[reCAPTCHA Service] Verification response:', {
+        success: data.success,
+        score: data.score,
+        action: data.action,
+        hostname: data.hostname,
+        errorCodes: data['error-codes'],
+        challengeTs: data.challenge_ts
+      });
+
       if (!data.success) {
-        console.error('reCAPTCHA verification failed:', data['error-codes']);
+        console.error('[reCAPTCHA Service] Verification failed:', data['error-codes']);
       } else {
-        console.log('reCAPTCHA verification successful. Score:', data.score, 'Action:', data.action);
+        console.log('[reCAPTCHA Service] Verification successful. Score:', data.score, 'Action:', data.action);
       }
 
       return data;
     } catch (error) {
-      console.error('Error verifying reCAPTCHA token:', error);
+      console.error('[reCAPTCHA Service] Error verifying token:', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
       return {
         success: false,
         'error-codes': ['network-error'],

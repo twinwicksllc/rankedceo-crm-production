@@ -29,7 +29,13 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false)
 
   const executeRecaptcha = async () => {
+    console.log('[Signup] Executing reCAPTCHA...', {
+      hasGrecaptcha: !!window.grecaptcha,
+      timestamp: new Date().toISOString()
+    })
+
     if (!window.grecaptcha) {
+      console.error('[Signup] Error: grecaptcha not loaded')
       setError('reCAPTCHA not loaded. Please try again.')
       return null
     }
@@ -38,13 +44,23 @@ export default function SignupPage() {
     return new Promise<string | null>((resolve) => {
       grecaptcha.ready(async () => {
         try {
+          console.log('[Signup] grecaptcha.ready called, executing token...')
           const token = await grecaptcha.execute(
             '6LeaeFUsAAAAAKr8KyPJu0B5njqb3Ha_bqeUrWQ6',
             { action: 'signup' }
           )
+          console.log('[Signup] Token received:', {
+            hasToken: !!token,
+            tokenLength: token?.length || 0,
+            timestamp: new Date().toISOString()
+          })
           resolve(token)
         } catch (err) {
-          console.error('reCAPTCHA error:', err)
+          console.error('[Signup] reCAPTCHA execution error:', {
+            error: err,
+            message: (err as any)?.message,
+            timestamp: new Date().toISOString()
+          })
           setError('reCAPTCHA verification failed')
           resolve(null)
         }
@@ -69,11 +85,16 @@ export default function SignupPage() {
     setLoading(true)
 
     try {
-      // Execute reCAPTCHA Enterprise
+      // Execute reCAPTCHA
+      console.log('[Signup] Starting signup flow...')
+      
       const token = await executeRecaptcha()
       if (!token) {
+        console.error('[Signup] Error: No token received from reCAPTCHA')
         throw new Error('reCAPTCHA verification failed')
       }
+
+      console.log('[Signup] Token received, verifying with server...')
 
       // Verify token on server
       const verifyResponse = await fetch('/api/auth/verify-recaptcha', {
@@ -83,9 +104,21 @@ export default function SignupPage() {
       })
 
       const verifyData = await verifyResponse.json()
+      console.log('[Signup] Verification response:', {
+        status: verifyResponse.status,
+        statusText: verifyResponse.statusText,
+        data: verifyData
+      })
+
       if (!verifyResponse.ok || !verifyData.valid) {
+        console.error('[Signup] Verification failed:', {
+          status: verifyResponse.status,
+          data: verifyData
+        })
         throw new Error(verifyData.error || 'reCAPTCHA verification failed')
       }
+
+      console.log('[Signup] Verification successful, proceeding with signup...')
 
       const supabase = createClient()
 
