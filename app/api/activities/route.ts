@@ -12,13 +12,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user's account
-    const { data: accountData, error: accountError } = await supabase
-      .from('accounts')
-      .select('id')
-      .eq('user_id', user.id)
+    const { data: userData } = await supabase
+      .from('users')
+      .select('account_id')
+      .eq('id', user.id)
       .single();
 
-    if (accountError || !accountData) {
+    if (!userData?.account_id) {
       return NextResponse.json({ error: 'Account not found' }, { status: 404 });
     }
 
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .from('activities')
       .insert({
-        account_id: accountData.id,
+        account_id: userData.account_id,
         user_id: user.id,
         ...validatedInput,
         completed_at: validatedInput.status === 'completed' ? new Date().toISOString() : null,
@@ -53,6 +53,22 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { data: userData } = await supabase
+      .from('users')
+      .select('account_id')
+      .eq('id', user.id)
+      .single();
+
+    if (!userData?.account_id) {
+      return NextResponse.json({ error: 'Account not found' }, { status: 404 });
+    }
+
     const { searchParams } = new URL(request.url);
     
     const type = searchParams.get('type');
@@ -70,6 +86,7 @@ export async function GET(request: NextRequest) {
         company:companies(id, name),
         deal:deals(id, title)
       `)
+      .eq('account_id', userData.account_id)
       .order('created_at', { ascending: false });
 
     if (type) query = query.eq('type', type);
