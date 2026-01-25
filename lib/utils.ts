@@ -59,3 +59,24 @@ export function truncate(str: string, length: number): string {
   if (str.length <= length) return str
   return str.slice(0, length) + '...'
 }
+
+/**
+ * Get Gemini API key from environment
+ * SECURITY WARNING: NEVER log this key or commit it to git
+ * This function should only be used for secure API calls
+ */
+export function getGeminiApiKey(): string | null {
+  const key = process.env.GEMINI_API_KEY
+  if (!key) {
+    console.error('[Security] GEMINI_API_KEY not found in environment')
+    return null
+  }
+  
+  // Validate key format (basic check)
+  if (key.length < 10) {
+    console.error('[Security] GEMINI_API_KEY appears invalid')
+    return null
+  }
+  
+  return key
+}
