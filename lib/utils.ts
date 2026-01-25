@@ -7,7 +7,18 @@ export function cn(...inputs: ClassValue[]) {
 
 export function getRecaptchaSiteKey(): string {
   // Priority: Environment variable > Fallback
-  return process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ''
+  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '6LcCmVUsAAAAAAvcQlUG4eUEJ5NxwNLXFju-vVoA'
+  
+  // Log for debugging (only in development)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[getRecaptchaSiteKey]', {
+      hasEnvKey: !!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
+      envKey: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
+      usingSiteKey: siteKey
+    })
+  }
+  
+  return siteKey
 }
 
 export function formatDate(date: Date | string): string {
