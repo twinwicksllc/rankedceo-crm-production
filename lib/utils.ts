@@ -5,6 +5,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export function getRecaptchaSiteKey(): string {
+  // Priority: Environment variable > Fallback
+  return process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ''
+}
+
 export function formatDate(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date
   return d.toLocaleDateString('en-US', {

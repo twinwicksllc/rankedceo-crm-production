@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { getRecaptchaSiteKey } from '@/lib/utils'
 
 declare global {
   interface Window {
@@ -46,7 +47,7 @@ export default function SignupPage() {
         try {
           console.log('[Signup] grecaptcha.ready called, executing token...')
           const token = await grecaptcha.execute(
-            process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!,
+            getRecaptchaSiteKey(),
             { action: 'signup' }
           )
           console.log('[Signup] Token received:', {
