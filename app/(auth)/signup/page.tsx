@@ -35,9 +35,39 @@ export default function SignupPage() {
       timestamp: new Date().toISOString()
     })
 
-    if (!window.grecaptcha) {
+    // Wait for grecaptcha to be available with retry logic
+    const waitForRecaptcha = (maxRetries = 10, delay = 200): Promise<boolean> => {
+      return new Promise((resolve) => {
+        let retries = 0
+        
+        const checkRecaptcha = () => {
+          retries++
+          console.log(`[Signup] Checking for grecaptcha... Attempt ${retries}/${maxRetries}`)
+          
+          if (window.grecaptcha) {
+            console.log('[Signup] grecaptcha found!')
+            resolve(true)
+            return
+          }
+          
+          if (retries >= maxRetries) {
+            console.error('[Signup] grecaptcha not found after retries')
+            resolve(false)
+            return
+          }
+          
+          setTimeout(checkRecaptcha, delay)
+        }
+        
+        checkRecaptcha()
+      })
+    }
+
+    const isRecaptchaReady = await waitForRecaptcha()
+    
+    if (!isRecaptchaReady || !window.grecaptcha) {
       console.error('[Signup] Error: grecaptcha not loaded')
-      setError('reCAPTCHA not loaded. Please try again.')
+      setError('reCAPTCHA not loaded. Please refresh the page and try again.')
       return null
     }
 

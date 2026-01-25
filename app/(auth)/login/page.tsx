@@ -28,8 +28,44 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
 
   const executeRecaptcha = async () => {
-    if (!window.grecaptcha) {
-      setError('reCAPTCHA not loaded. Please try again.')
+    console.log('[Login] Executing reCAPTCHA...', {
+      hasGrecaptcha: !!window.grecaptcha,
+      timestamp: new Date().toISOString()
+    })
+
+    // Wait for grecaptcha to be available with retry logic
+    const waitForRecaptcha = (maxRetries = 10, delay = 200): Promise<boolean> => {
+      return new Promise((resolve) => {
+        let retries = 0
+        
+        const checkRecaptcha = () => {
+          retries++
+          console.log(`[Login] Checking for grecaptcha... Attempt ${retries}/${maxRetries}`)
+          
+          if (window.grecaptcha) {
+            console.log('[Login] grecaptcha found!')
+            resolve(true)
+            return
+          }
+          
+          if (retries >= maxRetries) {
+            console.error('[Login] grecaptcha not found after retries')
+            resolve(false)
+            return
+          }
+          
+          setTimeout(checkRecaptcha, delay)
+        }
+        
+        checkRecaptcha()
+      })
+    }
+
+    const isRecaptchaReady = await waitForRecaptcha()
+    
+    if (!isRecaptchaReady || !window.grecaptcha) {
+      console.error('[Login] Error: grecaptcha not loaded')
+      setError('reCAPTCHA not loaded. Please refresh the page and try again.')
       return null
     }
 
@@ -37,13 +73,23 @@ export default function LoginPage() {
     return new Promise<string | null>((resolve) => {
       grecaptcha.ready(async () => {
         try {
+          console.log('[Login] grecaptcha.ready called, executing token...')
           const token = await grecaptcha.execute(
             getRecaptchaSiteKey(),
             { action: 'login' }
           )
+          console.log('[Login] Token received:', {
+            hasToken: !!token,
+            tokenLength: token?.length || 0,
+            timestamp: new Date().toISOString()
+          })
           resolve(token)
         } catch (err) {
-          console.error('reCAPTCHA error:', err)
+          console.error('[Login] reCAPTCHA execution error:', {
+            error: err,
+            message: (err as any)?.message,
+            timestamp: new Date().toISOString()
+          })
           setError('reCAPTCHA verification failed')
           resolve(null)
         }
