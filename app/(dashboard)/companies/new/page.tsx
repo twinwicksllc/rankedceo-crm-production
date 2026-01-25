@@ -13,13 +13,13 @@ export default async function NewCompanyPage() {
   if (!user) redirect('/login')
 
   // Get user's account
-  const { data: profile } = await supabase
-    .from('profiles')
+  const { data: userData } = await supabase
+    .from('users')
     .select('account_id')
     .eq('id', user.id)
     .single()
 
-  if (!profile?.account_id) {
+  if (!userData?.account_id) {
     return <div>No account found</div>
   }
 
@@ -43,7 +43,7 @@ export default async function NewCompanyPage() {
 
       {/* Form */}
       <Card className="p-6">
-        <CompanyForm accountId={profile.account_id} />
+        <CompanyForm accountId={userData.account_id} />
       </Card>
     </div>
   )

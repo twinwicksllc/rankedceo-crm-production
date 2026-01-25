@@ -13,13 +13,13 @@ export default async function EditDealPage({ params }: { params: { id: string } 
   if (!user) redirect('/login')
 
   // Get user's account
-  const { data: profile } = await supabase
-    .from('profiles')
+  const { data: userData } = await supabase
+    .from('users')
     .select('account_id')
     .eq('id', user.id)
     .single()
 
-  if (!profile?.account_id) {
+  if (!userData?.account_id) {
     return <div>No account found</div>
   }
 
@@ -28,7 +28,7 @@ export default async function EditDealPage({ params }: { params: { id: string } 
     .from('deals')
     .select('*')
     .eq('id', params.id)
-    .eq('account_id', profile.account_id)
+    .eq('account_id', userData.account_id)
     .single()
 
   if (error || !deal) {
@@ -39,21 +39,21 @@ export default async function EditDealPage({ params }: { params: { id: string } 
   const { data: contacts } = await supabase
     .from('contacts')
     .select('id, first_name, last_name')
-    .eq('account_id', profile.account_id)
+    .eq('account_id', userData.account_id)
     .order('first_name')
 
   // Fetch companies for dropdown
   const { data: companies } = await supabase
     .from('companies')
     .select('id, name')
-    .eq('account_id', profile.account_id)
+    .eq('account_id', userData.account_id)
     .order('name')
 
   // Fetch pipelines for dropdown
   const { data: pipelines } = await supabase
     .from('pipelines')
     .select('id, name')
-    .eq('account_id', profile.account_id)
+    .eq('account_id', userData.account_id)
     .order('name')
 
   return (
@@ -77,7 +77,7 @@ export default async function EditDealPage({ params }: { params: { id: string } 
       {/* Form */}
       <Card className="p-6">
         <DealForm 
-          accountId={profile.account_id}
+          accountId={userData.account_id}
           contacts={contacts || []}
           companies={companies || []}
           pipelines={pipelines || []}

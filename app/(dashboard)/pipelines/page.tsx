@@ -12,13 +12,13 @@ export default async function PipelinesPage() {
   if (!user) redirect('/login')
 
   // Get user's account
-  const { data: profile } = await supabase
-    .from('profiles')
+  const { data: userData } = await supabase
+    .from('users')
     .select('account_id')
     .eq('id', user.id)
     .single()
 
-  if (!profile?.account_id) {
+  if (!userData?.account_id) {
     return <div>No account found</div>
   }
 
@@ -29,7 +29,7 @@ export default async function PipelinesPage() {
       *,
       deals:deals(count)
     `)
-    .eq('account_id', profile.account_id)
+    .eq('account_id', userData.account_id)
     .order('created_at', { ascending: false })
 
   if (error) {
