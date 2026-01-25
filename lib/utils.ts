@@ -6,14 +6,14 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function getRecaptchaSiteKey(): string {
-  // Priority: Environment variable > Fallback
-  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '6LcCmVUsAAAAAAvcQlUG4eUEJ5NxwNLXFju-vVoA'
+  // Get the site key from environment variable
+  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ''
   
   // Log for debugging (only in development)
   if (process.env.NODE_ENV === 'development') {
     console.log('[getRecaptchaSiteKey]', {
       hasEnvKey: !!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
-      envKey: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
+      siteKeyLength: siteKey.length,
       usingSiteKey: siteKey
     })
   }
