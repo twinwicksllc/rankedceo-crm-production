@@ -46,7 +46,7 @@ export default function SignupPage() {
         try {
           console.log('[Signup] grecaptcha.ready called, executing token...')
           const token = await grecaptcha.execute(
-            '6LeaeFUsAAAAAKr8KyPJu0B5njqb3Ha_bqeUrWQ6',
+            process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!,
             { action: 'signup' }
           )
           console.log('[Signup] Token received:', {
