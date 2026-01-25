@@ -1,25 +1,71 @@
-import { RecaptchaEnterpriseServiceClient } from '@google-cloud/recaptcha-enterprise';
-
-interface CreateAssessmentParams {
-  projectID?: string;
-  recaptchaKey?: string;
+interface VerifyRecaptchaParams {
   token: string;
-  recaptchaAction?: string;
+  remoteIp?: string;
+}
+
+interface RecaptchaVerifyResponse {
+  success: boolean;
+  challenge_ts?: string;
+  hostname?: string;
+  score?: number;
+  action?: string;
+  'error-codes'?: string[];
 }
 
 export class RecaptchaService {
-  private client: RecaptchaEnterpriseServiceClient;
-  private projectID: string;
-  private recaptchaKey: string;
+  private secretKey: string;
 
   constructor() {
-    this.client = new RecaptchaEnterpriseServiceClient();
-    this.projectID = process.env.RECAPTCHA_PROJECT_ID || '';
-    this.recaptchaKey = process.env.RECAPTCHA_SITE_KEY || '';
+    this.secretKey = process.env.RECAPTCHA_SECRET_KEY || '';
+  }
+
+  /**
+   * Verify reCAPTCHA v2/v3 token using Google's verification API
+   * 
+   * @param token - The reCAPTCHA token from the client
+   * @param remoteIp - Optional remote IP address
+   * @returns The verification response with success status and score
+   */
+  async verifyToken({
+    token,
+    remoteIp,
+  }: VerifyRecaptchaParams): Promise<RecaptchaVerifyResponse> {
+    try {
+      // Build the verification URL
+      const verificationUrl = new URL('https://www.google.com/recaptcha/api/siteverify');
+      verificationUrl.searchParams.append('secret', this.secretKey);
+      verificationUrl.searchParams.append('response', token);
+      
+      if (remoteIp) {
+        verificationUrl.searchParams.append('remoteip', remoteIp);
+      }
+
+      // Make the verification request
+      const response = await fetch(verificationUrl.toString(), {
+        method: 'POST',
+      });
+
+      const data: RecaptchaVerifyResponse = await response.json();
+
+      if (!data.success) {
+        console.error('reCAPTCHA verification failed:', data['error-codes']);
+      } else {
+        console.log('reCAPTCHA verification successful. Score:', data.score, 'Action:', data.action);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error verifying reCAPTCHA token:', error);
+      return {
+        success: false,
+        'error-codes': ['network-error'],
+      };
+    }
   }
 
   /**
    * Create an assessment to analyze the risk of a UI action.
+   * This method maintains compatibility with the Enterprise API interface.
    * 
    * @param token - The generated token obtained from the client
    * @param recaptchaAction - Action name corresponding to the token
@@ -28,70 +74,32 @@ export class RecaptchaService {
   async createAssessment({
     token,
     recaptchaAction = 'submit',
-  }: Pick<CreateAssessmentParams, 'token' | 'recaptchaAction'>): Promise<number | null> {
+  }: { token: string; recaptchaAction?: string }): Promise<number | null> {
     try {
-      const projectPath = this.client.projectPath(this.projectID);
+      const result = await this.verifyToken({ token });
 
-      // Build the assessment request
-      const request = {
-        assessment: {
-          event: {
-            token: token,
-            siteKey: this.recaptchaKey,
-          },
-        },
-        parent: projectPath,
-      };
+      if (!result.success) {
+        console.log('reCAPTCHA verification failed:', result['error-codes']);
+        return null;
+      }
 
-      const [response] = await this.client.createAssessment(request);
-
-      // Check if the token is valid
-      if (!response.tokenProperties?.valid) {
+      // For reCAPTCHA v3, return the score; for v2, return a high score if successful
+      const score = result.score !== undefined ? result.score : 0.9;
+      console.log(`The reCAPTCHA score is: ${score}, Action: ${result.action || recaptchaAction}`);
+      
+      // Verify the action matches (for v3)
+      if (result.action && recaptchaAction && result.action !== recaptchaAction) {
         console.log(
-          `The CreateAssessment call failed because the token was: ${response.tokenProperties?.invalidReason}`
+          `Action mismatch: expected ${recaptchaAction}, got ${result.action}`
         );
         return null;
       }
 
-      // Check if the expected action was executed
-      if (response.tokenProperties?.action === recaptchaAction) {
-        // Get the risk score
-        const score = response.riskAnalysis?.score || 0;
-        console.log(`The reCAPTCHA score is: ${score}`);
-        
-        return score;
-      } else {
-        console.log(
-          'The action attribute in your reCAPTCHA tag does not match the action you are expecting to score'
-        );
-        return null;
-      }
+      return score;
     } catch (error) {
       console.error('Error creating reCAPTCHA assessment:', error);
       return null;
     }
-  }
-
-  /**
-   * Verify reCAPTCHA token with a minimum score threshold
-   * 
-   * @param token - The reCAPTCHA token
-   * @param recaptchaAction - The expected action
-   * @param minScore - Minimum acceptable score (default: 0.5)
-   * @returns true if valid, false otherwise
-   */
-  async verifyToken(
-    token: string,
-    recaptchaAction: string = 'submit',
-    minScore: number = 0.5
-  ): Promise<boolean> {
-    const score = await this.createAssessment({ token, recaptchaAction });
-    
-    if (score === null) {
-      return false;
-    }
-
-    return score >= minScore;
   }
 }
 

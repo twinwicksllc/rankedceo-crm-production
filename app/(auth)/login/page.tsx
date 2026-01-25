@@ -13,9 +13,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 declare global {
   interface Window {
     grecaptcha?: {
-      enterprise?: {
-        execute: (siteKey: string, options: { action: string }) => Promise<string>
-      }
+      execute: (siteKey: string, options: { action: string }) => Promise<string>
+      ready: (callback: () => void) => void
     }
   }
 }
@@ -28,22 +27,27 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
 
   const executeRecaptcha = async () => {
-    if (!window.grecaptcha?.enterprise) {
+    if (!window.grecaptcha) {
       setError('reCAPTCHA not loaded. Please try again.')
       return null
     }
 
-    try {
-      const token = await window.grecaptcha.enterprise.execute(
-        '6LeaeFUsAAAAAKr8KyPJu0B5njqb3Ha_bqeUrWQ6',
-        { action: 'login' }
-      )
-      return token
-    } catch (err) {
-      console.error('reCAPTCHA error:', err)
-      setError('reCAPTCHA verification failed')
-      return null
-    }
+    const grecaptcha = window.grecaptcha
+    return new Promise<string | null>((resolve) => {
+      grecaptcha.ready(async () => {
+        try {
+          const token = await grecaptcha.execute(
+            '6LeaeFUsAAAAAKr8KyPJu0B5njqb3Ha_bqeUrWQ6',
+            { action: 'login' }
+          )
+          resolve(token)
+        } catch (err) {
+          console.error('reCAPTCHA error:', err)
+          setError('reCAPTCHA verification failed')
+          resolve(null)
+        }
+      })
+    })
   }
 
   const handleLogin = async (e: React.FormEvent) => {
