@@ -9,6 +9,7 @@ import {
   DollarSign, 
   GitBranch,
   Calendar,
+  Inbox,
   Mail,
   FileText,
   Settings
@@ -21,6 +22,7 @@ const navItems = [
   { href: '/deals', label: 'Deals', icon: DollarSign },
   { href: '/pipelines', label: 'Pipelines', icon: GitBranch },
   { href: '/activities', label: 'Activities', icon: Calendar },
+  { href: '/emails', label: 'Emails', icon: Inbox },
   { href: '/campaigns', label: 'Campaigns', icon: Mail },
   { href: '/email-templates', label: 'Templates', icon: FileText },
   { href: '/settings', label: 'Settings', icon: Settings },
