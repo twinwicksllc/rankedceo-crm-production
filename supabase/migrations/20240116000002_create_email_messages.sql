@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS email_messages (
     -- Email metadata
     message_id TEXT UNIQUE NOT NULL,
     in_reply_to TEXT,
-    references TEXT[],
+    reference_headers TEXT[],
     
     -- Email addresses
     from_address TEXT NOT NULL,
