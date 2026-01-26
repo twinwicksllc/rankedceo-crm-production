@@ -4,9 +4,9 @@
 -- The issue is that even SECURITY DEFINER functions are triggering RLS
 -- Solution: Temporarily disable RLS on users table for the lookup function
 
--- Drop the problematic functions
-DROP FUNCTION IF EXISTS get_current_user_email();
-DROP FUNCTION IF EXISTS get_current_user_account_id();
+-- Drop the problematic functions with CASCADE to remove dependent policies
+DROP FUNCTION IF EXISTS get_current_user_email() CASCADE;
+DROP FUNCTION IF EXISTS get_current_user_account_id() CASCADE;
 
 -- Create a new function that explicitly disables RLS during execution
 CREATE OR REPLACE FUNCTION get_current_user_account_id()
