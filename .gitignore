@@ -35,3 +35,19 @@ next-env.d.ts
 
 # Outputs
 /outputs
+
+# Conversation summaries (may contain sensitive information)
+/summarized_conversations
+summarized_conversations/
+
+# Screenshots and uploaded files
+*.jpg
+*.png
+*.jpeg
+*.gif
+*.pdf
+*.mht
+
+# Documentation that may contain secrets
+PUSH_INSTRUCTIONS.md
+GET_SCHEMA_INSTRUCTIONS.md
