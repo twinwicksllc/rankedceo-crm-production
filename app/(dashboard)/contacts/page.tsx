@@ -25,7 +25,7 @@ export default async function ContactsPage() {
     .select(`
       *,
       company:companies(id, name),
-      owner:users(id, full_name)
+      owner:users(id, name)
     `)
     .eq('account_id', userData.account_id)
     .order('created_at', { ascending: false })

@@ -10,11 +10,11 @@ export default async function DashboardPage() {
   
   if (!user) return null
 
-  // Get user's account_id
+  // Get user's account_id by email (matching RLS policy)
   const { data: userData } = await supabase
     .from('users')
-    .select('account_id, full_name')
-    .eq('id', user.id)
+    .select('account_id, name')
+    .eq('email', user.email)
     .single()
 
   if (!userData) return null
@@ -75,7 +75,7 @@ export default async function DashboardPage() {
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">
-          Welcome back, {userData.full_name || 'User'}!
+          Welcome back, {userData.name || 'User'}!
         </h1>
         <p className="text-gray-600 mt-2">
           Here's what's happening with your business today.
