@@ -12,6 +12,7 @@ import {
   Inbox,
   Mail,
   FileText,
+  BarChart3,
   Settings
 } from 'lucide-react'
 
@@ -22,9 +23,10 @@ const navItems = [
   { href: '/deals', label: 'Deals', icon: DollarSign },
   { href: '/pipelines', label: 'Pipelines', icon: GitBranch },
   { href: '/activities', label: 'Activities', icon: Calendar },
-  // { href: '/emails', label: 'Emails', icon: Inbox }, // Disabled - requires email_messages table migration
+  { href: '/emails', label: 'Emails', icon: Inbox },
   { href: '/campaigns', label: 'Campaigns', icon: Mail },
   { href: '/email-templates', label: 'Templates', icon: FileText },
+  { href: '/reports', label: 'Reports', icon: BarChart3 },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 

@@ -37,6 +37,10 @@ export function formatCurrency(amount: number, currency: string = 'USD'): string
   }).format(amount)
 }
 
+export function formatPercentage(value: number, decimals: number = 1): string {
+  return `${value.toFixed(decimals)}%`
+}
+
 export function formatPhoneNumber(phone: string): string {
   const cleaned = phone.replace(/\D/g, '')
   const match = cleaned.match(/^(\d{3})(\d{3})(\d{4})$/)
