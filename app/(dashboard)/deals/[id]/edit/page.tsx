@@ -16,7 +16,7 @@ export default async function EditDealPage({ params }: { params: { id: string } 
   const { data: userData } = await supabase
     .from('users')
     .select('account_id')
-    .eq('id', user.id)
+    .eq('email', user.email)
     .single()
 
   if (!userData?.account_id) {
