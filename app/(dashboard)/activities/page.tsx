@@ -3,32 +3,44 @@ import Link from 'next/link';
 import { ActivityTimeline } from '@/components/activities/activity-timeline';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
-async function getActivities(filters: any) {
-  const searchParams = new URLSearchParams();
-  if (filters.type) searchParams.set('type', filters.type);
-  if (filters.status) searchParams.set('status', filters.status);
-  if (filters.search) searchParams.set('search', filters.search);
-
-  const response = await fetch(`/api/activities?${searchParams.toString()}`, {
-    cache: 'no-store',
-  });
+async function getActivities(filters: any, accountId: string) {
+  const supabase = await createClient();
   
-  if (!response.ok) {
+  let query = supabase
+    .from('activities')
+    .select('*')
+    .eq('account_id', accountId)
+    .order('created_at', { ascending: false });
+
+  if (filters.type) query = query.eq('type', filters.type);
+  if (filters.status) query = query.eq('status', filters.status);
+  if (filters.search) {
+    query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+  }
+
+  const { data, error } = await query;
+  
+  if (error) {
+    console.error('Error fetching activities:', error);
     return [];
   }
   
-  return response.json();
+  return data || [];
 }
 
-async function getActivityStats() {
-  const response = await fetch('/api/activities/stats', {
-    cache: 'no-store',
-  });
+async function getActivityStats(accountId: string) {
+  const supabase = await createClient();
   
-  if (!response.ok) {
+  const { data: activities, error } = await supabase
+    .from('activities')
+    .select('type, status')
+    .eq('account_id', accountId);
+  
+  if (error || !activities) {
     return {
       total: 0,
       completed: 0,
@@ -37,7 +49,17 @@ async function getActivityStats() {
     };
   }
   
-  return response.json();
+  const stats = {
+    total: activities.length,
+    completed: activities.filter(a => a.status === 'completed').length,
+    pending: activities.filter(a => a.status === 'pending').length,
+    byType: activities.reduce((acc: any, activity) => {
+      acc[activity.type] = (acc[activity.type] || 0) + 1;
+      return acc;
+    }, {}),
+  };
+  
+  return stats;
 }
 
 export default async function ActivitiesPage({
@@ -45,6 +67,20 @@ export default async function ActivitiesPage({
 }: {
   searchParams: { type?: string; status?: string; search?: string };
 }) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) return null;
+
+  // Get user's account_id by email
+  const { data: userData } = await supabase
+    .from('users')
+    .select('account_id')
+    .eq('email', user.email)
+    .single();
+
+  if (!userData?.account_id) return null;
+
   const filters = {
     type: searchParams.type,
     status: searchParams.status,
@@ -52,8 +88,8 @@ export default async function ActivitiesPage({
   };
 
   const [activities, stats] = await Promise.all([
-    getActivities(filters),
-    getActivityStats(),
+    getActivities(filters, userData.account_id),
+    getActivityStats(userData.account_id),
   ]);
 
   return (

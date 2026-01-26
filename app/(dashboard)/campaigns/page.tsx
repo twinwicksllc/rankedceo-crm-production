@@ -1,12 +1,25 @@
 import { Suspense } from 'react';
-import { CampaignService } from '@/lib/services/campaign-service';
+import { createClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Mail, Users, Send, TrendingUp, Calendar } from 'lucide-react';
 import Link from 'next/link';
 
-export default function CampaignsPage() {
+export default async function CampaignsPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) return null;
+
+  const { data: userData } = await supabase
+    .from('users')
+    .select('account_id')
+    .eq('email', user.email)
+    .single();
+
+  if (!userData?.account_id) return null;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -25,19 +38,32 @@ export default function CampaignsPage() {
       </div>
 
       <Suspense fallback={<div>Loading statistics...</div>}>
-        <CampaignsStats />
+        <CampaignsStats accountId={userData.account_id} />
       </Suspense>
 
       <Suspense fallback={<div>Loading campaigns...</div>}>
-        <CampaignsList />
+        <CampaignsList accountId={userData.account_id} />
       </Suspense>
     </div>
   );
 }
 
-async function CampaignsStats() {
-  const campaignService = new CampaignService();
-  const stats = await campaignService.getCampaignStats();
+async function CampaignsStats({ accountId }: { accountId: string }) {
+  const supabase = await createClient();
+  
+  const { data: campaigns } = await supabase
+    .from('campaigns')
+    .select('status, metrics')
+    .eq('account_id', accountId);
+
+  const stats = {
+    totalCampaigns: campaigns?.length || 0,
+    activeCampaigns: campaigns?.filter(c => c.status === 'active').length || 0,
+    totalEmailsSent: campaigns?.reduce((sum, c) => sum + (c.metrics?.sent || 0), 0) || 0,
+    averageOpenRate: campaigns?.length 
+      ? campaigns.reduce((sum, c) => sum + (c.metrics?.opened || 0), 0) / campaigns.length 
+      : 0,
+  };
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -89,11 +115,16 @@ function StatCard({ title, value, icon, trend }: {
   );
 }
 
-async function CampaignsList() {
-  const campaignService = new CampaignService();
-  const campaigns = await campaignService.getCampaigns();
+async function CampaignsList({ accountId }: { accountId: string }) {
+  const supabase = await createClient();
+  
+  const { data: campaigns } = await supabase
+    .from('campaigns')
+    .select('*')
+    .eq('account_id', accountId)
+    .order('created_at', { ascending: false });
 
-  if (campaigns.length === 0) {
+  if (!campaigns || campaigns.length === 0) {
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12">
