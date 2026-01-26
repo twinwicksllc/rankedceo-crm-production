@@ -8,16 +8,48 @@ export default async function DashboardPage() {
   // Get user and account info
   const { data: { user } } = await supabase.auth.getUser()
   
-  if (!user) return null
+  if (!user) {
+    return (
+      <div className="p-8">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+          <h2 className="text-lg font-semibold text-yellow-800">Not Authenticated</h2>
+          <p className="text-yellow-700 mt-2">Please log in to access the dashboard.</p>
+        </div>
+      </div>
+    )
+  }
 
   // Get user's account_id by email (matching RLS policy)
-  const { data: userData } = await supabase
+  const { data: userData, error: userError } = await supabase
     .from('users')
     .select('account_id, name')
     .eq('email', user.email)
     .single()
 
-  if (!userData) return null
+  if (!userData) {
+    return (
+      <div className="p-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <h2 className="text-lg font-semibold text-red-800">Account Setup Required</h2>
+          <p className="text-red-700 mt-2">
+            Your user account is not fully set up. This usually means the database migration needs to be run.
+          </p>
+          <div className="mt-4 p-4 bg-white rounded border text-sm">
+            <p><strong>Debug Info:</strong></p>
+            <p>Auth Email: {user.email}</p>
+            <p>Auth ID: {user.id}</p>
+            <p>Error: {userError?.message || 'No user record found'}</p>
+          </div>
+          <div className="mt-4 text-sm text-red-600">
+            <p><strong>Solution:</strong> Run the user migration in Supabase SQL Editor:</p>
+            <code className="block mt-2 p-2 bg-gray-100 rounded text-xs">
+              supabase/migrations/000007_correct_link_auth_users.sql
+            </code>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // Get stats
   const { count: contactsCount } = await supabase

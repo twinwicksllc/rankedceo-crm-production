@@ -65,13 +65,13 @@ export function EmailFilters({ filters, onFiltersChange }: EmailFiltersProps) {
           <Filter className="h-4 w-4 text-muted-foreground" />
           <Select
             value={filters.direction || ''}
-            onValueChange={(value) => updateFilter('direction', value || undefined)}
+            onValueChange={(value) => updateFilter('direction', value === 'all' ? undefined : value)}
           >
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Direction" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Directions</SelectItem>
+              <SelectItem value="all">All Directions</SelectItem>
               <SelectItem value="inbound">Inbound</SelectItem>
               <SelectItem value="outbound">Outbound</SelectItem>
             </SelectContent>
@@ -81,13 +81,13 @@ export function EmailFilters({ filters, onFiltersChange }: EmailFiltersProps) {
         {/* Status Filter */}
         <Select
           value={filters.status || ''}
-          onValueChange={(value) => updateFilter('status', value || undefined)}
+          onValueChange={(value) => updateFilter('status', value === 'all' ? undefined : value)}
         >
           <SelectTrigger className="w-[140px]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Status</SelectItem>
+            <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="received">Received</SelectItem>
             <SelectItem value="processed">Processed</SelectItem>
             <SelectItem value="error">Error</SelectItem>

@@ -22,7 +22,7 @@ const navItems = [
   { href: '/deals', label: 'Deals', icon: DollarSign },
   { href: '/pipelines', label: 'Pipelines', icon: GitBranch },
   { href: '/activities', label: 'Activities', icon: Calendar },
-  { href: '/emails', label: 'Emails', icon: Inbox },
+  // { href: '/emails', label: 'Emails', icon: Inbox }, // Disabled - requires email_messages table migration
   { href: '/campaigns', label: 'Campaigns', icon: Mail },
   { href: '/email-templates', label: 'Templates', icon: FileText },
   { href: '/settings', label: 'Settings', icon: Settings },
