@@ -4,5 +4,9 @@ import { NextResponse } from 'next/server'
 export async function POST() {
   const supabase = await createClient()
   await supabase.auth.signOut()
-  return NextResponse.json({ success: true })
+  
+  // Redirect to homepage after logout
+  return NextResponse.redirect(new URL('/', process.env.NEXT_PUBLIC_APP_URL || 'https://crm.rankedceo.com'), {
+    status: 302
+  })
 }
