@@ -26,6 +26,21 @@ export default async function DashboardPage() {
     .eq('email', user.email)
     .single()
 
+  // Check onboarding status
+  if (userData) {
+    const { data: accountData } = await supabase
+      .from('accounts')
+      .select('onboarding_completed')
+      .eq('id', userData.account_id)
+      .single()
+
+    // Redirect to onboarding if not completed
+    if (accountData && !accountData.onboarding_completed) {
+      const { redirect } = await import('next/navigation')
+      redirect('/onboarding')
+    }
+  }
+
   if (!userData) {
     return (
       <div className="p-8">

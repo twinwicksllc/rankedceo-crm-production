@@ -63,7 +63,7 @@ export default function SignupPage() {
 
       if (signUpError) throw signUpError
 
-      router.push('/dashboard')
+      router.push('/onboarding')
       router.refresh()
     } catch (err: any) {
       console.error('[Signup] Error:', err)
