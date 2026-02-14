@@ -1,25 +1,42 @@
 'use client';
 
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { Rocket, Users, BarChart3, Zap } from 'lucide-react';
 
 export function WelcomeStep() {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleNext = async () => {
+    setLoading(true);
+    setError('');
+    
     try {
+      console.log('[Welcome] Calling API to update step to 1');
       const response = await fetch('/api/onboarding/step', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ step: 1 }),
       });
 
+      const data = await response.json();
+      console.log('[Welcome] API response:', data);
+
       if (response.ok) {
+        console.log('[Welcome] Success, reloading page');
         window.location.reload();
+      } else {
+        console.error('[Welcome] API error:', data);
+        setError(data.error || 'Failed to update step');
+        setLoading(false);
       }
     } catch (error) {
-      console.error('Error updating step:', error);
+      console.error('[Welcome] Network error:', error);
+      setError('Network error. Please try again.');
+      setLoading(false);
     }
   };
 
@@ -97,12 +114,18 @@ export function WelcomeStep() {
         </ul>
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-sm text-red-800">{error}</p>
+        </div>
+      )}
+
       <div className="flex justify-between items-center pt-6 border-t">
-        <Button variant="ghost" onClick={handleSkip}>
+        <Button variant="ghost" onClick={handleSkip} disabled={loading}>
           Skip for now
         </Button>
-        <Button onClick={handleNext}>
-          Get Started
+        <Button onClick={handleNext} disabled={loading}>
+          {loading ? 'Loading...' : 'Get Started'}
         </Button>
       </div>
     </div>

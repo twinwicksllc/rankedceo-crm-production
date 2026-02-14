@@ -7,37 +7,40 @@ export async function POST() {
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
+      console.error('[Complete Onboarding] Not authenticated');
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
+    console.log('[Complete Onboarding] Completing for user:', user.email);
+
     // Get user's account_id
-    const { data: userData } = await supabase
+    const { data: userData, error: userError } = await supabase
       .from('users')
       .select('account_id')
       .eq('email', user.email)
       .single();
 
-    if (!userData) {
+    if (userError || !userData || !userData.account_id) {
+      console.error('[Complete Onboarding] User lookup failed:', userError);
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Mark onboarding as complete
-    const { error } = await supabase
-      .from('accounts')
-      .update({
-        onboarding_completed: true,
-        onboarding_completed_at: new Date().toISOString(),
-        onboarding_step: 5,
-      })
-      .eq('id', userData.account_id);
+    console.log('[Complete Onboarding] Found account_id:', userData.account_id);
+
+    // Use the SECURITY DEFINER function to bypass RLS
+    const { error } = await supabase.rpc('complete_onboarding', {
+      p_account_id: userData.account_id
+    });
 
     if (error) {
+      console.error('[Complete Onboarding] Error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    console.log('[Complete Onboarding] Successfully completed');
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error completing onboarding:', error);
+    console.error('[Complete Onboarding] Unexpected error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
