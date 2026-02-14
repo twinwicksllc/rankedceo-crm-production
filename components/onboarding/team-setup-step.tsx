@@ -49,7 +49,7 @@ export function TeamSetupStep() {
         body: JSON.stringify({ step: 3 }),
       });
 
-      router.refresh();
+      window.location.reload();
     } catch (error) {
       console.error('Error inviting team:', error);
     } finally {
@@ -64,7 +64,7 @@ export function TeamSetupStep() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ step: 3 }),
       });
-      router.refresh();
+      window.location.reload();
     } catch (error) {
       console.error('Error skipping step:', error);
     }
@@ -77,7 +77,7 @@ export function TeamSetupStep() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ step: 1 }),
       });
-      router.refresh();
+      window.location.reload();
     } catch (error) {
       console.error('Error going back:', error);
     }

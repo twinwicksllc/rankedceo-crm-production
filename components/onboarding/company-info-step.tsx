@@ -37,7 +37,7 @@ export function CompanyInfoStep({ accountInfo }: CompanyInfoStepProps) {
       });
 
       if (response.ok) {
-        router.refresh();
+        window.location.reload();
       }
     } catch (error) {
       console.error('Error updating company info:', error);
@@ -53,7 +53,7 @@ export function CompanyInfoStep({ accountInfo }: CompanyInfoStepProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ step: 0 }),
       });
-      router.refresh();
+      window.location.reload();
     } catch (error) {
       console.error('Error going back:', error);
     }

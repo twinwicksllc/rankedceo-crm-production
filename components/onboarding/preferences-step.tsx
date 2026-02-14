@@ -61,7 +61,7 @@ export function PreferencesStep({ accountInfo }: PreferencesStepProps) {
         body: JSON.stringify({ step: 4 }),
       });
 
-      router.refresh();
+      window.location.reload();
     } catch (error) {
       console.error('Error updating preferences:', error);
     } finally {
@@ -76,7 +76,7 @@ export function PreferencesStep({ accountInfo }: PreferencesStepProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ step: 2 }),
       });
-      router.refresh();
+      window.location.reload();
     } catch (error) {
       console.error('Error going back:', error);
     }

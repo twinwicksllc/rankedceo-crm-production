@@ -16,7 +16,7 @@ export function WelcomeStep() {
       });
 
       if (response.ok) {
-        router.refresh();
+        window.location.reload();
       }
     } catch (error) {
       console.error('Error updating step:', error);
