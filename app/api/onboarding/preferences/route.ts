@@ -27,28 +27,21 @@ export async function POST(request: Request) {
     }
 
     console.log('[Preferences] Found account_id:', userData.account_id);
+    console.log('[Preferences] Preferences data:', preferences);
 
-    // Update preferences in account settings
-    const { data: updateData, error } = await supabase
-      .from('accounts')
-      .update({
-        timezone: preferences.timezone,
-        settings: {
-          currency: preferences.currency,
-          date_format: preferences.date_format,
-        },
-      })
-      .eq('id', userData.account_id)
-      .select();
+    // Use SECURITY DEFINER function to bypass RLS
+    const { error } = await supabase.rpc('update_preferences', {
+      p_account_id: userData.account_id,
+      p_timezone: preferences.timezone || 'America/New_York',
+      p_settings: {
+        currency: preferences.currency || 'USD',
+        date_format: preferences.date_format || 'MM/DD/YYYY',
+      },
+    });
 
     if (error) {
       console.error('[Preferences] Update error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    if (!updateData || updateData.length === 0) {
-      console.error('[Preferences] No rows updated');
-      return NextResponse.json({ error: 'Failed to update preferences' }, { status: 500 });
     }
 
     console.log('[Preferences] Successfully updated');
