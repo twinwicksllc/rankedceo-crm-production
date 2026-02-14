@@ -11,13 +11,13 @@ Your previous Gemini API key was exposed in the GitHub repository because it was
 1. **NEVER hardcode API keys** in any file:
    ```typescript
    // ❌ BAD - Key is in the file
-   const API_KEY = "AIzaSyCohhHLDMHhM4McUrZ6_t7bazs8mWWOTlE"
+   const API_KEY = "AIza...NEVER_COMMIT_KEYS"
    ```
 
 2. **NEVER pass API keys** as command line arguments:
    ```bash
    # ❌ BAD - Key appears in process list
-   ./scripts/consult-gemini.sh AIzaSyCohhHLDMHhM4McUrZ6_t7bazs8mWWOTlE "question"
+   ./scripts/consult-gemini.sh "AIza...YOUR_KEY" "question"
    ```
 
 3. **NEVER log API keys** to console or files:
