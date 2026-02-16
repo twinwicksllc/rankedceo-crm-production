@@ -53,10 +53,25 @@ export async function middleware(request: NextRequest) {
   // ── 3. Smile subdomain → rewrite to /smile/* ─────────────────────────
   if (subdomain === 'smile') {
     const url = request.nextUrl.clone()
+    const { pathname } = url
+
+    // Exclude auth/API routes from subdomain rewrite so both products can share auth
+    const excludedPaths = [
+      '/login',
+      '/signup',
+      '/api/auth',
+    ]
+
+    const isExcluded = excludedPaths.some(path => pathname.startsWith(path))
+
+    // Don't rewrite excluded paths (auth routes)
+    if (isExcluded) {
+      return response
+    }
 
     // Don't double-prefix if the path already starts with /smile
-    if (!url.pathname.startsWith('/smile')) {
-      url.pathname = `/smile${url.pathname}`
+    if (!pathname.startsWith('/smile')) {
+      url.pathname = `/smile${pathname}`
     }
 
     // Build a rewrite response and copy over the auth cookies
