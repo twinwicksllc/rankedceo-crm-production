@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { useState } from 'react'
 import {
   BarChart,
   Bar,
@@ -20,7 +21,12 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Sparkles, Users, Target, TrendingUp, Clock, AlertCircle, Plus } from 'lucide-react'
+import { Sparkles, Users, Target, TrendingUp, Clock, AlertCircle, Plus, Copy, Check } from 'lucide-react'
+
+interface SmileDashboardProps {
+  userId: string
+  assessmentCount: number
+}
 
 // Sample data for Patient Qualification
 const patientQualificationData = [
@@ -125,7 +131,48 @@ const qualificationMetrics = [
   },
 ]
 
-export default function SmilePage() {
+export default function SmilePage({ userId, assessmentCount }: SmileDashboardProps) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopyLink = async () => {
+    const link = `${window.location.origin}/smile/assessment?dentistId=${userId}`
+    await navigator.clipboard.writeText(link)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  // Dynamic qualification metrics
+  const qualificationMetrics = [
+    {
+      label: 'Total Assessments',
+      value: assessmentCount,
+      subtext: 'Patient submissions',
+      icon: Users,
+      color: 'bg-purple-100 text-purple-700',
+    },
+    {
+      label: 'Qualification Rate',
+      value: '88%',
+      subtext: 'vs. 75% last month',
+      icon: Target,
+      color: 'bg-purple-50 text-purple-600',
+    },
+    {
+      label: 'Avg Case Value',
+      value: '$6,866',
+      subtext: 'Based on mix',
+      icon: TrendingUp,
+      color: 'bg-purple-100 text-purple-700',
+    },
+    {
+      label: 'Pending Consults',
+      value: 15,
+      subtext: 'Awaiting follow-up',
+      icon: Clock,
+      color: 'bg-purple-50 text-purple-600',
+    },
+  ]
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-25">
       {/* Header */}
@@ -153,10 +200,11 @@ export default function SmilePage() {
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Quick Action - New Patient Assessment */}
-        <div className="mb-6">
-          <Link href="/smile/assessment">
-            <Card className="border-purple-300 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 transition-all cursor-pointer">
+        {/* Quick Actions Row */}
+        <div className="mb-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* New Patient Assessment */}
+          <Link href="/smile/assessment" className="lg:col-span-2">
+            <Card className="h-full border-purple-300 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 transition-all cursor-pointer">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
@@ -178,6 +226,37 @@ export default function SmilePage() {
               </CardContent>
             </Card>
           </Link>
+
+          {/* Copy Patient Link */}
+          <Card className="border-purple-200 bg-white hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex flex-col h-full justify-between">
+                <div className="mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">Share Patient Link</h3>
+                  <p className="text-sm text-gray-600">
+                    Copy this link to send to patients for assessments
+                  </p>
+                </div>
+                <Button
+                  onClick={handleCopyLink}
+                  className="w-full bg-purple-600 hover:bg-purple-700"
+                  disabled={copied}
+                >
+                  {copied ? (
+                    <>
+                      <Check className="mr-2 h-4 w-4" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copy Patient Link
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Top Metrics */}
@@ -394,11 +473,12 @@ export default function SmilePage() {
             <Sparkles className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
             <div>
               <h3 className="font-semibold text-gray-900">
-                Welcome to Smile MakeOver
+                AI-Powered Patient Qualification Assistant
               </h3>
               <p className="text-sm text-gray-600 mt-1">
-                This dashboard is designed to help you track patient qualifications and manage your case mix revenue targets. 
-                Your AI Employee is continuously working to optimize patient follow-ups and increase conversion rates.
+                Smile streamlines patient intake with intelligent assessments and automated qualification. 
+                Share your unique patient link to collect comprehensive smile assessments, track conversion rates, 
+                and optimize your case mix for maximum revenue potential.
               </p>
             </div>
           </div>

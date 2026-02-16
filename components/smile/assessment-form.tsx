@@ -74,9 +74,10 @@ const medicalConditionOptions = [
 
 interface SmileAssessmentFormProps {
   onSubmit: (data: AssessmentFormData) => Promise<void>
+  dentistId?: string
 }
 
-export function SmileAssessmentForm({ onSubmit }: SmileAssessmentFormProps) {
+export function SmileAssessmentForm({ onSubmit, dentistId }: SmileAssessmentFormProps) {
   const [step, setStep] = useState(1)
   const [formData, setFormData] = useState<AssessmentFormData>(initialFormData)
   const [isSubmitting, setIsSubmitting] = useState(false)

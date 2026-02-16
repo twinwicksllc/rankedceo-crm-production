@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
 import { SmileAssessmentForm } from '@/components/smile/assessment-form'
 import { submitSmileAssessment } from '@/lib/actions/smile-assessment'
 import { ArrowLeft } from 'lucide-react'
@@ -10,33 +9,29 @@ import { Badge } from '@/components/ui/badge'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-async function AssessmentClientWrapper() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect('/login')
-  }
-
+async function AssessmentClientWrapper({ dentistId }: { dentistId?: string }) {
   // Server action wrapper for client component
   async function handleSubmit(formData: any) {
     'use server'
-    const result = await submitSmileAssessment(formData)
+    const result = await submitSmileAssessment({ ...formData, dentistId })
     
     if (result.success) {
-      redirect('/smile?success=assessment_submitted')
+      redirect('/smile/assessment/success')
     } else {
       // In production, you'd handle this more gracefully
       throw new Error(result.error || 'Submission failed')
     }
   }
 
-  return <SmileAssessmentForm onSubmit={handleSubmit} />
+  return <SmileAssessmentForm onSubmit={handleSubmit} dentistId={dentistId} />
 }
 
-export default async function SmileAssessmentPage() {
+export default async function SmileAssessmentPage({
+  searchParams,
+}: {
+  searchParams: { dentistId?: string }
+}) {
+  const dentistId = searchParams.dentistId
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-25">
       {/* Header */}
@@ -73,11 +68,11 @@ export default async function SmileAssessmentPage() {
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">New Patient Assessment</h1>
           <p className="text-gray-500">
-            Complete this comprehensive assessment to begin your patient's smile transformation journey
+            Complete this comprehensive assessment to begin your smile transformation journey
           </p>
         </div>
 
-        <AssessmentClientWrapper />
+        <AssessmentClientWrapper dentistId={dentistId} />
 
         {/* HIPAA Notice */}
         <div className="mt-8 rounded-lg border border-purple-200 bg-purple-50 p-4">

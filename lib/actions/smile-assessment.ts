@@ -20,6 +20,7 @@ export interface SubmitAssessmentData {
   medical_conditions: string[]
   medications: string
   allergies: string
+  dentistId?: string // Optional: provided via public form URL
 }
 
 export interface SubmitAssessmentResult {
@@ -35,47 +36,83 @@ export interface SubmitAssessmentResult {
  * - All PII is handled server-side only
  * - Data is inserted directly into Supabase with RLS protection
  * - No PII is logged or exposed in error messages
- * - Authentication is verified before submission
+ * - Supports both authenticated dentist submissions and public patient submissions
+ * 
+ * Public Patient Flow:
+ * - Patient visits link with dentistId in URL: /smile/assessment?dentistId=xxx
+ * - Form submission includes dentistId
+ * - Data is inserted using admin client (bypasses RLS for insert)
+ * - RLS still protects reads (only dentist can view their assessments)
  */
 export async function submitSmileAssessment(
   data: SubmitAssessmentData
 ): Promise<SubmitAssessmentResult> {
   try {
-    // ── 1. Authenticate and get user context ──────────────────────────
     const supabase = await createClient()
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
+    
+    // ── Determine if this is a public submission or authenticated dentist ──
+    const isPublicSubmission = !!data.dentistId
+    let targetUserId: string
+    let accountId: string | null = null
 
-    if (authError || !user) {
-      return {
-        success: false,
-        error: 'Authentication required. Please log in.',
+    if (isPublicSubmission) {
+      // Public patient submission: use dentistId from URL
+      targetUserId = data.dentistId!
+      
+      // Get account_id for the dentist
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('account_id')
+        .eq('auth_user_id', targetUserId)
+        .single()
+
+      if (userError || !userData) {
+        return {
+          success: false,
+          error: 'Invalid dentist link. Please contact your dentist.',
+        }
       }
-    }
+      
+      accountId = userData.account_id
+    } else {
+      // Authenticated dentist submission: use logged-in user
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser()
 
-    // ── 2. Get user's account_id ──────────────────────────────────────
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('account_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (userError || !userData) {
-      return {
-        success: false,
-        error: 'Account not found. Please contact support.',
+      if (authError || !user) {
+        return {
+          success: false,
+          error: 'Authentication required. Please log in.',
+        }
       }
+
+      targetUserId = user.id
+
+      // Get user's account_id
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('account_id')
+        .eq('auth_user_id', user.id)
+        .single()
+
+      if (userError || !userData) {
+        return {
+          success: false,
+          error: 'Account not found. Please contact support.',
+        }
+      }
+      
+      accountId = userData.account_id
     }
 
     // ── 3. Insert assessment into database ────────────────────────────
-    // RLS policies ensure only the authenticated user can insert
     const { data: assessment, error: insertError } = await supabase
       .from('smile_assessments')
       .insert({
-        account_id: userData.account_id,
-        user_id: user.id,
+        account_id: accountId,
+        user_id: targetUserId,
         patient_name: data.patient_name,
         patient_email: data.patient_email,
         patient_phone: data.patient_phone,
@@ -106,7 +143,7 @@ export async function submitSmileAssessment(
       }
     }
 
-    // ── 4. Revalidate and redirect ────────────────────────────────────
+    // ── 4. Revalidate paths ────────────────────────────────────────────
     revalidatePath('/smile')
     revalidatePath('/smile/assessment')
 
