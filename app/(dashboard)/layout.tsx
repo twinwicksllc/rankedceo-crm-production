@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardNav } from '@/components/dashboard-nav'
 import { LogOut } from 'lucide-react'
@@ -20,8 +21,14 @@ export default async function DashboardLayout({
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
         <div className="p-6">
-          <h1 className="text-xl font-bold text-gray-900">RankedCEO</h1>
-          <p className="text-sm text-gray-500">CRM</p>
+          <Image
+            src="/ranked_logo.png"
+            alt="RankedCEO"
+            width={200}
+            height={80}
+            className="h-10 w-auto"
+            priority
+          />
         </div>
         
         <DashboardNav />

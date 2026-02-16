@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { ButtonLanding as Button } from '@/components/ui/button-landing'
 import { CardLanding as Card, CardContentLanding as CardContent, CardDescriptionLanding as CardDescription, CardHeaderLanding as CardHeader, CardTitleLanding as CardTitle } from '@/components/ui/card-landing'
 import { BadgeLanding as Badge } from '@/components/ui/badge-landing'
@@ -27,12 +28,16 @@ export default function LandingPage() {
       {/* Navigation */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60" role="banner">
         <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary">
-              <span className="text-lg font-bold text-primary-foreground">R</span>
-            </div>
-            <span className="text-xl font-bold">RankedCEO</span>
-          </div>
+          <Link href="/" className="flex items-center gap-2">
+            <Image
+              src="/ranked_logo.png"
+              alt="RankedCEO"
+              width={150}
+              height={40}
+              className="h-8 w-auto"
+              priority
+            />
+          </Link>
           <nav className="hidden gap-6 md:flex">
             <Link href="#features" className="text-sm font-medium transition-colors hover:text-primary">
               Features

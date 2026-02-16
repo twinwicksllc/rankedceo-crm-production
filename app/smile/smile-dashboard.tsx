@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import {
   BarChart,
   Bar,
@@ -127,14 +128,18 @@ export default function SmilePage() {
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-25">
       {/* Header */}
       <div className="border-b border-purple-200 bg-white bg-opacity-80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-purple-600 to-purple-700">
-                <Sparkles className="h-6 w-6 text-white" />
-              </div>
+            <div className="flex items-center gap-4">
+              <Image
+                src="/smile_logo.png"
+                alt="Smile MakeOver"
+                width={120}
+                height={48}
+                className="h-12 w-auto"
+                priority
+              />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Smile MakeOver</h1>
                 <p className="text-sm text-purple-600 font-medium">Dentist Dashboard</p>
               </div>
             </div>
