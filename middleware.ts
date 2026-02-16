@@ -1,84 +1,116 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { updateSession } from '@/lib/supabase/middleware'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
+
+// ---------------------------------------------------------------------------
+// Multi-tenant middleware
+// ---------------------------------------------------------------------------
+// Two products share one Next.js app:
+//   • smile.rankedceo.com  →  app/smile/*   (Smile Dentist Dashboard)
+//   • rankedceo.com / crm.rankedceo.com  →  app/*  (Main CRM)
+//
+// The middleware:
+//   1. Refreshes the Supabase session (cookies) on every request.
+//   2. Detects the subdomain from the Host header.
+//   3. For "smile" subdomain → rewrites to /smile/* internally.
+//   4. For CRM domain → passes through to existing routes.
+// ---------------------------------------------------------------------------
 
 export async function middleware(request: NextRequest) {
-  // Get the hostname from the request
+  // ── 1. Refresh Supabase auth session ──────────────────────────────────
+  // We build the Supabase client inline so we can attach cookies to
+  // whichever response we ultimately return (next OR rewrite).
+  let response = NextResponse.next({ request: { headers: request.headers } })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          request.cookies.set({ name, value, ...options })
+          response = NextResponse.next({ request: { headers: request.headers } })
+          response.cookies.set({ name, value, ...options })
+        },
+        remove(name: string, options: CookieOptions) {
+          request.cookies.set({ name, value: '', ...options })
+          response = NextResponse.next({ request: { headers: request.headers } })
+          response.cookies.set({ name, value: '', ...options })
+        },
+      },
+    }
+  )
+
+  // Touch the session so Supabase refreshes tokens if needed
+  await supabase.auth.getUser()
+
+  // ── 2. Detect subdomain ───────────────────────────────────────────────
   const hostname = request.headers.get('host') || ''
-  
-  // Extract subdomain from hostname
-  // Examples: smile.rankedceo.com -> smile | crm.rankedceo.com -> crm | localhost:3000 -> null
   const subdomain = extractSubdomain(hostname)
-  
-  // Handle subdomain-specific routing
+
+  // ── 3. Smile subdomain → rewrite to /smile/* ─────────────────────────
   if (subdomain === 'smile') {
-    // First, update the session to maintain authentication
-    const sessionResponse = await updateSession(request)
-    
-    // Rewrite to (smile) route group while keeping browser URL intact
     const url = request.nextUrl.clone()
-    url.pathname = `/smile${url.pathname}`
-    
-    // Create rewrite response that includes session cookies from sessionResponse
-    const rewriteResponse = NextResponse.rewrite(url)
-    
-    // Copy headers from session response to preserve auth cookies
-    sessionResponse.headers.forEach((value, key) => {
-      if (key.toLowerCase() === 'set-cookie') {
-        rewriteResponse.headers.append(key, value)
-      }
+
+    // Don't double-prefix if the path already starts with /smile
+    if (!url.pathname.startsWith('/smile')) {
+      url.pathname = `/smile${url.pathname}`
+    }
+
+    // Build a rewrite response and copy over the auth cookies
+    const rewrite = NextResponse.rewrite(url)
+    response.cookies.getAll().forEach((cookie) => {
+      rewrite.cookies.set(cookie.name, cookie.value)
     })
-    
-    return rewriteResponse
+    return rewrite
   }
-  
-  // Route: Standard CRM (crm.rankedceo.com, localhost, etc.) - existing behavior
-  // Pass through to existing session update middleware
-  return await updateSession(request)
+
+  // ── 4. CRM domain → pass through (existing routes) ───────────────────
+  return response
 }
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
 /**
- * Extract subdomain from hostname
- * @param hostname - The host header value (e.g., 'smile.rankedceo.com', 'smile.localhost:3000', 'crm.rankedceo.com', 'localhost:3000')
- * @returns The subdomain string, or null if no subdomain exists
+ * Extract subdomain from the Host header.
+ *
+ * smile.rankedceo.com  → "smile"
+ * crm.rankedceo.com    → "crm"
+ * smile.localhost:3000  → "smile"
+ * localhost:3000        → null
  */
 function extractSubdomain(hostname: string): string | null {
-  // Remove port if present
-  const host = hostname.split(':')[0]
-  
-  // Split by dots
+  const host = hostname.split(':')[0] // strip port
+
   const parts = host.split('.')
-  
-  // If less than 2 parts, it's localhost or invalid
-  if (parts.length < 2) {
-    return null
-  }
-  
-  // Special handling for localhost: if it's smile.localhost, return "smile"
+
+  // Plain localhost or bare IP
+  if (parts.length < 2) return null
+
+  // smile.localhost → "smile"
   if (parts.length === 2 && parts[1] === 'localhost') {
     return parts[0]
   }
-  
-  // Check if it's a known domain (rankedceo.com, etc.)
+
+  // sub.rankedceo.com → "sub"
   const knownDomains = ['rankedceo.com']
   const domain = parts.slice(-2).join('.')
-  
-  // If the last 2 parts match a known domain and there are more parts, extract subdomain
   if (knownDomains.includes(domain) && parts.length > 2) {
-    return parts[0] // Return first part as subdomain
+    return parts[0]
   }
-  
+
   return null
 }
 
+// ---------------------------------------------------------------------------
+// Matcher – skip static assets
+// ---------------------------------------------------------------------------
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
-     */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
