@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 import {
   BarChart,
   Bar,
@@ -18,7 +19,8 @@ import {
 } from 'recharts'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Sparkles, Users, Target, TrendingUp, Clock, AlertCircle } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Sparkles, Users, Target, TrendingUp, Clock, AlertCircle, Plus } from 'lucide-react'
 
 // Sample data for Patient Qualification
 const patientQualificationData = [
@@ -151,6 +153,33 @@ export default function SmilePage() {
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* Quick Action - New Patient Assessment */}
+        <div className="mb-6">
+          <Link href="/smile/assessment">
+            <Card className="border-purple-300 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 transition-all cursor-pointer">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-white bg-opacity-20">
+                      <Plus className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">New Patient Assessment</h3>
+                      <p className="text-sm text-purple-100">Start a comprehensive intake form</p>
+                    </div>
+                  </div>
+                  <Button
+                    size="lg"
+                    className="bg-white text-purple-700 hover:bg-purple-50"
+                  >
+                    Begin Assessment
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+
         {/* Top Metrics */}
         <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {qualificationMetrics.map((metric) => {
