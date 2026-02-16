@@ -55,12 +55,13 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone()
     const { pathname } = url
 
-    // Exclude auth/API/onboarding routes from subdomain rewrite
+    // Exclude auth/API/dashboard/onboarding routes from subdomain rewrite
     // These are shared by both products and should not be rewritten
     const excludedPaths = [
       '/login',
       '/signup',
       '/onboarding',
+      '/dashboard',
       '/api/auth',
     ]
 
