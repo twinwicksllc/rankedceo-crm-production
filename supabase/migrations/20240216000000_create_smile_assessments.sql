@@ -44,9 +44,15 @@ TO authenticated
 USING (auth.uid() = user_id);
 
 -- Allow authenticated dentists to update/delete their own assessments
-CREATE POLICY "Dentists can manage their own assessments" 
+CREATE POLICY "Dentists can update their own assessments" 
 ON public.smile_assessments
-FOR UPDATE, DELETE
+FOR UPDATE
+TO authenticated
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Dentists can delete their own assessments" 
+ON public.smile_assessments
+FOR DELETE
 TO authenticated
 USING (auth.uid() = user_id);
 
