@@ -33,15 +33,23 @@ export class CampaignService {
   private sendGridService: SendGridService;
 
   constructor() {
-    this.sendGridService = new SendGridService(process.env.SENDGRID_API_KEY || '');
-  this.supabase = createClient();
+      this.sendGridService = new SendGridService(process.env.SENDGRID_API_KEY || '');
+    // Don't initialize client in constructor - will be lazy-loaded
+    this.supabase = null as any;
+  }
+
+  private async getClient() {
+    if (!this.supabase) {
+      this.supabase = await createClient();
+    }
+    return this.supabase;
   }
 
   /**
    * Helper method to get the current user's account_id and user_id
    */
   private async getUserInfo(): Promise<{ accountId: string; userId: string }> {
-    const userData = await this.supabase.auth.getUser();
+    const userData = await (await this.getClient()).auth.getUser();
     if (!userData.data.user) {
       throw new Error('User not authenticated');
     }

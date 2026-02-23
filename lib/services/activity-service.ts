@@ -7,7 +7,15 @@ export class ActivityService {
   private supabase;
 
   constructor() {
-    this.supabase = createClient();
+    // Don't initialize client in constructor - will be lazy-loaded
+    this.supabase = null as any;
+  }
+
+  private async getClient() {
+    if (!this.supabase) {
+      this.supabase = await createClient();
+    }
+    return this.supabase;
   }
 
   /**
@@ -17,7 +25,7 @@ export class ActivityService {
     // Validate input
     const validatedInput = createActivitySchema.parse(input);
 
-    const client = await this.supabase;
+    const client = await this.getClient();
     
     // Get current account
     const { data: { user } } = await client.auth.getUser();
@@ -60,7 +68,7 @@ export class ActivityService {
    */
   async getActivities(filters: ActivityFilters = {}): Promise<ActivityWithRelations[]> {
     const validatedFilters = activityFiltersSchema.parse(filters);
-    const client = await this.supabase;
+    const client = await this.getClient();
 
     let query = client
       .from('activities')
@@ -118,7 +126,7 @@ export class ActivityService {
    * Get a single activity by ID
    */
   async getActivityById(id: string): Promise<ActivityWithRelations | null> {
-    const client = await this.supabase;
+    const client = await this.getClient();
     
     const { data, error } = await client
       .from('activities')
@@ -174,7 +182,7 @@ export class ActivityService {
       validatedInput.completed_at = new Date().toISOString();
     }
 
-    const client = await this.supabase;
+    const client = await this.getClient();
     
     const { data, error } = await client
       .from('activities')
@@ -194,7 +202,7 @@ export class ActivityService {
    * Delete an activity
    */
   async deleteActivity(id: string): Promise<void> {
-    const client = await this.supabase;
+    const client = await this.getClient();
     
     const { error } = await client
       .from('activities')
@@ -210,7 +218,7 @@ export class ActivityService {
    * Get activity statistics
    */
   async getActivityStats() {
-    const client = await this.supabase;
+    const client = await this.getClient();
     
     const { data, error } = await client
       .from('activities')
@@ -228,7 +236,7 @@ export class ActivityService {
       completed: 0,
     };
 
-    data?.forEach(activity => {
+    data?.forEach((activity: any) => {
       // Count by type
       const type = activity.type as ActivityType;
       if (!stats.byType[type]) {
@@ -259,7 +267,7 @@ export class ActivityService {
    * Get upcoming activities (tasks with due dates)
    */
   async getUpcomingActivities(limit: number = 10): Promise<ActivityWithRelations[]> {
-    const client = await this.supabase;
+    const client = await this.getClient();
     
     const { data, error } = await client
       .from('activities')

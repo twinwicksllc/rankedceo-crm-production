@@ -1,0 +1,22 @@
+
+> rankedceo-crm@0.1.0 build
+> next build
+
+  ▲ Next.js 14.2.18
+  - Environments: .env.local, .env.production
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+Failed to compile.
+
+./lib/services/activity-service.ts:239:19
+Type error: Parameter 'activity' implicitly has an 'any' type.
+
+[0m [90m 237 |[39m     }[33m;[39m[0m
+[0m [90m 238 |[39m[0m
+[0m[31m[1m>[22m[39m[90m 239 |[39m     data[33m?[39m[33m.[39mforEach(activity [33m=>[39m {[0m
+[0m [90m     |[39m                   [31m[1m^[22m[39m[0m
+[0m [90m 240 |[39m       [90m// Count by type[39m[0m
+[0m [90m 241 |[39m       [36mconst[39m type [33m=[39m activity[33m.[39mtype [36mas[39m [33mActivityType[39m[33m;[39m[0m
+[0m [90m 242 |[39m       [36mif[39m ([33m![39mstats[33m.[39mbyType[type]) {[0m

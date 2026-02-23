@@ -6,13 +6,21 @@ export class CompanyService {
   private supabase;
 
   constructor() {
-    this.supabase = createClient();
+    // Don't initialize client in constructor - will be lazy-loaded
+    this.supabase = null as any;
+  }
+
+  private async getClient() {
+    if (!this.supabase) {
+      this.supabase = await createClient();
+    }
+    return this.supabase;
   }
 
   async createCompany(input: CreateCompanyInput): Promise<Company> {
     const validatedInput = createCompanySchema.parse(input);
 
-    const client = await this.supabase;
+    const client = await this.getClient();
     
     const { data: { user } } = await client.auth.getUser();
     if (!user) {
@@ -47,7 +55,7 @@ export class CompanyService {
   }
 
   async getCompanies(filters: any = {}): Promise<Company[]> {
-    const client = await this.supabase;
+    const client = await this.getClient();
     
     let query = client
       .from('companies')
@@ -68,7 +76,7 @@ export class CompanyService {
   }
 
   async getCompanyById(id: string): Promise<Company | null> {
-    const client = await this.supabase;
+    const client = await this.getClient();
     
     const { data, error } = await client
       .from('companies')
@@ -88,7 +96,7 @@ export class CompanyService {
 
   async updateCompany(id: string, input: UpdateCompanyInput): Promise<Company> {
     const validatedInput = updateCompanySchema.parse(input);
-    const client = await this.supabase;
+    const client = await this.getClient();
 
     const { data, error } = await client
       .from('companies')
@@ -105,7 +113,7 @@ export class CompanyService {
   }
 
   async deleteCompany(id: string): Promise<void> {
-    const client = await this.supabase;
+    const client = await this.getClient();
     
     const { error } = await client
       .from('companies')
@@ -118,7 +126,7 @@ export class CompanyService {
   }
 
   async getCompanyStats() {
-    const client = await this.supabase;
+    const client = await this.getClient();
     
     const { data, error } = await client
       .from('companies')
@@ -135,7 +143,7 @@ export class CompanyService {
       prospect: 0,
     };
 
-    data?.forEach(company => {
+    data?.forEach((company: any) => {
       if (company.status === 'active') stats.active++;
       if (company.status === 'inactive') stats.inactive++;
       if (company.status === 'prospect') stats.prospect++;

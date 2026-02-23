@@ -7,15 +7,23 @@ export class ContactService {
   private supabase;
 
   constructor() {
-    this.supabase = createClient();
+    // Don't initialize client in constructor - will be lazy-loaded
+    this.supabase = null as any;
+  }
+
+  private async getClient() {
+    if (!this.supabase) {
+      this.supabase = await createClient();
+    }
+    return this.supabase;
   }
 
   async createContact(input: CreateContactInput): Promise<Contact> {
     const validatedInput = createContactSchema.parse(input);
 
-    const client = await this.supabase;
+    const client = await this.getClient();
     
-    const { data: { user } } = await client.auth.getUser();
+    const { data: { user } } = await (await this.getClient()).auth.getUser();
     if (!user) {
       throw new Error('User not authenticated');
     }
@@ -48,7 +56,7 @@ export class ContactService {
   }
 
   async getContacts(filters: any = {}): Promise<Contact[]> {
-    const client = await this.supabase;
+    const client = await this.getClient();
     
     let query = client
       .from('contacts')
@@ -73,7 +81,7 @@ export class ContactService {
   }
 
   async getContactById(id: string): Promise<Contact | null> {
-    const client = await this.supabase;
+    const client = await this.getClient();
     
     const { data, error } = await client
       .from('contacts')
@@ -93,7 +101,7 @@ export class ContactService {
 
   async updateContact(id: string, input: UpdateContactInput): Promise<Contact> {
     const validatedInput = updateContactSchema.parse(input);
-    const client = await this.supabase;
+    const client = await this.getClient();
 
     const { data, error } = await client
       .from('contacts')
@@ -110,7 +118,7 @@ export class ContactService {
   }
 
   async deleteContact(id: string): Promise<void> {
-    const client = await this.supabase;
+    const client = await this.getClient();
     
     const { error } = await client
       .from('contacts')
@@ -123,7 +131,7 @@ export class ContactService {
   }
 
   async getContactStats() {
-    const client = await this.supabase;
+    const client = await this.getClient();
     
     const { data, error } = await client
       .from('contacts')
@@ -140,7 +148,7 @@ export class ContactService {
       prospect: 0,
     };
 
-    data?.forEach(contact => {
+    data?.forEach((contact: any) => {
       if (contact.status === 'active') stats.active++;
       if (contact.status === 'inactive') stats.inactive++;
       if (contact.status === 'prospect') stats.prospect++;

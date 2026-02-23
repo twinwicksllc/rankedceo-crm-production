@@ -6,13 +6,21 @@ export class DealService {
   private supabase;
 
   constructor() {
-    this.supabase = createClient();
+    // Don't initialize client in constructor - will be lazy-loaded
+    this.supabase = null as any;
+  }
+
+  private async getClient() {
+    if (!this.supabase) {
+      this.supabase = await createClient();
+    }
+    return this.supabase;
   }
 
   async createDeal(input: CreateDealInput): Promise<Deal> {
     const validatedInput = createDealSchema.parse(input);
 
-    const client = await this.supabase;
+    const client = await this.getClient();
     
     const { data: { user } } = await client.auth.getUser();
     if (!user) {
@@ -47,7 +55,7 @@ export class DealService {
   }
 
   async getDeals(filters: any = {}): Promise<Deal[]> {
-    const client = await this.supabase;
+    const client = await this.getClient();
     
     let query = client
       .from('deals')
@@ -76,7 +84,7 @@ export class DealService {
   }
 
   async getDealById(id: string): Promise<Deal | null> {
-    const client = await this.supabase;
+    const client = await this.getClient();
     
     const { data, error } = await client
       .from('deals')
@@ -96,7 +104,7 @@ export class DealService {
 
   async updateDeal(id: string, input: UpdateDealInput): Promise<Deal> {
     const validatedInput = updateDealSchema.parse(input);
-    const client = await this.supabase;
+    const client = await this.getClient();
 
     const { data, error } = await client
       .from('deals')
@@ -113,7 +121,7 @@ export class DealService {
   }
 
   async deleteDeal(id: string): Promise<void> {
-    const client = await this.supabase;
+    const client = await this.getClient();
     
     const { error } = await client
       .from('deals')
@@ -126,7 +134,7 @@ export class DealService {
   }
 
   async getDealStats() {
-    const client = await this.supabase;
+    const client = await this.getClient();
     
     const { data, error } = await client
       .from('deals')
@@ -145,7 +153,7 @@ export class DealService {
       activeCount: 0,
     };
 
-    data?.forEach(deal => {
+    data?.forEach((deal: any) => {
       stats.totalValue += deal.value || 0;
       
       if (deal.stage === 'Won') {
