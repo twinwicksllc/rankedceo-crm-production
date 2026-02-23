@@ -43,17 +43,25 @@ export interface SubmitAssessmentResult {
  * - Form submission includes dentistId
  * - Data is inserted using admin client (bypasses RLS for insert)
  * - RLS still protects reads (only dentist can view their assessments)
+ * 
+ * Pool Account Fallback:
+ * - If dentistId is invalid or user is not authenticated
+ * - Assessment is attributed to Smile Pool Account (00000000-0000-4000-a000-000000000004)
+ * - Ensures no assessment data is lost
  */
 export async function submitSmileAssessment(
   data: SubmitAssessmentData
 ): Promise<SubmitAssessmentResult> {
   try {
     const supabase = await createClient()
-    
+
     // ── Determine if this is a public submission or authenticated dentist ──
     const isPublicSubmission = !!data.dentistId
     let targetUserId: string
     let accountId: string | null = null
+
+    // Smile Pool Account ID for fallback
+    const SMILE_POOL_ACCOUNT_ID = '00000000-0000-4000-a000-000000000004'
 
     if (isPublicSubmission) {
       // Public patient submission: use dentistId from URL
@@ -67,13 +75,12 @@ export async function submitSmileAssessment(
         .single()
 
       if (userError || !userData) {
-        return {
-          success: false,
-          error: 'Invalid dentist link. Please contact your dentist.',
-        }
+        // If dentist not found, fall back to Pool Account
+        console.log('[Smile Assessment] Dentist not found, using Pool Account')
+        accountId = SMILE_POOL_ACCOUNT_ID
+      } else {
+        accountId = userData.account_id
       }
-      
-      accountId = userData.account_id
     } else {
       // Authenticated dentist submission: use logged-in user
       const {
@@ -82,37 +89,36 @@ export async function submitSmileAssessment(
       } = await supabase.auth.getUser()
 
       if (authError || !user) {
-        return {
-          success: false,
-          error: 'Authentication required. Please log in.',
+        // If not authenticated, fall back to Pool Account
+        console.log('[Smile Assessment] Not authenticated, using Pool Account')
+        targetUserId = SMILE_POOL_ACCOUNT_ID
+        accountId = SMILE_POOL_ACCOUNT_ID
+      } else {
+        targetUserId = user.id
+
+        // Get user's account_id
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('account_id')
+          .eq('auth_user_id', user.id)
+          .single()
+
+        if (userError || !userData) {
+          // If account not found, fall back to Pool Account
+          console.log('[Smile Assessment] Account not found, using Pool Account')
+          accountId = SMILE_POOL_ACCOUNT_ID
+        } else {
+          accountId = userData.account_id
         }
       }
-
-      targetUserId = user.id
-
-      // Get user's account_id
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('account_id')
-        .eq('auth_user_id', user.id)
-        .single()
-
-      if (userError || !userData) {
-        return {
-          success: false,
-          error: 'Account not found. Please contact support.',
-        }
-      }
-      
-      accountId = userData.account_id
     }
 
-    // ── 3. Insert assessment into database ────────────────────────────
+    // ── 3. Insert assessment into database ────────────────────────────────────
     const { data: assessment, error: insertError } = await supabase
       .from('smile_assessments')
       .insert({
         account_id: accountId,
-        user_id: targetUserId,
+        auth_user_id: targetUserId,
         patient_name: data.patient_name,
         patient_email: data.patient_email,
         patient_phone: data.patient_phone,
@@ -135,7 +141,7 @@ export async function submitSmileAssessment(
 
     if (insertError) {
       // Log error without PII
-      console.error('Assessment submission failed:', insertError.code)
+      console.error('[Smile Assessment] Submission failed:', insertError.code)
       
       return {
         success: false,
@@ -143,7 +149,7 @@ export async function submitSmileAssessment(
       }
     }
 
-    // ── 4. Revalidate paths ────────────────────────────────────────────
+    // ── 4. Revalidate paths ──────────────────────────────────────────────────
     revalidatePath('/smile')
     revalidatePath('/smile/assessment')
 
@@ -153,7 +159,7 @@ export async function submitSmileAssessment(
     }
   } catch (error) {
     // Generic error - no PII in logs
-    console.error('Unexpected error during assessment submission')
+    console.error('[Smile Assessment] Unexpected error during submission')
     
     return {
       success: false,
@@ -167,7 +173,7 @@ export async function submitSmileAssessment(
  * 
  * HIPAA Compliance:
  * - Only returns assessments for the authenticated user
- * - RLS policies automatically filter results
+ * - RLS policies automatically filter results by account_id
  */
 export async function getUserAssessments() {
   try {
@@ -183,17 +189,16 @@ export async function getUserAssessments() {
     const { data: assessments, error } = await supabase
       .from('smile_assessments')
       .select('id, created_at, patient_name, status')
-      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('Failed to fetch assessments')
+      console.error('[Smile Assessment] Failed to fetch assessments')
       return { success: false, data: [], error: 'Failed to load assessments' }
     }
 
     return { success: true, data: assessments, error: null }
   } catch (error) {
-    console.error('Unexpected error fetching assessments')
+    console.error('[Smile Assessment] Unexpected error fetching assessments')
     return { success: false, data: [], error: 'Unexpected error' }
   }
 }

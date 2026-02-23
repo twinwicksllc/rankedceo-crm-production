@@ -27,12 +27,19 @@ async function AssessmentClientWrapper({ dentistId }: { dentistId?: string }) {
 }
 
 export default async function SmileAssessmentPage({
-  searchParams,
-}: {
-  searchParams: { dentistId?: string }
-}) {
-  const dentistId = searchParams.dentistId
-  return (
+     searchParams,
+   }: {
+     searchParams: { dentistId?: string }
+   }) {
+     const dentistId = searchParams.dentistId
+     
+     // Pool Account ID for fallback (used if no dentistId in URL)
+     const POOL_ACCOUNT_ID = '00000000-0000-4000-a000-000000000004'
+     
+     // Use Pool Account ID if no dentistId provided
+     const finalDentistId = dentistId || POOL_ACCOUNT_ID
+     
+     return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-25">
       {/* Header */}
       <div className="border-b border-purple-200 bg-white bg-opacity-80 backdrop-blur-sm sticky top-0 z-10">
@@ -72,7 +79,7 @@ export default async function SmileAssessmentPage({
           </p>
         </div>
 
-        <AssessmentClientWrapper dentistId={dentistId} />
+        <AssessmentClientWrapper dentistId={finalDentistId} />
 
         {/* HIPAA Notice */}
         <div className="mt-8 rounded-lg border border-purple-200 bg-purple-50 p-4">
