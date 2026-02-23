@@ -148,11 +148,16 @@ export async function submitSmileAssessment(
         hint: insertError.hint,
       })
       
+      // Return detailed error for debugging (in production, sanitize this)
+      const errorMessage = `Error ${insertError.code}: ${insertError.message}`
+      console.error('[Smile Assessment] Returning error to client:', errorMessage)
+      
       // Provide specific error messages
       if (insertError.code === '42P01') {
         return {
           success: false,
           error: 'Database table not found. Please contact support.',
+          debug: errorMessage,
         }
       }
       
@@ -160,12 +165,22 @@ export async function submitSmileAssessment(
         return {
           success: false,
           error: 'Account not found. Please contact support.',
+          debug: errorMessage,
+        }
+      }
+      
+      if (insertError.code === '23502') {
+        return {
+          success: false,
+          error: 'Missing required field. Please fill all required fields.',
+          debug: errorMessage,
         }
       }
       
       return {
         success: false,
         error: 'Failed to submit assessment. Please try again.',
+        debug: errorMessage,
       }
     }
 
