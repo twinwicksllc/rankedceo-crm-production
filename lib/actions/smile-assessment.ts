@@ -140,8 +140,28 @@ export async function submitSmileAssessment(
       .single()
 
     if (insertError) {
-      // Log error without PII
-      console.error('[Smile Assessment] Submission failed:', insertError.code)
+      // Log error with more details for debugging
+      console.error('[Smile Assessment] Submission failed:', {
+        code: insertError.code,
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint,
+      })
+      
+      // Provide specific error messages
+      if (insertError.code === '42P01') {
+        return {
+          success: false,
+          error: 'Database table not found. Please contact support.',
+        }
+      }
+      
+      if (insertError.code === '23503') {
+        return {
+          success: false,
+          error: 'Account not found. Please contact support.',
+        }
+      }
       
       return {
         success: false,
