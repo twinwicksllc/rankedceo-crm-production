@@ -72,6 +72,7 @@ export async function submitSmileAssessment(
         .from('users')
         .select('account_id')
         .eq('auth_user_id', targetUserId)
+        .single()
 
       if (userError || !userData) {
         // If dentist not found, fall back to Pool Account
@@ -100,6 +101,7 @@ export async function submitSmileAssessment(
           .from('users')
           .select('account_id')
           .eq('auth_user_id', user.id)
+          .single()
 
         if (userError || !userData) {
           // If account not found, fall back to Pool Account
@@ -133,7 +135,7 @@ export async function submitSmileAssessment(
         medications: data.medications || null,
         allergies: data.allergies || null,
         status: 'pending',
-      }, { returning: 'minimal' })
+      })
 
     if (insertError) {
       // Log error with more details for debugging
@@ -153,7 +155,6 @@ export async function submitSmileAssessment(
         return {
           success: false,
           error: 'Database table not found. Please contact support.',
-          debug: errorMessage,
         }
       }
       
@@ -161,7 +162,6 @@ export async function submitSmileAssessment(
         return {
           success: false,
           error: 'Account not found. Please contact support.',
-          debug: errorMessage,
         }
       }
       
@@ -169,14 +169,12 @@ export async function submitSmileAssessment(
         return {
           success: false,
           error: 'Missing required field. Please fill all required fields.',
-          debug: errorMessage,
         }
       }
       
       return {
         success: false,
         error: 'Failed to submit assessment. Please try again.',
-        debug: errorMessage,
       }
     }
 
