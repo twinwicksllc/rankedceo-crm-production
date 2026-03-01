@@ -69,9 +69,25 @@
 - [x] Verify build passes
 - [x] Commit and push changes
 
-### Phase 4: Add agent_conversations Database Migration [ ]
+### Phase 4: Add agent_conversations Database Migration [x]
 - [x] Create database migration for agent_conversations table
 - [x] Create AgentConversationService for managing conversations
 - [x] Update chat API route to use conversation service
 - [x] Verify build passes
-- [ ] Commit and push changes
+- [x] Commit and push changes
+
+### Phase 3: Full End-to-End Booking Flow Testing [ ]
+- [ ] Run database migration in Supabase
+- [ ] Test 1: Chat Widget Visibility and Initialization
+- [ ] Test 2: Basic Conversation Flow
+- [ ] Test 3: Lead Information Extraction
+- [ ] Test 4: Booking Intent Detection
+- [ ] Test 5: Calendly Integration
+- [ ] Test 6: Conversation Persistence
+- [ ] Test 7: Multiple Conversations
+- [ ] Test 8: Error Handling
+- [ ] Test 9: Mobile Responsiveness
+- [ ] Test 10: Database Integrity
+- [ ] Document test results
+- [ ] Fix any issues found
+- [ ] Re-test after fixes
