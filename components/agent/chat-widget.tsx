@@ -162,24 +162,27 @@ export function ChatWidget({
         setLeadCaptured(true)
       }
 
-      // ── Immediate Calendly trigger (short-circuit path from API) ───────────────
-      // CRITICAL: Only redirect if widget is STILL OPEN (user didn't close it)
-      // triggerBooking=true means the API already confirmed booking intent + info
+      // ── Calendly redirect (ONLY when triggerBooking is true) ───────────────
+      // CRITICAL: Only redirect if:
+      // 1. triggerBooking=true (API confirmed booking intent + info)
+      // 2. Widget is STILL OPEN (user didn't close it)
+      // 3. Widget was open when message was sent
+      // 
+      // IMPORTANT: Do NOT redirect just because calendlyUrl is present.
+      // The user must explicitly request booking (e.g., "book a call").
+      // This allows users to ask questions (like "pricing") after providing info.
       if (data.triggerBooking && data.calendlyUrl && isOpen && wasOpenWhenSent) {
+        console.log('[Chat Widget] Triggering Calendly redirect:', {
+          triggerBooking: data.triggerBooking,
+          calendlyUrl: data.calendlyUrl,
+          isOpen,
+          wasOpenWhenSent,
+        })
+        
         // Open Calendly in new tab after short delay so user sees the message
         setTimeout(() => {
           if (isOpen) { // Double-check before redirecting
-            window.open(data.calendlyUrl!, '_blank')
-          }
-        }, 800)
-        return
-      }
-
-      // ── Calendly redirect via calendlyUrl (normal AI path) ───────────────────────
-      // CRITICAL: Only redirect if widget is STILL OPEN
-      if (data.calendlyUrl && isOpen && wasOpenWhenSent) {
-        setTimeout(() => {
-          if (isOpen) { // Double-check before redirecting
+            console.log('[Chat Widget] Opening Calendly:', data.calendlyUrl)
             window.open(data.calendlyUrl!, '_blank')
           }
         }, 800)
@@ -188,6 +191,7 @@ export function ChatWidget({
 
       // ── Show inline Calendly iframe (fallback for show_booking action) ───────
       if (data.action === 'show_booking' && data.bookingData?.schedulingUrl) {
+        console.log('[Chat Widget] Showing inline Calendly iframe')
         setBookingUrl(data.bookingData.schedulingUrl)
         setShowBooking(true)
       }

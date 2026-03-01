@@ -53,16 +53,16 @@ export async function submitIndustryLead(
       accountId = POOL_ACCOUNTS[data.industry]
     }
 
-    // Insert the lead
+    // Insert the lead with NEW column names
     const { data: lead, error: insertError } = await supabase
       .from('industry_leads')
       .insert({
         account_id: accountId,
         auth_user_id: authUserId,
         industry: data.industry,
-        customer_name: data.customer_name,
-        customer_email: data.customer_email,
-        customer_phone: data.customer_phone,
+        lead_name: data.customer_name,
+        lead_email: data.customer_email,
+        lead_phone: data.customer_phone,
         service_address: data.service_address || null,
         city: data.city || null,
         state: data.state || null,
@@ -78,7 +78,7 @@ export async function submitIndustryLead(
       .single()
 
     if (insertError) {
-      console.error('[IndustryLead] Insert failed:', insertError.code)
+      console.error('[IndustryLead] Insert failed:', insertError.code, insertError.message)
       return { success: false, error: 'Failed to submit your request. Please try again.' }
     }
 
@@ -87,7 +87,7 @@ export async function submitIndustryLead(
 
     return { success: true, leadId: lead.id }
   } catch (err) {
-    console.error('[IndustryLead] Unexpected error during submission')
+    console.error('[IndustryLead] Unexpected error during submission:', err)
     return { success: false, error: 'An unexpected error occurred. Please try again.' }
   }
 }
@@ -136,8 +136,9 @@ export async function getIndustryLeads(
       query = query.eq('urgency', filters.urgency)
     }
     if (filters?.search) {
+      // Updated to use NEW column names
       query = query.or(
-        `customer_name.ilike.%${filters.search}%,customer_email.ilike.%${filters.search}%,customer_phone.ilike.%${filters.search}%,city.ilike.%${filters.search}%`
+        `lead_name.ilike.%${filters.search}%,lead_email.ilike.%${filters.search}%,lead_phone.ilike.%${filters.search}%,city.ilike.%${filters.search}%`
       )
     }
     if (filters?.date_from) {

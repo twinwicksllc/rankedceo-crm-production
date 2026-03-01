@@ -120,27 +120,24 @@ async function upsertChatLead(
     }
 
     console.log('[Agent Chat] Creating new lead from chat for industry:', industry)
-    console.log('[Agent Chat] Lead data to insert:', {
+    
+    const leadData = {
       account_id: accountId,
       industry,
       lead_name: leadInfo.name,
       lead_email: leadInfo.email || '',
       lead_phone: leadInfo.phone || '',
-    })
+      urgency: 'scheduled',
+      preferred_contact_method: leadInfo.email ? 'email' : 'phone',
+      service_details: { source: 'chat_widget' },
+      status: 'new',
+    }
+    
+    console.log('[Agent Chat] Attempting upsert with:', leadData)
 
     const { data: newLead, error } = await supabase
       .from('industry_leads')
-      .insert({
-        account_id: accountId,
-        industry,
-        lead_name: leadInfo.name,
-        lead_email: leadInfo.email || '',
-        lead_phone: leadInfo.phone || '',
-        urgency: 'scheduled',
-        preferred_contact_method: leadInfo.email ? 'email' : 'phone',
-        service_details: { source: 'chat_widget' },
-        status: 'new',
-      })
+      .insert(leadData)
       .select('id')
       .single()
 
