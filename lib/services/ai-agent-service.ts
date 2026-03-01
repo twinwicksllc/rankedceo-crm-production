@@ -165,11 +165,50 @@ export function extractLeadInfo(messages: AgentMessage[]): {
   const phoneMatch = userMessages.match(/(\+?1?\s?)?(\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4})/)
   const phone = phoneMatch?.[0]
 
-  // Extract name (heuristic: look for "I'm [Name]" or "My name is [Name]" or "This is [Name]")
-  const nameMatch = userMessages.match(
-    /(?:i'm|i am|my name is|this is|call me)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i
+  // Extract name (improved heuristic with multiple patterns)
+  let name: string | undefined
+
+  // Pattern 1: "I'm [Name]", "I am [Name]", "My name is [Name]", "This is [Name]", "Call me [Name]"
+  const nameMatch1 = userMessages.match(
+    /(?:i'm|i am|my name is|this is|call me|name is|it's|its)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)(?:\s+[A-Z][a-z]+)?)/i
   )
-  const name = nameMatch?.[1]
+  if (nameMatch1?.[1]) {
+    name = nameMatch1[1]
+  }
+
+  // Pattern 2: Look for capitalized words that look like names (2-3 words, not at start of sentence)
+  if (!name) {
+    const nameMatch2 = userMessages.match(
+      /(?:^|[.!?]\s+)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)(?:\s+[A-Z][a-z]+)?)(?:\s+(?:is|here|speaking|calling|available))?/i
+    )
+    if (nameMatch2?.[1]) {
+      // Filter out common words that might match the pattern
+      const commonWords = ['This', 'That', 'There', 'Here', 'Hello', 'Hi', 'Hey', 'Good', 'Great', 'Thanks', 'Please', 'Sorry', 'Yes', 'No', 'Okay', 'Sure', 'Alright', 'Well', 'Now', 'Today', 'Tomorrow', 'Yesterday']
+      const potentialName = nameMatch2[1]
+      if (!commonWords.includes(potentialName)) {
+        name = potentialName
+      }
+    }
+  }
+
+  // Pattern 3: Look for name-like patterns near email/phone
+  if (!name && (email || phone)) {
+    // Find words before email or phone that might be a name
+    const beforeEmail = email ? userMessages.substring(0, userMessages.indexOf(email)).trim() : ''
+    const beforePhone = phone ? userMessages.substring(0, userMessages.indexOf(phone)).trim() : ''
+    
+    // Try to extract name from the text before email/phone
+    const nameMatch3 = (beforeEmail || beforePhone).match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)(?:\s+[A-Z][a-z]+)?)$/i)
+    if (nameMatch3?.[1]) {
+      const commonWords = ['This', 'That', 'There', 'Here', 'Hello', 'Hi', 'Hey', 'Good', 'Great', 'Thanks', 'Please', 'Sorry', 'Yes', 'No', 'Okay', 'Sure', 'Alright', 'Well', 'Now', 'Today', 'Tomorrow', 'Yesterday', 'My', 'Name', 'Is', 'Email', 'Phone', 'Contact', 'Number']
+      const potentialName = nameMatch3[1]
+      if (!commonWords.includes(potentialName)) {
+        name = potentialName
+      }
+    }
+  }
+
+  console.log('[extractLeadInfo] Extraction result:', { name, email, phone, userMessages: userMessages.substring(0, 100) })
 
   return { name, email, phone }
 }

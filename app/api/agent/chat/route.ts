@@ -109,8 +109,9 @@ async function upsertChatLead(
     }
 
     // ── Create new lead ─────────────────────────────────────────────────────────────────
-    // Only create if we have at minimum a name AND (email OR phone)
-    if (!leadInfo.name || (!leadInfo.email && !leadInfo.phone)) {
+    // Allow partial lead persistence: create if we have email OR phone (name is optional)
+    // This allows us to save leads immediately and update the name later in the same session
+    if (!leadInfo.email && !leadInfo.phone) {
       console.log('[Agent Chat] Insufficient info for lead creation:', {
         hasName: !!leadInfo.name,
         hasEmail: !!leadInfo.email,
@@ -124,7 +125,7 @@ async function upsertChatLead(
     const leadData = {
       account_id: accountId,
       industry,
-      lead_name: leadInfo.name,
+      lead_name: leadInfo.name || 'Unknown', // Default to 'Unknown' if name not captured yet
       lead_email: leadInfo.email || '',
       lead_phone: leadInfo.phone || '',
       urgency: 'scheduled',
@@ -257,7 +258,8 @@ export async function POST(request: NextRequest) {
       email: context.leadInfo?.email || preExtracted.email || conversation?.lead_email || undefined,
       phone: context.leadInfo?.phone || preExtracted.phone || conversation?.lead_phone || undefined,
     }
-    const hasEnoughInfoAlready = !!(preLeadInfo.name && (preLeadInfo.email || preLeadInfo.phone))
+    // Allow partial lead persistence: hasEnoughInfo if we have email OR phone
+    const hasEnoughInfoAlready = !!(preLeadInfo.email || preLeadInfo.phone)
 
     console.log('[Agent Chat] Pre-extraction check:', {
       hasEnoughInfoAlready,
@@ -313,8 +315,9 @@ export async function POST(request: NextRequest) {
     })
 
     // ── Auto-create/update industry lead when we have enough info ─────────────────────
+    // Allow partial lead persistence: create if we have email OR phone (name is optional)
     let leadId: string | null = null
-    const hasEnoughInfo = !!(updatedLeadInfo.name && (updatedLeadInfo.email || updatedLeadInfo.phone))
+    const hasEnoughInfo = !!(updatedLeadInfo.email || updatedLeadInfo.phone)
     if (hasEnoughInfo) {
       console.log('[Agent Chat] Attempting to upsert lead...')
       leadId = await upsertChatLead(supabase, resolvedAccountId, source, updatedLeadInfo)
@@ -345,6 +348,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Return enriched response ───────────────────────────────────────────────────────
+    // leadCaptured is true if we have email OR phone (partial lead capture allowed)
     return NextResponse.json({
       ...response,
       leadCaptured: hasEnoughInfo,
