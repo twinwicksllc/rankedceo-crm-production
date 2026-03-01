@@ -145,22 +145,14 @@ export async function POST(request: NextRequest) {
             .eq('is_active', true)
           
           if (connection && connection.length > 0) {
-            // Try exact match first
-            const exactMatch = connection.find(c => c.calendly_user_uri === organizerUri)
-            if (exactMatch) {
-              accountId = exactMatch.account_id
-              userId = exactMatch.user_id
-              console.log('[Calendly Webhook] Found exact match for account:', accountId)
+            // Since we now normalize URIs on save, we can do a direct normalized match
+            const normalizedMatch = connection.find(c => c.calendly_user_uri === normalizedUri)
+            if (normalizedMatch) {
+              accountId = normalizedMatch.account_id
+              userId = normalizedMatch.user_id
+              console.log('[Calendly Webhook] Found normalized match for account:', accountId)
             } else {
-              // Try normalized match
-              const normalizedMatch = connection.find(c => c.calendly_user_uri.replace(/\/$/, '') === normalizedUri)
-              if (normalizedMatch) {
-                accountId = normalizedMatch.account_id
-                userId = normalizedMatch.user_id
-                console.log('[Calendly Webhook] Found normalized match for account:', accountId)
-              } else {
-                console.log('[Calendly Webhook] Available URIs in database:', connection.map(c => c.calendly_user_uri))
-              }
+              console.log('[Calendly Webhook] Available URIs in database:', connection.map(c => c.calendly_user_uri))
             }
           }
         }

@@ -54,16 +54,20 @@ export async function GET(request: NextRequest) {
     // Calculate token expiry
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString()
 
+    // Normalize URIs by trimming trailing slashes
+    const normalizedUserUri = calendlyUser.uri.replace(/\/$/, '')
+    const normalizedOrgUri = calendlyUser.organization?.replace(/\/$/, '') || null
+
     // Save connection to database
     const appointmentService = new AppointmentService()
     await appointmentService.saveCalendlyConnection({
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
       token_expires_at: expiresAt,
-      calendly_user_uri: calendlyUser.uri,
+      calendly_user_uri: normalizedUserUri,
       calendly_user_name: calendlyUser.name,
       calendly_user_email: calendlyUser.email,
-      calendly_organization_uri: calendlyUser.organization,
+      calendly_organization_uri: normalizedOrgUri,
     })
 
     // Clear state cookie and redirect to settings
