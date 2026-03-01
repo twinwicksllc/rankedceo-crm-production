@@ -199,11 +199,11 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Check if appointment already exists
+        // Check if appointment already exists (use ilike for flexible matching)
         const { data: existing } = await supabase
           .from('appointments')
           .select('id')
-          .eq('calendly_invitee_uri', normalizedInviteeUri)
+          .ilike('calendly_invitee_uri', `%${normalizedInviteeUri}%`)
           .single()
 
         if (!existing) {
@@ -254,11 +254,11 @@ export async function POST(request: NextRequest) {
         console.log('[Calendly Webhook] Cancelling appointment for invitee:', inviteeUri)
         console.log('[Calendly Webhook] Invitee URI (normalized):', normalizedInviteeUri)
 
-        // First, check if appointment exists
+        // First, check if appointment exists (use ilike for flexible matching)
         const { data: existingAppointment } = await supabase
           .from('appointments')
           .select('id, status, calendly_invitee_uri')
-          .eq('calendly_invitee_uri', normalizedInviteeUri)
+          .ilike('calendly_invitee_uri', `%${normalizedInviteeUri}%`)
           .single()
 
         if (!existingAppointment) {
@@ -272,11 +272,11 @@ export async function POST(request: NextRequest) {
           calendly_invitee_uri: existingAppointment.calendly_invitee_uri
         })
 
-        // Update the appointment status
+        // Update the appointment status (use ilike for flexible matching)
         const { error } = await supabase
           .from('appointments')
           .update({ status: 'cancelled' })
-          .eq('calendly_invitee_uri', normalizedInviteeUri)
+          .ilike('calendly_invitee_uri', `%${normalizedInviteeUri}%`)
 
         if (error) {
           console.error('[Calendly Webhook] ❌ Failed to cancel appointment:', error)
@@ -293,7 +293,7 @@ export async function POST(request: NextRequest) {
         await supabase
           .from('appointments')
           .update({ status: 'no_show' })
-          .eq('calendly_invitee_uri', normalizedInviteeUri)
+          .ilike('calendly_invitee_uri', `%${normalizedInviteeUri}%`)
         console.log('[Calendly Webhook] ✅ No-show recorded for invitee:', normalizedInviteeUri)
         break
       }
