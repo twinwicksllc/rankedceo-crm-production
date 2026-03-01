@@ -124,6 +124,9 @@ export async function POST(request: NextRequest) {
         const location = eventData?.scheduled_event?.location?.location || null
         const timezone = eventData?.timezone || 'UTC'
 
+        // Normalize invitee URI by removing trailing slash
+        const normalizedInviteeUri = inviteeUri?.replace(/\/$/, '')
+
         // Capture invitee notes/questions
         const questionsAndAnswers = eventData?.questions_and_answers || []
         const notes = questionsAndAnswers
@@ -133,6 +136,7 @@ export async function POST(request: NextRequest) {
 
         console.log('[Calendly Webhook] New invitee:', inviteeEmail, 'for event:', eventUri)
         console.log('[Calendly Webhook] Notes captured:', notes ? 'Yes' : 'No')
+        console.log('[Calendly Webhook] Invitee URI (normalized):', normalizedInviteeUri)
 
         // Find the account that owns this Calendly connection
         const organizerUri =
@@ -199,7 +203,7 @@ export async function POST(request: NextRequest) {
         const { data: existing } = await supabase
           .from('appointments')
           .select('id')
-          .eq('calendly_invitee_uri', inviteeUri)
+          .eq('calendly_invitee_uri', normalizedInviteeUri)
           .single()
 
         if (!existing) {
@@ -226,7 +230,7 @@ export async function POST(request: NextRequest) {
             location,
             meeting_url: meetingUrl,
             calendly_event_uri: eventUri,
-            calendly_invitee_uri: inviteeUri,
+            calendly_invitee_uri: normalizedInviteeUri,
             calendly_cancel_url: cancelUrl,
             calendly_reschedule_url: rescheduleUrl,
             source: 'ai_agent',
@@ -245,17 +249,20 @@ export async function POST(request: NextRequest) {
 
       case 'invitee.canceled': {
         const inviteeUri = eventData?.uri
+        const normalizedInviteeUri = inviteeUri?.replace(/\/$/, '')
+        
         console.log('[Calendly Webhook] Cancelling appointment for invitee:', inviteeUri)
+        console.log('[Calendly Webhook] Invitee URI (normalized):', normalizedInviteeUri)
 
         // First, check if appointment exists
         const { data: existingAppointment } = await supabase
           .from('appointments')
           .select('id, status, calendly_invitee_uri')
-          .eq('calendly_invitee_uri', inviteeUri)
+          .eq('calendly_invitee_uri', normalizedInviteeUri)
           .single()
 
         if (!existingAppointment) {
-          console.warn('[Calendly Webhook] ⚠️ No appointment found with calendly_invitee_uri:', inviteeUri)
+          console.warn('[Calendly Webhook] ⚠️ No appointment found with calendly_invitee_uri:', normalizedInviteeUri)
           break
         }
 
@@ -269,23 +276,25 @@ export async function POST(request: NextRequest) {
         const { error } = await supabase
           .from('appointments')
           .update({ status: 'cancelled' })
-          .eq('calendly_invitee_uri', inviteeUri)
+          .eq('calendly_invitee_uri', normalizedInviteeUri)
 
         if (error) {
           console.error('[Calendly Webhook] ❌ Failed to cancel appointment:', error)
         } else {
-          console.log('[Calendly Webhook] ✅ Appointment cancelled successfully for invitee:', inviteeUri)
+          console.log('[Calendly Webhook] ✅ Appointment cancelled successfully for invitee:', normalizedInviteeUri)
         }
         break
       }
 
       case 'invitee_no_show.created': {
         const inviteeUri = eventData?.invitee
+        const normalizedInviteeUri = inviteeUri?.replace(/\/$/, '')
+        
         await supabase
           .from('appointments')
           .update({ status: 'no_show' })
-          .eq('calendly_invitee_uri', inviteeUri)
-        console.log('[Calendly Webhook] ✅ No-show recorded for invitee:', inviteeUri)
+          .eq('calendly_invitee_uri', normalizedInviteeUri)
+        console.log('[Calendly Webhook] ✅ No-show recorded for invitee:', normalizedInviteeUri)
         break
       }
 

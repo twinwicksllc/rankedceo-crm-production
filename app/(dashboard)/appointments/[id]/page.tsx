@@ -35,10 +35,10 @@ export default async function AppointmentDetailPage({
 
       <AppointmentCard appointment={appointment} />
 
-      {appointment.notes && (
+      {appointment.description && (
         <div className="mt-4 bg-white rounded-xl border border-gray-200 p-5">
           <h3 className="text-sm font-semibold text-gray-700 mb-2">Notes</h3>
-          <p className="text-sm text-gray-600 whitespace-pre-wrap">{appointment.notes}</p>
+          <p className="text-sm text-gray-600 whitespace-pre-wrap">{appointment.description}</p>
         </div>
       )}
 
