@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { CheckCircle, Flame, Phone, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ChatWidget } from '@/components/agent/chat-widget'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -61,6 +62,12 @@ export default function HvacLeadSuccessPage() {
           HVAC Pro · Powered by RankedCEO
         </p>
       </div>
+
+      <ChatWidget
+        source="hvac"
+        primaryColor="#2563eb"
+        position="bottom-right"
+      />
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { CheckCircle, Wrench, Phone, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ChatWidget } from '@/components/agent/chat-widget'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -43,6 +44,12 @@ export default function PlumbingLeadSuccessPage() {
         </div>
         <p className="mt-4 text-center text-xs text-gray-400">Plumb Pro · Powered by RankedCEO</p>
       </div>
+
+      <ChatWidget
+        source="plumbing"
+        primaryColor="#0d9488"
+        position="bottom-right"
+      />
     </div>
   )
 }

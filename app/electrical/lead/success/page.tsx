@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ChatWidget } from '@/components/agent/chat-widget'
 import { CheckCircle, Lightbulb, Phone, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -48,6 +49,12 @@ export default function ElectricalLeadSuccessPage() {
         </div>
         <p className="mt-4 text-center text-xs text-gray-400">Spark Pro · Powered by RankedCEO</p>
       </div>
+
+      <ChatWidget
+        source="electrical"
+        primaryColor="#d97706"
+        position="bottom-right"
+      />
     </div>
   )
 }

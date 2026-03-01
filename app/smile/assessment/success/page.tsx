@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { CheckCircle } from 'lucide-react'
+import { ChatWidget } from '@/components/agent/chat-widget'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -52,6 +53,12 @@ export default function AssessmentSuccessPage() {
           </Link>
         </div>
       </div>
+
+      <ChatWidget
+        source="smile"
+        primaryColor="#7c3aed"
+        position="bottom-right"
+      />
     </div>
   )
 }

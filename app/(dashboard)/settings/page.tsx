@@ -7,6 +7,7 @@ import { AccountSettings } from '@/components/settings/account-settings';
 import { TeamSettings } from '@/components/settings/team-settings';
 import { NotificationSettings } from '@/components/settings/notification-settings';
 import { SecuritySettings } from '@/components/settings/security-settings';
+import { IntegrationsSettings } from '@/components/settings/integrations-settings';
 import { redirect } from 'next/navigation';
 
 export default async function SettingsPage() {
@@ -47,6 +48,7 @@ export default async function SettingsPage() {
           <TabsTrigger value="team">Team</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="integrations">Integrations</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile" className="space-y-4">
@@ -67,6 +69,10 @@ export default async function SettingsPage() {
 
         <TabsContent value="security" className="space-y-4">
           <SecuritySettings />
+        </TabsContent>
+
+        <TabsContent value="integrations" className="space-y-4">
+          <IntegrationsSettings />
         </TabsContent>
       </Tabs>
     </div>

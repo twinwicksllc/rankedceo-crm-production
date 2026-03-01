@@ -1,38 +1,60 @@
-# Industry Templates — Phase A: Shared Infrastructure
+# AI Agent - Book Calls & Appointments (Calendly + Gemini)
 
-## Status: IN PROGRESS
+## Architecture
+- **AI Brain**: Google Gemini for natural language conversation
+- **Scheduling**: Calendly API (OAuth per user - each CRM user connects their own Calendly)
+- **Notifications**: SendGrid email confirmations
+- **Storage**: Supabase (appointments, calendly_connections tables)
+- **Public**: Chat widget + smart booking form on all subdomains
+- **Internal**: Staff can book on behalf of leads in CRM dashboard
 
-### Phase A Tasks
-- [x] A1: lib/types/industry-lead.ts — TypeScript types
-- [x] A2: lib/validations/industry-lead.ts — Zod schemas
-- [x] A3: lib/data/pool-accounts.ts — Pool account UUID constants
-- [x] A4: lib/data/industry-scripts.ts — NEBP scripts (backend only)
-- [x] A5: lib/actions/industry-lead.ts — Server actions (submit, fetch, update)
-- [x] A6: supabase/migrations/20240222000000_create_industry_leads.sql — DB migration
-- [x] A7: components/industry/lead-form-shell.tsx — Shared non-HIPAA form wrapper
-- [x] A8: components/industry/lead-card.tsx — Lead card component
-- [x] A9: components/industry/lead-status-badge.tsx — Status badge
-- [x] A10: components/industry/urgency-badge.tsx — Urgency badge
-- [x] A11: components/industry/lead-filters.tsx — Filter bar
-- [x] A12: components/industry/dashboard-stats.tsx — Stats cards
-- [x] A13: middleware.ts — Updated with industry isolation + 3 new subdomains
-- [x] A14: Build verification — npm run build passes ✅ (67 routes)
+## Phases
 
-### Upcoming Phases
-- [x] Phase B: HVAC Pro
-  - [x] B1: components/hvac/hvac-lead-form.tsx — 5-step HVAC form
-  - [x] B2: app/hvac/layout.tsx — subdomain guard + blue branding
-  - [x] B3: app/hvac/(auth)/signup/page.tsx — HVAC signup with industry metadata
-  - [x] B4: app/hvac/(auth)/login/page.tsx — HVAC login
-  - [x] B5: app/hvac/page.tsx — protected dashboard
-  - [x] B6: app/hvac/hvac-dashboard.tsx — operator dashboard client component
-  - [x] B7: app/hvac/lead/page.tsx — public lead form
-  - [x] B8: app/hvac/lead/success/page.tsx — confirmation page
-  - [x] B9: Build verified ✅ (69 routes)
-- [x] Phase C: Plumb Pro ✅ (5 routes)
-- [x] Phase D: Spark Pro ✅ (5 routes)
-- [ ] Phase E: Database & DNS
-  - [ ] E1: Run migration in Supabase SQL Editor
-  - [ ] E2: Add 3 custom domains in Vercel
-  - [ ] E3: Add 3 CNAME records in GoDaddy
-  - [ ] E4: Test all 3 subdomains end-to-end
+### Phase 1: Database & Types [ ]
+- [ ] Create `calendly_connections` table (per-user OAuth tokens)
+- [ ] Create `appointments` table (booked appointments)
+- [ ] Create TypeScript types
+- [ ] Create Zod validation schemas
+
+### Phase 2: Calendly OAuth Integration [ ]
+- [ ] Install `@calendly/api` or use fetch-based Calendly v2 API
+- [ ] Create `lib/services/calendly-service.ts` (OAuth flow, event types, availability, booking)
+- [ ] `app/api/calendly/connect/route.ts` - Start OAuth flow
+- [ ] `app/api/calendly/callback/route.ts` - Handle OAuth callback
+- [ ] `app/api/calendly/disconnect/route.ts` - Revoke connection
+- [ ] `app/api/calendly/event-types/route.ts` - List user's event types
+- [ ] `app/api/calendly/availability/route.ts` - Get available slots
+- [ ] `app/api/calendly/book/route.ts` - Create invitee/booking
+
+### Phase 3: AI Agent Core [ ]
+- [ ] Install `@google/generative-ai`
+- [ ] Create `lib/services/ai-agent-service.ts` (Gemini chat + booking intent detection)
+- [ ] Create `lib/services/appointment-service.ts` (CRUD + Calendly sync)
+- [ ] Create `lib/actions/appointment.ts` (server actions)
+- [ ] `app/api/agent/chat/route.ts` - Streaming AI chat endpoint
+
+### Phase 4: UI Components [ ]
+- [ ] `components/agent/chat-widget.tsx` - Floating chat bubble (public-facing)
+- [ ] `components/agent/booking-modal.tsx` - Full booking modal with Calendly slots
+- [ ] `components/agent/availability-picker.tsx` - Date/time slot picker
+- [ ] `components/agent/appointment-card.tsx` - Appointment display card
+- [ ] `components/agent/agent-provider.tsx` - Context provider for agent state
+
+### Phase 5: CRM Dashboard [ ]
+- [ ] `app/(dashboard)/appointments/page.tsx` - All appointments list
+- [ ] `app/(dashboard)/appointments/new/page.tsx` - Manual booking for a lead
+- [ ] `app/(dashboard)/appointments/[id]/page.tsx` - Detail + cancel/reschedule
+- [ ] Add Calendly connect button to Settings page
+- [ ] Add Appointments to dashboard navigation
+
+### Phase 6: Industry Subdomain Integration [ ]
+- [ ] Add chat widget + booking to HVAC success page
+- [ ] Add chat widget + booking to Plumbing success page
+- [ ] Add chat widget + booking to Electrical success page
+- [ ] Add chat widget + booking to Smile assessment success page
+- [ ] Each subdomain uses the operator's connected Calendly
+
+### Phase 7: Build & Deploy [ ]
+- [ ] Verify build passes
+- [ ] Commit and push to GitHub
+- [ ] Write migration + setup documentation
