@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic'
 // Default account ID for general company bookings
 const DEFAULT_ACCOUNT_ID = process.env.DEFAULT_ACCOUNT_ID || '00000000-0000-4000-a000-000000000001'
 
-// ───────── Duplicate Check & Lead Upsert ─────────────────────────────────────────────────────
+// ───────── Duplicate Check & Lead Upsert ─────────────────────────────────────
 // Checks if a lead already exists by email or phone within the same account.
 // If found, updates their record. If not, creates a new one.
 // Returns the lead ID.
@@ -39,7 +39,7 @@ async function upsertChatLead(
       return null
     }
 
-    // ── Duplicate check on email OR phone ───────────────────────────────────────────────
+    // ── Duplicate check on email OR phone ────────────────────────────────────
     let existingLead: any = null
 
     if (leadInfo.email) {
@@ -51,7 +51,7 @@ async function upsertChatLead(
         .eq('industry', industry)
         .ilike('lead_email', leadInfo.email)
         .maybeSingle()
-      
+
       if (error) {
         console.error('[Agent Chat] Email lookup error:', error)
       } else {
@@ -63,9 +63,7 @@ async function upsertChatLead(
     if (!existingLead && leadInfo.phone) {
       const normalizedPhone = leadInfo.phone.replace(/\D/g, '')
       console.log('[Agent Chat] Checking for existing lead by phone (normalized):', normalizedPhone)
-      
-      // Fetch leads for this account/industry and normalize stored phones client-side
-      // to handle formats like (555) 123-4567 vs 5551234567 vs 555-123-4567
+
       const { data: phoneLeads, error } = await supabase
         .from('industry_leads')
         .select('id, lead_name, lead_email, lead_phone')
@@ -85,32 +83,34 @@ async function upsertChatLead(
     }
 
     if (existingLead) {
-      // ── Update existing lead with any new info ─────────────────────────────────────────
+      // ── Update existing lead with any new info ────────────────────────────
       console.log('[Agent Chat] Existing lead found, updating:', existingLead.id)
       const updates: any = { updated_at: new Date().toISOString() }
-      if (leadInfo.name && !existingLead.lead_name) updates.lead_name = leadInfo.name
+      // Only overwrite name if we have a real name (not 'Unknown') and existing is blank
+      if (leadInfo.name && leadInfo.name !== 'Unknown' && (!existingLead.lead_name || existingLead.lead_name === 'Unknown')) {
+        updates.lead_name = leadInfo.name
+      }
       if (leadInfo.email && !existingLead.lead_email) updates.lead_email = leadInfo.email
       if (leadInfo.phone && !existingLead.lead_phone) updates.lead_phone = leadInfo.phone
 
       console.log('[Agent Chat] Updates to apply:', updates)
-      
+
       const { error: updateError } = await supabase
         .from('industry_leads')
         .update(updates)
         .eq('id', existingLead.id)
-      
+
       if (updateError) {
         console.error('[Agent Chat] Failed to update existing lead:', updateError)
         return null
       }
-      
+
       console.log('[Agent Chat] Successfully updated existing lead:', existingLead.id)
       return existingLead.id
     }
 
-    // ── Create new lead ─────────────────────────────────────────────────────────────────
-    // Allow partial lead persistence: create if we have email OR phone (name is optional)
-    // This allows us to save leads immediately and update the name later in the same session
+    // ── Create new lead ───────────────────────────────────────────────────────
+    // Require at minimum email OR phone to create a record
     if (!leadInfo.email && !leadInfo.phone) {
       console.log('[Agent Chat] Insufficient info for lead creation:', {
         hasName: !!leadInfo.name,
@@ -120,20 +120,17 @@ async function upsertChatLead(
       return null
     }
 
-    console.log('[Agent Chat] Creating new lead from chat for industry:', industry)
-    
+    // FIX 1: Only use confirmed Supabase columns.
+    // Removed: urgency, preferred_contact_method, service_details, status
+    // (these may not exist in the standardized schema)
     const leadData = {
       account_id: accountId,
       industry,
-      lead_name: leadInfo.name || 'Unknown', // Default to 'Unknown' if name not captured yet
+      lead_name: leadInfo.name || 'Unknown', // FIX 3: Never undefined — default to 'Unknown'
       lead_email: leadInfo.email || '',
       lead_phone: leadInfo.phone || '',
-      urgency: 'scheduled',
-      preferred_contact_method: leadInfo.email ? 'email' : 'phone',
-      service_details: { source: 'chat_widget' },
-      status: 'new',
     }
-    
+
     console.log('[Agent Chat] Attempting upsert with:', leadData)
 
     const { data: newLead, error } = await supabase
@@ -192,7 +189,7 @@ export async function POST(request: NextRequest) {
       resolvedAccountId
     )
 
-    let messages: AgentMessage[] = conversation?.messages || []
+    const messages: AgentMessage[] = conversation?.messages || []
 
     // Get Calendly event types for this account
     let eventTypes: any[] = []
@@ -217,7 +214,7 @@ export async function POST(request: NextRequest) {
       console.warn('[Agent Chat] Could not fetch event types:', err)
     }
 
-    // Build context
+    // Build context — merge conversation state with any incoming leadInfo
     const context = {
       source: source as AppointmentSource,
       accountId: resolvedAccountId,
@@ -231,68 +228,15 @@ export async function POST(request: NextRequest) {
       availableEventTypes: eventTypes,
     }
 
-    // ── Quick booking intent check (keyword-based, no AI cost) ───────────────────────
-    // REFINED: Only trigger on explicit booking-related keywords, not agreement words
-    const BOOKING_KEYWORDS = [
-      'book', 'schedule', 'appointment', 'call', 'meeting', 'available',
-      'availability', 'time', 'slot', 'calendar', 'talk', 'speak',
-      'consult', 'consultation', 'set up', 'arrange', 'reserve',
-    ]
-    const msgLower = message.toLowerCase()
-    const hasBookingIntent = BOOKING_KEYWORDS.some(kw => msgLower.includes(kw))
-    
-    console.log('[Agent Chat] Booking intent check:', {
-      message: msgLower.substring(0, 50),
-      hasBookingIntent,
-      keywordsFound: BOOKING_KEYWORDS.filter(kw => msgLower.includes(kw)),
-    })
+    // ── FIX 2: REMOVE SHORT-CIRCUIT — AI ALWAYS RESPONDS FIRST ───────────────
+    // The short-circuit was bypassing the AI and triggering Calendly redirects
+    // based on keyword detection alone. This caused premature redirects.
+    //
+    // The ONLY way triggerBooking=true is returned is if the AI's own response
+    // sets action='show_booking' or action='booking_confirmed'.
+    // ─────────────────────────────────────────────────────────────────────────
 
-    // ── Resolve lead info from conversation + current message ─────────────────────────
-    // Do this BEFORE calling AI so we can short-circuit if possible
-    const preExtracted = extractLeadInfo([
-      ...messages,
-      { role: 'user', content: message, timestamp: new Date().toISOString() },
-    ])
-    const preLeadInfo = {
-      name: context.leadInfo?.name || preExtracted.name || conversation?.lead_name || undefined,
-      email: context.leadInfo?.email || preExtracted.email || conversation?.lead_email || undefined,
-      phone: context.leadInfo?.phone || preExtracted.phone || conversation?.lead_phone || undefined,
-    }
-    // Allow partial lead persistence: hasEnoughInfo if we have email OR phone
-    const hasEnoughInfoAlready = !!(preLeadInfo.email || preLeadInfo.phone)
-
-    console.log('[Agent Chat] Pre-extraction check:', {
-      hasEnoughInfoAlready,
-      leadInfo: preLeadInfo,
-    })
-
-    // ── SHORT-CIRCUIT: If we have info + booking intent → skip AI entirely ───────
-    // This prevents the AI from asking "Would you like to see times?" again.
-    if (hasEnoughInfoAlready && hasBookingIntent && calendlySchedulingUrl) {
-      console.log('[Agent Chat] SHORT-CIRCUIT: Skipping AI, direct booking trigger')
-      
-      const confirmMsg = `Perfect${preLeadInfo.name ? `, ${preLeadInfo.name}` : ''}! I'm opening our booking calendar for you now. Please select a time that works best for you. 📅`
-
-      // Persist the user message + confirmation
-      if (conversation) {
-        await agentConversationService.addMessage(conversation.id, 'user', message)
-        await agentConversationService.addMessage(conversation.id, 'assistant', confirmMsg)
-        await agentConversationService.updateStatus(conversation.id, 'booked')
-      }
-
-      return NextResponse.json({
-        message: confirmMsg,
-        action: 'show_booking',
-        bookingData: { schedulingUrl: calendlySchedulingUrl },
-        leadCaptured: true,
-        leadId: null,
-        hasCalendly: true,
-        calendlyUrl: calendlySchedulingUrl,
-        triggerBooking: true,
-      })
-    }
-
-    // ── Normal AI response path ───────────────────────────────────────────────────────
+    // ── Always call AI ────────────────────────────────────────────────────────
     const response = await chat(message, messages, context, eventTypes)
 
     // Update messages array for extraction
@@ -302,7 +246,7 @@ export async function POST(request: NextRequest) {
       { role: 'assistant', content: response.message, timestamp: new Date().toISOString() },
     ]
 
-    // Extract any new lead info from full conversation
+    // Extract lead info from full conversation (including current turn)
     const extracted = extractLeadInfo(updatedMessages)
     const updatedLeadInfo = {
       name: context.leadInfo?.name || extracted.name || conversation?.lead_name || undefined,
@@ -314,8 +258,7 @@ export async function POST(request: NextRequest) {
       leadInfo: updatedLeadInfo,
     })
 
-    // ── Auto-create/update industry lead when we have enough info ─────────────────────
-    // Allow partial lead persistence: create if we have email OR phone (name is optional)
+    // ── Auto-create/update industry lead when we have email OR phone ──────────
     let leadId: string | null = null
     const hasEnoughInfo = !!(updatedLeadInfo.email || updatedLeadInfo.phone)
     if (hasEnoughInfo) {
@@ -324,7 +267,7 @@ export async function POST(request: NextRequest) {
       console.log('[Agent Chat] Lead upsert result:', leadId ? `Created/Updated: ${leadId}` : 'Failed')
     }
 
-    // ── Update conversation record ─────────────────────────────────────────────────────
+    // ── Update conversation record ────────────────────────────────────────────
     if (conversation) {
       await agentConversationService.addMessage(conversation.id, 'user', message)
       await agentConversationService.addMessage(conversation.id, 'assistant', response.message)
@@ -338,7 +281,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ── Attach Calendly URL to response when booking is requested ─────────────────────
+    // ── Attach Calendly URL only when AI explicitly requests booking ──────────
     const wantsBooking = response.action === 'show_booking' || response.action === 'booking_confirmed'
     if (wantsBooking && hasEnoughInfo && calendlySchedulingUrl) {
       response.bookingData = {
@@ -347,8 +290,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ── Return enriched response ───────────────────────────────────────────────────────
-    // leadCaptured is true if we have email OR phone (partial lead capture allowed)
+    // ── Return enriched response ──────────────────────────────────────────────
+    // triggerBooking is ONLY true when the AI itself sets a booking action
     return NextResponse.json({
       ...response,
       leadCaptured: hasEnoughInfo,
