@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
 
     // Normalize URIs by trimming trailing slashes
     const normalizedUserUri = calendlyUser.uri.replace(/\/$/, '')
-    const normalizedOrgUri = calendlyUser.organization?.replace(/\/$/, '') || null
+    const normalizedOrgUri = calendlyUser.organization?.replace(/\/$/, '')
 
     // Save connection to database
     const appointmentService = new AppointmentService()
