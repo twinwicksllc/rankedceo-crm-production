@@ -91,3 +91,11 @@
 - [ ] Document test results
 - [ ] Fix any issues found
 - [ ] Re-test after fixes
+
+### Future Enhancement: Company Referral Personalization [ ]
+- [ ] Add URL parameter support for company referrals (?company=AcmeCorp)
+- [ ] Update greeting logic to include company name when present
+- [ ] Add company logo to chat header (optional)
+- [ ] Store company-specific greetings in database (optional)
+- [ ] Track referral source in conversation metadata
+- [ ] Add company-specific quick replies (optional)
