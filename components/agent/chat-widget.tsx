@@ -105,9 +105,10 @@ export function ChatWidget({
     }])
   }
 
-  // ── Handle close button ────────────────────────────────────────────────────
+  // ───────── Handle close button ───────────────────────────────────────────────────────
   // If lead info was NOT captured, refresh the page so the form is shown again.
   // If lead info WAS captured, just close the widget.
+  // CRITICAL: This function ONLY manages isOpen state and refresh logic - NO redirects!
   function handleClose() {
     setIsOpen(false)
     if (!leadCaptured) {
@@ -121,6 +122,9 @@ export function ChatWidget({
   async function sendMessage(text?: string) {
     const messageText = text || input.trim()
     if (!messageText || isLoading) return
+
+    // CRITICAL: Track widget state at message send time to prevent redirect on close
+    const wasOpenWhenSent = isOpen
 
     setInput('')
     setIsLoading(true)
@@ -158,25 +162,31 @@ export function ChatWidget({
         setLeadCaptured(true)
       }
 
-      // ── Immediate Calendly trigger (short-circuit path from API) ──────────
+      // ── Immediate Calendly trigger (short-circuit path from API) ───────────────
+      // CRITICAL: Only redirect if widget is STILL OPEN (user didn't close it)
       // triggerBooking=true means the API already confirmed booking intent + info
-      if (data.triggerBooking && data.calendlyUrl) {
+      if (data.triggerBooking && data.calendlyUrl && isOpen && wasOpenWhenSent) {
         // Open Calendly in new tab after short delay so user sees the message
         setTimeout(() => {
-          window.open(data.calendlyUrl!, '_blank')
+          if (isOpen) { // Double-check before redirecting
+            window.open(data.calendlyUrl!, '_blank')
+          }
         }, 800)
         return
       }
 
-      // ── Calendly redirect via calendlyUrl (normal AI path) ────────────────
-      if (data.calendlyUrl) {
+      // ── Calendly redirect via calendlyUrl (normal AI path) ───────────────────────
+      // CRITICAL: Only redirect if widget is STILL OPEN
+      if (data.calendlyUrl && isOpen && wasOpenWhenSent) {
         setTimeout(() => {
-          window.open(data.calendlyUrl!, '_blank')
+          if (isOpen) { // Double-check before redirecting
+            window.open(data.calendlyUrl!, '_blank')
+          }
         }, 800)
         return
       }
 
-      // ── Show inline Calendly iframe (fallback for show_booking action) ────
+      // ── Show inline Calendly iframe (fallback for show_booking action) ───────
       if (data.action === 'show_booking' && data.bookingData?.schedulingUrl) {
         setBookingUrl(data.bookingData.schedulingUrl)
         setShowBooking(true)
