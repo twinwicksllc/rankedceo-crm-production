@@ -25,6 +25,7 @@ interface EnrichedChatResponse extends AgentChatResponse {
   leadId?: string | null
   hasCalendly?: boolean
   calendlyUrl?: string | null
+  triggerBooking?: boolean
 }
 
 function generateSessionId(): string {
@@ -157,17 +158,21 @@ export function ChatWidget({
         setLeadCaptured(true)
       }
 
-      // ── Calendly redirect: user wants to book AND info is captured ────────
-      // Redirect to Calendly in a new tab so they can pick a time
-      if (data.calendlyUrl) {
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: "Great! I'm opening our booking calendar for you now. Please select a time that works best for you. 📅",
-          timestamp: new Date().toISOString(),
-        }])
+      // ── Immediate Calendly trigger (short-circuit path from API) ──────────
+      // triggerBooking=true means the API already confirmed booking intent + info
+      if (data.triggerBooking && data.calendlyUrl) {
+        // Open Calendly in new tab after short delay so user sees the message
         setTimeout(() => {
           window.open(data.calendlyUrl!, '_blank')
-        }, 1000)
+        }, 800)
+        return
+      }
+
+      // ── Calendly redirect via calendlyUrl (normal AI path) ────────────────
+      if (data.calendlyUrl) {
+        setTimeout(() => {
+          window.open(data.calendlyUrl!, '_blank')
+        }, 800)
         return
       }
 
@@ -346,7 +351,7 @@ export function ChatWidget({
 
       {/* Toggle Button */}
       <button
-        onClick={() => setIsOpen(prev => !prev)}
+        onClick={() => isOpen ? handleClose() : setIsOpen(true)}
         className="w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-white transition-transform hover:scale-110 active:scale-95"
         style={{ backgroundColor: primaryColor }}
         aria-label="Open AI Assistant"

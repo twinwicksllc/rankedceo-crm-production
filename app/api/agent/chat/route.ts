@@ -46,14 +46,21 @@ async function upsertChatLead(
 
     if (!existingLead && leadInfo.phone) {
       const normalizedPhone = leadInfo.phone.replace(/\D/g, '')
-      const { data } = await supabase
+      // Fetch leads for this account/industry and normalize stored phones client-side
+      // to handle formats like (555) 123-4567 vs 5551234567 vs 555-123-4567
+      const { data: phoneLeads } = await supabase
         .from('industry_leads')
         .select('id, customer_name, customer_email, customer_phone')
         .eq('account_id', accountId)
         .eq('industry', industry)
-        .ilike('customer_phone', `%${normalizedPhone}%`)
-        .maybeSingle()
-      existingLead = data
+        .not('customer_phone', 'is', null)
+
+      if (phoneLeads) {
+        existingLead = phoneLeads.find((lead: any) => {
+          const storedNormalized = (lead.customer_phone || '').replace(/\D/g, '')
+          return storedNormalized === normalizedPhone && normalizedPhone.length >= 10
+        }) || null
+      }
     }
 
     if (existingLead) {
@@ -164,7 +171,54 @@ export async function POST(request: NextRequest) {
       availableEventTypes: eventTypes,
     }
 
-    // Get AI response
+    // ── Quick booking intent check (keyword-based, no AI cost) ──────────────
+    const BOOKING_KEYWORDS = [
+      'book', 'schedule', 'appointment', 'call', 'meeting', 'available',
+      'availability', 'time', 'slot', 'calendar', 'talk', 'speak',
+      'consult', 'consultation', 'set up', 'arrange', 'reserve',
+      'yes', 'sure', 'sounds good', "let's do it", 'ready', 'proceed',
+    ]
+    const msgLower = message.toLowerCase()
+    const hasBookingIntent = BOOKING_KEYWORDS.some(kw => msgLower.includes(kw))
+
+    // ── Resolve lead info from conversation + current message ─────────────
+    // Do this BEFORE calling AI so we can short-circuit if possible
+    const preExtracted = extractLeadInfo([
+      ...messages,
+      { role: 'user', content: message, timestamp: new Date().toISOString() },
+    ])
+    const preLeadInfo = {
+      name: context.leadInfo?.name || preExtracted.name || conversation?.lead_name || undefined,
+      email: context.leadInfo?.email || preExtracted.email || conversation?.lead_email || undefined,
+      phone: context.leadInfo?.phone || preExtracted.phone || conversation?.lead_phone || undefined,
+    }
+    const hasEnoughInfoAlready = !!(preLeadInfo.name && (preLeadInfo.email || preLeadInfo.phone))
+
+    // ── SHORT-CIRCUIT: If we have info + booking intent → skip AI entirely ──
+    // This prevents the AI from asking "Would you like to see times?" again.
+    if (hasEnoughInfoAlready && hasBookingIntent && calendlySchedulingUrl) {
+      const confirmMsg = `Perfect${preLeadInfo.name ? `, ${preLeadInfo.name}` : ''}! I'm opening our booking calendar for you now. Please select a time that works best for you. 📅`
+
+      // Persist the user message + confirmation
+      if (conversation) {
+        await agentConversationService.addMessage(conversation.id, 'user', message)
+        await agentConversationService.addMessage(conversation.id, 'assistant', confirmMsg)
+        await agentConversationService.updateStatus(conversation.id, 'booked')
+      }
+
+      return NextResponse.json({
+        message: confirmMsg,
+        action: 'show_booking',
+        bookingData: { schedulingUrl: calendlySchedulingUrl },
+        leadCaptured: true,
+        leadId: null,
+        hasCalendly: true,
+        calendlyUrl: calendlySchedulingUrl,
+        triggerBooking: true,
+      })
+    }
+
+    // ── Normal AI response path ────────────────────────────────────────────
     const response = await chat(message, messages, context, eventTypes)
 
     // Update messages array for extraction
@@ -174,7 +228,7 @@ export async function POST(request: NextRequest) {
       { role: 'assistant', content: response.message, timestamp: new Date().toISOString() },
     ]
 
-    // Extract any new lead info from conversation
+    // Extract any new lead info from full conversation
     const extracted = extractLeadInfo(updatedMessages)
     const updatedLeadInfo = {
       name: context.leadInfo?.name || extracted.name || conversation?.lead_name || undefined,
@@ -219,6 +273,7 @@ export async function POST(request: NextRequest) {
       leadId,
       hasCalendly: !!calendlySchedulingUrl,
       calendlyUrl: wantsBooking && hasEnoughInfo ? calendlySchedulingUrl : null,
+      triggerBooking: wantsBooking && hasEnoughInfo && !!calendlySchedulingUrl,
     })
 
   } catch (error) {

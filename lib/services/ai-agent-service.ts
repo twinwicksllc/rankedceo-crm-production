@@ -268,13 +268,17 @@ export async function chat(
   let action: AgentChatResponse['action'] = 'none'
   let bookingData: AgentChatResponse['bookingData'] = undefined
 
-  if (hasLeadInfo && wantsToBook && eventTypes.length > 0) {
+  // ── If we have lead info AND booking intent → trigger booking immediately ──
+  // Do NOT let the AI ask "Would you like to see times?" — just act.
+  if (hasLeadInfo && wantsToBook) {
     action = 'show_booking'
-    const primaryEventType = eventTypes[0]
-    bookingData = {
-      eventTypeUri: primaryEventType.uri,
-      eventTypeName: primaryEventType.name,
-      schedulingUrl: primaryEventType.scheduling_url,
+    if (eventTypes.length > 0) {
+      const primaryEventType = eventTypes[0]
+      bookingData = {
+        eventTypeUri: primaryEventType.uri,
+        eventTypeName: primaryEventType.name,
+        schedulingUrl: primaryEventType.scheduling_url,
+      }
     }
   } else if (!hasLeadInfo) {
     action = 'collect_info'
