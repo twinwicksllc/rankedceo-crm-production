@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { chat, getGreetingMessage, extractLeadInfo } from '@/lib/services/ai-agent-service'
 import { getEventTypes } from '@/lib/services/calendly-service'
+import { agentConversationService } from '@/lib/services/agent-conversation-service'
 import { agentChatSchema } from '@/lib/validations/appointment'
 import type { AgentMessage, AppointmentSource } from '@/lib/types/appointment'
 
@@ -27,14 +28,14 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
-    // Load or create conversation session
-    const { data: session, error: sessionError } = await supabase
-      .from('agent_conversations')
-      .select('*')
-      .eq('session_id', sessionId)
-      .single()
+    // Get or create conversation using service
+    const conversation = await agentConversationService.getOrCreateConversation(
+      sessionId,
+      source,
+      resolvedAccountId
+    )
 
-    let messages: AgentMessage[] = session?.messages || []
+    let messages: AgentMessage[] = conversation?.messages || []
 
     // Get Calendly event types for this account
     let eventTypes: any[] = []
@@ -63,9 +64,9 @@ export async function POST(request: NextRequest) {
       sessionId,
       leadInfo: {
         ...leadInfo,
-        ...(session?.lead_name ? { name: session.lead_name } : {}),
-        ...(session?.lead_email ? { email: session.lead_email } : {}),
-        ...(session?.lead_phone ? { phone: session.lead_phone } : {}),
+        ...(conversation?.lead_name ? { name: conversation.lead_name } : {}),
+        ...(conversation?.lead_email ? { email: conversation.lead_email } : {}),
+        ...(conversation?.lead_phone ? { phone: conversation.lead_phone } : {}),
       },
       availableEventTypes: eventTypes,
     }
@@ -83,22 +84,41 @@ export async function POST(request: NextRequest) {
     // Extract any new lead info from conversation
     const extracted = extractLeadInfo(updatedMessages)
     const updatedLeadInfo = {
-      lead_name: context.leadInfo?.name || extracted.name || session?.lead_name || null,
-      lead_email: context.leadInfo?.email || extracted.email || session?.lead_email || null,
-      lead_phone: context.leadInfo?.phone || extracted.phone || session?.lead_phone || null,
+      name: context.leadInfo?.name || extracted.name || conversation?.lead_name || undefined,
+      email: context.leadInfo?.email || extracted.email || conversation?.lead_email || undefined,
+      phone: context.leadInfo?.phone || extracted.phone || conversation?.lead_phone || undefined,
     }
 
-    // Upsert conversation session
-    await supabase
-      .from('agent_conversations')
-      .upsert({
-        session_id: sessionId,
-        account_id: resolvedAccountId,
-        source,
-        messages: updatedMessages,
-        status: response.action === 'booking_confirmed' ? 'booked' : 'active',
-        ...updatedLeadInfo,
-      }, { onConflict: 'session_id' })
+    // Update conversation with new messages and lead info
+    if (conversation) {
+      // Update messages
+      await agentConversationService.addMessage(
+        conversation.id,
+        'user',
+        message
+      )
+      await agentConversationService.addMessage(
+        conversation.id,
+        'assistant',
+        response.message
+      )
+
+      // Update lead info if we have new information
+      if (updatedLeadInfo.name || updatedLeadInfo.email || updatedLeadInfo.phone) {
+        await agentConversationService.updateLeadInfo(
+          conversation.id,
+          updatedLeadInfo
+        )
+      }
+
+      // Update status if booking was confirmed
+      if (response.action === 'booking_confirmed') {
+        await agentConversationService.updateStatus(
+          conversation.id,
+          'booked'
+        )
+      }
+    }
 
     return NextResponse.json(response)
   } catch (error) {

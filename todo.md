@@ -59,12 +59,19 @@
 - [ ] Commit and push to GitHub
 - [ ] Write migration + setup documentation
 
-### Phase 2: Add Chat Widget to Main Landing Pages [ ]
+### Phase 2: Add Chat Widget to Main Landing Pages [x]
 - [x] Add ChatWidget component to HVAC landing page (`/hvac`)
 - [x] Add ChatWidget component to Plumbing landing page (`/plumbing`)
 - [x] Add ChatWidget component to Electrical landing page (`/electrical`)
 - [x] Add ChatWidget component to Smile landing page (`/smile`)
 - [x] Configure each with industry-specific context
 - [x] Test chat functionality on all landing pages
+- [x] Verify build passes
+- [x] Commit and push changes
+
+### Phase 4: Add agent_conversations Database Migration [ ]
+- [x] Create database migration for agent_conversations table
+- [x] Create AgentConversationService for managing conversations
+- [x] Update chat API route to use conversation service
 - [x] Verify build passes
 - [ ] Commit and push changes
