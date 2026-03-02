@@ -169,7 +169,7 @@ export function extractLeadInfo(messages: AgentMessage[]): {
 
   // Pattern 1: "I'm [Name]", "I am [Name]", "My name is [Name]", "This is [Name]", "Call me [Name]"
   const nameMatch1 = userMessages.match(
-    /(?:i'm|i am|my name is|this is|call me|name is|it's|its)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)(?:\s+[A-Z][a-z]+)?)/i
+    /(?:i'm|i am|my name is|this is|call me|name is|it's|its)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?(?:\s+[A-Z][a-z]+)?)/i
   )
   if (nameMatch1?.[1]) {
     name = nameMatch1[1]
@@ -178,7 +178,7 @@ export function extractLeadInfo(messages: AgentMessage[]): {
   // Pattern 2: Look for capitalized words that look like names (2-3 words, not at start of sentence)
   if (!name) {
     const nameMatch2 = userMessages.match(
-      /(?:^|[.!?]\s+)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)(?:\s+[A-Z][a-z]+)?)(?:\s+(?:is|here|speaking|calling|available))?/i
+      /(?:^|[.!?]\s+)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?(?:\s+[A-Z][a-z]+)?)(?:\s+(?:is|here|speaking|calling|available))?/i
     )
     if (nameMatch2?.[1]) {
       // Filter out common words that might match the pattern
@@ -197,7 +197,7 @@ export function extractLeadInfo(messages: AgentMessage[]): {
     const beforePhone = phone ? userMessages.substring(0, userMessages.indexOf(phone)).trim() : ''
     
     // Try to extract name from the text before email/phone
-    const nameMatch3 = (beforeEmail || beforePhone).match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)(?:\s+[A-Z][a-z]+)?)$/i)
+    const nameMatch3 = (beforeEmail || beforePhone).match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?(?:\s+[A-Z][a-z]+)?)$/i)
     if (nameMatch3?.[1]) {
       const commonWords = ['This', 'That', 'There', 'Here', 'Hello', 'Hi', 'Hey', 'Good', 'Great', 'Thanks', 'Please', 'Sorry', 'Yes', 'No', 'Okay', 'Sure', 'Alright', 'Well', 'Now', 'Today', 'Tomorrow', 'Yesterday', 'My', 'Name', 'Is', 'Email', 'Phone', 'Contact', 'Number']
       const potentialName = nameMatch3[1]

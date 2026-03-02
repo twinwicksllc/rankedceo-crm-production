@@ -266,14 +266,13 @@ export async function POST(request: NextRequest) {
     // ── Step 2: HARD-CODED FALLBACK — simplified regex, logs full history for debugging ──
     console.error('[DEPLOYMENT-TIMESTAMP] Code executed at:', new Date().toISOString())
     if (!updatedLeadInfo.name || updatedLeadInfo.name === 'Valued Lead') {
-      const fullHistory = updatedMessages
-        .map(m => typeof m.content === 'string' ? m.content : JSON.stringify(m.content))
-        .join(' ')
+      const fullHistory = updatedMessages.map(m => m.content).join(' ')
       console.log('[DEBUG] Testing Regex on:', fullHistory)
-      const nameMatch = fullHistory.match(/(?:I am|name is|I'm)\s+([A-Z][a-z]+)/i)
+      // Slash-all: look for any 2 capitalized words after a name intro
+      const nameMatch = fullHistory.match(/(?:am|is|I'm|name:)\s*([A-Z][a-z]+\s[A-Z][a-z]+)/)
       if (nameMatch && nameMatch[1]) {
         updatedLeadInfo.name = nameMatch[1]
-        console.error('[EMERGENCY] Name found via fallback:', updatedLeadInfo.name)
+        console.error('[EMERGENCY] Found Name:', updatedLeadInfo.name)
       } else {
         console.error('[EMERGENCY] Fallback regex found NO match in history')
       }
