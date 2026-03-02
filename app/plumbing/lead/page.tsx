@@ -49,7 +49,7 @@ export default async function PlumbingLeadPage({
       <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6 lg:px-8">
         {/* Centered logo above form */}
         <div className="mb-8 text-center flex flex-col items-center gap-4">
-          <IndustryLogo industry="plumbing" height={84} priority className="mx-auto" />
+          <IndustryLogo industry="plumbing" height={126} priority className="mx-auto" />
           <p className="text-gray-500">
             Fill out this quick form and a licensed plumber will contact you shortly.
           </p>

@@ -252,7 +252,7 @@ export function ChatWidget({
                 <div className="bg-white rounded-full px-2 py-0.5 flex items-center justify-center h-8">
                   <IndustryLogo
                     industry={source}
-                    height={24}
+                    height={36}
                     priority
                     showFallback={false}
                   />
