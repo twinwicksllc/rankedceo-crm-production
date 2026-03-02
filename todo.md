@@ -136,13 +136,13 @@
 
 ## 🚀 Future Enhancements
 
-### Company Referral Personalization [ ]
-- [ ] Add URL parameter support for company referrals (?company=AcmeCorp)
-- [ ] Update greeting logic to include company name when present
-- [ ] Add company logo to chat header (optional)
-- [ ] Store company-specific greetings in database (optional)
-- [ ] Track referral source in conversation metadata
-- [ ] Add company-specific quick replies (optional)
+### Company Referral Personalization [x] ✅
+- [x] Add URL parameter support for company referrals (?company=AcmeCorp)
+- [x] Update greeting logic to include company name when present
+- [x] Add company logo to chat header (optional - dynamic title instead)
+- [x] Store company-specific greetings in database (via metadata JSONB)
+- [x] Track referral source in conversation metadata
+- [x] Add company-specific quick replies (optional - deferred)
 
 ### AI Features Integration [ ]
 - [ ] Integrate Gemini AI for lead scoring
