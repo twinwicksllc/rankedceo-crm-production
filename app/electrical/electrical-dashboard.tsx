@@ -8,6 +8,7 @@ import { LeadCard } from '@/components/industry/lead-card'
 import { LeadFiltersBar } from '@/components/industry/lead-filters'
 import { getIndustryLeads, getIndustryLeadStats } from '@/lib/actions/industry-lead'
 import type { IndustryLead, LeadStats, LeadFilters, LeadStatus } from '@/lib/types/industry-lead'
+import { IndustryLogo } from '@/components/ui/industry-logo'
 
 interface ElectricalDashboardProps {
   userId: string
@@ -60,13 +61,8 @@ export default function ElectricalDashboard({ userId, leadCount }: ElectricalDas
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-amber-100 p-2">
-                <Lightbulb className="h-6 w-6 text-amber-600" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Spark Pro</h1>
-                <p className="text-sm text-gray-500">Operator Dashboard</p>
-              </div>
+              <IndustryLogo industry="electrical" height={48} priority />
+              <p className="text-sm text-gray-500">Operator Dashboard</p>
             </div>
             <Button variant="outline" size="sm" onClick={loadData} disabled={loading}
               className="border-amber-200 text-amber-700 hover:bg-amber-50">

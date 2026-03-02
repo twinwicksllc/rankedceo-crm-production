@@ -5,6 +5,7 @@ import { MessageCircle, X, Send, Loader2, Calendar, Bot } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import type { AgentMessage, AppointmentSource, AgentChatResponse } from '@/lib/types/appointment'
+import { IndustryLogo } from '@/components/ui/industry-logo'
 
 interface ChatWidgetProps {
   source: AppointmentSource
@@ -235,11 +236,23 @@ export function ChatWidget({
           <div className="flex items-center justify-between px-4 py-3 text-white"
             style={{ backgroundColor: primaryColor }}>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                <Bot className="w-4 h-4" />
-              </div>
+              {/* Industry logo on white pill, or Bot icon fallback */}
+              {['hvac', 'plumbing', 'electrical', 'smile'].includes(source) ? (
+                <div className="bg-white rounded-full px-2 py-0.5 flex items-center justify-center h-8">
+                  <IndustryLogo
+                    industry={source}
+                    height={24}
+                    priority
+                    showFallback={false}
+                  />
+                </div>
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                  <Bot className="w-4 h-4" />
+                </div>
+              )}
               <div>
-                <p className="text-sm font-semibold">RankedCEO AI Assistant</p>
+                <p className="text-sm font-semibold">AI Assistant</p>
                 <p className="text-xs opacity-80">● Online</p>
               </div>
             </div>

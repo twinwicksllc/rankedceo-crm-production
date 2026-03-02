@@ -20,6 +20,7 @@ import {
 } from 'recharts'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { IndustryLogo } from '@/components/ui/industry-logo'
 import { Button } from '@/components/ui/button'
 import { Sparkles, Users, Target, TrendingUp, Clock, AlertCircle, Plus, Copy, Check } from 'lucide-react'
 
@@ -180,21 +181,12 @@ export default function SmilePage({ userId, assessmentCount }: SmileDashboardPro
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Image
-                src="/smile_logo.png"
-                alt="Smile MakeOver"
-                width={120}
-                height={48}
-                className="h-12 w-auto"
-                priority
-              />
-              <div>
-                <p className="text-sm text-purple-600 font-medium">Dentist Dashboard</p>
+              <IndustryLogo industry="smile" height={48} priority />
+              <p className="text-sm text-purple-600 font-medium">Dentist Dashboard</p>
               </div>
-            </div>
-            <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-200">
-              Premium Plan
-            </Badge>
+              <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-200">
+                Premium Plan
+              </Badge>
           </div>
         </div>
       </div>

@@ -1,10 +1,10 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Wrench } from 'lucide-react'
 import { PlumbingLeadForm } from '@/components/plumbing/plumbing-lead-form'
 import { submitIndustryLead } from '@/lib/actions/industry-lead'
 import type { PlumbingLeadInput } from '@/lib/validations/industry-lead'
 import { ChatWidget } from '@/components/agent/chat-widget'
+import { IndustryLogo } from '@/components/ui/industry-logo'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -33,17 +33,9 @@ export default async function PlumbingLeadPage({
     <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-teal-25">
       {/* Header */}
       <div className="border-b border-teal-200 bg-white bg-opacity-80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-teal-100 p-2">
-                <Wrench className="h-6 w-6 text-teal-600" />
-              </div>
-              <div>
-                <p className="text-lg font-bold text-gray-900">Plumb Pro</p>
-                <p className="text-xs text-teal-600 font-medium">Service Request</p>
-              </div>
-            </div>
+            <IndustryLogo industry="plumbing" height={48} priority />
             <Link href="/login">
               <span className="text-sm text-teal-600 hover:underline">Operator Login →</span>
             </Link>
@@ -53,8 +45,9 @@ export default async function PlumbingLeadPage({
 
       {/* Main Content */}
       <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Request Plumbing Service</h1>
+        {/* Centered logo above form */}
+        <div className="mb-8 text-center flex flex-col items-center gap-4">
+          <IndustryLogo industry="plumbing" height={56} priority className="mx-auto" />
           <p className="text-gray-500">
             Fill out this quick form and a licensed plumber will contact you shortly.
           </p>
