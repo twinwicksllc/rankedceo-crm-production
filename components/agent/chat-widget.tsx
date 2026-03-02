@@ -164,6 +164,7 @@ export function ChatWidget({
 
       if ((shouldBook || hasShowBookingAction) && data.calendlyUrl) {
         console.error('[FINAL-CHECK] REDIRECT TRIGGERED BY:', { triggerBooking: data.triggerBooking, action: data.action })
+        window.alert('REDIRECT INITIATED to: ' + data.calendlyUrl)
         window.location.assign(data.calendlyUrl)
         return
       } else {

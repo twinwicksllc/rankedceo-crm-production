@@ -266,10 +266,11 @@ export async function POST(request: NextRequest) {
     // ── Step 2: HARD-CODED FALLBACK — simplified regex, logs full history for debugging ──
     console.error('[DEPLOYMENT-TIMESTAMP] Code executed at:', new Date().toISOString())
     if (!updatedLeadInfo.name || updatedLeadInfo.name === 'Valued Lead') {
-      const fullHistory = updatedMessages.map(m => m.content).join(' ')
-      console.log('[DEBUG] Chat History:', fullHistory)
-      // Simplified: just grab first capitalized word after 'am'
-      const nameMatch = fullHistory.match(/am ([A-Z][a-z]+)/i)
+      const fullHistory = updatedMessages
+        .map(m => typeof m.content === 'string' ? m.content : JSON.stringify(m.content))
+        .join(' ')
+      console.log('[DEBUG] Testing Regex on:', fullHistory)
+      const nameMatch = fullHistory.match(/(?:I am|name is|I'm)\s+([A-Z][a-z]+)/i)
       if (nameMatch && nameMatch[1]) {
         updatedLeadInfo.name = nameMatch[1]
         console.error('[EMERGENCY] Name found via fallback:', updatedLeadInfo.name)
@@ -303,6 +304,19 @@ export async function POST(request: NextRequest) {
       if (response.action === 'booking_confirmed' || response.action === 'show_booking') {
         await agentConversationService.updateStatus(conversation.id, 'booked')
       }
+    }
+
+    // ── Force booking action if user message contains booking intent ────────
+    const userMsgLower = message.toLowerCase()
+    const userWantsBooking = userMsgLower.includes('book') ||
+      userMsgLower.includes('schedule') ||
+      userMsgLower.includes('calendly') ||
+      userMsgLower.includes('appointment') ||
+      userMsgLower.includes('set up a call') ||
+      userMsgLower.includes('set up call')
+    if (userWantsBooking && hasEnoughInfo && calendlySchedulingUrl) {
+      console.error('[BOOKING-FORCE] User expressed booking intent — forcing show_booking action')
+      response.action = 'show_booking'
     }
 
     // ── Attach Calendly URL only when AI explicitly requests booking ──────
