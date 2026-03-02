@@ -63,7 +63,7 @@ export default function ElectricalSignupPage() {
       <Card className="w-full max-w-md border-amber-200 shadow-lg">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <IndustryLogo industry="electrical" height={56} priority />
+            <IndustryLogo industry="electrical" height={84} priority />
           </div>
           <CardTitle className="sr-only">Spark Pro</CardTitle>
           <CardDescription className="text-gray-500">

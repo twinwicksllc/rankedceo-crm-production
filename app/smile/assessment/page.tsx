@@ -57,7 +57,7 @@ export default async function SmileAssessmentPage({
       <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
         {/* Centered logo above form */}
         <div className="mb-8 text-center flex flex-col items-center gap-4">
-          <IndustryLogo industry="smile" height={56} priority className="mx-auto" />
+          <IndustryLogo industry="smile" height={84} priority className="mx-auto" />
           <p className="text-gray-500">
             Complete this comprehensive assessment to begin your smile transformation journey
           </p>
