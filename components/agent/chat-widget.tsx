@@ -179,7 +179,6 @@ export function ChatWidget({
           // Redirecting to Calendly
             console.log('[Chat Widget] Opening Calendly:', data.calendlyUrl)
             window.location.href = data.calendlyUrl!
-          }
         }, 800)
         return
       }
