@@ -163,27 +163,22 @@ export function ChatWidget({
       }
 
       // ── Calendly redirect (ONLY when triggerBooking is true) ───────────────
-      // CRITICAL: Only redirect if:
-      // 1. triggerBooking=true (API confirmed booking intent + info)
-      // 2. Widget is STILL OPEN (user didn't close it)
-      // 3. Widget was open when message was sent
-      // 
-      // IMPORTANT: Do NOT redirect just because calendlyUrl is present.
+        // CRITICAL: Only redirect if triggerBooking=true (API confirmed booking intent + info)
+        //
+        // IMPORTANT: Do NOT redirect just because calendlyUrl is present.
       // The user must explicitly request booking (e.g., "book a call").
       // This allows users to ask questions (like "pricing") after providing info.
-      if (data.triggerBooking && data.calendlyUrl && isOpen && wasOpenWhenSent) {
+      if (data.triggerBooking && data.calendlyUrl) {
         console.log('[Chat Widget] Triggering Calendly redirect:', {
           triggerBooking: data.triggerBooking,
           calendlyUrl: data.calendlyUrl,
-          isOpen,
-          wasOpenWhenSent,
         })
         
-        // Open Calendly in new tab after short delay so user sees the message
+        // Redirect to Calendly in same tab after short delay so user sees the message
         setTimeout(() => {
-          if (isOpen) { // Double-check before redirecting
+          // Redirecting to Calendly
             console.log('[Chat Widget] Opening Calendly:', data.calendlyUrl)
-            window.open(data.calendlyUrl!, '_blank')
+            window.location.href = data.calendlyUrl!
           }
         }, 800)
         return
