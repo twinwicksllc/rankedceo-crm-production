@@ -9,10 +9,8 @@ import type { IndustryType } from '@/lib/types/industry-lead'
 
 export const dynamic = 'force-dynamic'
 
-// Default account ID for general company bookings
 const DEFAULT_ACCOUNT_ID = process.env.DEFAULT_ACCOUNT_ID || '00000000-0000-4000-a000-000000000001'
 
-// ─────────── Duplicate Check & Lead Upsert ─────────────────────────────────
 async function upsertChatLead(
   supabase: any,
   accountId: string,
@@ -20,11 +18,7 @@ async function upsertChatLead(
   leadInfo: { name?: string; email?: string; phone?: string }
 ): Promise<string | null> {
   try {
-    console.log('[Agent Chat] upsertChatLead called with:', {
-      accountId,
-      source,
-      leadInfo,
-    })
+    console.log('[Agent Chat] upsertChatLead called with:', { accountId, source, leadInfo })
 
     const industry = ['hvac', 'plumbing', 'electrical'].includes(source)
       ? source as IndustryType
@@ -91,8 +85,6 @@ async function upsertChatLead(
       if (leadInfo.email && !existingLead.lead_email) updates.lead_email = leadInfo.email
       if (leadInfo.phone && !existingLead.lead_phone) updates.lead_phone = leadInfo.phone
 
-      console.log('[Agent Chat] Updates to apply:', updates)
-
       const { error: updateError } = await supabase
         .from('industry_leads')
         .update(updates)
@@ -108,11 +100,7 @@ async function upsertChatLead(
     }
 
     if (!leadInfo.email && !leadInfo.phone) {
-      console.log('[Agent Chat] Insufficient info for lead creation:', {
-        hasName: !!leadInfo.name,
-        hasEmail: !!leadInfo.email,
-        hasPhone: !!leadInfo.phone,
-      })
+      console.log('[Agent Chat] Insufficient info for lead creation')
       return null
     }
 
@@ -275,15 +263,18 @@ export async function POST(request: NextRequest) {
       phone: context.leadInfo?.phone || extracted.phone || conversation?.lead_phone || undefined,
     }
 
-    // ── Step 2: HARD-CODED FALLBACK — broader regex catches "I am / My name is / I'm" ──
+    // ── Step 2: HARD-CODED FALLBACK — simplified regex, logs full history for debugging ──
     console.error('[DEPLOYMENT-TIMESTAMP] Code executed at:', new Date().toISOString())
     if (!updatedLeadInfo.name || updatedLeadInfo.name === 'Valued Lead') {
       const fullHistory = updatedMessages.map(m => m.content).join(' ')
-      const nameRegex = /(?:I am|My name is|I'm)\s+([A-Z][a-z]+(?:\s[A-Z][a-z]+)?)/i
-      const nameMatch = fullHistory.match(nameRegex)
+      console.log('[DEBUG] Chat History:', fullHistory)
+      // Simplified: just grab first capitalized word after 'am'
+      const nameMatch = fullHistory.match(/am ([A-Z][a-z]+)/i)
       if (nameMatch && nameMatch[1]) {
         updatedLeadInfo.name = nameMatch[1]
         console.error('[EMERGENCY] Name found via fallback:', updatedLeadInfo.name)
+      } else {
+        console.error('[EMERGENCY] Fallback regex found NO match in history')
       }
     }
 

@@ -29,7 +29,6 @@ interface EnrichedChatResponse extends AgentChatResponse {
 }
 
 function generateSessionId(): string {
-  // Reuse session from sessionStorage so refreshes keep the same session
   if (typeof window !== 'undefined') {
     const stored = sessionStorage.getItem('agent_session_id')
     if (stored) return stored
@@ -71,7 +70,6 @@ export function ChatWidget({
     scrollToBottom()
   }, [messages, scrollToBottom])
 
-  // Load greeting when widget opens
   useEffect(() => {
     if (isOpen && !hasGreeted) {
       loadStaticGreeting()
@@ -79,7 +77,6 @@ export function ChatWidget({
     }
   }, [isOpen, hasGreeted])
 
-  // Focus input when opened
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 100)
@@ -87,7 +84,6 @@ export function ChatWidget({
   }, [isOpen])
 
   function loadStaticGreeting() {
-    // Static, industry-specific greetings - no AI calls!
     const greetings: Record<AppointmentSource, string> = {
       hvac: "Hi there! 👋 I'm here to help you with your HVAC needs. To get started, could you please share your name, phone number, and email address?",
       plumbing: "Hello! 👋 I'm here to help with your plumbing needs. Could you please provide your name, phone number, and email address so we can assist you?",
@@ -105,14 +101,9 @@ export function ChatWidget({
     }])
   }
 
-  // ───────── Handle close button ───────────────────────────────────────────────────────
-  // If lead info was NOT captured, refresh the page so the form is shown again.
-  // If lead info WAS captured, just close the widget.
-  // CRITICAL: This function ONLY manages isOpen state and refresh logic - NO redirects!
   function handleClose() {
     setIsOpen(false)
     if (!leadCaptured) {
-      // Small delay so the close animation plays before refresh
       setTimeout(() => {
         window.location.reload()
       }, 300)
@@ -122,9 +113,6 @@ export function ChatWidget({
   async function sendMessage(text?: string) {
     const messageText = text || input.trim()
     if (!messageText || isLoading) return
-
-    // CRITICAL: Track widget state at message send time to prevent redirect on close
-    const wasOpenWhenSent = isOpen
 
     setInput('')
     setIsLoading(true)
@@ -150,10 +138,13 @@ export function ChatWidget({
       })
 
       const data: EnrichedChatResponse = await res.json()
-      console.log('[Chat Widget] Full API response:', data)
-      console.log('[Chat Widget] triggerBooking type:', typeof data.triggerBooking)
-      console.log('[Chat Widget] triggerBooking value:', data.triggerBooking)
-      console.log('[Chat Widget] calendlyUrl value:', data.calendlyUrl)
+
+      // ── Full response logging ──────────────────────────────────────────
+      console.error('[FINAL-CHECK] Full API response:', JSON.stringify(data))
+      console.error('[FINAL-CHECK] triggerBooking:', data.triggerBooking, '| type:', typeof data.triggerBooking)
+      console.error('[FINAL-CHECK] action:', data.action)
+      console.error('[FINAL-CHECK] calendlyUrl:', data.calendlyUrl)
+      console.error('[FINAL-CHECK] message snippet:', (data.message || '').substring(0, 80))
 
       setMessages(prev => [...prev, {
         role: 'assistant',
@@ -161,44 +152,38 @@ export function ChatWidget({
         timestamp: new Date().toISOString(),
       }])
 
-      // Track whether lead info has been captured
       if (data.leadCaptured) {
         setLeadCaptured(true)
       }
 
-      // ── Calendly redirect (ONLY when triggerBooking is true) ───────────────
-        // CRITICAL: Only redirect if triggerBooking=true (API confirmed booking intent + info)
-        //
-        // IMPORTANT: Do NOT redirect just because calendlyUrl is present.
-      // The user must explicitly request booking (e.g., "book a call").
-      // This allows users to ask questions (like "pricing") after providing info.
-      // HARD OVERRIDE: Truthiness check for both Boolean and String responses
+      // ── Redirect logic: triggerBooking boolean OR show_booking action OR
+      //    booking keywords in AI message ─────────────────────────────────
       const shouldBook = String(data.triggerBooking).toLowerCase() === 'true'
-      
-      // EMERGENCY: Force redirect if AI response contains "show_booking" regardless of triggerBooking
-      const hasShowBookingAction = data.action === 'show_booking' || (data.message || '').toLowerCase().includes('show_booking')
-      
-      if ((shouldBook || hasShowBookingAction) && data.calendlyUrl) {
-        console.error('[FINAL-CHECK] REDIRECT TRIGGERED')
-        console.error('[FINAL-CHECK] Calendly URL:', data.calendlyUrl)
-        console.error('[FINAL-CHECK] Trigger sources:', { shouldBook, hasShowBookingAction, action: data.action })
-        
-        // Immediate redirect - no setTimeout, no state checks
+      const hasShowBookingAction = data.action === 'show_booking' || data.action === 'booking_confirmed'
+      const msgLower = (data.message || '').toLowerCase()
+      const hasBookingKeyword = msgLower.includes('book') ||
+        msgLower.includes('calendly') ||
+        msgLower.includes('appointment') ||
+        msgLower.includes('schedule') ||
+        msgLower.includes('calendar')
+
+      console.error('[FINAL-CHECK] shouldBook:', shouldBook, '| hasShowBookingAction:', hasShowBookingAction, '| hasBookingKeyword:', hasBookingKeyword, '| calendlyUrl:', data.calendlyUrl)
+
+      if ((shouldBook || hasShowBookingAction || (hasBookingKeyword && data.leadCaptured)) && data.calendlyUrl) {
+        console.error('[FINAL-CHECK] REDIRECT TRIGGERED to:', data.calendlyUrl)
         window.location.assign(data.calendlyUrl)
         return
       } else {
-        console.error('[FINAL-CHECK] NOT REDIRECTING - Conditions not met:', {
-          triggerBooking: data.triggerBooking,
-          triggerBookingType: typeof data.triggerBooking,
+        console.error('[FINAL-CHECK] NOT REDIRECTING - conditions:', {
           shouldBook,
           hasShowBookingAction,
-          action: data.action,
+          hasBookingKeyword,
+          leadCaptured: data.leadCaptured,
           calendlyUrl: data.calendlyUrl,
         })
       }
 
-
-      // ── Show inline Calendly iframe (fallback for show_booking action) ───────
+      // ── Show inline Calendly iframe (fallback) ────────────────────────
       if (data.action === 'show_booking' && data.bookingData?.schedulingUrl) {
         console.log('[Chat Widget] Showing inline Calendly iframe')
         setBookingUrl(data.bookingData.schedulingUrl)
@@ -320,7 +305,7 @@ export function ChatWidget({
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Quick replies - shown only on first message */}
+              {/* Quick replies */}
               {messages.length === 1 && (
                 <div className="px-4 py-2 flex gap-2 flex-wrap border-t border-gray-100 bg-white">
                   {['I need help', 'Book a call', 'Get a quote'].map(reply => (
