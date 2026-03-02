@@ -12,10 +12,7 @@ export const dynamic = 'force-dynamic'
 // Default account ID for general company bookings
 const DEFAULT_ACCOUNT_ID = process.env.DEFAULT_ACCOUNT_ID || '00000000-0000-4000-a000-000000000001'
 
-// ───────── Duplicate Check & Lead Upsert ─────────────────────────────────────
-// Checks if a lead already exists by email or phone within the same account.
-// If found, updates their record. If not, creates a new one.
-// Returns the lead ID.
+// ─────────── Duplicate Check & Lead Upsert ─────────────────────────────────
 async function upsertChatLead(
   supabase: any,
   accountId: string,
@@ -33,13 +30,11 @@ async function upsertChatLead(
       ? source as IndustryType
       : null
 
-    // Only create industry_leads for industry subdomains
     if (!industry) {
       console.log('[Agent Chat] Not an industry subdomain, skipping lead creation')
       return null
     }
 
-    // ── Duplicate check on email OR phone ────────────────────────────────────
     let existingLead: any = null
 
     if (leadInfo.email) {
@@ -83,11 +78,14 @@ async function upsertChatLead(
     }
 
     if (existingLead) {
-      // ── Update existing lead with any new info ────────────────────────────
       console.log('[Agent Chat] Existing lead found, updating:', existingLead.id)
       const updates: any = { updated_at: new Date().toISOString() }
-      // Only overwrite name if we have a real name (not 'Unknown') and existing is blank
-      if (leadInfo.name && leadInfo.name !== 'Unknown' && (!existingLead.lead_name || existingLead.lead_name === 'Unknown')) {
+      if (
+        leadInfo.name &&
+        leadInfo.name !== 'Unknown' &&
+        leadInfo.name !== 'Valued Lead' &&
+        (!existingLead.lead_name || existingLead.lead_name === 'Unknown' || existingLead.lead_name === 'Valued Lead')
+      ) {
         updates.lead_name = leadInfo.name
       }
       if (leadInfo.email && !existingLead.lead_email) updates.lead_email = leadInfo.email
@@ -109,8 +107,6 @@ async function upsertChatLead(
       return existingLead.id
     }
 
-    // ── Create new lead ───────────────────────────────────────────────────────
-    // Require at minimum email OR phone to create a record
     if (!leadInfo.email && !leadInfo.phone) {
       console.log('[Agent Chat] Insufficient info for lead creation:', {
         hasName: !!leadInfo.name,
@@ -120,11 +116,6 @@ async function upsertChatLead(
       return null
     }
 
-    // FIX 1: Only use confirmed Supabase columns.
-    // Removed: urgency, preferred_contact_method, service_details, status
-    // (these may not exist in the standardized schema)
-    
-    
     const leadData = {
       account_id: accountId,
       industry,
@@ -133,7 +124,12 @@ async function upsertChatLead(
       lead_phone: leadInfo.phone || '',
     }
 
-    console.error('[CRITICAL] Upserting Lead:', { name: leadData.lead_name, email: leadData.lead_email, phone: leadData.lead_phone, industry: leadData.industry })
+    console.error('[CRITICAL] Upserting Lead:', {
+      name: leadData.lead_name,
+      email: leadData.lead_email,
+      phone: leadData.lead_phone,
+      industry: leadData.industry,
+    })
 
     const { data: newLead, error } = await supabase
       .from('industry_leads')
@@ -181,10 +177,8 @@ export async function POST(request: NextRequest) {
       message: message.substring(0, 100),
     })
 
-    // Use admin client so writes bypass RLS (public visitors have no session)
     const supabase = createAdminClient()
 
-    // Get or create conversation using service
     const conversation = await agentConversationService.getOrCreateConversation(
       sessionId,
       source,
@@ -193,7 +187,6 @@ export async function POST(request: NextRequest) {
 
     const messages: AgentMessage[] = conversation?.messages || []
 
-    // Get Calendly event types for this account
     let eventTypes: any[] = []
     let calendlySchedulingUrl: string | null = null
     try {
@@ -216,7 +209,6 @@ export async function POST(request: NextRequest) {
       console.warn('[Agent Chat] Could not fetch event types:', err)
     }
 
-    // Build context — merge conversation state with any incoming leadInfo
     const context = {
       source: source as AppointmentSource,
       accountId: resolvedAccountId,
@@ -230,27 +222,16 @@ export async function POST(request: NextRequest) {
       availableEventTypes: eventTypes,
     }
 
-    // ── FIX 2: REMOVE SHORT-CIRCUIT — AI ALWAYS RESPONDS FIRST ───────────────
-    // The short-circuit was bypassing the AI and triggering Calendly redirects
-    // based on keyword detection alone. This caused premature redirects.
-    //
-    // The ONLY way triggerBooking=true is returned is if the AI's own response
-    // sets action='show_booking' or action='booking_confirmed'.
-    // ─────────────────────────────────────────────────────────────────────────
-
-    // ── Always call AI ────────────────────────────────────────────────────────
     const response = await chat(message, messages, context, eventTypes)
 
-    // Update messages array for extraction
     const updatedMessages: AgentMessage[] = [
       ...messages,
       { role: 'user', content: message, timestamp: new Date().toISOString() },
       { role: 'assistant', content: response.message, timestamp: new Date().toISOString() },
     ]
 
-    // Extract lead info from full conversation (including current turn)
     const extracted = extractLeadInfo(updatedMessages)
-    
+
     console.log('[Agent Chat] Extraction results:', {
       extracted,
       contextLeadInfo: context.leadInfo,
@@ -260,23 +241,21 @@ export async function POST(request: NextRequest) {
         phone: conversation?.lead_phone,
       },
     })
-    
-    // HARD OVERRIDE: Regex fallback for name extraction
-    // If extraction failed, try to find name in user messages using regex
+
+    // ── Step 1: Try existing extraction pipeline ──────────────────────────
     let finalName = context.leadInfo?.name || extracted.name || conversation?.lead_name || undefined
-    
+
     if (!finalName) {
       const userMessagesText = updatedMessages
         .filter(m => m.role === 'user')
         .map(m => m.content)
         .join(' ')
-      
-      // Pattern 1: "I am [Name]", "I'm [Name]", "My name is [Name]", "This is [Name]"
+
       const namePatterns = [
         /(?:i am|i'm|my name is|this is|call me|name is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)(?:\s+[A-Z][a-z]+)?)/i,
         /(?:^|[.!?]\s+)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)(?:\s+[A-Z][a-z]+)?)(?:\s+(?:is|here|speaking|calling|available))?/i,
       ]
-      
+
       for (const pattern of namePatterns) {
         const match = userMessagesText.match(pattern)
         if (match && match[1]) {
@@ -289,24 +268,22 @@ export async function POST(request: NextRequest) {
         }
       }
     }
-    
+
     const updatedLeadInfo = {
       name: finalName,
       email: context.leadInfo?.email || extracted.email || conversation?.lead_email || undefined,
       phone: context.leadInfo?.phone || extracted.phone || conversation?.lead_phone || undefined,
     }
 
-    // HARD-CODED FALLBACK: Force local regex check to avoid 'Valued Lead'
-      console.error('[DEPLOYMENT-TIMESTAMP] Code executed at:', new Date().toISOString())
+    // ── Step 2: HARD-CODED FALLBACK — broader regex catches "I am / My name is / I'm" ──
+    console.error('[DEPLOYMENT-TIMESTAMP] Code executed at:', new Date().toISOString())
     if (!updatedLeadInfo.name || updatedLeadInfo.name === 'Valued Lead') {
-      const userMessagesText = updatedMessages
-        .filter(m => m.role === 'user')
-        .map(m => m.content)
-        .join(' ')
-      const nameMatch = userMessagesText.match(/I am ([A-Z][a-z]+ [A-Z][a-z]+)/)
+      const fullHistory = updatedMessages.map(m => m.content).join(' ')
+      const nameRegex = /(?:I am|My name is|I'm)\s+([A-Z][a-z]+(?:\s[A-Z][a-z]+)?)/i
+      const nameMatch = fullHistory.match(nameRegex)
       if (nameMatch && nameMatch[1]) {
         updatedLeadInfo.name = nameMatch[1]
-        console.error('[EMERGENCY] Name found via hard-coded fallback:', updatedLeadInfo.name)
+        console.error('[EMERGENCY] Name found via fallback:', updatedLeadInfo.name)
       }
     }
 
@@ -314,7 +291,7 @@ export async function POST(request: NextRequest) {
       leadInfo: updatedLeadInfo,
     })
 
-    // ── Auto-create/update industry lead when we have email OR phone ──────────
+    // ── Auto-create/update industry lead when we have email OR phone ──────
     let leadId: string | null = null
     const hasEnoughInfo = !!(updatedLeadInfo.email || updatedLeadInfo.phone)
     if (hasEnoughInfo) {
@@ -323,7 +300,7 @@ export async function POST(request: NextRequest) {
       console.log('[Agent Chat] Lead upsert result:', leadId ? `Created/Updated: ${leadId}` : 'Failed')
     }
 
-    // ── Update conversation record ────────────────────────────────────────────
+    // ── Update conversation record ────────────────────────────────────────
     if (conversation) {
       await agentConversationService.addMessage(conversation.id, 'user', message)
       await agentConversationService.addMessage(conversation.id, 'assistant', response.message)
@@ -337,7 +314,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ── Attach Calendly URL only when AI explicitly requests booking ──────────
+    // ── Attach Calendly URL only when AI explicitly requests booking ──────
     const wantsBooking = response.action === 'show_booking' || response.action === 'booking_confirmed'
     if (wantsBooking && hasEnoughInfo && calendlySchedulingUrl) {
       response.bookingData = {
@@ -346,8 +323,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ── Return enriched response ──────────────────────────────────────────────
-    // triggerBooking is ONLY true when the AI itself sets a booking action
     return NextResponse.json({
       ...response,
       leadCaptured: hasEnoughInfo,
