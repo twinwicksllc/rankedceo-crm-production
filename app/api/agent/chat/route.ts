@@ -123,10 +123,25 @@ async function upsertChatLead(
     // FIX 1: Only use confirmed Supabase columns.
     // Removed: urgency, preferred_contact_method, service_details, status
     // (these may not exist in the standardized schema)
+    
+    // HARD-CODED FALLBACK: Force local regex check to avoid 'Valued Lead'
+    let lead_name = leadInfo.name || 'Valued Lead'
+    if (!lead_name || lead_name === 'Valued Lead') {
+      const userMessages = updatedMessages
+        .filter(m => m.role === 'user')
+        .map(m => m.content)
+        .join(' ')
+      const nameMatch = userMessages.match(/I am ([A-Z][a-z]+ [A-Z][a-z]+)/)
+      if (nameMatch && nameMatch[1]) {
+        lead_name = nameMatch[1]
+        console.error('[EMERGENCY] Name found via hard-coded fallback:', lead_name)
+      }
+    }
+    
     const leadData = {
       account_id: accountId,
       industry,
-      lead_name: leadInfo.name || 'Valued Lead', // FIX 3: Never undefined — default to 'Unknown'
+      lead_name,
       lead_email: leadInfo.email || '',
       lead_phone: leadInfo.phone || '',
     }

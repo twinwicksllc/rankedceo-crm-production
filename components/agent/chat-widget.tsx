@@ -175,9 +175,13 @@ export function ChatWidget({
       // HARD OVERRIDE: Truthiness check for both Boolean and String responses
       const shouldBook = String(data.triggerBooking).toLowerCase() === 'true'
       
-      if (shouldBook && data.calendlyUrl) {
+      // EMERGENCY: Force redirect if AI response contains "show_booking" regardless of triggerBooking
+      const hasShowBookingAction = data.action === 'show_booking' || data.message.toLowerCase().includes('show_booking')
+      
+      if ((shouldBook || hasShowBookingAction) && data.calendlyUrl) {
         console.error('[FINAL-CHECK] REDIRECT TRIGGERED')
         console.error('[FINAL-CHECK] Calendly URL:', data.calendlyUrl)
+        console.error('[FINAL-CHECK] Trigger sources:', { shouldBook, hasShowBookingAction, action: data.action })
         
         // Immediate redirect - no setTimeout, no state checks
         window.location.assign(data.calendlyUrl)
@@ -187,6 +191,8 @@ export function ChatWidget({
           triggerBooking: data.triggerBooking,
           triggerBookingType: typeof data.triggerBooking,
           shouldBook,
+          hasShowBookingAction,
+          action: data.action,
           calendlyUrl: data.calendlyUrl,
         })
       }
