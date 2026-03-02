@@ -128,7 +128,7 @@ async function upsertChatLead(
     const leadData = {
       account_id: accountId,
       industry,
-      lead_name,
+      lead_name: leadInfo.name || 'Valued Lead',
       lead_email: leadInfo.email || '',
       lead_phone: leadInfo.phone || '',
     }
