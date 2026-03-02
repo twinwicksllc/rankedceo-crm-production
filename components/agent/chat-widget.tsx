@@ -172,29 +172,22 @@ export function ChatWidget({
         // IMPORTANT: Do NOT redirect just because calendlyUrl is present.
       // The user must explicitly request booking (e.g., "book a call").
       // This allows users to ask questions (like "pricing") after providing info.
-      if (data.triggerBooking && data.calendlyUrl) {
-        console.error('[Chat Widget] ✅ TRIGGERING REDIRECT - All conditions met:', {
-          triggerBooking: data.triggerBooking,
-          triggerBookingType: typeof data.triggerBooking,
-          calendlyUrl: data.calendlyUrl,
-        })
+      // HARD OVERRIDE: Truthiness check for both Boolean and String responses
+      const shouldBook = String(data.triggerBooking).toLowerCase() === 'true'
+      
+      if (shouldBook && data.calendlyUrl) {
+        console.error('[FINAL-CHECK] REDIRECT TRIGGERED')
+        console.error('[FINAL-CHECK] Calendly URL:', data.calendlyUrl)
         
-        // Alert to prove this branch is being hit
-        window.alert('Redirecting to Calendly...')
-        
-        // Redirect to Calendly in same tab after short delay so user sees the message
-        setTimeout(() => {
-          console.log('[Chat Widget] Executing redirect to:', data.calendlyUrl)
-          window.location.href = data.calendlyUrl!
-        }, 800)
+        // Immediate redirect - no setTimeout, no state checks
+        window.location.assign(data.calendlyUrl)
         return
       } else {
-        console.error('[Chat Widget] ❌ NOT REDIRECTING - Conditions not met:', {
+        console.error('[FINAL-CHECK] NOT REDIRECTING - Conditions not met:', {
           triggerBooking: data.triggerBooking,
           triggerBookingType: typeof data.triggerBooking,
+          shouldBook,
           calendlyUrl: data.calendlyUrl,
-          hasTriggerBooking: !!data.triggerBooking,
-          hasCalendlyUrl: !!data.calendlyUrl,
         })
       }
 

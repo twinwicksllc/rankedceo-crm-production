@@ -131,7 +131,7 @@ async function upsertChatLead(
       lead_phone: leadInfo.phone || '',
     }
 
-    console.log('[Agent Chat] Attempting upsert with:', leadData)
+    console.error('[CRITICAL] Upserting Lead:', { name: leadData.lead_name, email: leadData.lead_email, phone: leadData.lead_phone, industry: leadData.industry })
 
     const { data: newLead, error } = await supabase
       .from('industry_leads')
@@ -259,8 +259,37 @@ export async function POST(request: NextRequest) {
       },
     })
     
+    // HARD OVERRIDE: Regex fallback for name extraction
+    // If extraction failed, try to find name in user messages using regex
+    let finalName = context.leadInfo?.name || extracted.name || conversation?.lead_name || undefined
+    
+    if (!finalName) {
+      const userMessagesText = updatedMessages
+        .filter(m => m.role === 'user')
+        .map(m => m.content)
+        .join(' ')
+      
+      // Pattern 1: "I am [Name]", "I'm [Name]", "My name is [Name]", "This is [Name]"
+      const namePatterns = [
+        /(?:i am|i'm|my name is|this is|call me|name is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)(?:\s+[A-Z][a-z]+)?)/i,
+        /(?:^|[.!?]\s+)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)(?:\s+[A-Z][a-z]+)?)(?:\s+(?:is|here|speaking|calling|available))?/i,
+      ]
+      
+      for (const pattern of namePatterns) {
+        const match = userMessagesText.match(pattern)
+        if (match && match[1]) {
+          const commonWords = ['This', 'That', 'There', 'Here', 'Hello', 'Hi', 'Hey', 'Good', 'Great', 'Thanks', 'Please', 'Sorry', 'Yes', 'No', 'Okay', 'Sure', 'Alright', 'Well', 'Now', 'Today', 'Tomorrow', 'Yesterday']
+          if (!commonWords.includes(match[1])) {
+            finalName = match[1]
+            console.log('[Agent Chat] Name found via regex fallback:', finalName)
+            break
+          }
+        }
+      }
+    }
+    
     const updatedLeadInfo = {
-      name: context.leadInfo?.name || extracted.name || conversation?.lead_name || undefined,
+      name: finalName,
       email: context.leadInfo?.email || extracted.email || conversation?.lead_email || undefined,
       phone: context.leadInfo?.phone || extracted.phone || conversation?.lead_phone || undefined,
     }
