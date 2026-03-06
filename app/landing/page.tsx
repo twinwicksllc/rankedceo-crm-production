@@ -86,22 +86,70 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="features">
+      <section className="proof-section">
         <div className="container">
-          <h2>Why Choose Smile MakeOver?</h2>
-          <div className="features-grid">
-            <div className="feature-item">
-              <h4>Expert Surgeons</h4>
-              <p>Our team consists of top-tier cosmetic specialists with decades of experience.</p>
+          <h2>Proof You'll See (and Feel) Every Time You Smile</h2>
+          <p className="proof-subtitle">With over 1,500+ smile makeover cases completed, our before-and-after results demonstrate the life-changing impact of affordable cosmetic dentistry.</p>
+          
+          <div className="gallery">
+            <div className="gallery-item">
+              <Image src="https://via.placeholder.com/200x200?text=Before+%2F+After+1" alt="Patient transformation 1" width={200} height={200} />
             </div>
-            <div className="feature-item">
-              <h4>Modern Technology</h4>
-              <p>We use 3D imaging to preview your smile before we even begin.</p>
+            <div className="gallery-item">
+              <Image src="https://via.placeholder.com/200x200?text=Before+%2F+After+2" alt="Patient transformation 2" width={200} height={200} />
             </div>
-            <div className="feature-item">
-              <h4>Affordable Plans</h4>
-              <p>Luxury smiles shouldn't be for the 1%. We offer plans for every budget.</p>
+            <div className="gallery-item">
+              <Image src="https://via.placeholder.com/200x200?text=Before+%2F+After+3" alt="Patient transformation 3" width={200} height={200} />
             </div>
+            <div className="gallery-item">
+              <Image src="https://via.placeholder.com/200x200?text=Before+%2F+After+4" alt="Patient transformation 4" width={200} height={200} />
+            </div>
+            <div className="gallery-item">
+              <Image src="https://via.placeholder.com/200x200?text=Before+%2F+After+5" alt="Patient transformation 5" width={200} height={200} />
+            </div>
+          </div>
+          
+          <p className="gallery-caption">Real Transformations. <strong>Real Confidence. Real Results.</strong></p>
+        </div>
+      </section>
+
+      <section className="two-column-section">
+        <div className="container">
+          <div className="two-column-grid">
+            <div className="column">
+              <h3>Have You Ever...</h3>
+              <ul className="bullet-list">
+                <li>Felt embarrassed to smile in photos?</li>
+                <li>Covered your mouth when laughing?</li>
+                <li>Avoided social or professional opportunities because of your teeth?</li>
+                <li>Been told veneers or cosmetic dental work were "too expensive"?</li>
+              </ul>
+              <p className="column-text">Traditional cosmetic dentistry can cost thousands upfront. Most people delay treatment because of price – not desire.</p>
+              <p className="column-bold">That's where we change the equation.</p>
+            </div>
+
+            <div className="column">
+              <h3>A Confident Smile Should Never Feel Unattainable</h3>
+              <p className="sub-label">Your smile impacts:</p>
+              <ul className="impact-list">
+                <li>Career opportunities</li>
+                <li>First Impressions</li>
+                <li>Relationships</li>
+                <li>Self-confidence</li>
+                <li>Social presence</li>
+              </ul>
+              <button className="cta-button purple-button">BOOK FREE VIRTUAL SMILE CONSULTATION</button>
+              <Image src="https://via.placeholder.com/300x250?text=Happy+Couple" alt="Happy couple smiling" width={300} height={250} className="lifestyle-image" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="bottom-cta-bar">
+        <div className="container">
+          <div className="cta-buttons-row">
+            <button className="pill-button">🔍 Member Lookup ›</button>
+            <button className="pill-button">🦷 Dentist Sign Up ›</button>
           </div>
         </div>
       </section>
