@@ -54,8 +54,8 @@ body {
 
 /* --- HERO SECTION --- */
 .hero {
-    background: linear-gradient(135deg, #243b6b, #365fa0), url('/smile_hero_image.png') center/cover;
-    background-blend-mode: overlay;
+    background: linear-gradient(135deg, rgba(36, 59, 107, 0.5), rgba(54, 95, 160, 0.5)), url('/smile_hero_image.png') center/cover;
+    background-blend-mode: darken;
     color: #fff;
     padding: 80px 0;
 }
