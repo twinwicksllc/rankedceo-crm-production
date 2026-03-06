@@ -11,7 +11,7 @@ export function Header() {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <IndustryLogo industry="smile" height={40} priority />
+            <IndustryLogo industry="smile" height={80} priority />
             <div>
               <h1 className="text-xl font-bold text-primary font-serif">
                 Smile<span className="text-secondary">Pro</span>
