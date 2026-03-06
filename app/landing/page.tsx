@@ -47,11 +47,16 @@ export default function LandingPage() {
 
             <div className="hero-right">
               <div className="testimonial">
-                <h3>Get Your Free Estimate</h3>
+                <h3>Book Your FREE Virtual Smile Consultation</h3>
+                <p className="form-disclaimer">There is no cost. No obligation. Just clarity on your smile options.</p>
                 <form method="POST" action="/api/landing/quote">
                   <div className="form-group">
-                    <label htmlFor="fullname">Full Name</label>
-                    <input id="fullname" type="text" name="fullname" placeholder="Full Name" required />
+                    <label htmlFor="firstname">First Name</label>
+                    <input id="firstname" type="text" name="firstname" placeholder="First Name" required />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="lastname">Last Name</label>
+                    <input id="lastname" type="text" name="lastname" placeholder="Last Name" required />
                   </div>
                   <div className="form-group">
                     <label htmlFor="email">Email Address</label>
@@ -61,7 +66,12 @@ export default function LandingPage() {
                     <label htmlFor="phone">Phone Number</label>
                     <input id="phone" type="tel" name="phone" placeholder="Phone Number" required />
                   </div>
-                  <button type="submit" className="cta-button">GET MY FREE QUOTE</button>
+                  <div className="form-group">
+                    <label htmlFor="zipcode">Zip Code</label>
+                    <input id="zipcode" type="text" name="zipcode" placeholder="Zip Code" required />
+                  </div>
+                  <button type="submit" className="cta-button">BOOK FREE VIRTUAL SMILE CONSULTATION</button>
+                  <p className="form-disclaimer">There is no cost. No obligation. Just clarity on your smile options.</p>
                 </form>
               </div>
 
