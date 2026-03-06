@@ -402,7 +402,7 @@ body {
     .hero-content { flex-direction: column; text-align: center; }
     .hero-left, .hero-right { width: 100%; }
     .hero-left ul li { justify-content: center; }
-    .hero-left h1 { font-size: 32px; }
+    .hero-left h1 { font-size: 40px; }
     .testimonial-card { margin-top: 20px; }
     
     .two-column-grid {
@@ -418,5 +418,133 @@ body {
     .pill-button {
         width: 100%;
         max-width: 300px;
+    }
+}
+
+/* --- MOBILE RESPONSIVENESS --- */
+@media (max-width: 768px) {
+    .hero-content { 
+        flex-direction: column; 
+        text-align: center; 
+        gap: 30px;
+        padding: 20px 0;
+    }
+    
+    .hero-left, .hero-right { 
+        width: 100%; 
+    }
+    
+    .hero-left h1 { 
+        font-size: 32px;
+        margin-bottom: 10px;
+    }
+    
+    .hero-left h2 {
+        font-size: 16px;
+        margin-bottom: 15px;
+    }
+    
+    .hero-paragraph {
+        font-size: 14px;
+        margin-bottom: 15px;
+    }
+    
+    .hero-left ul li {
+        font-size: 14px;
+        margin-bottom: 8px;
+    }
+    
+    .testimonial {
+        padding: 20px;
+        margin: 20px auto;
+        max-width: 100%;
+    }
+    
+    .testimonial h3 {
+        font-size: 18px;
+        margin-bottom: 15px;
+    }
+    
+    .form-group {
+        margin-bottom: 12px;
+    }
+    
+    .form-group input {
+        padding: 12px;
+        font-size: 14px;
+    }
+    
+    .cta-button {
+        padding: 14px;
+        font-size: 16px;
+    }
+    
+    .testimonial-card {
+        padding: 16px;
+        margin-top: 15px;
+    }
+    
+    .testimonial-text {
+        font-size: 13px;
+    }
+    
+    .proof-section {
+        padding: 50px 0;
+    }
+    
+    .proof-section h2 {
+        font-size: 32px;
+        margin-bottom: 15px;
+    }
+    
+    .proof-subtitle {
+        font-size: 14px;
+        margin-bottom: 30px;
+    }
+    
+    .gallery {
+        gap: 10px;
+        margin-bottom: 30px;
+    }
+    
+    .two-column-section {
+        padding: 50px 0;
+    }
+    
+    .two-column-grid {
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
+    
+    .column h3 {
+        font-size: 24px;
+        margin-bottom: 15px;
+    }
+    
+    .bullet-list li, .impact-list li {
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
+    
+    .column-text {
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
+    
+    .bottom-cta-bar {
+        padding: 30px 0;
+    }
+    
+    .cta-buttons-row {
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
+    }
+    
+    .pill-button {
+        width: 100%;
+        padding: 14px 20px;
+        font-size: 14px;
+        border-radius: 25px;
     }
 }
