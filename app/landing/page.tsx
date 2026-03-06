@@ -48,7 +48,6 @@ export default function LandingPage() {
             <div className="hero-right">
               <div className="testimonial">
                 <h3>Book Your FREE Virtual Smile Consultation</h3>
-                <p className="form-disclaimer">There is no cost. No obligation. Just clarity on your smile options.</p>
                 <form method="POST" action="/api/landing/quote">
                   <div className="form-group">
                     <label htmlFor="firstname">First Name</label>
