@@ -46,8 +46,13 @@ next-env.d.ts
 summarized_conversations/
 
 # Screenshots and uploaded files
+# Allow images needed for deployment
+!public/logos/
+!app/landing/
 *.jpg
 *.png
+!public/logos/*.png
+!app/landing/*.png
 *.jpeg
 *.gif
 *.pdf
