@@ -1,17 +1,18 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
+import '../globals.css'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export const metadata: Metadata = {
-  title: 'Smile MakeOver - Dentist Dashboard',
-  description: 'Patient qualification and case mix revenue management for dental practices',
+  title: 'Smile MakeOver - Affordable Veneers & Cosmetic Dentistry',
+  description: 'Transform your smile with affordable, membership-based cosmetic dentistry without traditional insurance.',
 }
 
 /**
- * Smile Dashboard Layout
+ * Smile Subdomain Layout
  * 
  * Protects /smile routes: only accessible via smile.rankedceo.com subdomain.
  * Direct access to /smile from the main domain redirects to /.
@@ -21,7 +22,7 @@ export default async function SmileLayout({
 }: {
   children: React.ReactNode
 }) {
-  // ── Guard: Verify subdomain is "smile" ──────────────────────────────
+  // ─── Guard: Verify subdomain is "smile" ─────────────────────────────────────────
   const headersObj = await headers()
   const hostname = headersObj.get('host') || ''
   
@@ -45,5 +46,11 @@ export default async function SmileLayout({
     redirect('/')
   }
   
-  return <>{children}</>
+  return (
+    <html lang="en">
+      <body className="font-sans antialiased">
+        {children}
+      </body>
+    </html>
+  )
 }
