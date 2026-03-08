@@ -127,11 +127,18 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    // ── 3b. Special handling for smile subdomain root landing page ─────────
-    // smile.rankedceo.com/ → rewrites to /landing instead of /smile/
-    if (industry === 'smile' && pathname === '/') {
+    // ── 3b. Special handling for subdomain root landing pages ─────────────
+    // Each industry subdomain root → rewrites to its dedicated landing page
+    const landingRoutes: Partial<Record<IndustrySubdomain, string>> = {
+      smile:      '/landing',
+      hvac:       '/landing-hvac',
+      plumbing:   '/landing-plumbing',
+      electrical: '/landing-electrical',
+    }
+
+    if (pathname === '/' && landingRoutes[industry]) {
       const url = request.nextUrl.clone()
-      url.pathname = '/landing'
+      url.pathname = landingRoutes[industry]!
       const rewrite = NextResponse.rewrite(url)
       response.cookies.getAll().forEach(cookie => {
         rewrite.cookies.set(cookie.name, cookie.value)
