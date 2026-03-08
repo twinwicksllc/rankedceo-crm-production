@@ -8,9 +8,10 @@ const POOL_ACCOUNTS: Record<string, string> = {
   hvac:       '00000000-0000-0000-0001-000000000001',
   plumbing:   '00000000-0000-0000-0002-000000000002',
   electrical: '00000000-0000-0000-0003-000000000003',
+  smile:      '00000000-0000-0000-0004-000000000004',
 }
 
-const VALID_INDUSTRIES = ['hvac', 'plumbing', 'electrical']
+const VALID_INDUSTRIES = ['hvac', 'plumbing', 'electrical', 'smile']
 
 export async function POST(request: NextRequest) {
   try {

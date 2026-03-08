@@ -49,6 +49,7 @@ export default function LandingPage() {
               <div className="testimonial">
                 <h3>Book Your FREE Virtual Smile Consultation</h3>
                 <form method="POST" action="/api/landing/quote">
+                  <input type="hidden" name="industry" value="smile" />
                   <div className="form-group">
                     <label htmlFor="firstname">First Name</label>
                     <input id="firstname" type="text" name="firstname" placeholder="First Name" required />

@@ -49,6 +49,19 @@ const INDUSTRY_CONFIG: Record<string, {
       'You\'ll receive a transparent, upfront quote — no surprises',
     ],
   },
+  smile: {
+    name: 'Smile MakeOver',
+    color: '#7c3aed',
+    accent: '#8b5cf6',
+    icon: '😁',
+    phone: '(800) 555-0185',
+    nextSteps: [
+      'A smile consultant will contact you within 1 business hour',
+      'We\'ll schedule your FREE virtual smile consultation',
+      'A licensed cosmetic dentist will review your smile goals',
+      'You\'ll receive a personalized treatment plan — no obligation',
+    ],
+  },
 }
 
 const DEFAULT_CONFIG = INDUSTRY_CONFIG.hvac
@@ -305,7 +318,7 @@ export default function ThankYouContent() {
                 </div>
               </div>
 
-              <a href={`/${industry ? industry + '/' : ''}`} className="ty-back-btn" style={{ background: config.accent }}>
+              <a href="/" className="ty-back-btn" style={{ background: config.accent }}>
                 ← Back to {config.name}
               </a>
             </>
