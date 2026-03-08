@@ -20,31 +20,11 @@ export default function HvacLandingPage() {
       </header>
 
       <section className="hero">
-        {/* Placeholder hero image — replace with real HVAC photo */}
-        <div style={{
-          position: 'absolute',
-          right: 0,
-          top: 0,
-          width: '47%',
-          height: '68%',
-          background: 'linear-gradient(135deg, #1e3a5f 0%, #2563b0 50%, #60a5fa 100%)',
-          zIndex: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexDirection: 'column',
-          gap: '12px',
-          color: 'rgba(255,255,255,0.4)',
-          fontSize: '16px',
-          fontWeight: 600,
-        }}>
-          <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/>
-            <path d="M12 6v6l4 2"/>
-            <circle cx="12" cy="12" r="3"/>
-          </svg>
-          Hero Image Placeholder
-        </div>
+        <img
+          src="/landing-page/hvac_hero.jpg"
+          alt="Hero background"
+          className="hero-image"
+        />
 
         <div className="hero-container">
           <div className="hero-content">

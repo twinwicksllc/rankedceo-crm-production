@@ -19,29 +19,11 @@ export default function ElectricalLandingPage() {
       </header>
 
       <section className="hero">
-        {/* Placeholder hero image — replace with real electrical photo */}
-        <div style={{
-          position: 'absolute',
-          right: 0,
-          top: 0,
-          width: '47%',
-          height: '68%',
-          background: 'linear-gradient(135deg, #451a03 0%, #b45309 50%, #fbbf24 100%)',
-          zIndex: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexDirection: 'column',
-          gap: '12px',
-          color: 'rgba(255,255,255,0.4)',
-          fontSize: '16px',
-          fontWeight: 600,
-        }}>
-          <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-          </svg>
-          Hero Image Placeholder
-        </div>
+        <img
+          src="/landing-page/electrician_hero.jpg"
+          alt="Hero background"
+          className="hero-image"
+        />
 
         <div className="hero-container">
           <div className="hero-content">

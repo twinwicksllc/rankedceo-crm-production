@@ -19,30 +19,11 @@ export default function PlumbingLandingPage() {
       </header>
 
       <section className="hero">
-        {/* Placeholder hero image — replace with real plumbing photo */}
-        <div style={{
-          position: 'absolute',
-          right: 0,
-          top: 0,
-          width: '47%',
-          height: '68%',
-          background: 'linear-gradient(135deg, #062a2c 0%, #0d7377 50%, #4db8bb 100%)',
-          zIndex: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexDirection: 'column',
-          gap: '12px',
-          color: 'rgba(255,255,255,0.4)',
-          fontSize: '16px',
-          fontWeight: 600,
-        }}>
-          <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
-            <path d="M8 12h8M12 8v8"/>
-          </svg>
-          Hero Image Placeholder
-        </div>
+        <img
+          src="/landing-page/plumber_hero.jpg"
+          alt="Hero background"
+          className="hero-image"
+        />
 
         <div className="hero-container">
           <div className="hero-content">
