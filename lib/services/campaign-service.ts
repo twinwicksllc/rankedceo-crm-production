@@ -57,7 +57,7 @@ export class CampaignService {
     const { data: accountData, error: accountError } = await this.supabase
       .from('users')
       .select('account_id, id')
-      .eq('email', userData.data.user.email)
+      .eq('id', userData.data.user.id)
       .single();
 
     if (accountError || !accountData) {

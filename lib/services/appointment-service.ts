@@ -30,7 +30,7 @@ export class AppointmentService {
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('id, account_id, name, email')
-      .eq('email', user.email)
+      .eq('id', user.id)
       .single()
 
     if (userError || !userData) throw new Error('User record not found')
