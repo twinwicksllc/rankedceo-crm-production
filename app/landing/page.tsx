@@ -126,7 +126,7 @@ export default function LandingPage() {
                 <li>Social presence</li>
               </ul>
               <button className="cta-button purple-button">BOOK FREE VIRTUAL SMILE CONSULTATION</button>
-              <Image src="https://via.placeholder.com/300x250?text=Happy+Couple" alt="Happy couple smiling" width={300} height={250} className="lifestyle-image" />
+              <Image src="/landing-page/smile_dental_team.jpg" alt="Smile MakeOver dental team" width={600} height={483} className="lifestyle-image" />
             </div>
           </div>
         </div>
