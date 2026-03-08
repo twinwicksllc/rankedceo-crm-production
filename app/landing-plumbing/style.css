@@ -35,7 +35,7 @@ body {
     z-index: 50;
 }
 
-.logo img { height: 110px; width: auto; }
+.logo img { height: 83px; width: auto; }
 
 .header-right { text-align: right; }
 .header-right p { font-size: 14px; font-weight: 500; color: #4a5568; }
