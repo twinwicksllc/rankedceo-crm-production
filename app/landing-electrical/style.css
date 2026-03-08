@@ -335,7 +335,7 @@ body {
 .gallery-wide {
     width: 100%;
     max-width: 1000px;
-    height: 320px;
+    height: auto;
 }
 
 .gallery-placeholder {
@@ -353,6 +353,14 @@ body {
 
 .gallery-placeholder svg {
     opacity: 0.4;
+}
+
+.gallery-image {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: cover;
+    border-radius: 12px;
 }
 
 .gallery-item:hover { transform: translateY(-5px); }

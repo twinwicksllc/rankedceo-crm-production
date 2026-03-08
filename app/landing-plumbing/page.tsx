@@ -106,13 +106,11 @@ export default function PlumbingLandingPage() {
 
           <div className="gallery">
             <div className="gallery-item gallery-wide">
-              <div className="gallery-placeholder">
-                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
-                  <path d="M8 12h8M12 8v8"/>
-                </svg>
-                Before &amp; After Job Photos — Coming Soon
-              </div>
+              <img
+                src="/landing-page/plumbing_projects.jpg"
+                alt="Plumbing Project Results – Before & After"
+                className="gallery-image"
+              />
             </div>
           </div>
 
