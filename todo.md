@@ -178,6 +178,16 @@
 
 ---
 
+## 🎯 Collage Images Task
+- [ ] Optimize hvac_website_image.png → public/landing-page/hvac_collage.jpg (~125KB)
+- [ ] Optimize plumb_website_image.png → public/landing-page/plumbing_collage.jpg (~125KB)
+- [ ] Optimize electric_website_image.png → public/landing-page/electrical_collage.jpg (~125KB)
+- [ ] Update app/landing-hvac/page.tsx - replace lifestyle-image-placeholder with img tag
+- [ ] Update app/landing-plumbing/page.tsx - replace lifestyle-image-placeholder with img tag
+- [ ] Update app/landing-electrical/page.tsx - replace lifestyle-image-placeholder with img tag
+- [ ] Verify .gitignore allows *.jpg in public/landing-page/
+- [ ] Commit and push to GitHub
+
 ## 🎯 Next Steps
 
 ### Recommended: Company Referral Personalization

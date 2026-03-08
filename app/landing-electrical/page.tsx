@@ -144,9 +144,11 @@ export default function ElectricalLandingPage() {
                 <li>Peace of mind</li>
               </ul>
               <button className="blue-button">BOOK FREE ELECTRICAL CONSULTATION</button>
-              <div className="lifestyle-image-placeholder">
-                📸 Modern Home / Bright Living Room Photo
-              </div>
+              <img
+                src="/landing-page/electrical_collage.jpg"
+                alt="Real Electrical Transformations – Safe, Modern, Efficient"
+                className="collage-image"
+              />
             </div>
           </div>
         </div>

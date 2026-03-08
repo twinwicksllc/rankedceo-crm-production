@@ -146,9 +146,11 @@ export default function PlumbingLandingPage() {
                 <li>Peace of mind</li>
               </ul>
               <button className="blue-button">BOOK FREE PLUMBING CONSULTATION</button>
-              <div className="lifestyle-image-placeholder">
-                📸 Happy Homeowner / Clean Kitchen Photo
-              </div>
+              <img
+                src="/landing-page/plumbing_collage.jpg"
+                alt="Real Plumbing Transformations – Clean, Reliable, Professional"
+                className="collage-image"
+              />
             </div>
           </div>
         </div>

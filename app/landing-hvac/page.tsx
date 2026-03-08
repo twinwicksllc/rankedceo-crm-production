@@ -149,9 +149,11 @@ export default function HvacLandingPage() {
                 <li>Family safety in extreme weather</li>
               </ul>
               <button className="blue-button">BOOK FREE HVAC CONSULTATION</button>
-              <div className="lifestyle-image-placeholder">
-                📸 Happy Family / Home Comfort Photo
-              </div>
+              <img
+                src="/landing-page/hvac_collage.jpg"
+                alt="Real HVAC Transformations – Real Comfort, Real Results"
+                className="collage-image"
+              />
             </div>
           </div>
         </div>
