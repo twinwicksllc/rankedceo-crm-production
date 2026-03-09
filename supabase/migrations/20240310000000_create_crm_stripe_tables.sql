@@ -27,10 +27,10 @@ CREATE TABLE IF NOT EXISTS public.crm_subscriptions (
 
   -- Plan Details
   plan_name         TEXT NOT NULL,
-  plan_tier         TEXT NOT NULL DEFAULT 'pro',     -- 'starter', 'pro', 'enterprise'
+  plan_tier         TEXT NOT NULL DEFAULT 'pro',      -- 'starter', 'pro', 'enterprise'
   industry          TEXT NOT NULL,                    -- 'hvac', 'plumbing', 'electrical', 'smile'
   billing_interval  TEXT NOT NULL DEFAULT 'monthly',  -- 'monthly', 'yearly'
-  amount_cents      INTEGER NOT NULL DEFAULT 0,       -- price in cents (e.g. 4900 = $49.00)
+  amount_cents      INTEGER NOT NULL DEFAULT 0,        -- price in cents (e.g. 4900 = $49.00)
   currency          TEXT NOT NULL DEFAULT 'usd',
 
   -- Status
@@ -212,4 +212,6 @@ CREATE POLICY "Service role manages crm_billing_events"
 -- =============================================================================
 -- Done
 -- =============================================================================
-RAISE NOTICE 'CRM Stripe tables migration complete.';
+DO $$ BEGIN
+  RAISE NOTICE 'CRM Stripe tables migration complete.';
+END $$;
