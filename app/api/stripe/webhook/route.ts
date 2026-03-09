@@ -16,13 +16,6 @@ import { SubscriptionService } from '@/lib/services/subscription-service'
 
 export const dynamic = 'force-dynamic'
 
-// Disable body parsing — we need the raw body for signature verification
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-}
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.text()
