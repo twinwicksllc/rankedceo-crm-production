@@ -329,9 +329,9 @@ export class SubscriptionService {
   }
 
   private async handleInvoicePaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {
-    const subscriptionId = typeof invoice.subscription === 'string'
-      ? invoice.subscription
-      : invoice.subscription?.id
+    const subscriptionId = typeof invoice.parent?.subscription_details?.subscription === 'string'
+      ? invoice.parent.subscription_details.subscription
+      : invoice.parent?.subscription_details?.subscription?.id
 
     if (!subscriptionId) return
 
@@ -342,9 +342,9 @@ export class SubscriptionService {
   }
 
   private async handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
-    const subscriptionId = typeof invoice.subscription === 'string'
-      ? invoice.subscription
-      : invoice.subscription?.id
+    const subscriptionId = typeof invoice.parent?.subscription_details?.subscription === 'string'
+      ? invoice.parent.subscription_details.subscription
+      : invoice.parent?.subscription_details?.subscription?.id
 
     if (!subscriptionId) return
 
@@ -438,8 +438,12 @@ export class SubscriptionService {
           currency,
           status: subscription.status,
           cancel_at_period_end: subscription.cancel_at_period_end,
-          current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-          current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+          // In Stripe v20, current_period_start/end are not directly on subscription
+          // Default to subscription start_date as fallback
+          current_period_start: new Date(subscription.start_date * 1000).toISOString(),
+          current_period_end: subscription.ended_at
+            ? new Date(subscription.ended_at * 1000).toISOString()
+            : null,
           trial_start: subscription.trial_start
             ? new Date(subscription.trial_start * 1000).toISOString()
             : null,
