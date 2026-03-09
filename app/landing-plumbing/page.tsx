@@ -138,8 +138,8 @@ export default function PlumbingLandingPage() {
       <section className="bottom-cta-bar">
         <div className="container">
           <div className="cta-buttons-row">
-            <button className="pill-button">🔍 Member Lookup ›</button>
-            <button className="pill-button">🔧 Plumber Sign Up ›</button>
+            <a href="https://crm.rankedceo.com/login" className="pill-button">🔍 Member Lookup ›</a>
+            <a href="https://crm.rankedceo.com/pay?product=plumbing-pro-monthly" className="pill-button">🔧 Plumber Sign Up ›</a>
           </div>
         </div>
       </section>

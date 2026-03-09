@@ -15,7 +15,8 @@ import {
   FileText,
   BarChart3,
   Settings,
-  Wallet
+  Wallet,
+  CreditCard
 } from 'lucide-react'
 
 const navItems = [
@@ -31,6 +32,7 @@ const navItems = [
   { href: '/email-templates', label: 'Templates', icon: FileText },
   { href: '/commissions', label: 'Commissions', icon: Wallet },
   { href: '/reports', label: 'Reports', icon: BarChart3 },
+  { href: '/billing', label: 'Billing', icon: CreditCard },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 

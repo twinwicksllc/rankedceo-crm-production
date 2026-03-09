@@ -136,8 +136,8 @@ export default function LandingPage() {
       <section className="bottom-cta-bar">
         <div className="container">
           <div className="cta-buttons-row">
-            <button className="pill-button">🔍 Member Lookup ›</button>
-            <button className="pill-button">🦷 Dentist Sign Up ›</button>
+            <a href="https://crm.rankedceo.com/login" className="pill-button">🔍 Member Lookup ›</a>
+            <a href="https://crm.rankedceo.com/pay?product=smile-pro-monthly" className="pill-button">🦷 Dentist Sign Up ›</a>
           </div>
         </div>
       </section>

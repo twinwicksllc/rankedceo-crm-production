@@ -139,8 +139,8 @@ export default function HvacLandingPage() {
       <section className="bottom-cta-bar">
         <div className="container">
           <div className="cta-buttons-row">
-            <button className="pill-button">🔍 Member Lookup ›</button>
-            <button className="pill-button">🔧 Technician Sign Up ›</button>
+            <a href="https://crm.rankedceo.com/login" className="pill-button">🔍 Member Lookup ›</a>
+            <a href="https://crm.rankedceo.com/pay?product=hvac-pro-monthly" className="pill-button">🔧 Technician Sign Up ›</a>
           </div>
         </div>
       </section>

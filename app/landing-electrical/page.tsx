@@ -138,8 +138,8 @@ export default function ElectricalLandingPage() {
       <section className="bottom-cta-bar">
         <div className="container">
           <div className="cta-buttons-row">
-            <button className="pill-button">🔍 Member Lookup ›</button>
-            <button className="pill-button">⚡ Electrician Sign Up ›</button>
+            <a href="https://crm.rankedceo.com/login" className="pill-button">🔍 Member Lookup ›</a>
+            <a href="https://crm.rankedceo.com/pay?product=electrical-pro-monthly" className="pill-button">⚡ Electrician Sign Up ›</a>
           </div>
         </div>
       </section>

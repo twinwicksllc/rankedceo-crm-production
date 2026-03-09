@@ -46,6 +46,7 @@ const PUBLIC_CRM_PATHS = [
   '/',                      // landing page
   '/login',                 // login page
   '/signup',                // signup page
+  '/pay',                   // checkout page (handles own auth redirect)
   '/api/auth',              // auth API routes
   '/api/',                  // all API routes
   '/_next',                 // Next.js internals
@@ -59,6 +60,7 @@ const PROTECTED_CRM_PATHS = [
   '/deals',                 // deals/sales pipeline
   '/appointments',          // appointments
   '/settings',              // account settings
+  '/billing',               // subscription billing
 ]
 
 export async function middleware(request: NextRequest) {
@@ -74,14 +76,22 @@ export async function middleware(request: NextRequest) {
           return request.cookies.get(name)?.value
         },
         set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({ name, value, ...options })
+          // Share auth cookies across all *.rankedceo.com subdomains
+          // so a login on crm.rankedceo.com is valid on hvac.rankedceo.com, etc.
+          const sharedOptions = isProductionDomain(request)
+            ? { ...options, domain: '.rankedceo.com' }
+            : options
+          request.cookies.set({ name, value, ...sharedOptions })
           response = NextResponse.next({ request: { headers: request.headers } })
-          response.cookies.set({ name, value, ...options })
+          response.cookies.set({ name, value, ...sharedOptions })
         },
         remove(name: string, options: CookieOptions) {
-          request.cookies.set({ name, value: '', ...options })
+          const sharedOptions = isProductionDomain(request)
+            ? { ...options, domain: '.rankedceo.com' }
+            : options
+          request.cookies.set({ name, value: '', ...sharedOptions })
           response = NextResponse.next({ request: { headers: request.headers } })
-          response.cookies.set({ name, value: '', ...options })
+          response.cookies.set({ name, value: '', ...sharedOptions })
         },
       },
     }
@@ -196,6 +206,16 @@ export async function middleware(request: NextRequest) {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * Returns true if the request is on the production rankedceo.com domain.
+ * Used to conditionally set cross-subdomain cookies only in production.
+ * In local development (localhost), we skip the domain cookie to avoid issues.
+ */
+function isProductionDomain(request: NextRequest): boolean {
+  const host = (request.headers.get('host') || '').split(':')[0]
+  return host.endsWith('.rankedceo.com') || host === 'rankedceo.com'
+}
 
 /**
  * Extract subdomain from the Host header.
