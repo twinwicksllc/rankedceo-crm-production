@@ -104,8 +104,8 @@ body {
     right: 0 !important;
     top: 0 !important;
     bottom: auto !important;
-    width: 55% !important;
-    max-width: 55% !important;
+    width: 60% !important;
+    max-width: 60% !important;
     height: 100% !important;
     object-fit: cover !important;
     object-position: center top !important;
@@ -116,12 +116,14 @@ body {
     position: relative;
     z-index: 3;
     width: 100%;
+    padding-left: 5%;
+    padding-right: 50%;
 }
 
 .hero-content {
     display: grid;
-    grid-template-columns: 42% 32% 26%;
-    gap: 0;
+    grid-template-columns: 45% 55%;
+    gap: 20px;
     position: relative;
     z-index: 3;
     align-items: start;
@@ -197,7 +199,7 @@ body {
     flex-direction: column;
     justify-content: flex-start;
     align-items: center;
-    padding: 20px 10px 20px;
+    padding: 0;
 }
 
 .hero-spacer {
@@ -649,12 +651,12 @@ body {
 /* --- RESPONSIVENESS --- */
 @media (max-width: 992px) {
     .hero { min-height: auto; padding: 40px 0; }
-    .hero-image { width: 46% !important; max-width: 46% !important; height: 65% !important; }
-    .hero-content { grid-template-columns: 42% 32% 26%; gap: 20px; min-height: auto; }
+    .hero-image { width: 55% !important; max-width: 55% !important; height: 100% !important; }
+    .hero-content { grid-template-columns: 45% 55%; gap: 16px; min-height: auto; }
     .hero-left { padding-right: 20px; }
     .hero-left h1 { font-size: 40px; }
-    .hero-right { padding: 70px 16px 16px; }
-    .testimonial { margin-top: 360px; }
+    .hero-right { padding: 0 16px; }
+    .testimonial { margin-top: 0; }
     .two-column-grid { grid-template-columns: 1fr; gap: 40px; }
     .footer-grid { grid-template-columns: 1fr 1fr; }
     .footer-badges { grid-template-columns: 1fr 1fr; }

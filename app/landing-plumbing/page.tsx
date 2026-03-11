@@ -76,7 +76,6 @@ export default function PlumbingLandingPage() {
                 <p className="testimonial-author">Jennifer R. — via <svg className="google-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><text x="2" y="18" fontSize="12" fontWeight="bold" fill="#4285F4">G</text></svg> Google</p>
               </div>
             </div>
-            <div className="hero-spacer"></div>
           </div>
         </div>
       </section>
