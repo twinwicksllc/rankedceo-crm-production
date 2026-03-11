@@ -75,10 +75,9 @@ body {
     bottom: 0;
     background: linear-gradient(90deg,
         #1a56a0 0%,
-        #1a56a0 43%,
-        rgba(26, 86, 160, 0.88) 56%,
-        rgba(26, 86, 160, 0.4) 64%,
-        transparent 72%,
+        #1a56a0 40%,
+        rgba(26, 86, 160, 0.5) 47%,
+        transparent 53%,
         transparent 100%);
     pointer-events: none;
     z-index: 1;
@@ -105,9 +104,9 @@ body {
     right: 0 !important;
     top: 0 !important;
     bottom: auto !important;
-    width: 47% !important;
-    max-width: 47% !important;
-    height: 45% !important;
+    width: 55% !important;
+    max-width: 55% !important;
+    height: 100% !important;
     object-fit: cover !important;
     object-position: center top !important;
     z-index: 0 !important;
@@ -121,12 +120,12 @@ body {
 
 .hero-content {
     display: grid;
-    grid-template-columns: 40% 60%;
+    grid-template-columns: 42% 32% 26%;
     gap: 0;
     position: relative;
     z-index: 3;
-    align-items: center;
-    min-height: 600px;
+    align-items: start;
+    min-height: auto;
 }
 
 .hero-left {
@@ -198,7 +197,11 @@ body {
     flex-direction: column;
     justify-content: flex-start;
     align-items: center;
-    padding: 20px 30px 20px;
+    padding: 20px 10px 20px;
+}
+
+.hero-spacer {
+    display: block;
 }
 
 .testimonial {
@@ -647,7 +650,7 @@ body {
 @media (max-width: 992px) {
     .hero { min-height: auto; padding: 40px 0; }
     .hero-image { width: 46% !important; max-width: 46% !important; height: 65% !important; }
-    .hero-content { grid-template-columns: 40% 60%; gap: 20px; min-height: auto; }
+    .hero-content { grid-template-columns: 42% 32% 26%; gap: 20px; min-height: auto; }
     .hero-left { padding-right: 20px; }
     .hero-left h1 { font-size: 40px; }
     .hero-right { padding: 70px 16px 16px; }

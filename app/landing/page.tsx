@@ -82,6 +82,7 @@ export default function LandingPage() {
                 </svg> Google</p>
               </div>
             </div>
+            <div className="hero-spacer"></div>
           </div>
         </div>
       </section>

@@ -76,10 +76,9 @@ body {
     bottom: 0;
     background: linear-gradient(90deg,
         #6B3FA0 0%,
-        #6B3FA0 43%,
-        rgba(107, 63, 160, 0.88) 56%,
-        rgba(107, 63, 160, 0.4) 64%,
-        transparent 72%,
+        #6B3FA0 40%,
+        rgba(107, 63, 160, 0.5) 47%,
+        transparent 53%,
         transparent 100%);
     pointer-events: none;
     z-index: 1;
@@ -106,9 +105,9 @@ body {
     right: 0 !important;
     top: 0 !important;
     bottom: auto !important;
-    width: 47% !important;
-    max-width: 47% !important;
-    height: 45% !important;
+    width: 55% !important;
+    max-width: 55% !important;
+    height: 100% !important;
     object-fit: cover !important;
     object-position: center top !important;
     z-index: 0 !important;
@@ -122,12 +121,12 @@ body {
 
 .hero-content {
     display: grid;
-    grid-template-columns: 40% 60%;
+    grid-template-columns: 42% 32% 26%;
     gap: 0;
     position: relative;
     z-index: 3;
-    align-items: center;
-    min-height: 600px;
+    align-items: start;
+    min-height: auto;
 }
 
 .hero-left { 
@@ -199,7 +198,11 @@ body {
     flex-direction: column;
     justify-content: flex-start;
     align-items: center;
-    padding: 20px 30px 20px;
+    padding: 20px 10px 20px;
+}
+
+.hero-spacer {
+    display: block;
 }
 
 .testimonial {
@@ -501,7 +504,7 @@ body {
     }
     
     .hero-content { 
-        grid-template-columns: 40% 60%;
+        grid-template-columns: 42% 32% 26%;
         gap: 20px;
         min-height: auto;
     }
