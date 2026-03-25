@@ -7,7 +7,7 @@ export default function LandingPage() {
       <header className="top-bar">
         <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
           <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <img src="/logos/smile_makeover.svg" alt="Smile MakeOver Makeover Logo" style={{ height: '160px', width: 'auto' }} />
+            <img src="/logos/smile_makeover.svg" alt="Smile MakeOver Makeover Logo" style={{ height: '240px', width: 'auto' }} />
             <img src="/logos/smile-logo.png" alt="Smile MakeOver Logo" style={{ height: '110px', width: 'auto' }} />
           </div>
           <div className="header-right">
