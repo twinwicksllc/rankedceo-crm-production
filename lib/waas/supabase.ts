@@ -126,16 +126,16 @@ export interface WaasDatabase {
         Args: {
           p_email:         string
           p_audit_id:      string
-          p_name?:         string | null
-          p_phone?:        string | null
-          p_company?:      string | null
-          p_target_url?:   string | null
-          p_industry?:     string | null
-          p_location?:     string | null
-          p_utm_source?:   string | null
-          p_utm_medium?:   string | null
-          p_utm_campaign?: string | null
-          p_referrer_url?: string | null
+          p_name:          string | null
+          p_phone:         string | null
+          p_company:       string | null
+          p_target_url:    string | null
+          p_industry:      string | null
+          p_location:      string | null
+          p_utm_source:    string | null
+          p_utm_medium:    string | null
+          p_utm_campaign:  string | null
+          p_referrer_url:  string | null
         }
         Returns: string  // lead UUID
       }
