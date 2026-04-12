@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const formService = new FormService()
     const forms = await formService.getForms({
       search,
-      status: status as any,
+      status: status as import('@/lib/types/form').FormStatus | undefined,
     })
 
     return NextResponse.json(forms)

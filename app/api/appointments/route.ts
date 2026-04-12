@@ -10,8 +10,8 @@ export async function GET(request: NextRequest) {
     const service = new AppointmentService()
 
     const filters = {
-      status: searchParams.get('status') as any || undefined,
-      source: searchParams.get('source') as any || undefined,
+      status: (searchParams.get('status') as import('@/lib/types/appointment').AppointmentStatus | null) || undefined,
+      source: searchParams.get('source') || undefined,
       contact_id: searchParams.get('contact_id') || undefined,
       date_from: searchParams.get('date_from') || undefined,
       date_to: searchParams.get('date_to') || undefined,
