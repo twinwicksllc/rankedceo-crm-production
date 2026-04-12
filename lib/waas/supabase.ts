@@ -120,6 +120,9 @@ export function getWaasClient(): SupabaseClient<WaasDatabase> {
   return _waasClient
 }
 
+// Alias for server-side usage (same as getWaasClient but clearer naming for SSR pages)
+export const createWaasClient = getWaasClient
+
 // ---------------------------------------------------------------------------
 // SERVER-SIDE: Service role client (API routes, admin operations)
 // Bypasses RLS — use with extreme caution, server-side only.
@@ -244,7 +247,16 @@ export async function createProspectAudit(input: {
 /**
  * Poll for audit status (for client-side polling after submission)
  */
-export async function getAuditStatus(auditId: string) {
+export interface AuditStatusResult {
+  id:            string
+  status:        'pending' | 'running' | 'completed' | 'failed' | 'expired'
+  report_data:   Record<string, unknown> | null
+  completed_at:  string | null
+  expires_at:    string
+  error_message: string | null
+}
+
+export async function getAuditStatus(auditId: string): Promise<AuditStatusResult | null> {
   try {
     const supabase = getWaasClient()
 
@@ -257,7 +269,7 @@ export async function getAuditStatus(auditId: string) {
     }
 
     if (!data || data.length === 0) return null
-    return data[0]
+    return data[0] as AuditStatusResult
   } catch (err) {
     console.error('[WaaS] Get audit status exception:', err)
     return null
