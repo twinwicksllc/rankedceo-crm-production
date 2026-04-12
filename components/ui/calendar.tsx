@@ -129,14 +129,13 @@ function Calendar({
         Root: ({ className, rootRef, ...props }: {
           className?: string
           rootRef?: React.Ref<HTMLDivElement>
-          [key: string]: unknown
-        }) => {
+        } & React.HTMLAttributes<HTMLDivElement>) => {
           return (
             <div
               data-slot="calendar"
-              ref={rootRef as React.Ref<HTMLDivElement>}
+              ref={rootRef}
               className={cn(className)}
-              {...(props as React.HTMLAttributes<HTMLDivElement>)}
+              {...props}
             />
           )
         },
@@ -163,10 +162,9 @@ function Calendar({
         DayButton: CalendarDayButton,
         WeekNumber: ({ children, ...props }: {
           children?: React.ReactNode
-          [key: string]: unknown
-        }) => {
+        } & React.HTMLAttributes<HTMLTableCellElement>) => {
           return (
-            <td {...(props as React.HTMLAttributes<HTMLTableCellElement>)}>
+            <td {...props}>
               <div className="flex size-(--cell-size) items-center justify-center text-center">
                 {children}
               </div>
