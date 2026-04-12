@@ -7,7 +7,7 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { AuditReportClient } from './client'
 import { createWaasClient } from '@/lib/waas/supabase'
-import type { WaasAudit } from '@/lib/waas/types'
+import type { WaasAuditRow } from '@/lib/waas/supabase'
 
 // ---------------------------------------------------------------------------
 // Metadata
@@ -48,7 +48,7 @@ export default async function AuditReportPage({ params }: PageProps) {
     notFound()
   }
 
-  const audit = data as WaasAudit
+  const audit = data as WaasAuditRow
 
   return (
     <AuditReportClient audit={audit} />

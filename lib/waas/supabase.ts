@@ -18,6 +18,17 @@ import type {
 // Database type (generated from Supabase schema — extend as needed)
 // ---------------------------------------------------------------------------
 
+// Extended audit row including columns added in migration 004
+export interface WaasAuditRow extends WaasAudit {
+  lead_id:           string | null
+  admin_notified:    boolean
+  admin_notified_at: string | null
+  manual_review:     boolean
+  manual_review_note: string | null
+  keywords_used:     string[] | null
+  location_detected: string | null
+}
+
 export interface WaasDatabase {
   public: {
     Tables: {
@@ -27,9 +38,57 @@ export interface WaasDatabase {
         Update: Partial<Omit<WaasTenant, 'id' | 'created_at'>>
       }
       audits: {
-        Row:    WaasAudit
-        Insert: Omit<WaasAudit, 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Omit<WaasAudit, 'id' | 'created_at'>>
+        Row:    WaasAuditRow
+        Insert: Omit<WaasAuditRow, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<WaasAuditRow, 'id' | 'created_at'>>
+      }
+      leads: {
+        Row: {
+          id:             string
+          email:          string
+          name:           string | null
+          phone:          string | null
+          company:        string | null
+          audit_id:       string | null
+          tenant_id:      string | null
+          target_url:     string | null
+          industry:       string | null
+          location:       string | null
+          utm_source:     string | null
+          utm_medium:     string | null
+          utm_campaign:   string | null
+          referrer_url:   string | null
+          created_at:     string
+          updated_at:     string
+        }
+        Insert: {
+          email:          string
+          name?:          string | null
+          phone?:         string | null
+          company?:       string | null
+          audit_id?:      string | null
+          tenant_id?:     string | null
+          target_url?:    string | null
+          industry?:      string | null
+          location?:      string | null
+          utm_source?:    string | null
+          utm_medium?:    string | null
+          utm_campaign?:  string | null
+          referrer_url?:  string | null
+        }
+        Update: Partial<{
+          email:          string
+          name:           string | null
+          phone:          string | null
+          company:        string | null
+          audit_id:       string | null
+          target_url:     string | null
+          utm_source:     string | null
+          utm_medium:     string | null
+          utm_campaign:   string | null
+          referrer_url:   string | null
+          updated_at:     string
+        }>
       }
     }
     Functions: {
@@ -39,11 +98,11 @@ export interface WaasDatabase {
       }
       create_prospect_audit: {
         Args: {
-          p_target_url:        string
-          p_competitor_urls:   string[]
-          p_requestor_name?:   string
-          p_requestor_email?:  string
-          p_requestor_phone?:  string
+          p_target_url:         string
+          p_competitor_urls:    string[]
+          p_requestor_name?:    string
+          p_requestor_email?:   string
+          p_requestor_phone?:   string
           p_requestor_company?: string
         }
         Returns: string  // UUID
@@ -58,6 +117,23 @@ export interface WaasDatabase {
           expires_at:    string
           error_message: string | null
         }>
+      }
+      capture_audit_lead: {
+        Args: {
+          p_email:         string
+          p_audit_id:      string
+          p_name?:         string | null
+          p_phone?:        string | null
+          p_company?:      string | null
+          p_target_url?:   string | null
+          p_industry?:     string | null
+          p_location?:     string | null
+          p_utm_source?:   string | null
+          p_utm_medium?:   string | null
+          p_utm_campaign?: string | null
+          p_referrer_url?: string | null
+        }
+        Returns: string  // lead UUID
       }
     }
   }

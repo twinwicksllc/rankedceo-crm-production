@@ -8,6 +8,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import type { WaasAudit, AuditReportData } from '@/lib/waas/types'
+import type { WaasAuditRow } from '@/lib/waas/supabase'
 import { ScoreGauge }          from '@/components/audit/score-gauge'
 import { RankingLeaderboard }  from '@/components/audit/ranking-leaderboard'
 import { GapAnalysis }         from '@/components/audit/gap-analysis'
@@ -126,18 +127,18 @@ const POLL_MAX_ATTEMPTS = 45  // ~3 minutes max
 // ---------------------------------------------------------------------------
 
 interface AuditReportClientProps {
-  audit: WaasAudit
+  audit: WaasAuditRow
 }
 
 export function AuditReportClient({ audit: initialAudit }: AuditReportClientProps) {
-  const [audit,    setAudit]    = useState<WaasAudit>(initialAudit)
+  const [audit,    setAudit]    = useState<WaasAuditRow>(initialAudit)
   const [attempts, setAttempts] = useState(0)
 
   const isRunning  = audit.status === 'pending' || audit.status === 'running'
   const isComplete = audit.status === 'completed'
   const isFailed   = audit.status === 'failed'
   const isExpired  = audit.status === 'expired'
-  const isManual   = (audit as any).manual_review === true
+  const isManual   = audit.manual_review === true
 
   // ── Polling ──────────────────────────────────────────────────────────────
   const poll = useCallback(async () => {
@@ -280,7 +281,7 @@ function FullReport({ audit }: { audit: WaasAudit }) {
           <RankingLeaderboard
             entries={leaderboard}
             keyword={primaryKeyword}
-            location={(audit as any).location_detected ?? 'your area'}
+            location={audit.location_detected ?? 'your area'}
           />
         </Section>
       )}
