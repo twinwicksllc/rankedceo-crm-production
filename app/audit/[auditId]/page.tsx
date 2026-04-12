@@ -7,7 +7,7 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { AuditReportClient } from './client'
 import { createWaasClient } from '@/lib/waas/supabase'
-import type { WaasAudit } from '@/lib/waas/types'
+import type { WaasAuditRow as WaasAudit } from '@/lib/waas/supabase'
 
 // ---------------------------------------------------------------------------
 // Metadata

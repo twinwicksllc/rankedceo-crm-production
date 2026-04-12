@@ -7,7 +7,8 @@
 // =============================================================================
 
 import { useEffect, useState, useCallback } from 'react'
-import type { WaasAudit, AuditReportData } from '@/lib/waas/types'
+import type { AuditReportData } from '@/lib/waas/types'
+import type { WaasAuditRow as WaasAudit } from '@/lib/waas/supabase'
 import { ScoreGauge }          from '@/components/audit/score-gauge'
 import { RankingLeaderboard }  from '@/components/audit/ranking-leaderboard'
 import { GapAnalysis }         from '@/components/audit/gap-analysis'
@@ -137,7 +138,7 @@ export function AuditReportClient({ audit: initialAudit }: AuditReportClientProp
   const isComplete = audit.status === 'completed'
   const isFailed   = audit.status === 'failed'
   const isExpired  = audit.status === 'expired'
-  const isManual   = (audit as any).manual_review === true
+  const isManual   = audit.manual_review === true
 
   // ── Polling ──────────────────────────────────────────────────────────────
   const poll = useCallback(async () => {
@@ -280,7 +281,7 @@ function FullReport({ audit }: { audit: WaasAudit }) {
           <RankingLeaderboard
             entries={leaderboard}
             keyword={primaryKeyword}
-            location={(audit as any).location_detected ?? 'your area'}
+            location={audit.location_detected ?? 'your area'}
           />
         </Section>
       )}

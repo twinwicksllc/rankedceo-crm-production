@@ -374,13 +374,13 @@ export async function runFullAudit(
       request_id: crypto.randomUUID(),
     },
     // Extended data stored in report_data for the UI
-    ...({
+    ...(({
       leaderboard,
-      gap_analysis:   gapAnalysis,
+      gap_analysis:    gapAnalysis,
       grade,
       page_speed_full: pageSpeed,
-      keywords_used:  keywords,
-    } as any),
+      keywords_used:   keywords,
+    }) as unknown as Partial<AuditReportData>),
   }
 
   return {
