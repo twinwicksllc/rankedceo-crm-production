@@ -1,0 +1,243 @@
+// =============================================================================
+// AdvantagePoint — Tenant Detail View (Server Component)
+// Brand Sheet, Audit Results, Domain Requests, Deploy Site
+// =============================================================================
+
+import React from 'react'
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
+import { getTenantDetail } from '@/lib/waas/actions/admin'
+import { DeploySiteButton } from './deploy-site-button'
+import { DomainStatusManager } from './domain-status-manager'
+import type { WaasDomainRequest } from '@/lib/waas/types'
+
+interface PageProps {
+  params: { tenantId: string }
+}
+
+export default async function TenantDetailPage({ params }: PageProps) {
+  const result = await getTenantDetail(params.tenantId)
+  if (!result.success || !result.data) notFound()
+
+  const { tenant, domainRequests, audit } = result.data
+  const brand  = tenant.brand_config
+  const colors = brand?.colors
+
+  return (
+    <div>
+      {/* Back */}
+      <Link href="/admin/dashboard" className="inline-flex items-center gap-2 text-white/40 hover:text-white/70 text-sm mb-6 transition-colors">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        Back to Dashboard
+      </Link>
+
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
+        <div
+          className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-xl font-bold shrink-0 shadow-lg"
+          style={{ background: `linear-gradient(135deg, ${colors?.primary ?? '#2563EB'}, ${colors?.secondary ?? '#1E40AF'})` }}
+        >
+          {(brand?.business_name ?? tenant.legal_name ?? '?')[0].toUpperCase()}
+        </div>
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold text-white">
+            {brand?.business_name ?? tenant.legal_name ?? 'Unnamed Business'}
+          </h1>
+          <p className="text-white/40 text-sm mt-0.5">
+            {tenant.primary_trade ?? '—'} &bull; {tenant.city ? `${tenant.city}, ${tenant.state}` : '—'} &bull; {tenant.package_tier} plan
+          </p>
+        </div>
+        {/* Deploy Site */}
+        {(tenant.status === 'pending_review' || tenant.status === 'onboarding') && (
+          <DeploySiteButton
+            tenantId={tenant.id}
+            businessName={brand?.business_name ?? tenant.legal_name ?? 'this business'}
+          />
+        )}
+        {tenant.status === 'active' && (
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-emerald-400 text-sm font-semibold">Live</span>
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {/* Left column: Brand Sheet + Contact */}
+        <div className="lg:col-span-1 space-y-6">
+
+          {/* Brand Sheet */}
+          <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-white/10">
+              <h2 className="text-white font-semibold text-sm">Brand Sheet</h2>
+            </div>
+            <div className="p-5 space-y-5">
+              {/* Logo */}
+              <div>
+                <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Logo</p>
+                {brand?.logo_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={brand.logo_url} alt="Logo" className="max-h-12 max-w-full object-contain" />
+                ) : (
+                  <div
+                    className="h-10 w-28 rounded-lg flex items-center justify-center text-white text-sm font-bold"
+                    style={{ background: `linear-gradient(135deg, ${colors?.primary ?? '#2563EB'}, ${colors?.secondary ?? '#1E40AF'})` }}
+                  >
+                    {(brand?.business_name ?? '')[0]}
+                  </div>
+                )}
+              </div>
+
+              {/* Colors */}
+              <div>
+                <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Color Palette</p>
+                <div className="flex gap-2">
+                  {colors && Object.entries(colors).map(([key, val]) => val ? (
+                    <div key={key} className="group relative">
+                      <div
+                        className="w-8 h-8 rounded-lg border border-white/10 cursor-pointer"
+                        style={{ backgroundColor: val as string }}
+                        title={`${key}: ${val}`}
+                      />
+                    </div>
+                  ) : null)}
+                </div>
+                <div className="mt-2 flex gap-3 flex-wrap">
+                  <div>
+                    <p className="text-white/25 text-[10px]">PRIMARY</p>
+                    <p className="text-white font-mono text-xs">{colors?.primary ?? '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-white/25 text-[10px]">SECONDARY</p>
+                    <p className="text-white font-mono text-xs">{colors?.secondary ?? '—'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* USP */}
+              {tenant.usp && (
+                <div>
+                  <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Unique Selling Proposition</p>
+                  <p className="text-white/70 text-sm leading-relaxed">{tenant.usp}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Contact Details */}
+          <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-white/10">
+              <h2 className="text-white font-semibold text-sm">Contact Details</h2>
+            </div>
+            <div className="p-5 space-y-3">
+              {[
+                { label: 'Email',    value: tenant.submitted_by_email },
+                { label: 'Address',  value: tenant.physical_address },
+                { label: 'City',     value: tenant.city && tenant.state ? `${tenant.city}, ${tenant.state} ${tenant.zip ?? ''}` : null },
+                { label: 'Trade',    value: tenant.primary_trade },
+                { label: 'Calendly', value: tenant.calendly_url },
+                { label: 'Financing',value: tenant.financing_enabled ? 'Enabled' : 'Disabled' },
+              ].map(row => row.value ? (
+                <div key={row.label} className="flex gap-3">
+                  <span className="text-white/30 text-xs w-16 shrink-0 pt-0.5">{row.label}</span>
+                  <span className="text-white/70 text-xs break-all">{row.value}</span>
+                </div>
+              ) : null)}
+            </div>
+          </div>
+        </div>
+
+        {/* Right column: Domains + Audit */}
+        <div className="lg:col-span-2 space-y-6">
+
+          {/* Domain Requests */}
+          <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-white/10">
+              <h2 className="text-white font-semibold text-sm">Domain Requests</h2>
+            </div>
+            <div className="p-5">
+              {domainRequests.length === 0 ? (
+                <p className="text-white/30 text-sm">No domain requests submitted.</p>
+              ) : (
+                <div className="space-y-3">
+                  {domainRequests.map((req: WaasDomainRequest) => (
+                    <DomainStatusManager key={req.id} request={req} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Audit Results */}
+          <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
+              <h2 className="text-white font-semibold text-sm">Original Audit</h2>
+              {audit && (
+                <Link
+                  href={`/audit/${(audit as { id: string }).id}`}
+                  className="text-blue-400 hover:text-blue-300 text-xs font-medium transition-colors"
+                  target="_blank"
+                >
+                  View Full Report →
+                </Link>
+              )}
+            </div>
+            <div className="p-5">
+              {!audit ? (
+                <p className="text-white/30 text-sm">No linked audit report.</p>
+              ) : (
+                <AuditSummaryCard audit={audit} />
+              )}
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Audit Summary Card
+// ---------------------------------------------------------------------------
+
+function AuditSummaryCard({ audit }: { audit: Record<string, unknown> }) {
+  const report = audit.report_data as Record<string, unknown> | null
+  const summary = report?.summary as Record<string, number> | null
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Overall',   value: summary?.overall_score   },
+          { label: 'SEO',       value: summary?.seo_score       },
+          { label: 'Perf.',     value: summary?.performance_score },
+          { label: 'Mobile',    value: summary?.mobile_score    },
+        ].map(m => (
+          <div key={m.label} className="rounded-xl bg-white/5 border border-white/10 p-3 text-center">
+            <div className={`text-2xl font-bold ${
+              (m.value ?? 0) >= 70 ? 'text-emerald-400' :
+              (m.value ?? 0) >= 50 ? 'text-amber-400' : 'text-red-400'
+            }`}>
+              {m.value !== undefined ? m.value : '—'}
+            </div>
+            <div className="text-white/40 text-xs mt-0.5">{m.label}</div>
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-4 text-sm">
+        <div>
+          <span className="text-white/30 text-xs">Target URL</span>
+          <p className="text-white/60 text-xs truncate max-w-[250px]">{String(audit.target_url ?? '—')}</p>
+        </div>
+        <div>
+          <span className="text-white/30 text-xs">Status</span>
+          <p className="text-white/60 text-xs capitalize">{String(audit.status ?? '—')}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
