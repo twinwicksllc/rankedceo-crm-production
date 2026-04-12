@@ -19,8 +19,8 @@ export async function GET(request: NextRequest) {
 
     const campaignService = new CampaignService();
     const campaigns = await campaignService.getCampaigns({
-      type: type as any,
-      status: status as any,
+      type: type as import('@/lib/types/campaign').CampaignType | undefined,
+      status: status as import('@/lib/types/campaign').CampaignStatus | undefined,
       search: search || undefined,
     });
 
