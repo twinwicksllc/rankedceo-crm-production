@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
       p_utm_medium:   utm_medium   ?? null,
       p_utm_campaign: utm_campaign ?? null,
       p_referrer_url: referrer_url ?? null,
-    } as any)
+    })
 
     if (error) {
       console.error('[/api/audit/leads] Capture lead error:', error)
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
     if (leadId) {
       await waas
         .from('audits')
-        .update({ lead_id: leadId, updated_at: new Date().toISOString() } as any)
+        .update({ lead_id: leadId, updated_at: new Date().toISOString() })
         .eq('id', audit_id)
     }
 

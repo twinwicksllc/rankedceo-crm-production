@@ -12,7 +12,65 @@ import type {
   WaasTenant,
   WaasTenantResolved,
   WaasAudit,
+  WaasAuditStatus,
+  AuditSeoProvider,
+  AuditReportData,
 } from './types'
+
+// ---------------------------------------------------------------------------
+// Extended audit row — includes columns added in migrations 003 & 004
+// ---------------------------------------------------------------------------
+
+export interface WaasAuditRow extends WaasAudit {
+  lead_id:             string | null
+  admin_notified:      boolean
+  admin_notified_at:   string | null
+  manual_review:       boolean
+  manual_review_note:  string | null
+  keywords_used:       string[] | null
+  location_detected:   string | null
+}
+
+// Update payload type for audits — all columns are optional
+export type WaasAuditUpdate = Partial<{
+  status:              WaasAuditStatus
+  report_data:         AuditReportData | null
+  completed_at:        string | null
+  started_at:          string | null
+  error_message:       string | null
+  seo_provider:        AuditSeoProvider | null
+  requestor_name:      string | null
+  requestor_email:     string | null
+  requestor_phone:     string | null
+  requestor_company:   string | null
+  lead_id:             string | null
+  admin_notified:      boolean
+  admin_notified_at:   string | null
+  manual_review:       boolean
+  manual_review_note:  string | null
+  keywords_used:       string[] | null
+  location_detected:   string | null
+  updated_at:          string
+}>
+
+// Lead row — added in migration 003
+export interface WaasLead {
+  id:           string
+  email:        string
+  audit_id:     string | null
+  name:         string | null
+  phone:        string | null
+  company:      string | null
+  target_url:   string | null
+  industry:     string | null
+  location:     string | null
+  utm_source:   string | null
+  utm_medium:   string | null
+  utm_campaign: string | null
+  referrer_url: string | null
+  created_at:   string
+  updated_at:   string
+}
 
 // ---------------------------------------------------------------------------
 // Database type (generated from Supabase schema — extend as needed)
@@ -27,9 +85,14 @@ export interface WaasDatabase {
         Update: Partial<Omit<WaasTenant, 'id' | 'created_at'>>
       }
       audits: {
-        Row:    WaasAudit
+        Row:    WaasAuditRow
         Insert: Omit<WaasAudit, 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Omit<WaasAudit, 'id' | 'created_at'>>
+        Update: WaasAuditUpdate
+      }
+      leads: {
+        Row:    WaasLead
+        Insert: Omit<WaasLead, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<WaasLead, 'id' | 'created_at'>>
       }
     }
     Functions: {
@@ -39,11 +102,11 @@ export interface WaasDatabase {
       }
       create_prospect_audit: {
         Args: {
-          p_target_url:        string
-          p_competitor_urls:   string[]
-          p_requestor_name?:   string
-          p_requestor_email?:  string
-          p_requestor_phone?:  string
+          p_target_url:         string
+          p_competitor_urls:    string[]
+          p_requestor_name?:    string
+          p_requestor_email?:   string
+          p_requestor_phone?:   string
           p_requestor_company?: string
         }
         Returns: string  // UUID
@@ -58,6 +121,23 @@ export interface WaasDatabase {
           expires_at:    string
           error_message: string | null
         }>
+      }
+      capture_audit_lead: {
+        Args: {
+          p_email:         string
+          p_audit_id:      string
+          p_name?:         string | null
+          p_phone?:        string | null
+          p_company?:      string | null
+          p_target_url?:   string | null
+          p_industry?:     string | null
+          p_location?:     string | null
+          p_utm_source?:   string | null
+          p_utm_medium?:   string | null
+          p_utm_campaign?: string | null
+          p_referrer_url?: string | null
+        }
+        Returns: string  // lead UUID
       }
     }
   }
