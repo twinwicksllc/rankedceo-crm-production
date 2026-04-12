@@ -5,8 +5,7 @@
   "outputDirectory": ".next",
   "framework": "nextjs",
   "env": {
-    "NEXT_PUBLIC_APP_URL": "https://crm.rankedceo.com",
-    "NODE_ENV": "production"
+    "NEXT_PUBLIC_APP_URL": "https://crm.rankedceo.com"
   },
   "headers": [
     {
