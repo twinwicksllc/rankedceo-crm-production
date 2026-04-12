@@ -5,7 +5,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getWaasAdminClient, captureAuditLead } from '@/lib/waas/supabase'
+import { updateAuditRecord, captureAuditLead } from '@/lib/waas/supabase'
 
 export async function POST(req: NextRequest) {
   try {
@@ -62,11 +62,7 @@ export async function POST(req: NextRequest) {
 
     // Link lead_id back to audit
     if (leadId) {
-      const waas = getWaasAdminClient()
-      await waas
-        .from('audits')
-        .update({ lead_id: leadId, updated_at: new Date().toISOString() })
-        .eq('id', String(audit_id))
+      await updateAuditRecord(String(audit_id), { lead_id: leadId })
     }
 
     return NextResponse.json({

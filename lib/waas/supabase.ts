@@ -22,36 +22,54 @@ import type {
 // ---------------------------------------------------------------------------
 
 export interface WaasAuditRow extends WaasAudit {
-  lead_id:             string | null
-  admin_notified:      boolean
-  admin_notified_at:   string | null
-  manual_review:       boolean
-  manual_review_note:  string | null
-  keywords_used:       string[] | null
-  location_detected:   string | null
+  lead_id:            string | null
+  admin_notified:     boolean
+  admin_notified_at:  string | null
+  manual_review:      boolean
+  manual_review_note: string | null
+  keywords_used:      string[] | null
+  location_detected:  string | null
 }
 
-// Update payload type for audits — all columns are optional
+// Typed update payload for audits
 export type WaasAuditUpdate = Partial<{
-  status:              WaasAuditStatus
-  report_data:         AuditReportData | null
-  completed_at:        string | null
-  started_at:          string | null
-  error_message:       string | null
-  seo_provider:        AuditSeoProvider | null
-  requestor_name:      string | null
-  requestor_email:     string | null
-  requestor_phone:     string | null
-  requestor_company:   string | null
-  lead_id:             string | null
-  admin_notified:      boolean
-  admin_notified_at:   string | null
-  manual_review:       boolean
-  manual_review_note:  string | null
-  keywords_used:       string[] | null
-  location_detected:   string | null
-  updated_at:          string
+  status:             WaasAuditStatus
+  report_data:        AuditReportData | null
+  completed_at:       string | null
+  started_at:         string | null
+  error_message:      string | null
+  seo_provider:       AuditSeoProvider | null
+  requestor_name:     string | null
+  requestor_email:    string | null
+  requestor_phone:    string | null
+  requestor_company:  string | null
+  lead_id:            string | null
+  admin_notified:     boolean
+  admin_notified_at:  string | null
+  manual_review:      boolean
+  manual_review_note: string | null
+  keywords_used:      string[] | null
+  location_detected:  string | null
+  updated_at:         string
 }>
+
+// Typed insert payload for audits
+export type WaasAuditInsert = {
+  audit_type:        WaasAudit['audit_type']
+  status:            WaasAuditStatus
+  target_url:        string
+  competitor_urls:   string[]
+  tenant_id?:        string | null
+  requestor_name?:   string | null
+  requestor_email?:  string | null
+  requestor_phone?:  string | null
+  requestor_company?: string | null
+  started_at?:       string | null
+  expires_at:        string
+  seo_provider?:     AuditSeoProvider | null
+  requested_at?:     string
+  retry_count?:      number
+}
 
 // Lead row — added in migration 003
 export interface WaasLead {
@@ -72,8 +90,39 @@ export interface WaasLead {
   updated_at:   string
 }
 
+// Typed update payload for tenants
+export type WaasTenantUpdate = Partial<{
+  domain:             string | null
+  subdomain:          string | null
+  brand_config:       WaasTenant['brand_config']
+  package_tier:       WaasTenant['package_tier']
+  status:             WaasTenant['status']
+  target_industry:    string | null
+  target_location:    string | null
+  crm_account_id:     string | null
+  vercel_project_id:  string | null
+  domain_verified:    boolean
+  domain_verified_at: string | null
+  deleted_at:         string | null
+  updated_at:         string
+}>
+
+// Typed insert payload for tenants
+export type WaasTenantInsert = {
+  slug:             string
+  domain?:          string | null
+  subdomain?:       string | null
+  brand_config:     WaasTenant['brand_config']
+  package_tier?:    WaasTenant['package_tier']
+  status?:          WaasTenant['status']
+  target_industry?: string | null
+  target_location?: string | null
+  crm_account_id?:  string | null
+  domain_verified?: boolean
+}
+
 // ---------------------------------------------------------------------------
-// Database type (generated from Supabase schema — extend as needed)
+// Database type — used to type the Supabase client for READ operations
 // ---------------------------------------------------------------------------
 
 export interface WaasDatabase {
@@ -81,12 +130,12 @@ export interface WaasDatabase {
     Tables: {
       tenants: {
         Row:    WaasTenant
-        Insert: Omit<WaasTenant, 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Omit<WaasTenant, 'id' | 'created_at'>>
+        Insert: WaasTenantInsert
+        Update: WaasTenantUpdate
       }
       audits: {
         Row:    WaasAuditRow
-        Insert: Omit<WaasAudit, 'id' | 'created_at' | 'updated_at'>
+        Insert: WaasAuditInsert
         Update: WaasAuditUpdate
       }
       leads: {
@@ -102,12 +151,12 @@ export interface WaasDatabase {
       }
       create_prospect_audit: {
         Args: {
-          p_target_url:         string
-          p_competitor_urls:    string[]
-          p_requestor_name?:    string
-          p_requestor_email?:   string
-          p_requestor_phone?:   string
-          p_requestor_company?: string
+          p_target_url:        string
+          p_competitor_urls:   string[]
+          p_requestor_name:    string | null
+          p_requestor_email:   string | null
+          p_requestor_phone:   string | null
+          p_requestor_company: string | null
         }
         Returns: string  // UUID
       }
@@ -124,18 +173,18 @@ export interface WaasDatabase {
       }
       capture_audit_lead: {
         Args: {
-          p_email:         string
-          p_audit_id:      string
-          p_name:          string | null
-          p_phone:         string | null
-          p_company:       string | null
-          p_target_url:    string | null
-          p_industry:      string | null
-          p_location:      string | null
-          p_utm_source:    string | null
-          p_utm_medium:    string | null
-          p_utm_campaign:  string | null
-          p_referrer_url:  string | null
+          p_email:        string
+          p_audit_id:     string
+          p_name:         string | null
+          p_phone:        string | null
+          p_company:      string | null
+          p_target_url:   string | null
+          p_industry:     string | null
+          p_location:     string | null
+          p_utm_source:   string | null
+          p_utm_medium:   string | null
+          p_utm_campaign: string | null
+          p_referrer_url: string | null
         }
         Returns: string  // lead UUID
       }
@@ -163,7 +212,7 @@ function getWaasEnvVars() {
   return { url, anon }
 }
 
-function getWaasServiceEnvVars() {
+export function getWaasServiceEnvVars() {
   const url         = process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL
   const serviceRole = process.env.WAAS_SUPABASE_SERVICE_ROLE_KEY
 
@@ -180,6 +229,18 @@ function getWaasServiceEnvVars() {
 }
 
 // ---------------------------------------------------------------------------
+// Raw (untyped) admin client — used for DML operations to avoid
+// Supabase 2.x ExactMatch type inference issues with complex payloads.
+// ---------------------------------------------------------------------------
+
+function getRawAdminClient() {
+  const { url, serviceRole } = getWaasServiceEnvVars()
+  return createClient(url, serviceRole, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+}
+
+// ---------------------------------------------------------------------------
 // CLIENT-SIDE: Anon key client (browser + public API routes)
 // ---------------------------------------------------------------------------
 
@@ -192,7 +253,7 @@ export function getWaasClient(): SupabaseClient<WaasDatabase> {
 
   _waasClient = createClient<WaasDatabase>(url, anon, {
     auth: {
-      persistSession: false,  // WaaS doesn't use Supabase Auth for tenant visitors
+      persistSession:  false,
       autoRefreshToken: false,
     },
   })
@@ -200,12 +261,11 @@ export function getWaasClient(): SupabaseClient<WaasDatabase> {
   return _waasClient
 }
 
-// Alias for server-side usage (same as getWaasClient but clearer naming for SSR pages)
+// Alias for server-side usage
 export const createWaasClient = getWaasClient
 
 // ---------------------------------------------------------------------------
-// SERVER-SIDE: Service role client (API routes, admin operations)
-// Bypasses RLS — use with extreme caution, server-side only.
+// SERVER-SIDE: Typed service role client (for SELECT queries)
 // ---------------------------------------------------------------------------
 
 let _waasAdminClient: SupabaseClient<WaasDatabase> | null = null
@@ -227,7 +287,6 @@ export function getWaasAdminClient(): SupabaseClient<WaasDatabase> {
 
 // ---------------------------------------------------------------------------
 // MIDDLEWARE: Lightweight anon client for edge runtime tenant resolution
-// Avoids singleton issues in Edge middleware (different runtime context)
 // ---------------------------------------------------------------------------
 
 export function createWaasMiddlewareClient(): SupabaseClient<WaasDatabase> {
@@ -235,7 +294,6 @@ export function createWaasMiddlewareClient(): SupabaseClient<WaasDatabase> {
   const anon = process.env.NEXT_PUBLIC_WAAS_SUPABASE_ANON_KEY
 
   if (!url || !anon) {
-    // In middleware, we can't throw — return null-safe client or skip
     throw new Error('[WaaS Middleware] Missing WAAS Supabase env vars')
   }
 
@@ -244,7 +302,6 @@ export function createWaasMiddlewareClient(): SupabaseClient<WaasDatabase> {
       persistSession:   false,
       autoRefreshToken: false,
     },
-    // Use fetch with no-cache for fresh tenant resolution in edge
     global: {
       fetch: (input, init) => fetch(input, { ...init, cache: 'no-store' }),
     },
@@ -252,22 +309,14 @@ export function createWaasMiddlewareClient(): SupabaseClient<WaasDatabase> {
 }
 
 // ---------------------------------------------------------------------------
-// TENANT RESOLUTION: Core lookup used by middleware
+// TENANT RESOLUTION
 // ---------------------------------------------------------------------------
 
-/**
- * Resolve a tenant from a hostname.
- * Calls the `resolve_tenant_by_hostname` Postgres RPC function.
- *
- * @param hostname - The full hostname including port if present (e.g. 'client-a.rankedceo.com:3000')
- * @returns The resolved tenant or null if not found
- */
 export async function resolveTenantByHostname(
   hostname: string
 ): Promise<WaasTenantResolved | null> {
   try {
     const supabase = createWaasMiddlewareClient()
-
     const { data, error } = await supabase
       .rpc('resolve_tenant_by_hostname', { p_hostname: hostname })
 
@@ -277,7 +326,6 @@ export async function resolveTenantByHostname(
     }
 
     if (!data || data.length === 0) return null
-
     return data[0] as WaasTenantResolved
   } catch (err) {
     console.error('[WaaS] Tenant resolution exception:', err)
@@ -286,14 +334,135 @@ export async function resolveTenantByHostname(
 }
 
 // ---------------------------------------------------------------------------
+// AUDIT DML HELPERS
+// All write operations use the raw untyped client to avoid Supabase 2.x
+// ExactMatch type inference issues. Read operations use the typed client.
+// ---------------------------------------------------------------------------
+
+export async function createAuditRecord(insert: WaasAuditInsert): Promise<string | null> {
+  try {
+    const client = getRawAdminClient()
+    const { data, error } = await client
+      .from('audits')
+      .insert(insert)
+      .select('id')
+      .single()
+
+    if (error) {
+      console.error('[WaaS] createAuditRecord error:', error.message)
+      return null
+    }
+    return (data as { id: string }).id
+  } catch (err) {
+    console.error('[WaaS] createAuditRecord exception:', err)
+    return null
+  }
+}
+
+export async function updateAuditRecord(
+  auditId: string,
+  update: WaasAuditUpdate
+): Promise<boolean> {
+  try {
+    const client = getRawAdminClient()
+    const { error } = await client
+      .from('audits')
+      .update({ ...update, updated_at: new Date().toISOString() })
+      .eq('id', auditId)
+
+    if (error) {
+      console.error('[WaaS] updateAuditRecord error:', error.message)
+      return false
+    }
+    return true
+  } catch (err) {
+    console.error('[WaaS] updateAuditRecord exception:', err)
+    return false
+  }
+}
+
+// ---------------------------------------------------------------------------
+// TENANT DML HELPERS
+// ---------------------------------------------------------------------------
+
+export async function createTenantRecord(insert: WaasTenantInsert): Promise<WaasTenant | null> {
+  try {
+    const client = getRawAdminClient()
+    const { data, error } = await client
+      .from('tenants')
+      .insert({
+        ...insert,
+        status:          insert.status          ?? 'onboarding',
+        package_tier:    insert.package_tier     ?? 'hosting',
+        domain_verified: insert.domain_verified  ?? false,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('[WaaS] createTenantRecord error:', error.message)
+      throw error
+    }
+    return data as WaasTenant
+  } catch (err) {
+    console.error('[WaaS] createTenantRecord exception:', err)
+    throw err
+  }
+}
+
+export async function updateTenantRecord(
+  tenantId: string,
+  update: WaasTenantUpdate
+): Promise<WaasTenant | null> {
+  try {
+    const client = getRawAdminClient()
+    const { data, error } = await client
+      .from('tenants')
+      .update({ ...update, updated_at: new Date().toISOString() })
+      .eq('id', tenantId)
+      .is('deleted_at', null)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('[WaaS] updateTenantRecord error:', error.message)
+      throw error
+    }
+    return data as WaasTenant
+  } catch (err) {
+    console.error('[WaaS] updateTenantRecord exception:', err)
+    throw err
+  }
+}
+
+export async function softDeleteTenant(tenantId: string): Promise<boolean> {
+  try {
+    const client = getRawAdminClient()
+    const { error } = await client
+      .from('tenants')
+      .update({
+        deleted_at: new Date().toISOString(),
+        status:     'cancelled',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', tenantId)
+      .is('deleted_at', null)
+
+    if (error) {
+      console.error('[WaaS] softDeleteTenant error:', error.message)
+      return false
+    }
+    return true
+  } catch (err) {
+    console.error('[WaaS] softDeleteTenant exception:', err)
+    return false
+  }
+}
+
+// ---------------------------------------------------------------------------
 // LEAD HELPERS
 // ---------------------------------------------------------------------------
 
-/**
- * Capture a lead via the capture_audit_lead RPC.
- * Uses an untyped client internally to avoid Supabase 2.x ExactMatch
- * arg resolution issues with destructured `any` values from req.json().
- */
 export async function captureAuditLead(input: {
   email:        string
   audit_id:     string
@@ -309,12 +478,7 @@ export async function captureAuditLead(input: {
   referrer_url: string | null
 }): Promise<{ leadId: string | null; error: string | null }> {
   try {
-    const { url, serviceRole } = getWaasServiceEnvVars()
-    // Use untyped client to bypass Supabase 2.x ExactMatch RPC arg resolution
-    const client = createClient(url, serviceRole, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    })
-
+    const client = getRawAdminClient()
     const { data, error } = await client.rpc('capture_audit_lead', {
       p_email:        input.email,
       p_audit_id:     input.audit_id,
@@ -338,12 +502,9 @@ export async function captureAuditLead(input: {
 }
 
 // ---------------------------------------------------------------------------
-// AUDIT HELPERS
+// AUDIT READ HELPERS
 // ---------------------------------------------------------------------------
 
-/**
- * Create a prospect audit (called from public /audit tool)
- */
 export async function createProspectAudit(input: {
   target_url:         string
   competitor_urls:    string[]
@@ -353,15 +514,14 @@ export async function createProspectAudit(input: {
   requestor_company?: string
 }): Promise<string | null> {
   try {
-    const supabase = getWaasClient()
-
-    const { data, error } = await supabase.rpc('create_prospect_audit', {
-      p_target_url:         input.target_url,
-      p_competitor_urls:    input.competitor_urls,
-      p_requestor_name:     input.requestor_name,
-      p_requestor_email:    input.requestor_email,
-      p_requestor_phone:    input.requestor_phone,
-      p_requestor_company:  input.requestor_company,
+    const client = getRawAdminClient()
+    const { data, error } = await client.rpc('create_prospect_audit', {
+      p_target_url:        input.target_url,
+      p_competitor_urls:   input.competitor_urls,
+      p_requestor_name:    input.requestor_name    ?? null,
+      p_requestor_email:   input.requestor_email   ?? null,
+      p_requestor_phone:   input.requestor_phone   ?? null,
+      p_requestor_company: input.requestor_company ?? null,
     })
 
     if (error) {
@@ -376,9 +536,6 @@ export async function createProspectAudit(input: {
   }
 }
 
-/**
- * Poll for audit status (for client-side polling after submission)
- */
 export interface AuditStatusResult {
   id:            string
   status:        'pending' | 'running' | 'completed' | 'failed' | 'expired'
@@ -390,9 +547,8 @@ export interface AuditStatusResult {
 
 export async function getAuditStatus(auditId: string): Promise<AuditStatusResult | null> {
   try {
-    const supabase = getWaasClient()
-
-    const { data, error } = await supabase
+    const client = getRawAdminClient()
+    const { data, error } = await client
       .rpc('get_audit_status', { p_audit_id: auditId })
 
     if (error) {

@@ -7,7 +7,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { getWaasAdminClient } from '@/lib/waas/supabase'
+import { getWaasAdminClient, createTenantRecord } from '@/lib/waas/supabase'
+import type { WaasTenantInsert } from '@/lib/waas/supabase'
 import type { CreateWaasTenantInput } from '@/lib/waas/types'
 
 // ---------------------------------------------------------------------------
@@ -95,37 +96,33 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const waas = getWaasAdminClient()
+    const insert: WaasTenantInsert = {
+      slug:            body.slug,
+      domain:          body.domain          ?? null,
+      subdomain:       body.subdomain        ?? null,
+      brand_config:    body.brand_config,
+      package_tier:    body.package_tier     ?? 'hosting',
+      status:          'onboarding',
+      target_industry: body.target_industry  ?? null,
+      target_location: body.target_location  ?? null,
+      crm_account_id:  body.crm_account_id   ?? null,
+      domain_verified: false,
+    }
 
-    const { data, error } = await waas
-      .from('tenants')
-      .insert({
-        slug:             body.slug,
-        domain:           body.domain           ?? null,
-        subdomain:        body.subdomain         ?? null,
-        brand_config:     body.brand_config,
-        package_tier:     body.package_tier      ?? 'hosting',
-        status:           'onboarding',
-        target_industry:  body.target_industry   ?? null,
-        target_location:  body.target_location   ?? null,
-        crm_account_id:   body.crm_account_id    ?? null,
-        domain_verified:  false,
-      } as any)
-      .select()
-      .single()
-
-    if (error) {
-      if (error.code === '23505') {
+    try {
+      const tenant = await createTenantRecord(insert)
+      return NextResponse.json({ tenant }, { status: 201 })
+    } catch (createErr: unknown) {
+      const pgErr = createErr as { code?: string; message?: string }
+      if (pgErr?.code === '23505') {
         return NextResponse.json(
           { error: 'A tenant with this slug, domain, or subdomain already exists' },
           { status: 409 }
         )
       }
-      console.error('[WaaS API] Create tenant error:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('[WaaS API] Create tenant error:', createErr)
+      return NextResponse.json({ error: pgErr?.message ?? 'Failed to create tenant' }, { status: 500 })
     }
-
-    return NextResponse.json({ tenant: data }, { status: 201 })
   } catch (err) {
     console.error('[WaaS API] POST /tenants exception:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
