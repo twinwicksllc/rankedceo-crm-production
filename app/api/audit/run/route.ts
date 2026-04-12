@@ -6,8 +6,8 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getWaasAdminClient } from '@/lib/waas/supabase'
-import type { WaasAuditUpdate } from '@/lib/waas/supabase'
+import { createAuditRecord, updateAuditRecord } from '@/lib/waas/supabase'
+import type { WaasAuditInsert, WaasAuditUpdate } from '@/lib/waas/supabase'
 import type { AuditSeoProvider } from '@/lib/waas/types'
 import { runFullAudit } from '@/lib/waas/services/audit-engine'
 import { extractDomain } from '@/lib/waas/services/serper'
@@ -29,10 +29,10 @@ export async function POST(req: NextRequest) {
       requestor_email,
       requestor_phone,
       requestor_company,
-      audit_id,          // optional: pre-created audit ID from the form step
+      audit_id,
     } = body
 
-    // ── Validate inputs ───────────────────────────────────────────────────
+    // ── Validate inputs ──────────────────────────────────────────────────────
     if (!target_url?.trim()) {
       return NextResponse.json({ error: 'target_url is required' }, { status: 400 })
     }
@@ -40,13 +40,12 @@ export async function POST(req: NextRequest) {
     const normalizeUrl = (url: string) =>
       url.trim().startsWith('http') ? url.trim() : `https://${url.trim()}`
 
-    const normalizedTarget      = normalizeUrl(target_url)
-    const normalizedCompetitors = (competitor_urls ?? [])
+    const normalizedTarget      = normalizeUrl(String(target_url))
+    const normalizedCompetitors = ((competitor_urls ?? []) as unknown[])
       .filter(Boolean)
       .slice(0, 3)
-      .map(normalizeUrl)
+      .map((u) => normalizeUrl(String(u)))
 
-    // Validate URL format
     try { new URL(normalizedTarget) } catch {
       return NextResponse.json({ error: 'target_url must be a valid URL' }, { status: 400 })
     }
@@ -58,71 +57,59 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // ── Create or update audit record (status: running) ───────────────────
-    const waas = getWaasAdminClient()
-    let auditId = audit_id as string | null
+    // ── Create or update audit record (status: running) ──────────────────────
+    let auditId: string | null = audit_id ? String(audit_id) : null
 
     if (auditId) {
-      // Update existing audit to 'running'
-      await waas.from('audits').update({
-        status:     'running' as const,
+      await updateAuditRecord(auditId, {
+        status:     'running',
         started_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }).eq('id', auditId)
+      })
     } else {
-      // Create new audit record
-      const { data: newAudit, error: createError } = await waas
-        .from('audits')
-        .insert({
-          audit_type:        'prospect' as const,
-          status:            'running'  as const,
-          target_url:        normalizedTarget,
-          competitor_urls:   normalizedCompetitors,
-          requestor_name:    requestor_name    ?? null,
-          requestor_email:   requestor_email   ?? null,
-          requestor_phone:   requestor_phone   ?? null,
-          requestor_company: requestor_company ?? null,
-          started_at:        new Date().toISOString(),
-          expires_at:        new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
-          seo_provider:      (process.env.WAAS_SEO_PROVIDER ?? 'mock') as AuditSeoProvider,
-        })
-        .select('id')
-        .single()
+      const insert: WaasAuditInsert = {
+        audit_type:        'prospect',
+        status:            'running',
+        target_url:        normalizedTarget,
+        competitor_urls:   normalizedCompetitors,
+        requestor_name:    requestor_name    ? String(requestor_name)    : null,
+        requestor_email:   requestor_email   ? String(requestor_email)   : null,
+        requestor_phone:   requestor_phone   ? String(requestor_phone)   : null,
+        requestor_company: requestor_company ? String(requestor_company) : null,
+        started_at:        new Date().toISOString(),
+        expires_at:        new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+        seo_provider:      (process.env.WAAS_SEO_PROVIDER ?? 'mock') as AuditSeoProvider,
+      }
 
-      if (createError || !newAudit) {
-        console.error('[/api/audit/run] Create audit failed:', createError)
+      auditId = await createAuditRecord(insert)
+
+      if (!auditId) {
         return NextResponse.json(
           { error: 'Failed to initialize audit record' },
           { status: 500 }
         )
       }
-
-      auditId = newAudit.id
     }
 
-    // ── Run the audit engine ──────────────────────────────────────────────
+    // ── Run the audit engine ─────────────────────────────────────────────────
     let engineResult
     try {
       engineResult = await runFullAudit(
         normalizedTarget,
         normalizedCompetitors,
-        industry ?? null,
-        location ?? null
+        industry ? String(industry) : null,
+        location ? String(location) : null
       )
     } catch (engineErr) {
       console.error('[/api/audit/run] Engine error:', engineErr)
 
-      // Mark audit as failed + trigger manual review
-      await waas.from('audits').update({
-        status:             'failed' as const,
+      await updateAuditRecord(auditId, {
+        status:             'failed',
         error_message:      String(engineErr).slice(0, 500),
         manual_review:      true,
         manual_review_note: `Engine exception: ${String(engineErr).slice(0, 300)}`,
-        updated_at:         new Date().toISOString(),
-      }).eq('id', auditId)
+      })
 
-      // Notify admin asynchronously (don't await to avoid blocking response)
-      notifyAdmin(auditId!, normalizedTarget, String(engineErr)).catch(console.error)
+      notifyAdmin(auditId, normalizedTarget, String(engineErr)).catch(console.error)
 
       return NextResponse.json(
         {
@@ -136,9 +123,9 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // ── Save results to Supabase ──────────────────────────────────────────
+    // ── Save results to Supabase ─────────────────────────────────────────────
     const updatePayload: WaasAuditUpdate = {
-      status:             engineResult.manualReview ? 'failed' as const : 'completed' as const,
+      status:             engineResult.manualReview ? 'failed' : 'completed',
       report_data:        engineResult.reportData,
       completed_at:       engineResult.manualReview ? null : new Date().toISOString(),
       seo_provider:       engineResult.provider,
@@ -146,27 +133,17 @@ export async function POST(req: NextRequest) {
       location_detected:  engineResult.locationDetected,
       manual_review:      engineResult.manualReview,
       manual_review_note: engineResult.manualReviewNote,
-      updated_at:         new Date().toISOString(),
     }
 
-    // Update requestor info if provided
-    if (requestor_email)   updatePayload.requestor_email   = requestor_email
-    if (requestor_name)    updatePayload.requestor_name    = requestor_name
-    if (requestor_phone)   updatePayload.requestor_phone   = requestor_phone
-    if (requestor_company) updatePayload.requestor_company = requestor_company
+    if (requestor_email)   updatePayload.requestor_email   = String(requestor_email)
+    if (requestor_name)    updatePayload.requestor_name    = String(requestor_name)
+    if (requestor_phone)   updatePayload.requestor_phone   = String(requestor_phone)
+    if (requestor_company) updatePayload.requestor_company = String(requestor_company)
 
-    const { error: saveError } = await waas
-      .from('audits')
-      .update(updatePayload)
-      .eq('id', auditId)
+    await updateAuditRecord(auditId, updatePayload)
 
-    if (saveError) {
-      console.error('[/api/audit/run] Save results failed:', saveError)
-    }
-
-    // If manual review needed, notify admin
     if (engineResult.manualReview) {
-      notifyAdmin(auditId!, normalizedTarget, engineResult.manualReviewNote ?? 'Unknown').catch(console.error)
+      notifyAdmin(auditId, normalizedTarget, engineResult.manualReviewNote ?? 'Unknown').catch(console.error)
     }
 
     const elapsed = Date.now() - startTime
@@ -201,16 +178,11 @@ async function notifyAdmin(
   reason:    string
 ): Promise<void> {
   try {
-    const waas = getWaasAdminClient()
-
-    // Mark as notified in DB
-    await waas.from('audits').update({
+    await updateAuditRecord(auditId, {
       admin_notified:    true,
       admin_notified_at: new Date().toISOString(),
-      updated_at:        new Date().toISOString(),
-    }).eq('id', auditId)
+    })
 
-    // Send email via SendGrid if configured
     const sendgridKey = process.env.SENDGRID_API_KEY
     const adminEmail  = process.env.WAAS_ADMIN_EMAIL ?? 'darrick@rankedceo.com'
 
@@ -219,7 +191,7 @@ async function notifyAdmin(
       return
     }
 
-    const domain = extractDomain(targetUrl)
+    const domain   = extractDomain(targetUrl)
     const auditUrl = `${process.env.NEXT_PUBLIC_APP_URL_PROD ?? 'https://crm.rankedceo.com'}/waas/audits/${auditId}`
 
     await fetch('https://api.sendgrid.com/v3/mail/send', {
