@@ -286,6 +286,58 @@ export async function resolveTenantByHostname(
 }
 
 // ---------------------------------------------------------------------------
+// LEAD HELPERS
+// ---------------------------------------------------------------------------
+
+/**
+ * Capture a lead via the capture_audit_lead RPC.
+ * Uses an untyped client internally to avoid Supabase 2.x ExactMatch
+ * arg resolution issues with destructured `any` values from req.json().
+ */
+export async function captureAuditLead(input: {
+  email:        string
+  audit_id:     string
+  name:         string | null
+  phone:        string | null
+  company:      string | null
+  target_url:   string | null
+  industry:     string | null
+  location:     string | null
+  utm_source:   string | null
+  utm_medium:   string | null
+  utm_campaign: string | null
+  referrer_url: string | null
+}): Promise<{ leadId: string | null; error: string | null }> {
+  try {
+    const { url, serviceRole } = getWaasServiceEnvVars()
+    // Use untyped client to bypass Supabase 2.x ExactMatch RPC arg resolution
+    const client = createClient(url, serviceRole, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+
+    const { data, error } = await client.rpc('capture_audit_lead', {
+      p_email:        input.email,
+      p_audit_id:     input.audit_id,
+      p_name:         input.name,
+      p_phone:        input.phone,
+      p_company:      input.company,
+      p_target_url:   input.target_url,
+      p_industry:     input.industry,
+      p_location:     input.location,
+      p_utm_source:   input.utm_source,
+      p_utm_medium:   input.utm_medium,
+      p_utm_campaign: input.utm_campaign,
+      p_referrer_url: input.referrer_url,
+    })
+
+    if (error) return { leadId: null, error: error.message }
+    return { leadId: data as string, error: null }
+  } catch (err) {
+    return { leadId: null, error: String(err) }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // AUDIT HELPERS
 // ---------------------------------------------------------------------------
 

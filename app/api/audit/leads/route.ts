@@ -5,7 +5,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getWaasAdminClient } from '@/lib/waas/supabase'
+import { getWaasAdminClient, captureAuditLead } from '@/lib/waas/supabase'
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,22 +39,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'audit_id is required' }, { status: 400 })
     }
 
-    const waas = getWaasAdminClient()
-
-    // Call the Supabase RPC
-    const { data: leadId, error } = await waas.rpc('capture_audit_lead', {
-      p_email:        email.trim().toLowerCase(),
-      p_audit_id:     audit_id,
-      p_name:         name         ?? null,
-      p_phone:        phone        ?? null,
-      p_company:      company      ?? null,
-      p_target_url:   target_url   ?? null,
-      p_industry:     industry     ?? null,
-      p_location:     location     ?? null,
-      p_utm_source:   utm_source   ?? null,
-      p_utm_medium:   utm_medium   ?? null,
-      p_utm_campaign: utm_campaign ?? null,
-      p_referrer_url: referrer_url ?? null,
+    // Call the Supabase RPC via typed helper (avoids Supabase 2.x ExactMatch issues)
+    const { leadId, error } = await captureAuditLead({
+      email:        String(email).trim().toLowerCase(),
+      audit_id:     String(audit_id),
+      name:         name         != null ? String(name)         : null,
+      phone:        phone        != null ? String(phone)        : null,
+      company:      company      != null ? String(company)      : null,
+      target_url:   target_url   != null ? String(target_url)   : null,
+      industry:     industry     != null ? String(industry)     : null,
+      location:     location     != null ? String(location)     : null,
+      utm_source:   utm_source   != null ? String(utm_source)   : null,
+      utm_medium:   utm_medium   != null ? String(utm_medium)   : null,
+      utm_campaign: utm_campaign != null ? String(utm_campaign) : null,
+      referrer_url: referrer_url != null ? String(referrer_url) : null,
     })
 
     if (error) {
@@ -64,10 +62,11 @@ export async function POST(req: NextRequest) {
 
     // Link lead_id back to audit
     if (leadId) {
+      const waas = getWaasAdminClient()
       await waas
         .from('audits')
         .update({ lead_id: leadId, updated_at: new Date().toISOString() })
-        .eq('id', audit_id)
+        .eq('id', String(audit_id))
     }
 
     return NextResponse.json({
