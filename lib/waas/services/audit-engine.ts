@@ -195,7 +195,7 @@ function computeOverallScore(
   // Ranking (60% weight — split across keywords)
   const targetDomain = extractDomain(targetUrl)
   if (rankReports.length > 0) {
-    const rankScores = rankReports.map(report => {
+    const rankScores: number[] = rankReports.map(report => {
       const pos = report.targetResult.position
       if (!pos) return 0
       if (pos <= 3)  return 95
@@ -315,6 +315,7 @@ export async function runFullAudit(
       const compRank  = rankReport?.competitorResults.find(c => c.domain === domain)
       return {
         url,
+        domain,
         domain_authority:  0,  // Phase 3: add Moz/Ahrefs integration
         keywords_ranking:  compRank?.position ? 1 : 0,
         estimated_traffic: 0,

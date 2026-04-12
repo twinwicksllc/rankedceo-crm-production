@@ -316,8 +316,17 @@ export async function resolveTenantByHostname(
   hostname: string
 ): Promise<WaasTenantResolved | null> {
   try {
-    const supabase = createWaasMiddlewareClient()
-    const { data, error } = await supabase
+    const url  = process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL
+    const anon = process.env.NEXT_PUBLIC_WAAS_SUPABASE_ANON_KEY
+    if (!url || !anon) return null
+
+    // Use raw untyped client to bypass Supabase 2.x ExactMatch RPC arg resolution
+    const client = createClient(url, anon, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { fetch: (input, init) => fetch(input, { ...init, cache: 'no-store' }) },
+    })
+
+    const { data, error } = await client
       .rpc('resolve_tenant_by_hostname', { p_hostname: hostname })
 
     if (error) {
@@ -325,8 +334,8 @@ export async function resolveTenantByHostname(
       return null
     }
 
-    if (!data || data.length === 0) return null
-    return data[0] as WaasTenantResolved
+    if (!data || (data as unknown[]).length === 0) return null
+    return (data as unknown[])[0] as WaasTenantResolved
   } catch (err) {
     console.error('[WaaS] Tenant resolution exception:', err)
     return null
