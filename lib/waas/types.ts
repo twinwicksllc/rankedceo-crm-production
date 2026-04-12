@@ -133,6 +133,7 @@ export interface AuditRanking {
 
 export interface AuditCompetitor {
   url:               string
+  domain?:           string
   domain_authority:  number
   keywords_ranking:  number
   estimated_traffic: number
