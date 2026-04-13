@@ -1050,7 +1050,7 @@ function PageShell({
           )}
           {auditId && (
             <a
-              href={`/onboarding?tier=standard&auditId=${auditId}`}
+              href={`/get-started?tier=standard&auditId=${auditId}`}
               style={{
                 padding:        '7px 16px',
                 background:     'linear-gradient(135deg, #2563EB, #1D4ED8)',

@@ -2,7 +2,7 @@
 
 // =============================================================================
 // Buy Now CTA
-// Conversion panel — links to /onboarding?tier=standard&auditId=
+// Conversion panel — links to /get-started?tier=standard&auditId=
 // Uses glassmorphism + heavy shadow, red-to-green gradient urgency
 // =============================================================================
 
@@ -69,7 +69,7 @@ export function BuyNowCta({
   compact = false,
 }: BuyNowCtaProps) {
   const msg        = getScoreMessage(score, grade)
-  const ctaUrl     = `/onboarding?tier=standard&auditId=${auditId}`
+  const ctaUrl     = `/get-started?tier=standard&auditId=${auditId}`
   const isUrgent   = grade === 'D' || grade === 'F' || grade === 'C'
   const accentColor = isUrgent ? '#EF4444' : '#2563EB'
 

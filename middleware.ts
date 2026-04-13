@@ -84,7 +84,7 @@ const PROTECTED_CRM_PATHS = [
 ]
 
 // Industry subdomain public paths
-const PUBLIC_INDUSTRY_PATH_SEGMENTS = ['/', '/login', '/signup', '/onboarding', '/api/']
+const PUBLIC_INDUSTRY_PATH_SEGMENTS = ['/', '/login', '/signup', '/onboarding', '/get-started', '/api/']
 
 // ---------------------------------------------------------------------------
 // MAIN MIDDLEWARE
@@ -217,7 +217,7 @@ function handleIndustrySubdomain(
   const { pathname } = request.nextUrl
 
   // Allow shared API and onboarding routes
-  const isSharedRoute = ['/api/auth', '/api/', '/onboarding', '/_next'].some(p =>
+  const isSharedRoute = ['/api/auth', '/api/', '/onboarding', '/get-started', '/_next'].some(p =>
     pathname.startsWith(p)
   )
   if (isSharedRoute) return response
@@ -377,7 +377,7 @@ function handleAuditSubdomain(
   const { pathname } = request.nextUrl
 
   // Allow API and onboarding routes to pass through
-  const isSharedRoute = ['/api/auth', '/api/', '/onboarding', '/_next'].some(p =>
+  const isSharedRoute = ['/api/auth', '/api/', '/onboarding', '/get-started', '/_next'].some(p =>
     pathname.startsWith(p)
   )
   if (isSharedRoute) return response
