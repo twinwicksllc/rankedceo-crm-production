@@ -1,14 +1,13 @@
 import Link from 'next/link'
 import { Shield, Zap, TrendingUp, Search, Clock, BarChart3 } from 'lucide-react'
 
-// Always point auth links to the main domain, not the current subdomain
+// CTA points to /get-started on the same audit subdomain (middleware passes it through)
+// Login/signup point to the main app domain
+const GET_STARTED_URL = '/get-started'
+
 const LOGIN_URL = process.env.NEXT_PUBLIC_APP_URL
   ? `${process.env.NEXT_PUBLIC_APP_URL}/login`
   : 'https://rankedceo.com/login'
-
-const SIGNUP_URL = process.env.NEXT_PUBLIC_APP_URL
-  ? `${process.env.NEXT_PUBLIC_APP_URL}/signup`
-  : 'https://rankedceo.com/signup'
 
 export default function AuditLandingPage() {
   return (
@@ -34,7 +33,7 @@ export default function AuditLandingPage() {
                 Log in
               </Link>
               <Link
-                href={LOGIN_URL}
+                href={GET_STARTED_URL}
                 className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
               >
                 Start Free Audit
@@ -65,7 +64,7 @@ export default function AuditLandingPage() {
             </p>
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link
-                href={LOGIN_URL}
+                href={GET_STARTED_URL}
                 className="flex w-full items-center justify-center rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg transition-all hover:shadow-xl sm:w-auto"
               >
                 <Shield className="mr-2 h-5 w-5" />
@@ -198,7 +197,7 @@ export default function AuditLandingPage() {
               Start your free audit today. No credit card required. Get insights in under 2 minutes.
             </p>
             <Link
-              href={LOGIN_URL}
+              href={GET_STARTED_URL}
               className="inline-flex items-center rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-4 text-base font-semibold text-white shadow-lg transition-all hover:shadow-xl"
             >
               <Shield className="mr-2 h-5 w-5" />
