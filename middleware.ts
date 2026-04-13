@@ -14,12 +14,13 @@ import {
 //
 //   1. WaaS Custom Domain     client-a.com           → /_sites/[slug]/*
 //   2. WaaS Subdomain         client-a.rankedceo.com → /_sites/[slug]/*
-//   3. Industry Subdomain     smile.rankedceo.com    → /smile/*
+//   3. Audit Subdomain        audit.rankedceo.com    → /audit-landing (public landing)
+//   4. Industry Subdomain     smile.rankedceo.com    → /smile/*
 //                             hvac.rankedceo.com     → /hvac/*
 //                             plumbing.rankedceo.com → /plumbing/*
 //                             electrical.rankedceo.com → /electrical/*
-//   4. CRM Domain             crm.rankedceo.com      → app/* (auth-gated)
-//   5. Root Domain            rankedceo.com          → app/* (landing / audit tool)
+//   5. CRM Domain             crm.rankedceo.com      → app/* (auth-gated)
+//   6. Root Domain            rankedceo.com          → app/* (landing / audit tool)
 //
 // ---------------------------------------------------------------------------
 
@@ -47,6 +48,7 @@ const WAAS_ENABLED =
 const RESERVED_SUBDOMAINS = new Set([
   ...INDUSTRY_SUBDOMAINS,
   'crm',
+  'audit',     // Audit tool landing page (audit.rankedceo.com → /audit-landing)
   'www',
   'api',
   'admin',
@@ -360,6 +362,40 @@ function isProductionDomain(request: NextRequest): boolean {
 // ---------------------------------------------------------------------------
 // MATCHER — skip static file extensions
 // ---------------------------------------------------------------------------
+
+
+// ---------------------------------------------------------------------------
+// HANDLER: Audit Subdomain
+// ---------------------------------------------------------------------------
+
+function handleAuditSubdomain(
+  request: NextRequest,
+  response: NextResponse,
+  user: { user_metadata?: Record<string, unknown> } | null,
+  hostname: string
+): NextResponse {
+  const { pathname } = request.nextUrl
+
+  // Allow API and onboarding routes to pass through
+  const isSharedRoute = ['/api/auth', '/api/', '/onboarding', '/_next'].some(p =>
+    pathname.startsWith(p)
+  )
+  if (isSharedRoute) return response
+
+  // Rewrite root / to /audit-landing
+  const url = request.nextUrl.clone()
+  if (pathname === '/') {
+    url.pathname = '/audit-landing'
+  } else {
+    url.pathname = `/audit-landing${pathname}`
+  }
+
+  const rewrite = NextResponse.rewrite(url)
+  response.cookies.getAll().forEach(cookie => {
+    rewrite.cookies.set(cookie.name, cookie.value)
+  })
+  return rewrite
+}
 
 export const config = {
   matcher: [
