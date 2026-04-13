@@ -135,12 +135,17 @@ export async function middleware(request: NextRequest) {
   // ── 2. Extract subdomain ──────────────────────────────────────────────────
   const subdomain = extractSubdomain(hostname)
 
-  // ── 3. Industry subdomains (existing behaviour — unchanged) ───────────────
+  // ── 3. Audit subdomain (audit.rankedceo.com → /audit-landing) ───────────────
+  if (subdomain === 'audit') {
+    return handleAuditSubdomain(request, response, user, hostname)
+  }
+
+  // ── 4. Industry subdomains (existing behaviour — unchanged) ───────────────
   if (subdomain && INDUSTRY_SUBDOMAINS.includes(subdomain as IndustrySubdomain)) {
     return handleIndustrySubdomain(request, response, subdomain as IndustrySubdomain, user, hostname)
   }
 
-  // ── 4. WaaS tenant resolution ─────────────────────────────────────────────
+  // ── 5. WaaS tenant resolution ─────────────────────────────────────────────
   // Skip WaaS lookup if:
   //   a) WaaS is not configured (env vars missing)
   //   b) This is a reserved/known subdomain
