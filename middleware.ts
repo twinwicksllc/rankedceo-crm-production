@@ -67,6 +67,8 @@ const PUBLIC_CRM_PATHS = [
   '/login',
   '/signup',
   '/pay',
+  '/forgot-password',
+  '/reset-password',
   '/api/auth',
   '/api/',
   '/_next',
