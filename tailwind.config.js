@@ -50,6 +50,17 @@ module.exports = {
           DEFAULT: "var(--card)",
           foreground: "var(--card-foreground)",
         },
+        // WaaS Brand CSS Variables — injected per-tenant by ThemeProvider
+        // Usage: bg-brand-primary, text-brand-secondary, border-brand-accent, etc.
+        "brand-primary":    "rgb(var(--brand-primary-rgb) / <alpha-value>)",
+        "brand-secondary":  "rgb(var(--brand-secondary-rgb) / <alpha-value>)",
+        "brand-accent":     "rgb(var(--brand-accent-rgb) / <alpha-value>)",
+        "brand-background": "rgb(var(--brand-background-rgb) / <alpha-value>)",
+        "brand-text":       "rgb(var(--brand-text-rgb) / <alpha-value>)",
+      },
+      fontFamily: {
+        "brand-heading": "var(--brand-font-heading)",
+        "brand-body":    "var(--brand-font-body)",
       },
       borderRadius: {
         lg: "var(--radius)",

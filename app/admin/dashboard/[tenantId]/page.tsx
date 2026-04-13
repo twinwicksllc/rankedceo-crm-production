@@ -1,27 +1,30 @@
 // =============================================================================
 // AdvantagePoint — Tenant Detail View (Server Component)
-// Brand Sheet, Audit Results, Domain Requests, Deploy Site
+// Brand Sheet, Audit Results, Domain Requests, Deploy Site, Live Preview
 // =============================================================================
 
-import React from 'react'
-import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import React          from 'react'
+import Link           from 'next/link'
+import { notFound }   from 'next/navigation'
 import { getTenantDetail } from '@/lib/waas/actions/admin'
-import { DeploySiteButton } from './deploy-site-button'
+import { DeploySiteButton }    from './deploy-site-button'
 import { DomainStatusManager } from './domain-status-manager'
+import { PreviewTab }          from './preview-tab'
 import type { WaasDomainRequest } from '@/lib/waas/types'
 
 interface PageProps {
-  params: { tenantId: string }
+  params:      { tenantId: string }
+  searchParams: { tab?: string }
 }
 
-export default async function TenantDetailPage({ params }: PageProps) {
+export default async function TenantDetailPage({ params, searchParams }: PageProps) {
   const result = await getTenantDetail(params.tenantId)
   if (!result.success || !result.data) notFound()
 
   const { tenant, domainRequests, audit } = result.data
-  const brand  = tenant.brand_config
-  const colors = brand?.colors
+  const brand   = tenant.brand_config
+  const colors  = brand?.colors
+  const activeTab = searchParams?.tab ?? 'overview'
 
   return (
     <div>
@@ -64,138 +67,169 @@ export default async function TenantDetailPage({ params }: PageProps) {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Tab Navigation */}
+      <div className="flex gap-1 mb-8 p-1 rounded-xl bg-white/5 border border-white/10 w-fit">
+        {[
+          { key: 'overview', label: '📋 Overview' },
+          { key: 'preview',  label: '🌐 Live Preview' },
+        ].map(tab => (
+          <Link
+            key={tab.key}
+            href={`/admin/dashboard/${params.tenantId}?tab=${tab.key}`}
+            className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === tab.key
+                ? 'bg-white/10 text-white shadow-sm'
+                : 'text-white/40 hover:text-white/70'
+            }`}
+          >
+            {tab.label}
+          </Link>
+        ))}
+      </div>
 
-        {/* Left column: Brand Sheet + Contact */}
-        <div className="lg:col-span-1 space-y-6">
+      {/* Tab: Overview */}
+      {activeTab === 'overview' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* Brand Sheet */}
-          <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-white/10">
-              <h2 className="text-white font-semibold text-sm">Brand Sheet</h2>
-            </div>
-            <div className="p-5 space-y-5">
-              {/* Logo */}
-              <div>
-                <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Logo</p>
-                {brand?.logo_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={brand.logo_url} alt="Logo" className="max-h-12 max-w-full object-contain" />
-                ) : (
-                  <div
-                    className="h-10 w-28 rounded-lg flex items-center justify-center text-white text-sm font-bold"
-                    style={{ background: `linear-gradient(135deg, ${colors?.primary ?? '#2563EB'}, ${colors?.secondary ?? '#1E40AF'})` }}
-                  >
-                    {(brand?.business_name ?? '')[0]}
+          {/* Left column: Brand Sheet + Contact */}
+          <div className="lg:col-span-1 space-y-6">
+
+            {/* Brand Sheet */}
+            <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-white/10">
+                <h2 className="text-white font-semibold text-sm">Brand Sheet</h2>
+              </div>
+              <div className="p-5 space-y-5">
+                {/* Logo */}
+                <div>
+                  <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Logo</p>
+                  {brand?.logo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={brand.logo_url} alt="Logo" className="max-h-12 max-w-full object-contain" />
+                  ) : (
+                    <div
+                      className="h-10 w-28 rounded-lg flex items-center justify-center text-white text-sm font-bold"
+                      style={{ background: `linear-gradient(135deg, ${colors?.primary ?? '#2563EB'}, ${colors?.secondary ?? '#1E40AF'})` }}
+                    >
+                      {(brand?.business_name ?? '')[0]}
+                    </div>
+                  )}
+                </div>
+
+                {/* Colors */}
+                <div>
+                  <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Color Palette</p>
+                  <div className="flex gap-2">
+                    {colors && Object.entries(colors).map(([key, val]) => val ? (
+                      <div key={key} className="group relative">
+                        <div
+                          className="w-8 h-8 rounded-lg border border-white/10 cursor-pointer"
+                          style={{ backgroundColor: val as string }}
+                          title={`${key}: ${val}`}
+                        />
+                      </div>
+                    ) : null)}
+                  </div>
+                  <div className="mt-2 flex gap-3 flex-wrap">
+                    <div>
+                      <p className="text-white/25 text-[10px]">PRIMARY</p>
+                      <p className="text-white font-mono text-xs">{colors?.primary ?? '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-white/25 text-[10px]">SECONDARY</p>
+                      <p className="text-white font-mono text-xs">{colors?.secondary ?? '—'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* USP */}
+                {tenant.usp && (
+                  <div>
+                    <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Unique Selling Proposition</p>
+                    <p className="text-white/70 text-sm leading-relaxed">{tenant.usp}</p>
                   </div>
                 )}
               </div>
+            </div>
 
-              {/* Colors */}
-              <div>
-                <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Color Palette</p>
-                <div className="flex gap-2">
-                  {colors && Object.entries(colors).map(([key, val]) => val ? (
-                    <div key={key} className="group relative">
-                      <div
-                        className="w-8 h-8 rounded-lg border border-white/10 cursor-pointer"
-                        style={{ backgroundColor: val as string }}
-                        title={`${key}: ${val}`}
-                      />
-                    </div>
-                  ) : null)}
-                </div>
-                <div className="mt-2 flex gap-3 flex-wrap">
-                  <div>
-                    <p className="text-white/25 text-[10px]">PRIMARY</p>
-                    <p className="text-white font-mono text-xs">{colors?.primary ?? '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-white/25 text-[10px]">SECONDARY</p>
-                    <p className="text-white font-mono text-xs">{colors?.secondary ?? '—'}</p>
-                  </div>
-                </div>
+            {/* Contact Details */}
+            <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-white/10">
+                <h2 className="text-white font-semibold text-sm">Contact Details</h2>
               </div>
-
-              {/* USP */}
-              {tenant.usp && (
-                <div>
-                  <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Unique Selling Proposition</p>
-                  <p className="text-white/70 text-sm leading-relaxed">{tenant.usp}</p>
-                </div>
-              )}
+              <div className="p-5 space-y-3">
+                {[
+                  { label: 'Email',    value: tenant.submitted_by_email },
+                  { label: 'Address',  value: tenant.physical_address },
+                  { label: 'City',     value: tenant.city && tenant.state ? `${tenant.city}, ${tenant.state} ${tenant.zip ?? ''}` : null },
+                  { label: 'Trade',    value: tenant.primary_trade },
+                  { label: 'Calendly', value: tenant.calendly_url },
+                  { label: 'Financing',value: tenant.financing_enabled ? 'Enabled' : 'Disabled' },
+                ].map(row => row.value ? (
+                  <div key={row.label} className="flex gap-3">
+                    <span className="text-white/30 text-xs w-16 shrink-0 pt-0.5">{row.label}</span>
+                    <span className="text-white/70 text-xs break-all">{row.value}</span>
+                  </div>
+                ) : null)}
+              </div>
             </div>
           </div>
 
-          {/* Contact Details */}
-          <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-white/10">
-              <h2 className="text-white font-semibold text-sm">Contact Details</h2>
+          {/* Right column: Domains + Audit */}
+          <div className="lg:col-span-2 space-y-6">
+
+            {/* Domain Requests */}
+            <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-white/10">
+                <h2 className="text-white font-semibold text-sm">Domain Requests</h2>
+              </div>
+              <div className="p-5">
+                {domainRequests.length === 0 ? (
+                  <p className="text-white/30 text-sm">No domain requests submitted.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {domainRequests.map((req: WaasDomainRequest) => (
+                      <DomainStatusManager key={req.id} request={req} />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="p-5 space-y-3">
-              {[
-                { label: 'Email',    value: tenant.submitted_by_email },
-                { label: 'Address',  value: tenant.physical_address },
-                { label: 'City',     value: tenant.city && tenant.state ? `${tenant.city}, ${tenant.state} ${tenant.zip ?? ''}` : null },
-                { label: 'Trade',    value: tenant.primary_trade },
-                { label: 'Calendly', value: tenant.calendly_url },
-                { label: 'Financing',value: tenant.financing_enabled ? 'Enabled' : 'Disabled' },
-              ].map(row => row.value ? (
-                <div key={row.label} className="flex gap-3">
-                  <span className="text-white/30 text-xs w-16 shrink-0 pt-0.5">{row.label}</span>
-                  <span className="text-white/70 text-xs break-all">{row.value}</span>
-                </div>
-              ) : null)}
+
+            {/* Audit Results */}
+            <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
+                <h2 className="text-white font-semibold text-sm">Original Audit</h2>
+                {audit && (
+                  <Link
+                    href={`/audit/${(audit as { id: string }).id}`}
+                    className="text-blue-400 hover:text-blue-300 text-xs font-medium transition-colors"
+                    target="_blank"
+                  >
+                    View Full Report →
+                  </Link>
+                )}
+              </div>
+              <div className="p-5">
+                {!audit ? (
+                  <p className="text-white/30 text-sm">No linked audit report.</p>
+                ) : (
+                  <AuditSummaryCard audit={audit} />
+                )}
+              </div>
             </div>
           </div>
         </div>
+      )}
 
-        {/* Right column: Domains + Audit */}
-        <div className="lg:col-span-2 space-y-6">
-
-          {/* Domain Requests */}
-          <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-white/10">
-              <h2 className="text-white font-semibold text-sm">Domain Requests</h2>
-            </div>
-            <div className="p-5">
-              {domainRequests.length === 0 ? (
-                <p className="text-white/30 text-sm">No domain requests submitted.</p>
-              ) : (
-                <div className="space-y-3">
-                  {domainRequests.map((req: WaasDomainRequest) => (
-                    <DomainStatusManager key={req.id} request={req} />
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Audit Results */}
-          <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
-              <h2 className="text-white font-semibold text-sm">Original Audit</h2>
-              {audit && (
-                <Link
-                  href={`/audit/${(audit as { id: string }).id}`}
-                  className="text-blue-400 hover:text-blue-300 text-xs font-medium transition-colors"
-                  target="_blank"
-                >
-                  View Full Report →
-                </Link>
-              )}
-            </div>
-            <div className="p-5">
-              {!audit ? (
-                <p className="text-white/30 text-sm">No linked audit report.</p>
-              ) : (
-                <AuditSummaryCard audit={audit} />
-              )}
-            </div>
-          </div>
-
-        </div>
-      </div>
+      {/* Tab: Live Preview */}
+      {activeTab === 'preview' && (
+        <PreviewTab
+          tenantId={tenant.id}
+          slug={tenant.slug}
+          currentTheme={null}
+        />
+      )}
     </div>
   )
 }
@@ -205,17 +239,17 @@ export default async function TenantDetailPage({ params }: PageProps) {
 // ---------------------------------------------------------------------------
 
 function AuditSummaryCard({ audit }: { audit: Record<string, unknown> }) {
-  const report = audit.report_data as Record<string, unknown> | null
+  const report  = audit.report_data as Record<string, unknown> | null
   const summary = report?.summary as Record<string, number> | null
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Overall',   value: summary?.overall_score   },
-          { label: 'SEO',       value: summary?.seo_score       },
-          { label: 'Perf.',     value: summary?.performance_score },
-          { label: 'Mobile',    value: summary?.mobile_score    },
+          { label: 'Overall', value: summary?.overall_score   },
+          { label: 'SEO',     value: summary?.seo_score       },
+          { label: 'Perf.',   value: summary?.performance_score },
+          { label: 'Mobile',  value: summary?.mobile_score    },
         ].map(m => (
           <div key={m.label} className="rounded-xl bg-white/5 border border-white/10 p-3 text-center">
             <div className={`text-2xl font-bold ${
