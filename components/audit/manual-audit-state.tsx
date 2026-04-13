@@ -151,7 +151,7 @@ export function ManualAuditState({
       {/* CTA */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
         <a
-          href={`/onboarding?tier=standard&auditId=${auditId}`}
+          href={`/get-started?tier=standard&auditId=${auditId}`}
           style={{
             display:        'inline-block',
             padding:        '14px 32px',
