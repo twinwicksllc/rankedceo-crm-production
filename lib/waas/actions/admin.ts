@@ -197,3 +197,62 @@ export async function getAdminStats(): Promise<ActionResult<AdminStats>> {
     return { success: false, error: msg }
   }
 }
+
+// ---------------------------------------------------------------------------
+// Apply template to tenant site config
+// Creates or updates tenant_site_config with the selected template
+// ---------------------------------------------------------------------------
+
+export async function applyTemplate(
+  tenantId:     string,
+  templateSlug: string
+): Promise<ActionResult<void>> {
+  'use server'
+  try {
+    const supabase = getAdminClient()
+
+    // Look up template id from site_templates table
+    const { data: template, error: tplError } = await supabase
+      .from('site_templates')
+      .select('id, default_layout_json')
+      .eq('slug', templateSlug)
+      .single()
+
+    if (tplError || !template) {
+      // Fallback: use slug as id (registry-only mode without DB templates)
+      const { error: upsertError } = await supabase
+        .from('tenant_site_config')
+        .upsert(
+          {
+            tenant_id:            tenantId,
+            template_id:          null,
+            active_sections_json: [],
+            updated_at:           new Date().toISOString(),
+          },
+          { onConflict: 'tenant_id' }
+        )
+      if (upsertError) throw new Error(upsertError.message)
+    } else {
+      const { error: upsertError } = await supabase
+        .from('tenant_site_config')
+        .upsert(
+          {
+            tenant_id:            tenantId,
+            template_id:          template.id,
+            active_sections_json: [],   // empty = use template defaults
+            updated_at:           new Date().toISOString(),
+          },
+          { onConflict: 'tenant_id' }
+        )
+      if (upsertError) throw new Error(upsertError.message)
+    }
+
+    revalidatePath(`/admin/dashboard/${tenantId}`)
+    revalidatePath('/_sites', 'layout')
+
+    return { success: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
