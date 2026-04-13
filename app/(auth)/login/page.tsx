@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -35,7 +35,32 @@ function GoogleIcon() {
   )
 }
 
-export default function LoginPage() {
+// Loading skeleton for the login form
+function LoginLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <div className="h-8 w-48 mx-auto bg-gray-200 rounded animate-pulse" />
+          <div className="h-4 w-64 mx-auto bg-gray-100 rounded animate-pulse" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="h-10 w-full bg-gray-100 rounded animate-pulse" />
+          <div className="h-px w-full bg-gray-200" />
+          <div className="h-10 w-full bg-gray-100 rounded animate-pulse" />
+          <div className="space-y-2">
+            <div className="h-10 w-full bg-gray-100 rounded animate-pulse" />
+            <div className="h-10 w-full bg-gray-100 rounded animate-pulse" />
+            <div className="h-10 w-full bg-gray-100 rounded animate-pulse" />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+// Inner component that uses useSearchParams - must be wrapped in Suspense
+function LoginForm() {
   const router       = useRouter()
   const searchParams = useSearchParams()
   const redirectTo   = searchParams.get('redirectTo') ?? '/dashboard'
@@ -51,7 +76,7 @@ export default function LoginPage() {
 
   const supabase = createClient()
 
-  // ── Email + Password ────────────────────────────────────────────────────────
+  // ─── Email + Password ───────────────────────────────────────────────────────────────────────────
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -72,7 +97,7 @@ export default function LoginPage() {
     }
   }
 
-  // ── Magic Link ───────────────────────────────────────────────────────────────
+  // ─── Magic Link ─────────────────────────────────────────────────────────────────────────────────
   const handleMagicLink = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -94,7 +119,7 @@ export default function LoginPage() {
     }
   }
 
-  // ── Google OAuth ─────────────────────────────────────────────────────────────
+  // ─── Google OAuth ───────────────────────────────────────────────────────────────────────────────
   const handleGoogleLogin = async () => {
     setError('')
     setGoogleLoading(true)
@@ -117,7 +142,7 @@ export default function LoginPage() {
     }
   }
 
-  // ── Magic link sent state ────────────────────────────────────────────────────
+  // ─── Magic link sent state ─────────────────────────────────────────────────────────────────────
   if (magicSent) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -290,5 +315,14 @@ export default function LoginPage() {
         </CardFooter>
       </Card>
     </div>
+  )
+}
+
+// Main page component - wraps LoginForm in Suspense
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginLoading />}>
+      <LoginForm />
+    </Suspense>
   )
 }
