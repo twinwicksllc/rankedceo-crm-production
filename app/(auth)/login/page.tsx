@@ -76,13 +76,33 @@ function LoginForm() {
 
   const supabase = createClient()
 
+  const resolveRedirectTarget = (target: string) => {
+    if (target.startsWith('/')) {
+      return `${window.location.origin}${target}`
+    }
+
+    try {
+      const parsed = new URL(target)
+      const isHttps = parsed.protocol === 'https:'
+      const isRankedCeoHost =
+        parsed.hostname === 'rankedceo.com' || parsed.hostname.endsWith('.rankedceo.com')
+
+      if (isHttps && isRankedCeoHost) {
+        return parsed.toString()
+      }
+    } catch {
+      // Fall through to default.
+    }
+
+    return `${window.location.origin}/dashboard`
+  }
+
   const buildAuthCallbackUrl = () => {
     const callbackUrl = new URL('/api/auth/callback', window.location.origin)
 
-    // Preserve the originating host/path so OAuth and magic-link flows
-    // can return users to audit.rankedceo.com when login starts there.
-    const resolvedRedirectPath = redirectTo.startsWith('/') ? redirectTo : `/${redirectTo}`
-    const nextAbsolute = `${window.location.origin}${resolvedRedirectPath}`
+    // Preserve the requested destination, including safe absolute
+    // rankedceo.com URLs when auth starts on crm.rankedceo.com.
+    const nextAbsolute = resolveRedirectTarget(redirectTo)
     callbackUrl.searchParams.set('next', nextAbsolute)
 
     return callbackUrl.toString()
@@ -100,7 +120,7 @@ function LoginForm() {
         password,
       })
       if (signInError) throw signInError
-      router.push(redirectTo)
+      router.push(resolveRedirectTarget(redirectTo))
       router.refresh()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to sign in')

@@ -7,16 +7,23 @@ import { buildGetStartedUrl, getAuditFunnelProperties } from '@/lib/analytics/au
 import { trackEvent } from '@/lib/analytics/track-event'
 
 const GET_STARTED_URL = '/get-started'
-const LOGIN_URL = '/login?redirectTo=%2F'
 
 export function AuditLandingContent() {
   const [getStartedUrl, setGetStartedUrl] = useState(GET_STARTED_URL)
+  const [loginUrl, setLoginUrl] = useState(
+    `${process.env.NEXT_PUBLIC_APP_URL || 'https://crm.rankedceo.com'}/login`
+  )
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search)
     const funnelProperties = getAuditFunnelProperties(searchParams)
+    const loginBase = process.env.NEXT_PUBLIC_APP_URL || 'https://crm.rankedceo.com'
+    const returnTo = `${window.location.origin}/`
+    const login = new URL('/login', loginBase)
+    login.searchParams.set('redirectTo', returnTo)
 
     setGetStartedUrl(buildGetStartedUrl(GET_STARTED_URL, searchParams))
+    setLoginUrl(login.toString())
 
     trackEvent('audit_landing_viewed', {
       host: window.location.hostname,
@@ -51,8 +58,8 @@ export function AuditLandingContent() {
             </div>
             <div className="flex items-center gap-4">
               <Link
-                href={LOGIN_URL}
-                onClick={() => trackCtaClick('nav_login', LOGIN_URL)}
+                href={loginUrl}
+                onClick={() => trackCtaClick('nav_login', loginUrl)}
                 className="text-sm font-medium text-slate-600 hover:text-slate-900"
               >
                 Log in
