@@ -6,10 +6,10 @@ import { Shield, Zap, TrendingUp, Search, Clock, BarChart3 } from 'lucide-react'
 import { buildGetStartedUrl, getAuditFunnelProperties } from '@/lib/analytics/audit-funnel'
 import { trackEvent } from '@/lib/analytics/track-event'
 
-const GET_STARTED_URL = '/get-started'
+const AUDIT_START_URL = '/audit/start'
 
 export function AuditLandingContent() {
-  const [getStartedUrl, setGetStartedUrl] = useState(GET_STARTED_URL)
+  const [getStartedUrl, setGetStartedUrl] = useState(AUDIT_START_URL)
   const [loginUrl, setLoginUrl] = useState(
     `${process.env.NEXT_PUBLIC_APP_URL || 'https://crm.rankedceo.com'}/login`
   )
@@ -18,11 +18,11 @@ export function AuditLandingContent() {
     const searchParams = new URLSearchParams(window.location.search)
     const funnelProperties = getAuditFunnelProperties(searchParams)
     const loginBase = process.env.NEXT_PUBLIC_APP_URL || 'https://crm.rankedceo.com'
-    const returnTo = `${window.location.origin}/`
+    const returnTo = `${window.location.origin}/audit/start`
     const login = new URL('/login', loginBase)
     login.searchParams.set('redirectTo', returnTo)
 
-    setGetStartedUrl(buildGetStartedUrl(GET_STARTED_URL, searchParams))
+    setGetStartedUrl(buildGetStartedUrl(AUDIT_START_URL, searchParams))
     setLoginUrl(login.toString())
 
     trackEvent('audit_landing_viewed', {

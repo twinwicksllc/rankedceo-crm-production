@@ -384,7 +384,7 @@ function handleAuditSubdomain(
   const { pathname } = request.nextUrl
 
   // Allow auth, API, and onboarding routes to pass through
-  const isSharedRoute = ['/login', '/signup', '/forgot-password', '/reset-password', '/api/auth', '/api/', '/onboarding', '/get-started', '/_next'].some(p =>
+  const isSharedRoute = ['/login', '/signup', '/forgot-password', '/reset-password', '/api/auth', '/api/', '/audit', '/onboarding', '/get-started', '/_next'].some(p =>
     pathname.startsWith(p)
   )
   if (isSharedRoute) return response
