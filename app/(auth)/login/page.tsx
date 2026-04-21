@@ -77,8 +77,7 @@ function LoginForm() {
   const supabase = createClient()
 
   const buildAuthCallbackUrl = () => {
-    const callbackOrigin = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
-    const callbackUrl = new URL('/api/auth/callback', callbackOrigin)
+    const callbackUrl = new URL('/api/auth/callback', window.location.origin)
 
     // Preserve the originating host/path so OAuth and magic-link flows
     // can return users to audit.rankedceo.com when login starts there.
