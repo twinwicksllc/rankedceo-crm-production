@@ -7,6 +7,8 @@
 // =============================================================================
 
 import { useEffect, useState, useCallback } from 'react'
+import { buildGetStartedUrl, getAuditFunnelProperties } from '@/lib/analytics/audit-funnel'
+import { trackEvent } from '@/lib/analytics/track-event'
 import type { AuditReportData } from '@/lib/waas/types'
 import type { WaasAuditRow as WaasAudit } from '@/lib/waas/supabase'
 import { ScoreGauge }          from '@/components/audit/score-gauge'
@@ -1013,6 +1015,29 @@ function PageShell({
   auditId?:   string
   expiresAt?: string
 }) {
+  const [ctaUrl, setCtaUrl] = useState(auditId ? `/get-started?tier=standard&auditId=${auditId}` : '')
+
+  useEffect(() => {
+    if (!auditId) return
+
+    const searchParams = new URLSearchParams(window.location.search)
+    setCtaUrl(buildGetStartedUrl('/get-started', searchParams, {
+      tier: 'standard',
+      auditId,
+    }))
+  }, [auditId])
+
+  const trackHeaderClick = () => {
+    if (!auditId) return
+
+    const searchParams = new URLSearchParams(window.location.search)
+    trackEvent('audit_report_cta_clicked', {
+      ...getAuditFunnelProperties(searchParams, auditId),
+      cta: 'report_header',
+      destination: ctaUrl,
+    })
+  }
+
   return (
     <div style={{
       minHeight:   '100vh',
@@ -1050,7 +1075,8 @@ function PageShell({
           )}
           {auditId && (
             <a
-              href={`/get-started?tier=standard&auditId=${auditId}`}
+              href={ctaUrl}
+              onClick={trackHeaderClick}
               style={{
                 padding:        '7px 16px',
                 background:     'linear-gradient(135deg, #2563EB, #1D4ED8)',

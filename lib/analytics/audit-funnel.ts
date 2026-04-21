@@ -10,6 +10,7 @@ const UTM_KEYS = [
 ] as const
 
 type EventProperties = Record<string, string | number | boolean | null | undefined>
+type QueryValue = string | number | boolean | null | undefined
 
 function createLandingSessionId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -65,7 +66,11 @@ export function getAuditFunnelProperties(searchParams: URLSearchParams, auditId?
   }
 }
 
-export function buildGetStartedUrl(basePath: string, searchParams: URLSearchParams): string {
+export function buildGetStartedUrl(
+  basePath: string,
+  searchParams: URLSearchParams,
+  extraParams?: Record<string, QueryValue>
+): string {
   const nextParams = new URLSearchParams()
   const landingSessionId = getOrCreateLandingSessionId()
 
@@ -77,6 +82,12 @@ export function buildGetStartedUrl(basePath: string, searchParams: URLSearchPara
     const value = searchParams.get(key)
     if (value) {
       nextParams.set(key, value)
+    }
+  })
+
+  Object.entries(extraParams ?? {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      nextParams.set(key, String(value))
     }
   })
 

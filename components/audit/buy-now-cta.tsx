@@ -6,6 +6,10 @@
 // Uses glassmorphism + heavy shadow, red-to-green gradient urgency
 // =============================================================================
 
+import { useEffect, useState } from 'react'
+import { buildGetStartedUrl, getAuditFunnelProperties } from '@/lib/analytics/audit-funnel'
+import { trackEvent } from '@/lib/analytics/track-event'
+
 interface BuyNowCtaProps {
   auditId:      string
   targetDomain: string
@@ -69,15 +73,37 @@ export function BuyNowCta({
   compact = false,
 }: BuyNowCtaProps) {
   const msg        = getScoreMessage(score, grade)
-  const ctaUrl     = `/get-started?tier=standard&auditId=${auditId}`
+  const [ctaUrl, setCtaUrl] = useState(`/get-started?tier=standard&auditId=${auditId}`)
   const isUrgent   = grade === 'D' || grade === 'F' || grade === 'C'
   const accentColor = isUrgent ? '#EF4444' : '#2563EB'
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search)
+    setCtaUrl(buildGetStartedUrl('/get-started', searchParams, {
+      tier: 'standard',
+      auditId,
+    }))
+  }, [auditId])
+
+  const trackClick = (variant: 'compact' | 'full') => {
+    const searchParams = new URLSearchParams(window.location.search)
+
+    trackEvent('audit_report_cta_clicked', {
+      ...getAuditFunnelProperties(searchParams, auditId),
+      cta: variant === 'compact' ? 'buy_now_compact' : 'buy_now_full',
+      destination: ctaUrl,
+      targetDomain,
+      score,
+      grade,
+    })
+  }
 
   // ── Compact inline button ────────────────────────────────────────────────
   if (compact) {
     return (
       <a
         href={ctaUrl}
+        onClick={() => trackClick('compact')}
         style={{
           display:        'inline-flex',
           alignItems:     'center',
@@ -309,6 +335,7 @@ export function BuyNowCta({
         {/* CTA Button */}
         <a
           href={ctaUrl}
+          onClick={() => trackClick('full')}
           style={{
             display:        'block',
             padding:        '16px 24px',

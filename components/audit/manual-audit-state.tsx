@@ -6,6 +6,10 @@
 // Red-to-amber gradient, no scary error messages, actionable CTA
 // =============================================================================
 
+import { useEffect, useState } from 'react'
+import { buildGetStartedUrl, getAuditFunnelProperties } from '@/lib/analytics/audit-funnel'
+import { trackEvent } from '@/lib/analytics/track-event'
+
 interface ManualAuditStateProps {
   targetUrl:    string
   auditId:      string
@@ -19,12 +23,33 @@ export function ManualAuditState({
   errorMessage,
   adminEmail = 'darrick@rankedceo.com',
 }: ManualAuditStateProps) {
+  const [ctaUrl, setCtaUrl] = useState(`/get-started?tier=standard&auditId=${auditId}`)
+
   const targetDomain = (() => {
     try { return new URL(targetUrl).hostname.replace(/^www\./, '') }
     catch { return targetUrl }
   })()
 
   const shortAuditId = auditId.slice(0, 8).toUpperCase()
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search)
+    setCtaUrl(buildGetStartedUrl('/get-started', searchParams, {
+      tier: 'standard',
+      auditId,
+    }))
+  }, [auditId])
+
+  const trackClick = () => {
+    const searchParams = new URLSearchParams(window.location.search)
+
+    trackEvent('audit_report_cta_clicked', {
+      ...getAuditFunnelProperties(searchParams, auditId),
+      cta: 'manual_audit_state',
+      destination: ctaUrl,
+      targetDomain,
+    })
+  }
 
   return (
     <div style={{ maxWidth: 680, margin: '0 auto', padding: '40px 16px', textAlign: 'center' }}>
@@ -151,7 +176,8 @@ export function ManualAuditState({
       {/* CTA */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
         <a
-          href={`/get-started?tier=standard&auditId=${auditId}`}
+          href={ctaUrl}
+          onClick={trackClick}
           style={{
             display:        'inline-block',
             padding:        '14px 32px',
