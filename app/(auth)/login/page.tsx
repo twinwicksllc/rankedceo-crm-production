@@ -76,6 +76,19 @@ function LoginForm() {
 
   const supabase = createClient()
 
+  const buildAuthCallbackUrl = () => {
+    const callbackOrigin = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+    const callbackUrl = new URL('/api/auth/callback', callbackOrigin)
+
+    // Preserve the originating host/path so OAuth and magic-link flows
+    // can return users to audit.rankedceo.com when login starts there.
+    const resolvedRedirectPath = redirectTo.startsWith('/') ? redirectTo : `/${redirectTo}`
+    const nextAbsolute = `${window.location.origin}${resolvedRedirectPath}`
+    callbackUrl.searchParams.set('next', nextAbsolute)
+
+    return callbackUrl.toString()
+  }
+
   // ─── Email + Password ───────────────────────────────────────────────────────────────────────────
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -107,7 +120,7 @@ function LoginForm() {
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+          emailRedirectTo: buildAuthCallbackUrl(),
         },
       })
       if (otpError) throw otpError
@@ -128,7 +141,7 @@ function LoginForm() {
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+          redirectTo: buildAuthCallbackUrl(),
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',

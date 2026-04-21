@@ -6,6 +6,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 
+function resolveSafeNext(next: string, origin: string): string {
+  if (!next) return `${origin}/dashboard`
+
+  if (next.startsWith('/')) {
+    return `${origin}${next}`
+  }
+
+  try {
+    const parsed = new URL(next)
+    const isHttps = parsed.protocol === 'https:'
+    const isRankedCeoHost =
+      parsed.hostname === 'rankedceo.com' || parsed.hostname.endsWith('.rankedceo.com')
+
+    if (isHttps && isRankedCeoHost) {
+      return parsed.toString()
+    }
+  } catch {
+    // Invalid next URL falls through to default.
+  }
+
+  return `${origin}/dashboard`
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code  = searchParams.get('code')
@@ -21,7 +44,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (code) {
-    const response = NextResponse.redirect(`${origin}${next}`)
+    const response = NextResponse.redirect(resolveSafeNext(next, origin))
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
