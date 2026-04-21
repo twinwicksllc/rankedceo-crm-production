@@ -7,10 +7,7 @@ import { buildGetStartedUrl, getAuditFunnelProperties } from '@/lib/analytics/au
 import { trackEvent } from '@/lib/analytics/track-event'
 
 const GET_STARTED_URL = '/get-started'
-
-const LOGIN_URL = process.env.NEXT_PUBLIC_APP_URL
-  ? `${process.env.NEXT_PUBLIC_APP_URL}/login`
-  : 'https://rankedceo.com/login'
+const LOGIN_URL = '/login?redirectTo=%2F'
 
 export function AuditLandingContent() {
   const [getStartedUrl, setGetStartedUrl] = useState(GET_STARTED_URL)
