@@ -5,7 +5,7 @@
 // React Hook Form + Zod, 4 steps, state-managed, glassmorphism dark theme
 // =============================================================================
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -25,6 +25,8 @@ import type {
   DomainWishlistItem,
   WaasPackageTier,
 } from '@/lib/waas/types'
+import { getAuditFunnelProperties } from '@/lib/analytics/audit-funnel'
+import { trackEvent } from '@/lib/analytics/track-event'
 
 // ---------------------------------------------------------------------------
 // Zod Schemas
@@ -77,8 +79,38 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
   const [secondaryColor, setSecondaryColor] = useState('#1E40AF')
   const [logoUrl,        setLogoUrl]        = useState<string | null>(null)
   const [businessName,   setBusinessName]   = useState('')
+  const trackedSteps = useRef<Set<number>>(new Set())
+  const trackingContext = useRef<Record<string, string | number | boolean | null | undefined>>({})
 
   const TOTAL_STEPS = 4
+
+  useEffect(() => {
+    trackingContext.current = getAuditFunnelProperties(
+      new URLSearchParams(window.location.search),
+      auditId,
+    )
+
+    trackEvent('audit_onboarding_started', {
+      ...trackingContext.current,
+      tier: initialTier,
+      hasAuditId: Boolean(auditId),
+    })
+  }, [auditId, initialTier])
+
+  useEffect(() => {
+    if (trackedSteps.current.has(currentStep)) {
+      return
+    }
+
+    trackedSteps.current.add(currentStep)
+    trackEvent('audit_onboarding_step_viewed', {
+      ...trackingContext.current,
+      step: currentStep,
+      stepName: ['business', 'domains', 'brand', 'integrations'][currentStep - 1],
+      tier: initialTier,
+      hasAuditId: Boolean(auditId),
+    })
+  }, [auditId, currentStep, initialTier])
 
   // Step 1 form
   const step1Form = useForm<Step1FormData>({
@@ -105,9 +137,14 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
   })
 
   const handleError = useCallback((msg: string) => {
+    trackEvent('audit_onboarding_error', {
+      ...trackingContext.current,
+      step: currentStep,
+      message: msg,
+    })
     setError(msg)
     setIsLoading(false)
-  }, [])
+  }, [currentStep])
 
   // ---------------------------------------------------------------------------
   // Step handlers
@@ -139,6 +176,14 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
 
     setTenantId(result.data.tenantId)
     setIsLoading(false)
+    trackEvent('audit_onboarding_step_completed', {
+      ...trackingContext.current,
+      step: 1,
+      stepName: 'business',
+      tenantCreated: true,
+      hasAuditId: Boolean(auditId),
+      tier: initialTier,
+    })
     setCurrentStep(2)
   }
 
@@ -152,6 +197,13 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
     if (!result.success) { handleError(result.error ?? 'Failed to save domains.'); return }
 
     setIsLoading(false)
+    trackEvent('audit_onboarding_step_completed', {
+      ...trackingContext.current,
+      step: 2,
+      stepName: 'domains',
+      domainCount: domains.length,
+      tier: initialTier,
+    })
     setCurrentStep(3)
   }
 
@@ -170,6 +222,13 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
     if (!result.success) { handleError(result.error ?? 'Failed to save brand.'); return }
 
     setIsLoading(false)
+    trackEvent('audit_onboarding_step_completed', {
+      ...trackingContext.current,
+      step: 3,
+      stepName: 'brand',
+      hasLogo: Boolean(logoUrl),
+      tier: initialTier,
+    })
     setCurrentStep(4)
   }
 
@@ -182,11 +241,31 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
     if (!result.success) { handleError(result.error ?? 'Failed to submit.'); return }
 
     setIsLoading(false)
+    trackEvent('audit_onboarding_step_completed', {
+      ...trackingContext.current,
+      step: 4,
+      stepName: 'integrations',
+      calendlyConnected: Boolean(data.calendly_url),
+      financingEnabled: data.financing_enabled,
+      tier: initialTier,
+    })
+    trackEvent('audit_onboarding_completed', {
+      ...trackingContext.current,
+      tier: initialTier,
+      hasAuditId: Boolean(auditId),
+      tenantId,
+    })
     setCompleted(true)
   }
 
   const goBack = () => {
     setError(null)
+    trackEvent('audit_onboarding_back_clicked', {
+      ...trackingContext.current,
+      fromStep: currentStep,
+      toStep: Math.max(1, currentStep - 1),
+      tier: initialTier,
+    })
     setCurrentStep(s => Math.max(1, s - 1))
   }
 

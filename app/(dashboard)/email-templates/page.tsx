@@ -5,6 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Plus, FileText } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
+
 export default async function EmailTemplatesPage() {
   const campaignService = new CampaignService()
   const templates = await campaignService.getTemplates()

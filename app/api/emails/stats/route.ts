@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { EmailService } from '@/lib/services/email-service'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * Email Statistics API Endpoint
  * Returns email statistics for the current user's account

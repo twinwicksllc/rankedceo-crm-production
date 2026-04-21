@@ -10,6 +10,8 @@ import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { AdvantagePointHeader } from '@/components/advantagepoint/header'
 import { AdvantagePointFooter } from '@/components/advantagepoint/footer'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'Command Center | AdvantagePoint',
   description: 'AdvantagePoint Admin Dashboard',

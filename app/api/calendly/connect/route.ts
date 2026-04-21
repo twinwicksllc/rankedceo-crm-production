@@ -3,13 +3,17 @@ import { createClient } from '@/lib/supabase/server'
 import { getCalendlyAuthUrl } from '@/lib/services/calendly-service'
 import { randomBytes } from 'crypto'
 
-export async function GET() {
+export const dynamic = 'force-dynamic'
+
+export async function GET(request: Request) {
   try {
     const supabase = await createClient()
     const { data: { user }, error } = await supabase.auth.getUser()
 
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? request.url
+
     if (error || !user) {
-      return NextResponse.redirect(new URL('/login', process.env.NEXT_PUBLIC_APP_URL!))
+      return NextResponse.redirect(new URL('/login', appUrl))
     }
 
     // Generate state token to prevent CSRF
@@ -31,7 +35,7 @@ export async function GET() {
   } catch (error) {
     console.error('[Calendly Connect] Error:', error)
     return NextResponse.redirect(
-      new URL('/settings?error=calendly_connect_failed', process.env.NEXT_PUBLIC_APP_URL!)
+      new URL('/settings?error=calendly_connect_failed', process.env.NEXT_PUBLIC_APP_URL ?? request.url)
     )
   }
 }

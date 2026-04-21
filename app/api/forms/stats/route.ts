@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { FormService } from '@/lib/services/form-service'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * Forms Statistics API Endpoint
  * GET /api/forms/stats - Get form statistics
