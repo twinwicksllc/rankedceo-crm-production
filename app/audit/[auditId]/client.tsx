@@ -311,6 +311,13 @@ function FullReport({ audit }: { audit: WaasAudit }) {
         </Section>
       )}
 
+      {/* ── KEYWORD PERFORMANCE ───────────────────────────────────────────── */}
+      {summary && (summary.top_search_result || summary.bottom_search_result || summary.mean_position !== null) && (
+        <Section title="🔎 Keyword Performance" subtitle="Best term, weakest term, and average position across the top 5 keywords">
+          <KeywordPerformancePanel summary={summary} />
+        </Section>
+      )}
+
       {/* ── PAGE SPEED ────────────────────────────────────────────────────── */}
       {pageSpeed && (
         <Section title="⚡ Page Speed Analysis" subtitle="Speed kills — or converts. Here's where you stand.">
@@ -652,6 +659,105 @@ function ScoreBreakdown({ summary, grade }: {
           </div>
         )
       })}
+    </div>
+  )
+}
+
+function formatPosition(position: number | null | undefined): string {
+  if (position === null || position === undefined) return 'Not ranked'
+  return position >= 101 ? 'Not ranked (Top 100)' : `#${position}`
+}
+
+function KeywordPerformancePanel({ summary }: {
+  summary: NonNullable<AuditReportData['summary']>
+}) {
+  const { theme } = useOnboardingTheme()
+  const isLight = theme === 'light'
+  const top = summary.top_search_result
+  const bottom = summary.bottom_search_result
+  const mean = summary.mean_position
+  const evaluated = summary.evaluated_keywords ?? 0
+  const measured = summary.measured_keywords ?? 0
+
+  const cards = [
+    {
+      label: 'Top Search Result',
+      color: '#22C55E',
+      keyword: top?.keyword ?? 'N/A',
+      value: formatPosition(top?.position),
+      hint: 'Best ranking keyword',
+    },
+    {
+      label: 'Bottom Result',
+      color: '#EF4444',
+      keyword: bottom?.keyword ?? 'N/A',
+      value: formatPosition(bottom?.position),
+      hint: 'Weakest ranking keyword',
+    },
+    {
+      label: 'Mean Position',
+      color: '#3B82F6',
+      keyword: `${measured}/${evaluated} ranked`,
+      value: mean !== null && mean !== undefined ? `#${mean}` : 'N/A',
+      hint: 'Average across evaluated terms',
+    },
+  ]
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{
+        fontSize: '0.75rem',
+        color: isLight ? 'rgba(15,23,42,0.55)' : 'rgba(255,255,255,0.45)',
+      }}>
+        Evaluated {evaluated} high-intent keywords. Unranked terms are treated as position 101 in the mean.
+      </div>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gap: 12,
+      }}>
+        {cards.map(card => (
+          <div key={card.label} style={{
+            borderRadius: 12,
+            padding: '14px 16px',
+            background: isLight ? `${card.color}12` : `${card.color}10`,
+            border: `1px solid ${card.color}35`,
+          }}>
+            <div style={{
+              fontSize: '0.68rem',
+              fontWeight: 700,
+              color: card.color,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              marginBottom: 8,
+            }}>
+              {card.label}
+            </div>
+            <div style={{
+              fontSize: '1.5rem',
+              fontWeight: 800,
+              lineHeight: 1,
+              color: card.color,
+              marginBottom: 6,
+            }}>
+              {card.value}
+            </div>
+            <div style={{
+              fontSize: '0.78rem',
+              color: isLight ? 'rgba(15,23,42,0.8)' : 'rgba(255,255,255,0.75)',
+              marginBottom: 5,
+            }}>
+              {card.keyword}
+            </div>
+            <div style={{
+              fontSize: '0.68rem',
+              color: isLight ? 'rgba(15,23,42,0.55)' : 'rgba(255,255,255,0.45)',
+            }}>
+              {card.hint}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

@@ -162,6 +162,9 @@ export async function POST(req: NextRequest) {
         grade:           (engineResult.reportData as Record<string, unknown>)?.grade ?? 'F',
         keywords_tested: engineResult.keywordsUsed.length,
         location:        engineResult.locationDetected,
+        top_search_result: engineResult.reportData.summary?.top_search_result ?? null,
+        bottom_search_result: engineResult.reportData.summary?.bottom_search_result ?? null,
+        mean_position: engineResult.reportData.summary?.mean_position ?? null,
       },
     })
 

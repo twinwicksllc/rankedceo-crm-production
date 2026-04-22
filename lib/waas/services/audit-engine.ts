@@ -6,10 +6,10 @@
 import {
   getSearchRankings,
   getMockSearchRankings,
-  generateKeywords,
   extractDomain,
   type SearchRankReport,
 } from './serper'
+import { generateTopIndustryKeywords } from './keyword-generator'
 import {
   runPageSpeedAudit,
   getMockPageSpeedReport,
@@ -124,6 +124,51 @@ export interface LeaderboardEntry {
   bestPosition: number | null   // best Google position across all keywords
   isTarget:     boolean
   badge:        string           // emoji badge
+}
+
+export interface KeywordResultSummary {
+  keyword:  string
+  position: number | null
+}
+
+export interface KeywordPerformanceSummary {
+  topSearchResult:    KeywordResultSummary | null
+  bottomSearchResult: KeywordResultSummary | null
+  meanPosition:       number | null
+  measuredKeywords:   number
+  evaluatedKeywords:  number
+}
+
+function computeKeywordPerformance(
+  rankReports: SearchRankReport[],
+  evaluatedKeywords: number
+): KeywordPerformanceSummary {
+  const entries = rankReports.map(report => ({
+    keyword: report.keyword,
+    position: report.targetResult.position,
+  }))
+
+  const rankedEntries = entries.filter((entry): entry is { keyword: string; position: number } => entry.position !== null)
+  const topSearchResult = rankedEntries.length > 0
+    ? [...rankedEntries].sort((a, b) => a.position - b.position)[0]
+    : null
+  const bottomSearchResult = rankedEntries.length > 0
+    ? [...rankedEntries].sort((a, b) => b.position - a.position)[0]
+    : null
+
+  // Include non-ranked keywords as position 101 so the mean reflects all evaluated terms.
+  const positions = entries.map(entry => entry.position ?? 101)
+  const meanPosition = positions.length > 0
+    ? Number((positions.reduce((sum, value) => sum + value, 0) / positions.length).toFixed(1))
+    : null
+
+  return {
+    topSearchResult,
+    bottomSearchResult,
+    meanPosition,
+    measuredKeywords: rankedEntries.length,
+    evaluatedKeywords,
+  }
 }
 
 function buildLeaderboard(
@@ -242,23 +287,31 @@ export async function runFullAudit(
 ): Promise<AuditEngineResult> {
   const provider   = (process.env.WAAS_SEO_PROVIDER ?? 'mock') as AuditSeoProvider
   const detectedLocation = location ?? 'Chicago, IL'
-  const keywords   = generateKeywords(targetUrl, industry, detectedLocation)
-  const primaryKw  = keywords[0]
+  const keywords = await generateTopIndustryKeywords(targetUrl, industry, detectedLocation, 5)
   let   manualReview     = false
   let   manualReviewNote: string | null = null
 
   // ── 1. Get search rankings ──────────────────────────────────────────────
-  let rankReport: SearchRankReport | null = null
+  const rankReports: SearchRankReport[] = []
 
   if (provider === 'mock') {
-    rankReport = getMockSearchRankings(targetUrl, competitorUrls, primaryKw, detectedLocation)
+    for (const keyword of keywords) {
+      rankReports.push(getMockSearchRankings(targetUrl, competitorUrls, keyword, detectedLocation))
+    }
   } else {
-    try {
-      rankReport = await getSearchRankings(targetUrl, competitorUrls, primaryKw, detectedLocation)
-    } catch (err) {
-      console.error('[AuditEngine] Search rankings failed:', err)
-      manualReview     = true
-      manualReviewNote = `Search API failed: ${String(err).slice(0, 200)}`
+    const searchResults = await Promise.allSettled(
+      keywords.map(keyword => getSearchRankings(targetUrl, competitorUrls, keyword, detectedLocation))
+    )
+
+    for (const result of searchResults) {
+      if (result.status === 'fulfilled' && result.value) {
+        rankReports.push(result.value)
+      }
+    }
+
+    if (rankReports.length === 0) {
+      manualReview = true
+      manualReviewNote = 'Search API failed for all evaluated keywords.'
     }
   }
 
@@ -280,15 +333,15 @@ export async function runFullAudit(
   }
 
   // If both APIs failed, mark for manual review
-  if (!rankReport && !pageSpeed) {
+  if (rankReports.length === 0 && !pageSpeed) {
     manualReview     = true
     manualReviewNote = 'Both search rankings and PageSpeed APIs failed. Site may be unscrapable.'
   }
 
   // ── 3. Compute gap analysis ─────────────────────────────────────────────
-  const rankReports  = rankReport ? [rankReport] : []
   const gapAnalysis  = computeGapAnalysis(targetUrl, rankReports)
   const leaderboard  = buildLeaderboard(targetUrl, competitorUrls, rankReports)
+  const keywordPerformance = computeKeywordPerformance(rankReports, keywords.length)
   const { score, grade } = computeOverallScore(pageSpeed, rankReports, targetUrl)
 
   // ── 4. Build report_data ────────────────────────────────────────────────
@@ -301,25 +354,42 @@ export async function runFullAudit(
       seo_score:           pageSpeed?.mobile.categoryScores.seo.score          ?? 0,
       mobile_score:        pageSpeed?.mobile.categoryScores.performance.score  ?? 0,
       accessibility_score: pageSpeed?.mobile.categoryScores.accessibility.score ?? 0,
+      top_search_result:   keywordPerformance.topSearchResult,
+      bottom_search_result: keywordPerformance.bottomSearchResult,
+      mean_position:       keywordPerformance.meanPosition,
+      measured_keywords:   keywordPerformance.measuredKeywords,
+      evaluated_keywords:  keywordPerformance.evaluatedKeywords,
     },
-    rankings: rankReport
-      ? rankReport.allResults.map(r => ({
-          keyword:       primaryKw,
-          position:      r.position,
-          url:           r.link,
+    rankings: rankReports.length > 0
+      ? rankReports.map(report => ({
+          keyword:       report.keyword,
+          position:      report.targetResult.position ?? 101,
+          url:           report.targetResult.url,
           search_volume: 0,   // Serper free tier doesn't include search volume
         }))
       : [],
     competitors: competitorUrls.map(url => {
       const domain    = extractDomain(url)
-      const compRank  = rankReport?.competitorResults.find(c => c.domain === domain)
+      const domainRanks = rankReports
+        .map(report => {
+          const match = report.competitorResults.find(c => c.domain === domain)
+          if (!match?.position) return null
+          return { keyword: report.keyword, position: match.position }
+        })
+        .filter((entry): entry is { keyword: string; position: number } => entry !== null)
+
+      const topKeywords = domainRanks
+        .sort((a, b) => a.position - b.position)
+        .slice(0, 5)
+        .map(entry => entry.keyword)
+
       return {
         url,
         domain,
         domain_authority:  0,  // Phase 3: add Moz/Ahrefs integration
-        keywords_ranking:  compRank?.position ? 1 : 0,
+        keywords_ranking:  domainRanks.length,
         estimated_traffic: 0,
-        top_keywords:      compRank?.position ? [primaryKw] : [],
+        top_keywords:      topKeywords,
       }
     }),
     technical_issues: [
@@ -381,6 +451,7 @@ export async function runFullAudit(
       grade,
       page_speed_full: pageSpeed,
       keywords_used:   keywords,
+      keyword_performance: keywordPerformance,
     }) as unknown as Partial<AuditReportData>),
   }
 

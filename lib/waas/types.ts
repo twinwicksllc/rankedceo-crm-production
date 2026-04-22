@@ -226,6 +226,31 @@ export interface AuditSummary {
   seo_score:           number
   mobile_score:        number
   accessibility_score: number
+  top_search_result?: {
+    keyword: string
+    position: number | null
+  } | null
+  bottom_search_result?: {
+    keyword: string
+    position: number | null
+  } | null
+  mean_position?:      number | null
+  measured_keywords?:  number
+  evaluated_keywords?: number
+}
+
+export interface AuditKeywordPerformance {
+  topSearchResult: {
+    keyword: string
+    position: number | null
+  } | null
+  bottomSearchResult: {
+    keyword: string
+    position: number | null
+  } | null
+  meanPosition:      number | null
+  measuredKeywords:  number
+  evaluatedKeywords: number
 }
 
 export interface AuditRanking {
@@ -296,6 +321,7 @@ export interface AuditReportData {
   backlinks?:         AuditBacklinks
   opportunities?:     AuditOpportunity[]
   provider_meta?:     AuditProviderMeta
+  keyword_performance?: AuditKeywordPerformance
 }
 
 // ---------------------------------------------------------------------------
