@@ -7,8 +7,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { getWaasAdminClient, createProspectAudit } from '@/lib/waas/supabase'
+import { getWaasAdminClient, createProspectAudit, updateAuditRecord } from '@/lib/waas/supabase'
 import type { CreateProspectAuditInput } from '@/lib/waas/types'
+
+const AUDIT_EXPIRY_DAYS = 30
 
 async function getCrmUser() {
   const cookieStore = cookies()
@@ -133,6 +135,11 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Ensure prospect audits from this endpoint match product policy.
+    await updateAuditRecord(auditId, {
+      expires_at: new Date(Date.now() + AUDIT_EXPIRY_DAYS * 24 * 60 * 60 * 1000).toISOString(),
+    })
+
     // TODO (Phase 2): Trigger SEO audit worker via queue/webhook
     // await triggerAuditWorker(auditId)
 
@@ -142,7 +149,7 @@ export async function POST(req: NextRequest) {
         status:     'pending',
         message:    'Audit queued. Poll /api/waas/audits/[id]/status for updates.',
         poll_url:   `/api/waas/audits/${auditId}/status`,
-        expires_in: '90 days',
+        expires_in: '30 days',
       },
       { status: 201 }
     )

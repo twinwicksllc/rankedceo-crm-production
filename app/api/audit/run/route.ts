@@ -12,6 +12,8 @@ import type { AuditSeoProvider } from '@/lib/waas/types'
 import { runFullAudit } from '@/lib/waas/services/audit-engine'
 import { extractDomain } from '@/lib/waas/services/serper'
 
+const AUDIT_EXPIRY_DAYS = 30
+
 // ---------------------------------------------------------------------------
 // POST /api/audit/run
 // ---------------------------------------------------------------------------
@@ -76,7 +78,7 @@ export async function POST(req: NextRequest) {
         requestor_phone:   requestor_phone   ? String(requestor_phone)   : null,
         requestor_company: requestor_company ? String(requestor_company) : null,
         started_at:        new Date().toISOString(),
-        expires_at:        new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+        expires_at:        new Date(Date.now() + AUDIT_EXPIRY_DAYS * 24 * 60 * 60 * 1000).toISOString(),
         seo_provider:      (process.env.WAAS_SEO_PROVIDER ?? 'mock') as AuditSeoProvider,
       }
 

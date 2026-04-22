@@ -37,6 +37,7 @@ export type WaasAuditUpdate = Partial<{
   report_data:        AuditReportData | null
   completed_at:       string | null
   started_at:         string | null
+  expires_at:         string
   error_message:      string | null
   seo_provider:       AuditSeoProvider | null
   requestor_name:     string | null

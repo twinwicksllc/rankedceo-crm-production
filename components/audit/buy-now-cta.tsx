@@ -377,7 +377,7 @@ export function BuyNowCta({
           <span>⭐⭐⭐⭐⭐</span>
           <span>Trusted by 200+ local businesses</span>
           <span>·</span>
-          <span>Average +34 positions in 90 days</span>
+          <span>Average +34 positions in 30 days</span>
         </div>
       </div>
     </div>

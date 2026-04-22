@@ -2,7 +2,7 @@
 
 // =============================================================================
 // Expiry Countdown
-// Shows time remaining before audit expires (48h window)
+// Shows time remaining before audit expires (30-day window)
 // Creates urgency to take action / upgrade
 // =============================================================================
 
@@ -45,8 +45,8 @@ export function ExpiryCountdown({ expiresAt, compact = false }: ExpiryCountdownP
   }, [expiresAt])
 
   const expired  = timeLeft.total <= 0
-  const critical = !expired && timeLeft.hours < 6
-  const warning  = !expired && !critical && timeLeft.hours < 24
+  const critical = !expired && timeLeft.hours < 24
+  const warning  = !expired && !critical && timeLeft.hours < 7 * 24
 
   const accentColor = expired
     ? '#6B7280'
@@ -126,7 +126,7 @@ export function ExpiryCountdown({ expiresAt, compact = false }: ExpiryCountdownP
             }}>
               {critical
                 ? 'Save your report now before it disappears'
-                : 'This free audit report is only available for 48 hours'
+                : 'This free audit report is available for 30 days'
               }
             </div>
           </div>
@@ -154,7 +154,7 @@ export function ExpiryCountdown({ expiresAt, compact = false }: ExpiryCountdownP
           color:        '#FCA5A5',
           textAlign:    'center',
         }}>
-          ⚠️ Less than 6 hours left — <strong>download your PDF</strong> or{' '}
+          ⚠️ Less than 24 hours left — <strong>download your PDF</strong> or{' '}
           <strong>start your campaign</strong> to preserve these results permanently.
         </div>
       )}
