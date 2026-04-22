@@ -60,7 +60,10 @@ export function AdvantagePointHeader({
                 }`}
               />
             ))}
-            <span className="text-white/40 text-xs ml-2 font-medium">
+            <span
+              className="text-white/40 text-xs ml-2 font-medium"
+              style={isLightOnboarding ? { color: '#ffffff' } : undefined}
+            >
               {step} of {totalSteps}
             </span>
           </div>
@@ -72,6 +75,7 @@ export function AdvantagePointHeader({
               type="button"
               onClick={toggleTheme}
               className="h-9 px-3 rounded-lg border border-white/20 text-white/70 hover:text-white transition-colors text-xs font-semibold"
+              style={isLightOnboarding ? { color: '#ffffff', borderColor: 'rgba(255,255,255,0.75)' } : undefined}
               aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
               title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
             >
