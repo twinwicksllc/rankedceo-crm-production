@@ -12,9 +12,7 @@ type AuditRunResponse = {
 export default function AuditStartPage() {
   const router = useRouter()
   const [targetUrl, setTargetUrl] = useState('')
-  const [competitor1, setCompetitor1] = useState('')
-  const [competitor2, setCompetitor2] = useState('')
-  const [competitor3, setCompetitor3] = useState('')
+  const [competitors, setCompetitors] = useState<string[]>([''])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -23,7 +21,7 @@ export default function AuditStartPage() {
     setError('')
     setLoading(true)
 
-    const competitors = [competitor1, competitor2, competitor3].map(v => v.trim()).filter(Boolean)
+    const cleanedCompetitors = competitors.map((v) => v.trim()).filter(Boolean)
 
     try {
       const response = await fetch('/api/audit/run', {
@@ -31,7 +29,7 @@ export default function AuditStartPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           target_url: targetUrl,
-          competitor_urls: competitors,
+          competitor_urls: cleanedCompetitors,
         }),
       })
 
@@ -61,83 +59,122 @@ export default function AuditStartPage() {
     }
   }
 
+  const updateCompetitor = (index: number, value: string) => {
+    setCompetitors((current) => current.map((item, i) => (i === index ? value : item)))
+  }
+
+  const addCompetitor = () => {
+    setCompetitors((current) => (current.length >= 3 ? current : [...current, '']))
+  }
+
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Start Your Free Audit</h1>
-        <p className="mt-2 text-sm text-slate-600 sm:text-base">
-          Enter your website and up to 3 competitor sites. We will generate your report in a few minutes.
-        </p>
+    <main className="relative min-h-screen overflow-hidden bg-[#020b2c] px-4 py-10 sm:px-6 lg:px-8">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-28 top-0 h-80 w-80 rounded-full bg-cyan-500/20 blur-[120px]" />
+        <div className="absolute -right-24 top-24 h-80 w-80 rounded-full bg-emerald-500/15 blur-[120px]" />
+        <div className="absolute bottom-0 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-blue-700/25 blur-[140px]" />
+      </div>
 
-        <form onSubmit={submitAudit} className="mt-6 space-y-4">
-          <div>
-            <label htmlFor="targetUrl" className="mb-1 block text-sm font-medium text-slate-700">
-              Your Website URL
-            </label>
-            <input
-              id="targetUrl"
-              type="text"
-              required
-              placeholder="example.com"
-              value={targetUrl}
-              onChange={(e) => setTargetUrl(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none ring-blue-500 focus:ring"
-            />
-          </div>
+      <div className="relative mx-auto max-w-3xl">
+        <div className="mx-auto max-w-2xl text-center">
+          <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
+            See how you <span className="bg-gradient-to-r from-cyan-300 to-emerald-400 bg-clip-text text-transparent">stack up</span>
+            <br />
+            against competitors
+          </h1>
+          <p className="mt-4 text-base text-slate-300 sm:text-xl">
+            Get detailed insights on performance, SEO, and user experience compared to your local competition.
+          </p>
+        </div>
 
-          <div>
-            <label htmlFor="competitor1" className="mb-1 block text-sm font-medium text-slate-700">
-              Competitor URL 1 (required)
-            </label>
-            <input
-              id="competitor1"
-              type="text"
-              required
-              placeholder="competitor.com"
-              value={competitor1}
-              onChange={(e) => setCompetitor1(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none ring-blue-500 focus:ring"
-            />
-          </div>
+        <div className="mt-8 rounded-3xl border border-cyan-400/20 bg-[#0a1a3b]/90 p-6 shadow-[0_0_50px_rgba(16,185,129,0.08)] backdrop-blur-xl sm:p-8">
+          <form onSubmit={submitAudit} className="space-y-5">
+            <div>
+              <label htmlFor="targetUrl" className="mb-2 flex items-center gap-2 text-base font-semibold text-slate-100">
+                <span className="text-cyan-300">◎</span>
+                Your Website
+              </label>
+              <input
+                id="targetUrl"
+                type="text"
+                required
+                placeholder="https://yourwebsite.com"
+                value={targetUrl}
+                onChange={(e) => setTargetUrl(e.target.value)}
+                className="h-12 w-full rounded-xl border border-cyan-200/15 bg-[#13284d] px-4 text-slate-100 placeholder:text-slate-500 outline-none transition focus:border-cyan-300/40 focus:ring-2 focus:ring-cyan-400/20"
+              />
+            </div>
 
-          <div>
-            <label htmlFor="competitor2" className="mb-1 block text-sm font-medium text-slate-700">
-              Competitor URL 2 (optional)
-            </label>
-            <input
-              id="competitor2"
-              type="text"
-              placeholder="competitor-two.com"
-              value={competitor2}
-              onChange={(e) => setCompetitor2(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none ring-blue-500 focus:ring"
-            />
-          </div>
+            <div>
+              <label className="mb-2 flex items-center gap-2 text-base font-semibold text-slate-100">
+                <span className="text-emerald-300">◎</span>
+                Competitor Websites
+                <span className="text-sm font-medium text-slate-400">(up to 3)</span>
+              </label>
 
-          <div>
-            <label htmlFor="competitor3" className="mb-1 block text-sm font-medium text-slate-700">
-              Competitor URL 3 (optional)
-            </label>
-            <input
-              id="competitor3"
-              type="text"
-              placeholder="competitor-three.com"
-              value={competitor3}
-              onChange={(e) => setCompetitor3(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none ring-blue-500 focus:ring"
-            />
-          </div>
+              <div className="space-y-3">
+                {competitors.map((value, index) => (
+                  <div key={`competitor-${index}`} className="relative">
+                    <input
+                      id={`competitor${index + 1}`}
+                      type="text"
+                      required={index === 0}
+                      placeholder={`https://competitor${index + 1}.com`}
+                      value={value}
+                      onChange={(e) => updateCompetitor(index, e.target.value)}
+                      className="h-12 w-full rounded-xl border border-cyan-200/15 bg-[#13284d] px-4 text-slate-100 placeholder:text-slate-500 outline-none transition focus:border-emerald-300/40 focus:ring-2 focus:ring-emerald-400/20"
+                    />
+                    {index === 0 && (
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-emerald-400/15 px-2 py-0.5 text-xs font-semibold text-emerald-300">
+                        required
+                      </span>
+                    )}
+                  </div>
+                ))}
 
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+                {competitors.length < 3 && (
+                  <button
+                    type="button"
+                    onClick={addCompetitor}
+                    className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-cyan-200/20 bg-[#0f2448] text-sm font-semibold text-slate-300 transition hover:border-cyan-200/35 hover:text-white"
+                  >
+                    <span className="text-lg leading-none">＋</span>
+                    Add another competitor
+                  </button>
+                )}
+              </div>
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-blue-600 px-4 py-2.5 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            {loading ? 'Running Audit...' : 'Run Your Free Audit'}
-          </button>
-        </form>
+            {error ? <p className="text-sm font-medium text-rose-300">{error}</p> : null}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-2 h-14 w-full rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 text-lg font-extrabold text-[#052230] transition hover:from-cyan-400 hover:to-emerald-400 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {loading ? 'Running Audit...' : 'Run Your Free Audit'}
+            </button>
+
+            <div className="mt-2 border-t border-cyan-100/10 pt-6">
+              <div className="grid grid-cols-3 gap-3 text-center text-xs text-slate-300 sm:text-sm">
+                <div className="rounded-xl bg-[#13284d]/80 px-2 py-3">
+                  <div className="mx-auto mb-1 flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-400/15 text-cyan-300">↗</div>
+                  SEO Score
+                </div>
+                <div className="rounded-xl bg-[#13284d]/80 px-2 py-3">
+                  <div className="mx-auto mb-1 flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-400/15 text-cyan-300">◎</div>
+                  Performance
+                </div>
+                <div className="rounded-xl bg-[#13284d]/80 px-2 py-3">
+                  <div className="mx-auto mb-1 flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-400/15 text-cyan-300">◉</div>
+                  UX Analysis
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <p className="mt-7 text-center text-sm text-slate-400">No credit card required • Results in under 2 minutes</p>
       </div>
     </main>
   )
