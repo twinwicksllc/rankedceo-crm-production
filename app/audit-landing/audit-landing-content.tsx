@@ -73,7 +73,9 @@ export function AuditLandingContent() {
       <section className="py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-3xl text-center">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-green-100 px-4 py-2 text-sm font-medium text-green-700">
+            <div className={`mb-6 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ${
+              isLight ? 'bg-green-100 text-green-700' : 'bg-emerald-500/15 text-emerald-300'
+            }`}>
               <Clock className="h-4 w-4" />
               <span>Results in under 2 minutes</span>
             </div>
@@ -100,7 +102,11 @@ export function AuditLandingContent() {
               <Link
                 href="#features"
                 onClick={() => trackCtaClick('hero_learn_more', '#features')}
-                className="flex w-full items-center justify-center rounded-lg border border-slate-300 bg-white px-8 py-3.5 text-base font-semibold text-slate-700 transition-all hover:bg-slate-50 sm:w-auto"
+                className={`flex w-full items-center justify-center rounded-lg border px-8 py-3.5 text-base font-semibold transition-all sm:w-auto ${
+                  isLight
+                    ? 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                    : 'border-white/20 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white'
+                }`}
               >
                 Learn More
               </Link>
@@ -109,13 +115,13 @@ export function AuditLandingContent() {
         </div>
       </section>
 
-      <section id="features" className="py-20 bg-white">
+      <section id="features" className={`py-20 ${isLight ? 'bg-white' : 'bg-[#071534]'}`}>
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-16 text-center">
-            <h2 className="mb-4 text-3xl font-bold text-slate-900 sm:text-4xl">
+            <h2 className={`mb-4 text-3xl font-bold sm:text-4xl ${isLight ? 'text-slate-900' : 'text-white'}`}>
               What the Audit Tells You
             </h2>
-            <p className="mx-auto max-w-2xl text-lg text-slate-600">
+            <p className={`mx-auto max-w-2xl text-lg ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
               Comprehensive analysis across multiple dimensions of search performance
             </p>
           </div>
@@ -155,26 +161,32 @@ export function AuditLandingContent() {
             ].map((feature, i) => (
               <div
                 key={i}
-                className="rounded-2xl border border-slate-200 bg-slate-50 p-6 transition-all hover:border-blue-200 hover:shadow-lg"
+                className={`rounded-2xl border p-6 transition-all ${
+                  isLight
+                    ? 'border-slate-200 bg-slate-50 hover:border-blue-200 hover:shadow-lg'
+                    : 'border-white/10 bg-white/5 hover:border-cyan-300/40 hover:shadow-[0_0_30px_rgba(14,165,233,0.12)]'
+                }`}
               >
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-500">
                   <feature.icon className="h-6 w-6 text-white" />
                 </div>
-                <h3 className="mb-3 text-xl font-semibold text-slate-900">{feature.title}</h3>
-                <p className="text-slate-600">{feature.description}</p>
+                <h3 className={`mb-3 text-xl font-semibold ${isLight ? 'text-slate-900' : 'text-white'}`}>{feature.title}</h3>
+                <p className={isLight ? 'text-slate-600' : 'text-slate-300'}>{feature.description}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="py-20 bg-gradient-to-br from-slate-900 to-slate-800">
+      <section className={`py-20 ${
+        isLight ? 'bg-gradient-to-br from-slate-900 to-slate-800' : 'bg-gradient-to-br from-[#040f2b] to-[#071c4a]'
+      }`}>
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-16 text-center">
             <h2 className="mb-4 text-3xl font-bold text-white sm:text-4xl">
               How It Works
             </h2>
-            <p className="mx-auto max-w-2xl text-lg text-slate-300">
+            <p className={`mx-auto max-w-2xl text-lg ${isLight ? 'text-slate-300' : 'text-slate-200'}`}>
               Three simple steps to actionable competitor intelligence
             </p>
           </div>
@@ -202,9 +214,9 @@ export function AuditLandingContent() {
                   {item.step}
                 </div>
                 <h3 className="mb-3 text-xl font-semibold text-white">{item.title}</h3>
-                <p className="text-slate-400">{item.description}</p>
+                <p className={isLight ? 'text-slate-400' : 'text-slate-300'}>{item.description}</p>
                 {i < 2 && (
-                  <div className="absolute -right-4 top-8 hidden h-0.5 w-8 bg-slate-700 md:block" />
+                  <div className={`absolute -right-4 top-8 hidden h-0.5 w-8 md:block ${isLight ? 'bg-slate-700' : 'bg-cyan-300/25'}`} />
                 )}
               </div>
             ))}
@@ -212,13 +224,17 @@ export function AuditLandingContent() {
         </div>
       </section>
 
-      <section className="py-20 bg-white">
+      <section className={`py-20 ${isLight ? 'bg-white' : 'bg-[#071534]'}`}>
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <div className="rounded-3xl border border-blue-200 bg-gradient-to-br from-blue-50 to-purple-50 p-8 text-center shadow-lg sm:p-12">
-            <h2 className="mb-4 text-3xl font-bold text-slate-900 sm:text-4xl">
+          <div className={`rounded-3xl border p-8 text-center sm:p-12 ${
+            isLight
+              ? 'border-blue-200 bg-gradient-to-br from-blue-50 to-purple-50 shadow-lg'
+              : 'border-cyan-300/30 bg-gradient-to-br from-[#0b1f49] to-[#112e68] shadow-[0_0_40px_rgba(14,165,233,0.18)]'
+          }`}>
+            <h2 className={`mb-4 text-3xl font-bold sm:text-4xl ${isLight ? 'text-slate-900' : 'text-white'}`}>
               Ready to Outrank Your Competitors?
             </h2>
-            <p className="mb-8 text-lg text-slate-600">
+            <p className={`mb-8 text-lg ${isLight ? 'text-slate-600' : 'text-slate-200'}`}>
               Start your free audit today. No credit card required. Get insights in under 2 minutes.
             </p>
             <Link
@@ -233,16 +249,18 @@ export function AuditLandingContent() {
         </div>
       </section>
 
-      <footer className="border-t border-slate-200 bg-white py-12">
+      <footer className={`border-t py-12 ${
+        isLight ? 'border-slate-200 bg-white' : 'border-white/10 bg-[#040f2b]'
+      }`}>
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-purple-600">
                 <Search className="h-4 w-4 text-white" />
               </div>
-              <span className="text-lg font-bold text-slate-900">RankedCEO</span>
+              <span className={`text-lg font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>RankedCEO</span>
             </div>
-            <p className="text-sm text-slate-600">
+            <p className={`text-sm ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
               © {new Date().getFullYear()} RankedCEO. All rights reserved.
             </p>
           </div>
