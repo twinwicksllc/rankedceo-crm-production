@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { AuditLandingContent } from './audit-landing-content'
+import { AuditLandingContentWithTheme } from './audit-landing-content'
 
 export const metadata: Metadata = {
   title: 'Free SEO Audit Tool | RankedCEO',
@@ -17,5 +17,5 @@ export const metadata: Metadata = {
 }
 
 export default function AuditLandingPage() {
-  return <AuditLandingContent />
+  return <AuditLandingContentWithTheme />
 }

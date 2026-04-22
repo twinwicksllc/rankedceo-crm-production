@@ -5,10 +5,14 @@ import Link from 'next/link'
 import { Shield, Zap, TrendingUp, Search, Clock, BarChart3 } from 'lucide-react'
 import { buildGetStartedUrl, getAuditFunnelProperties } from '@/lib/analytics/audit-funnel'
 import { trackEvent } from '@/lib/analytics/track-event'
+import { AdvantagePointHeader } from '@/components/advantagepoint/header'
+import { OnboardingThemeProvider, useOnboardingTheme } from '@/app/get-started/theme-context'
 
 const AUDIT_START_URL = '/audit/start'
 
 export function AuditLandingContent() {
+  const { theme } = useOnboardingTheme()
+  const isLight = theme === 'light'
   const [getStartedUrl, setGetStartedUrl] = useState(AUDIT_START_URL)
   const [loginUrl, setLoginUrl] = useState(
     `${process.env.NEXT_PUBLIC_APP_URL || 'https://crm.rankedceo.com'}/login`
@@ -43,38 +47,28 @@ export function AuditLandingContent() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <nav className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-purple-600">
-                <Search className="h-5 w-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-slate-900">RankedCEO</span>
-              <span className="ml-2 rounded-full bg-blue-100 px-3 py-0.5 text-xs font-medium text-blue-600">
-                Audit Tool
-              </span>
-            </div>
-            <div className="flex items-center gap-4">
-              <Link
-                href={loginUrl}
-                onClick={() => trackCtaClick('nav_login', loginUrl)}
-                className="text-sm font-medium text-slate-600 hover:text-slate-900"
-              >
-                Log in
-              </Link>
-              <Link
-                href={getStartedUrl}
-                onClick={() => trackCtaClick('nav_start_free_audit', getStartedUrl)}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
-              >
-                Start Free Audit
-              </Link>
-            </div>
+    <div className={`min-h-screen ${isLight ? 'bg-slate-50' : 'bg-[#030f2f]'}`}>
+      <AdvantagePointHeader variant="onboarding" />
+      <div className={`border-b ${isLight ? 'border-slate-200 bg-white' : 'border-white/10 bg-[#071634]'}`}>
+        <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-end gap-4">
+            <Link
+              href={loginUrl}
+              onClick={() => trackCtaClick('nav_login', loginUrl)}
+              className={`text-sm font-medium ${isLight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-300 hover:text-white'}`}
+            >
+              Log in
+            </Link>
+            <Link
+              href={getStartedUrl}
+              onClick={() => trackCtaClick('nav_start_free_audit', getStartedUrl)}
+              className="rounded-lg bg-gradient-to-r from-cyan-500 to-emerald-500 px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              Start Free Audit
+            </Link>
           </div>
         </div>
-      </nav>
+      </div>
 
       <section className="py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -83,14 +77,14 @@ export function AuditLandingContent() {
               <Clock className="h-4 w-4" />
               <span>Results in under 2 minutes</span>
             </div>
-            <h1 className="mb-6 text-4xl font-bold tracking-tight text-slate-900 sm:text-6xl">
+            <h1 className={`mb-6 text-4xl font-bold tracking-tight sm:text-6xl ${isLight ? 'text-slate-900' : 'text-white'}`}>
               See Your SEO Gaps
               <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 {' '}
                 vs. Competitors
               </span>
             </h1>
-            <p className="mb-8 text-lg text-slate-600">
+            <p className={`mb-8 text-lg ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
               Enter your competitor's website URL and get instant insights into their SEO strategy,
               performance scores, and growth opportunities. Stop guessing - start competing.
             </p>
@@ -255,5 +249,13 @@ export function AuditLandingContent() {
         </div>
       </footer>
     </div>
+  )
+}
+
+export function AuditLandingContentWithTheme() {
+  return (
+    <OnboardingThemeProvider>
+      <AuditLandingContent />
+    </OnboardingThemeProvider>
   )
 }
