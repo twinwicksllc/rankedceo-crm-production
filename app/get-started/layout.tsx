@@ -8,8 +8,8 @@ import { AdvantagePointFooter } from '@/components/advantagepoint/footer'
 import { OnboardingThemeShell } from './theme-shell'
 
 export const metadata: Metadata = {
-  title: 'Get Started | AdvantagePoint',
-  description: 'Set up your AdvantagePoint website in minutes. Tell us about your business and we\'ll build you a high-converting local SEO website.',
+  title: 'Get Started | RankedCEO',
+  description: 'Set up your RankedCEO website in minutes. Tell us about your business and we\'ll build you a high-converting local SEO website.',
   robots: 'noindex',
 }
 
