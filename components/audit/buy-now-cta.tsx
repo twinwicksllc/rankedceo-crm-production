@@ -7,7 +7,11 @@
 // =============================================================================
 
 import { useEffect, useState } from 'react'
-import { buildGetStartedUrl, getAuditFunnelProperties } from '@/lib/analytics/audit-funnel'
+import {
+  buildGetStartedUrl,
+  getAuditFunnelProperties,
+  getGetStartedBaseUrl,
+} from '@/lib/analytics/audit-funnel'
 import { trackEvent } from '@/lib/analytics/track-event'
 
 interface BuyNowCtaProps {
@@ -79,7 +83,7 @@ export function BuyNowCta({
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search)
-    setCtaUrl(buildGetStartedUrl('/get-started', searchParams, {
+    setCtaUrl(buildGetStartedUrl(getGetStartedBaseUrl(), searchParams, {
       tier: 'standard',
       auditId,
     }))

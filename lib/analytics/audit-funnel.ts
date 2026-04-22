@@ -12,6 +12,9 @@ const UTM_KEYS = [
 type EventProperties = Record<string, string | number | boolean | null | undefined>
 type QueryValue = string | number | boolean | null | undefined
 
+const DEFAULT_GET_STARTED_PATH = '/get-started'
+const PRODUCTION_GET_STARTED_URL = 'https://audit.rankedceo.com/get-started'
+
 function createLandingSessionId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID()
@@ -64,6 +67,31 @@ export function getAuditFunnelProperties(searchParams: URLSearchParams, auditId?
     referrerHost: getReferrerHost(),
     ...getUtmProperties(searchParams),
   }
+}
+
+export function getGetStartedBaseUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_GET_STARTED_URL?.trim()
+  if (configured) return configured
+
+  if (typeof window === 'undefined') {
+    return DEFAULT_GET_STARTED_PATH
+  }
+
+  const hostname = window.location.hostname
+
+  if (
+    hostname === 'localhost' ||
+    hostname.endsWith('.localhost') ||
+    hostname.endsWith('.vercel.app')
+  ) {
+    return DEFAULT_GET_STARTED_PATH
+  }
+
+  if (hostname.endsWith('rankedceo.com')) {
+    return PRODUCTION_GET_STARTED_URL
+  }
+
+  return DEFAULT_GET_STARTED_PATH
 }
 
 export function buildGetStartedUrl(

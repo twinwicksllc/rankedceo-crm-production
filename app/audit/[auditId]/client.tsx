@@ -7,7 +7,11 @@
 // =============================================================================
 
 import { useEffect, useState, useCallback } from 'react'
-import { buildGetStartedUrl, getAuditFunnelProperties } from '@/lib/analytics/audit-funnel'
+import {
+  buildGetStartedUrl,
+  getAuditFunnelProperties,
+  getGetStartedBaseUrl,
+} from '@/lib/analytics/audit-funnel'
 import { trackEvent } from '@/lib/analytics/track-event'
 import type { AuditReportData } from '@/lib/waas/types'
 import type { WaasAuditRow as WaasAudit } from '@/lib/waas/supabase'
@@ -1021,7 +1025,7 @@ function PageShell({
     if (!auditId) return
 
     const searchParams = new URLSearchParams(window.location.search)
-    setCtaUrl(buildGetStartedUrl('/get-started', searchParams, {
+      setCtaUrl(buildGetStartedUrl(getGetStartedBaseUrl(), searchParams, {
       tier: 'standard',
       auditId,
     }))
