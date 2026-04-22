@@ -81,3 +81,70 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Onboarding theme system (light default) */
+.ap-onboarding.ap-theme-light {
+  background: linear-gradient(180deg, #f8fbff 0%, #eef4ff 45%, #f7fafc 100%);
+}
+
+.ap-onboarding.ap-theme-dark {
+  background: #0a0f1e;
+}
+
+.ap-onboarding .ap-grid {
+  background-size: 60px 60px;
+}
+
+.ap-onboarding.ap-theme-light .ap-grid {
+  opacity: 0.08;
+  background-image:
+    linear-gradient(rgba(30, 41, 59, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30, 41, 59, 0.12) 1px, transparent 1px);
+}
+
+.ap-onboarding.ap-theme-dark .ap-grid {
+  opacity: 0.03;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.5) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.5) 1px, transparent 1px);
+}
+
+.ap-onboarding.ap-theme-light .ap-glow-blue { background: rgba(37, 99, 235, 0.12); }
+.ap-onboarding.ap-theme-light .ap-glow-violet { background: rgba(124, 58, 237, 0.1); }
+.ap-onboarding.ap-theme-light .ap-glow-indigo { background: rgba(99, 102, 241, 0.08); }
+
+.ap-onboarding.ap-theme-dark .ap-glow-blue { background: rgba(37, 99, 235, 0.1); }
+.ap-onboarding.ap-theme-dark .ap-glow-violet { background: rgba(124, 58, 237, 0.1); }
+.ap-onboarding.ap-theme-dark .ap-glow-indigo { background: rgba(99, 102, 241, 0.05); }
+
+.ap-onboarding.ap-theme-light .bg-white\/5 { background-color: rgba(255, 255, 255, 0.78) !important; }
+.ap-onboarding.ap-theme-light .bg-white\/10 { background-color: rgba(255, 255, 255, 0.9) !important; }
+.ap-onboarding.ap-theme-light .bg-black\/20 { background-color: rgba(255, 255, 255, 0.75) !important; }
+
+.ap-onboarding.ap-theme-light .border-white\/10 { border-color: rgba(15, 23, 42, 0.12) !important; }
+.ap-onboarding.ap-theme-light .border-white\/15 { border-color: rgba(15, 23, 42, 0.18) !important; }
+.ap-onboarding.ap-theme-light .border-white\/20 { border-color: rgba(15, 23, 42, 0.2) !important; }
+
+.ap-onboarding.ap-theme-light .text-white { color: rgba(15, 23, 42, 0.98) !important; }
+.ap-onboarding.ap-theme-light .text-white\/70 { color: rgba(15, 23, 42, 0.76) !important; }
+.ap-onboarding.ap-theme-light .text-white\/60 { color: rgba(15, 23, 42, 0.64) !important; }
+.ap-onboarding.ap-theme-light .text-white\/50 { color: rgba(15, 23, 42, 0.52) !important; }
+.ap-onboarding.ap-theme-light .text-white\/40 { color: rgba(15, 23, 42, 0.42) !important; }
+.ap-onboarding.ap-theme-light .text-white\/30 { color: rgba(15, 23, 42, 0.33) !important; }
+.ap-onboarding.ap-theme-light .text-white\/25 { color: rgba(15, 23, 42, 0.27) !important; }
+
+.ap-onboarding.ap-theme-light .placeholder\:text-white\/25::placeholder {
+  color: rgba(15, 23, 42, 0.32) !important;
+}
+
+.ap-onboarding.ap-theme-light [class*='from-blue-'][class*='to-violet-'] {
+  color: #ffffff !important;
+}
+
+.ap-onboarding.ap-theme-light .bg-blue-600,
+.ap-onboarding.ap-theme-light .bg-blue-500,
+.ap-onboarding.ap-theme-light .bg-violet-500,
+.ap-onboarding.ap-theme-light .bg-emerald-500,
+.ap-onboarding.ap-theme-light .bg-red-500 {
+  color: #ffffff !important;
+}
