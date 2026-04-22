@@ -23,7 +23,8 @@ interface Props {
 }
 
 export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Props) {
-  const { register, handleSubmit, formState: { errors } } = form
+  const { register, handleSubmit, watch, formState: { errors } } = form
+  const selectedTrade = watch('primary_trade')
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -152,6 +153,21 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
           </select>
           {errors.primary_trade && <p className="mt-1.5 text-xs text-red-400">{errors.primary_trade.message}</p>}
         </div>
+
+        {selectedTrade === 'Other' && (
+          <div>
+            <label className="block text-sm font-medium text-white/70 mb-2">
+              Industry Type <span className="text-red-400">*</span>
+            </label>
+            <input
+              {...register('primary_trade_other')}
+              type="text"
+              placeholder="e.g. Junk Removal"
+              className={inputClass(!!errors.primary_trade_other)}
+            />
+            {errors.primary_trade_other && <p className="mt-1.5 text-xs text-red-400">{errors.primary_trade_other.message}</p>}
+          </div>
+        )}
 
         {/* Optional builder intake fields */}
         <div className="grid sm:grid-cols-2 gap-4">

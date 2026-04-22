@@ -39,6 +39,7 @@ export const step1Schema = z.object({
   state:            z.string().min(2, 'State is required'),
   zip:              z.string().regex(/^\d{5}(-\d{4})?$/, 'Enter a valid ZIP code'),
   primary_trade:    z.string().min(2, 'Please select your primary trade'),
+  primary_trade_other: z.string().max(80, 'Keep it under 80 characters').optional().or(z.literal('')),
   email:            z.string().email('Please enter a valid email address'),
   tagline:          z.string().max(120, 'Keep it under 120 characters').optional().or(z.literal('')),
   business_type:    z.string().max(100, 'Keep it under 100 characters').optional().or(z.literal('')),
@@ -46,6 +47,14 @@ export const step1Schema = z.object({
   services_offered: z.string().max(500, 'Keep it under 500 characters').optional().or(z.literal('')),
   business_hours:   z.string().max(300, 'Keep it under 300 characters').optional().or(z.literal('')),
   target_audience:  z.string().max(300, 'Keep it under 300 characters').optional().or(z.literal('')),
+}).superRefine((data, ctx) => {
+  if (data.primary_trade === 'Other' && !(data.primary_trade_other ?? '').trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Please enter your industry type.',
+      path: ['primary_trade_other'],
+    })
+  }
 })
 
 export const step4Schema = z.object({
@@ -143,6 +152,7 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
       state:            '',
       zip:              '',
       primary_trade:    '',
+      primary_trade_other: '',
       email:            '',
       tagline:          '',
       business_type:    '',
@@ -196,6 +206,9 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
     setIsLoading(true)
     setError(null)
     setBusinessName(data.legal_name)
+    const resolvedPrimaryTrade = data.primary_trade === 'Other'
+      ? (data.primary_trade_other ?? '').trim()
+      : data.primary_trade
 
     const result = await saveOnboardingStep1(
       tenantId,
@@ -205,7 +218,7 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
         city:             data.city,
         state:            data.state,
         zip:              data.zip,
-        primary_trade:    data.primary_trade,
+        primary_trade:    resolvedPrimaryTrade,
         tagline:          data.tagline,
         business_type:    data.business_type,
         phone:            data.phone,
