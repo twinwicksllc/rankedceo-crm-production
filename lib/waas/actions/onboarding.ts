@@ -39,6 +39,86 @@ export interface ActionResult<T = null> {
 }
 
 // ---------------------------------------------------------------------------
+// Tenant write helpers (schema-cache safe)
+// ---------------------------------------------------------------------------
+
+function parseMissingTenantColumn(errorMessage: string): string | null {
+  const match = errorMessage.match(/Could not find the '([^']+)' column of 'tenants' in the schema cache/i)
+  return match?.[1] ?? null
+}
+
+function isPendingReviewEnumError(errorMessage: string): boolean {
+  return /invalid input value for enum .*pending_review/i.test(errorMessage)
+}
+
+async function updateTenantWithFallback(
+  supabase: ReturnType<typeof getRawClient>,
+  tenantId: string,
+  payload: Record<string, unknown>
+): Promise<{ error: { message: string } | null }> {
+  const mutablePayload: Record<string, unknown> = { ...payload }
+
+  // Retry after removing unknown columns reported by schema cache.
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const { error } = await supabase
+      .from('tenants')
+      .update(mutablePayload)
+      .eq('id', tenantId)
+
+    if (!error) return { error: null }
+
+    const missingColumn = parseMissingTenantColumn(error.message)
+    if (missingColumn && missingColumn in mutablePayload) {
+      delete mutablePayload[missingColumn]
+      continue
+    }
+
+    if (isPendingReviewEnumError(error.message) && mutablePayload.status === 'pending_review') {
+      mutablePayload.status = 'onboarding'
+      continue
+    }
+
+    return { error: { message: error.message } }
+  }
+
+  return { error: { message: 'Tenant update failed after schema fallback retries.' } }
+}
+
+async function insertTenantWithFallback(
+  supabase: ReturnType<typeof getRawClient>,
+  payload: Record<string, unknown>
+): Promise<{ id?: string; error: { message: string } | null }> {
+  const mutablePayload: Record<string, unknown> = { ...payload }
+
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const { data: inserted, error } = await supabase
+      .from('tenants')
+      .insert(mutablePayload)
+      .select('id')
+      .single()
+
+    if (!error) {
+      return { id: (inserted as { id: string }).id, error: null }
+    }
+
+    const missingColumn = parseMissingTenantColumn(error.message)
+    if (missingColumn && missingColumn in mutablePayload) {
+      delete mutablePayload[missingColumn]
+      continue
+    }
+
+    if (isPendingReviewEnumError(error.message) && mutablePayload.status === 'pending_review') {
+      mutablePayload.status = 'onboarding'
+      continue
+    }
+
+    return { error: { message: error.message } }
+  }
+
+  return { error: { message: 'Tenant insert failed after schema fallback retries.' } }
+}
+
+// ---------------------------------------------------------------------------
 // Step 1: Save Business Identity
 // ---------------------------------------------------------------------------
 
@@ -101,21 +181,18 @@ export async function saveOnboardingStep1(
 
     if (tenantId) {
       // Update existing tenant
-      const { error } = await supabase
-        .from('tenants')
-        .update(payload)
-        .eq('id', tenantId)
+      const { error } = await updateTenantWithFallback(supabase, tenantId, payload)
       if (error) return { success: false, error: error.message }
       return { success: true, data: { tenantId } }
     } else {
       // Create new tenant
-      const { data: inserted, error } = await supabase
-        .from('tenants')
-        .insert({ ...payload, slug, package_tier: 'standard' })
-        .select('id')
-        .single()
-      if (error) return { success: false, error: error.message }
-      return { success: true, data: { tenantId: (inserted as { id: string }).id } }
+      const { id, error } = await insertTenantWithFallback(supabase, {
+        ...payload,
+        slug,
+        package_tier: 'standard',
+      })
+      if (error || !id) return { success: false, error: error?.message ?? 'Tenant insert failed' }
+      return { success: true, data: { tenantId: id } }
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error'
@@ -152,10 +229,14 @@ export async function saveOnboardingStep2(
     }
 
     // Advance onboarding step
-    await supabase
-      .from('tenants')
-      .update({ onboarding_step: 3, updated_at: new Date().toISOString() })
-      .eq('id', tenantId)
+    const { error: tenantUpdateError } = await updateTenantWithFallback(supabase, tenantId, {
+      onboarding_step: 3,
+      updated_at: new Date().toISOString(),
+    })
+
+    if (tenantUpdateError) {
+      return { success: false, error: tenantUpdateError.message }
+    }
 
     return { success: true }
   } catch (err) {
@@ -200,14 +281,11 @@ export async function saveOnboardingStep3(
       },
     }
 
-    const { error } = await supabase
-      .from('tenants')
-      .update({
-        brand_config:    updatedBrandConfig,
-        onboarding_step: 4,
-        updated_at:      new Date().toISOString(),
-      })
-      .eq('id', tenantId)
+    const { error } = await updateTenantWithFallback(supabase, tenantId, {
+      brand_config:    updatedBrandConfig,
+      onboarding_step: 4,
+      updated_at:      new Date().toISOString(),
+    })
 
     if (error) return { success: false, error: error.message }
     return { success: true }
@@ -270,21 +348,18 @@ export async function saveOnboardingStep4(
       },
     }
 
-    const { error } = await supabase
-      .from('tenants')
-      .update({
-        calendly_url:            data.calendly_url || null,
-        financing_enabled:       data.financing_enabled,
-        usp:                     data.usp || null,
-        brand_config:            updatedBrandConfig,
-        package_tier:            packageTier,
-        status:                  'pending_review',
-        onboarding_step:         5,
-        onboarding_completed:    true,
-        onboarding_completed_at: new Date().toISOString(),
-        updated_at:              new Date().toISOString(),
-      })
-      .eq('id', tenantId)
+    const { error } = await updateTenantWithFallback(supabase, tenantId, {
+      calendly_url:            data.calendly_url || null,
+      financing_enabled:       data.financing_enabled,
+      usp:                     data.usp || null,
+      brand_config:            updatedBrandConfig,
+      package_tier:            packageTier,
+      status:                  'pending_review',
+      onboarding_step:         5,
+      onboarding_completed:    true,
+      onboarding_completed_at: new Date().toISOString(),
+      updated_at:              new Date().toISOString(),
+    })
 
     if (error) return { success: false, error: error.message }
 
