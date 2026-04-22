@@ -24,6 +24,8 @@ import { ReportSkeleton }      from '@/components/audit/report-skeleton'
 import { ManualAuditState }    from '@/components/audit/manual-audit-state'
 import { BuyNowCta }           from '@/components/audit/buy-now-cta'
 import { EmailCaptureForm }    from '@/components/audit/email-capture-form'
+import { AdvantagePointHeader } from '@/components/advantagepoint/header'
+import { OnboardingThemeProvider, useOnboardingTheme } from '@/app/get-started/theme-context'
 
 // ---------------------------------------------------------------------------
 // Types (extended report_data shape from audit-engine.ts)
@@ -136,7 +138,7 @@ interface AuditReportClientProps {
   audit: WaasAudit
 }
 
-export function AuditReportClient({ audit: initialAudit }: AuditReportClientProps) {
+function AuditReportClientContent({ audit: initialAudit }: AuditReportClientProps) {
   const [audit,    setAudit]    = useState<WaasAudit>(initialAudit)
   const [attempts, setAttempts] = useState(0)
 
@@ -250,11 +252,21 @@ export function AuditReportClient({ audit: initialAudit }: AuditReportClientProp
   )
 }
 
+export function AuditReportClient({ audit }: AuditReportClientProps) {
+  return (
+    <OnboardingThemeProvider>
+      <AuditReportClientContent audit={audit} />
+    </OnboardingThemeProvider>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Full Report (completed audit)
 // ---------------------------------------------------------------------------
 
 function FullReport({ audit }: { audit: WaasAudit }) {
+  const { theme } = useOnboardingTheme()
+  const isLight = theme === 'light'
   const report       = audit.report_data as ExtendedReportData
   const targetDomain = extractDomain(audit.target_url)
   const summary      = report.summary
@@ -269,7 +281,7 @@ function FullReport({ audit }: { audit: WaasAudit }) {
   const primaryKeyword = keywords[0] ?? 'your industry'
 
   return (
-    <div style={{ maxWidth: 1000, margin: '0 auto', padding: '24px 16px 60px' }}>
+    <div style={{ maxWidth: 1000, margin: '0 auto', padding: '24px 16px 60px', color: isLight ? '#0f172a' : '#ffffff' }}>
 
       {/* ── HERO SECTION ──────────────────────────────────────────────────── */}
       <HeroSection
@@ -400,14 +412,18 @@ function HeroSection({
   keyword:      string
   completedAt:  string | null
 }) {
+  const { theme } = useOnboardingTheme()
+  const isLight = theme === 'light'
   const gradeColor = getGradeColor(grade)
   const scoreColor = getScoreColor(score)
   const isUrgent   = score < 50
 
   return (
     <div style={{
-      background:   `linear-gradient(135deg, rgba(15,15,25,0.97) 0%, rgba(37,99,235,0.12) 60%, rgba(239,68,68,0.08) 100%)`,
-      border:       '1px solid rgba(255,255,255,0.1)',
+      background:   isLight
+        ? 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(14,165,233,0.08) 60%, rgba(16,185,129,0.06) 100%)'
+        : 'linear-gradient(135deg, rgba(15,15,25,0.97) 0%, rgba(37,99,235,0.12) 60%, rgba(239,68,68,0.08) 100%)',
+      border:       isLight ? '1px solid rgba(51,65,85,0.15)' : '1px solid rgba(255,255,255,0.1)',
       borderRadius: 16,
       padding:      'clamp(20px, 4vw, 36px)',
       marginBottom: 24,
@@ -418,8 +434,10 @@ function HeroSection({
       <div style={{
         position:   'absolute',
         inset:      0,
-        opacity:    0.03,
-        backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(255,255,255,0.5) 40px, rgba(255,255,255,0.5) 41px), repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(255,255,255,0.5) 40px, rgba(255,255,255,0.5) 41px)',
+        opacity:    isLight ? 0.05 : 0.03,
+        backgroundImage: isLight
+          ? 'repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(15,23,42,0.18) 40px, rgba(15,23,42,0.18) 41px), repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(15,23,42,0.18) 40px, rgba(15,23,42,0.18) 41px)'
+          : 'repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(255,255,255,0.5) 40px, rgba(255,255,255,0.5) 41px), repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(255,255,255,0.5) 40px, rgba(255,255,255,0.5) 41px)',
         pointerEvents: 'none',
       }} />
 
@@ -434,7 +452,7 @@ function HeroSection({
       }}>
         <div style={{
           fontSize:     '0.75rem',
-          color:        'rgba(255,255,255,0.35)',
+          color:        isLight ? 'rgba(15,23,42,0.45)' : 'rgba(255,255,255,0.35)',
           textTransform: 'uppercase',
           letterSpacing: '0.12em',
           fontWeight:   600,
@@ -444,7 +462,7 @@ function HeroSection({
         {completedAt && (
           <div style={{
             fontSize: '0.72rem',
-            color:    'rgba(255,255,255,0.3)',
+            color:    isLight ? 'rgba(15,23,42,0.4)' : 'rgba(255,255,255,0.3)',
           }}>
             Generated {new Date(completedAt).toLocaleDateString('en-US', {
               month: 'short', day: 'numeric', year: 'numeric',
@@ -483,7 +501,7 @@ function HeroSection({
             margin:     '0 0 8px',
             fontSize:   'clamp(1.3rem, 4vw, 2rem)',
             fontWeight: 800,
-            color:      '#ffffff',
+            color:      isLight ? '#0f172a' : '#ffffff',
             lineHeight: 1.2,
           }}>
             <span style={{ color: '#EF4444' }}>{targetDomain}</span>
@@ -518,11 +536,11 @@ function HeroSection({
               <div style={{
                 padding:      '4px 12px',
                 background:   'rgba(239,68,68,0.15)',
-                border:       '1px solid rgba(239,68,68,0.35)',
+                color:      isLight ? 'rgba(15,23,42,0.6)' : 'rgba(255,255,255,0.55)',
                 borderRadius: 20,
                 fontSize:     '0.72rem',
                 fontWeight:   600,
-                color:        '#FCA5A5',
+                <em style={{ color: isLight ? 'rgba(15,23,42,0.8)' : 'rgba(255,255,255,0.7)' }}>
                 display:      'flex',
                 alignItems:   'center',
                 gap:          5,
@@ -972,6 +990,8 @@ function Section({
   subtitle: string
   children: React.ReactNode
 }) {
+  const { theme } = useOnboardingTheme()
+  const isLight = theme === 'light'
   return (
     <div style={{ marginBottom: 28 }}>
       {/* Section header */}
@@ -980,14 +1000,14 @@ function Section({
           margin:     '0 0 4px',
           fontSize:   'clamp(0.95rem, 2.5vw, 1.15rem)',
           fontWeight: 800,
-          color:      '#ffffff',
+          color:      isLight ? '#0f172a' : '#ffffff',
         }}>
           {title}
         </h2>
         <p style={{
           margin:   0,
           fontSize: '0.78rem',
-          color:    'rgba(255,255,255,0.4)',
+          color:    isLight ? 'rgba(15,23,42,0.45)' : 'rgba(255,255,255,0.4)',
         }}>
           {subtitle}
         </p>
@@ -995,8 +1015,8 @@ function Section({
 
       {/* Content card */}
       <div style={{
-        background:   'rgba(255,255,255,0.03)',
-        border:       '1px solid rgba(255,255,255,0.08)',
+        background:   isLight ? 'rgba(255,255,255,0.86)' : 'rgba(255,255,255,0.03)',
+        border:       isLight ? '1px solid rgba(51,65,85,0.16)' : '1px solid rgba(255,255,255,0.08)',
         borderRadius: 14,
         padding:      'clamp(14px, 3vw, 22px)',
         backdropFilter: 'blur(8px)',
@@ -1019,6 +1039,8 @@ function PageShell({
   auditId?:   string
   expiresAt?: string
 }) {
+  const { theme } = useOnboardingTheme()
+  const isLight = theme === 'light'
   const [ctaUrl, setCtaUrl] = useState(auditId ? `/get-started?tier=standard&auditId=${auditId}` : '')
 
   useEffect(() => {
@@ -1045,59 +1067,45 @@ function PageShell({
   return (
     <div style={{
       minHeight:   '100vh',
-      background:  'linear-gradient(180deg, #0a0a0f 0%, #0d0d18 50%, #0a0a0f 100%)',
-      color:       '#ffffff',
+      background:  isLight
+        ? 'linear-gradient(180deg, #f1f5f9 0%, #e2edf7 50%, #eff6ff 100%)'
+        : 'linear-gradient(180deg, #0a0a0f 0%, #0d0d18 50%, #0a0a0f 100%)',
+      color:       isLight ? '#0f172a' : '#ffffff',
       fontFamily:  'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
     }}>
-      {/* Sticky header */}
-      <header style={{
-        position:    'sticky',
-        top:         0,
-        zIndex:      50,
-        background:  'rgba(10,10,15,0.92)',
+      <AdvantagePointHeader variant="onboarding" />
+      <div style={{
+        borderBottom: isLight ? '1px solid rgba(51,65,85,0.2)' : '1px solid rgba(255,255,255,0.08)',
+        background: isLight ? 'rgba(255,255,255,0.75)' : 'rgba(10,10,15,0.65)',
         backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid rgba(255,255,255,0.08)',
-        padding:     '10px 20px',
-        display:     'flex',
-        alignItems:  'center',
-        justifyContent: 'space-between',
-        gap:         12,
-        flexWrap:    'wrap',
+        padding: '10px 20px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        gap: 12,
+        flexWrap: 'wrap',
       }}>
-        <div style={{
-          fontSize:   '0.88rem',
-          fontWeight: 800,
-          color:      '#ffffff',
-          letterSpacing: '-0.01em',
-        }}>
-          <span style={{ color: '#2563EB' }}>Ranked</span>CEO
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          {expiresAt && (
-            <ExpiryCountdown expiresAt={expiresAt} compact />
-          )}
-          {auditId && (
-            <a
-              href={ctaUrl}
-              onClick={trackHeaderClick}
-              style={{
-                padding:        '7px 16px',
-                background:     'linear-gradient(135deg, #2563EB, #1D4ED8)',
-                color:          '#ffffff',
-                textDecoration: 'none',
-                borderRadius:   8,
-                fontSize:       '0.78rem',
-                fontWeight:     700,
-                whiteSpace:     'nowrap',
-                boxShadow:      '0 2px 12px rgba(37,99,235,0.4)',
-              }}
-            >
-              🚀 Fix My Rankings
-            </a>
-          )}
-        </div>
-      </header>
+        {expiresAt && <ExpiryCountdown expiresAt={expiresAt} compact />}
+        {auditId && (
+          <a
+            href={ctaUrl}
+            onClick={trackHeaderClick}
+            style={{
+              padding:        '7px 16px',
+              background:     'linear-gradient(135deg, #06b6d4, #10b981)',
+              color:          '#ffffff',
+              textDecoration: 'none',
+              borderRadius:   8,
+              fontSize:       '0.78rem',
+              fontWeight:     700,
+              whiteSpace:     'nowrap',
+              boxShadow:      '0 2px 12px rgba(6,182,212,0.35)',
+            }}
+          >
+            🚀 Fix My Rankings
+          </a>
+        )}
+      </div>
 
       {/* Page content */}
       <main>
@@ -1112,15 +1120,17 @@ function PageShell({
 // ---------------------------------------------------------------------------
 
 function ReportFooter({ auditId, completedAt }: { auditId: string; completedAt: string | null }) {
+  const { theme } = useOnboardingTheme()
+  const isLight = theme === 'light'
   return (
     <div style={{
-      borderTop:   '1px solid rgba(255,255,255,0.08)',
+      borderTop:   isLight ? '1px solid rgba(51,65,85,0.14)' : '1px solid rgba(255,255,255,0.08)',
       paddingTop:  24,
       textAlign:   'center',
     }}>
       <div style={{
         fontSize:   '0.72rem',
-        color:      'rgba(255,255,255,0.2)',
+        color:      isLight ? 'rgba(15,23,42,0.45)' : 'rgba(255,255,255,0.2)',
         marginBottom: 8,
       }}>
         Report ID: {auditId.toUpperCase().slice(0, 8)}
@@ -1128,12 +1138,12 @@ function ReportFooter({ auditId, completedAt }: { auditId: string; completedAt: 
       </div>
       <div style={{
         fontSize: '0.72rem',
-        color:    'rgba(255,255,255,0.15)',
+        color:    isLight ? 'rgba(15,23,42,0.38)' : 'rgba(255,255,255,0.15)',
       }}>
         © {new Date().getFullYear()} RankedCEO · Powered by Surface Audit Engine v2 ·{' '}
         <a
           href="/"
-          style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none' }}
+          style={{ color: isLight ? 'rgba(15,23,42,0.55)' : 'rgba(255,255,255,0.3)', textDecoration: 'none' }}
         >
           rankedceo.com
         </a>
@@ -1154,6 +1164,8 @@ function ScorePill({
   color:  string
   glow?:  boolean
 }) {
+  const { theme } = useOnboardingTheme()
+  const isLight = theme === 'light'
   return (
     <div style={{
       display:      'flex',
@@ -1174,7 +1186,7 @@ function ScorePill({
       </span>
       <span style={{
         fontSize: '0.7rem',
-        color:    'rgba(255,255,255,0.4)',
+        color:    isLight ? 'rgba(15,23,42,0.5)' : 'rgba(255,255,255,0.4)',
       }}>
         {label}
       </span>
