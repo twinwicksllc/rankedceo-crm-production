@@ -21,6 +21,14 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
   const financingEnabled = watch('financing_enabled')
   const uspValue         = watch('usp') ?? ''
 
+  const functionalityOptions = [
+    { key: 'functionality_contact_form' as const, label: 'Contact Form' },
+    { key: 'functionality_booking' as const, label: 'Booking / Scheduler' },
+    { key: 'functionality_gallery' as const, label: 'Photo Gallery' },
+    { key: 'functionality_blog' as const, label: 'Blog' },
+    { key: 'functionality_ecommerce' as const, label: 'E-commerce' },
+  ]
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate>
       {/* Header */}
@@ -130,6 +138,155 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
             }`}>
               {uspValue.length}/500
             </span>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-white/70 mb-2">
+            Value Propositions <span className="text-white/30">(optional)</span>
+          </label>
+          <textarea
+            {...register('value_propositions')}
+            rows={2}
+            placeholder="3-5 bullet-style selling points separated by commas"
+            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-blue-500/60 text-white placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-white/70 mb-2">
+            About Us Narrative <span className="text-white/30">(optional)</span>
+          </label>
+          <textarea
+            {...register('about_narrative')}
+            rows={3}
+            placeholder="A short paragraph about your story, team, and values"
+            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-blue-500/60 text-white placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
+          />
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-white/70 mb-2">
+              Primary CTA <span className="text-white/30">(optional)</span>
+            </label>
+            <input
+              {...register('primary_cta')}
+              type="text"
+              placeholder="Book My Free Estimate"
+              className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 focus:border-blue-500/60 text-white placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-white/70 mb-2">
+              Service Area <span className="text-white/30">(optional)</span>
+            </label>
+            <input
+              {...register('service_area')}
+              type="text"
+              placeholder="Chicago, Evanston, Oak Park"
+              className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 focus:border-blue-500/60 text-white placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-white/70 mb-2">
+              Brand Tone <span className="text-white/30">(optional)</span>
+            </label>
+            <select
+              {...register('tone')}
+              className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 focus:border-blue-500/60 text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all [&_option]:bg-[#0A0F1E]"
+            >
+              <option value="Professional">Professional</option>
+              <option value="Friendly">Friendly</option>
+              <option value="Edgy">Edgy</option>
+              <option value="Luxurious">Luxurious</option>
+              <option value="Bold">Bold</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-white/70 mb-2">
+              Typography Style <span className="text-white/30">(optional)</span>
+            </label>
+            <select
+              {...register('font_preference')}
+              className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 focus:border-blue-500/60 text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all [&_option]:bg-[#0A0F1E]"
+            >
+              <option value="Modern">Modern</option>
+              <option value="Classic">Classic</option>
+              <option value="Playful">Playful</option>
+              <option value="Luxury">Luxury</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-white/70 mb-2">
+            Target Keywords <span className="text-white/30">(optional)</span>
+          </label>
+          <input
+            {...register('target_keywords')}
+            type="text"
+            placeholder="emergency plumber chicago, sewer repair, water heater replacement"
+            className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 focus:border-blue-500/60 text-white placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-white/70 mb-2">
+            Key Phrases <span className="text-white/30">(optional)</span>
+          </label>
+          <input
+            {...register('key_phrases')}
+            type="text"
+            placeholder="same-day service, family-owned, licensed & insured"
+            className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 focus:border-blue-500/60 text-white placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-white/70 mb-2">
+            Inspiration URLs <span className="text-white/30">(optional)</span>
+          </label>
+          <textarea
+            {...register('inspiration_urls')}
+            rows={2}
+            placeholder="Paste 1-3 websites you like, separated by commas"
+            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-blue-500/60 text-white placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-white/70 mb-2">
+            Hero Image Preference <span className="text-white/30">(optional)</span>
+          </label>
+          <select
+            {...register('hero_image_preference')}
+            className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 focus:border-blue-500/60 text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all [&_option]:bg-[#0A0F1E]"
+          >
+            <option value="Generate for me">Generate for me</option>
+            <option value="I will upload photos">I will upload photos</option>
+            <option value="Use quality stock photos">Use quality stock photos</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-white/70 mb-3">
+            Website Functionality <span className="text-white/30">(optional)</span>
+          </label>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {functionalityOptions.map((option) => (
+              <label
+                key={option.key}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-all"
+              >
+                <input
+                  {...register(option.key)}
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-white/20 bg-white/5"
+                />
+                <span className="text-white/70 text-sm">{option.label}</span>
+              </label>
+            ))}
           </div>
         </div>
 

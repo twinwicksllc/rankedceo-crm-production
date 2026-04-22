@@ -148,6 +148,12 @@ export interface OnboardingStep1Data {
   state:           string
   zip:             string
   primary_trade:   string
+  tagline?:        string
+  business_type?:  string
+  phone?:          string
+  services_offered?: string
+  business_hours?: string
+  target_audience?: string
 }
 
 export interface OnboardingStep2Data {
@@ -166,6 +172,21 @@ export interface OnboardingStep4Data {
   calendly_url:        string
   financing_enabled:   boolean
   usp:                 string
+  value_propositions?: string
+  about_narrative?:    string
+  primary_cta?:        string
+  target_keywords?:    string
+  service_area?:       string
+  tone?:               string
+  font_preference?:    string
+  hero_image_preference?: string
+  inspiration_urls?:   string
+  key_phrases?:        string
+  functionality_contact_form?: boolean
+  functionality_booking?:      boolean
+  functionality_gallery?:      boolean
+  functionality_ecommerce?:    boolean
+  functionality_blog?:         boolean
 }
 
 export interface OnboardingFormData {

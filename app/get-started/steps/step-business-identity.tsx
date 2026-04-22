@@ -152,6 +152,78 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
           </select>
           {errors.primary_trade && <p className="mt-1.5 text-xs text-red-400">{errors.primary_trade.message}</p>}
         </div>
+
+        {/* Optional builder intake fields */}
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-white/70 mb-2">
+              Tagline <span className="text-white/30">(optional)</span>
+            </label>
+            <input
+              {...register('tagline')}
+              type="text"
+              placeholder="e.g. Fast, honest service done right"
+              className={inputClass(!!errors.tagline)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-white/70 mb-2">
+              Business Type <span className="text-white/30">(optional)</span>
+            </label>
+            <input
+              {...register('business_type')}
+              type="text"
+              placeholder="e.g. Local service business"
+              className={inputClass(!!errors.business_type)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-white/70 mb-2">
+              Phone Number <span className="text-white/30">(optional)</span>
+            </label>
+            <input
+              {...register('phone')}
+              type="tel"
+              placeholder="(312) 555-1212"
+              className={inputClass(!!errors.phone)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-white/70 mb-2">
+              Business Hours <span className="text-white/30">(optional)</span>
+            </label>
+            <input
+              {...register('business_hours')}
+              type="text"
+              placeholder="Mon-Fri 8AM-6PM, Sat 9AM-2PM"
+              className={inputClass(!!errors.business_hours)}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-white/70 mb-2">
+            Services / Products <span className="text-white/30">(optional)</span>
+          </label>
+          <textarea
+            {...register('services_offered')}
+            rows={3}
+            placeholder="List your top services (comma separated), e.g. Drain cleaning, water heater repair, sewer line replacement"
+            className={inputClass(!!errors.services_offered)}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-white/70 mb-2">
+            Target Audience <span className="text-white/30">(optional)</span>
+          </label>
+          <input
+            {...register('target_audience')}
+            type="text"
+            placeholder="e.g. Homeowners in Chicago metro"
+            className={inputClass(!!errors.target_audience)}
+          />
+        </div>
       </div>
 
       {/* Submit */}

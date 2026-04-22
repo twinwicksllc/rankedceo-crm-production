@@ -58,13 +58,14 @@ export async function saveOnboardingStep1(
       .replace(/^-+|-+$/g, '')
       .substring(0, 50) + '-' + Math.random().toString(36).substring(2, 7)
 
+    const locationLabel = `${data.city}, ${data.state}`
+
     const payload = {
       legal_name:       data.legal_name,
       physical_address: data.physical_address,
-      city:             data.city,
-      state:            data.state,
-      zip:              data.zip,
       primary_trade:    data.primary_trade,
+      target_industry:  data.primary_trade,
+      target_location:  locationLabel,
       source_audit_id:  auditId ?? null,
       submitted_by_email: email ?? null,
       status:           'onboarding',
@@ -72,12 +73,28 @@ export async function saveOnboardingStep1(
       updated_at:       new Date().toISOString(),
       brand_config: {
         business_name: data.legal_name,
+        tagline: data.tagline || null,
         colors: {
           primary:    '#2563EB',
           secondary:  '#1E40AF',
           accent:     '#DBEAFE',
           background: '#FFFFFF',
           text:       '#111827',
+        },
+        contact: {
+          email: email ?? null,
+          phone: data.phone || null,
+          address: data.physical_address,
+          city: data.city,
+          state: data.state,
+          zip: data.zip,
+        },
+        intake_profile: {
+          business_type: data.business_type || null,
+          services_offered: data.services_offered || null,
+          business_hours: data.business_hours || null,
+          target_audience: data.target_audience || null,
+          primary_trade: data.primary_trade,
         },
       },
     }
@@ -212,12 +229,54 @@ export async function saveOnboardingStep4(
   try {
     const supabase = getRawClient()
 
+    const { data: tenant } = await supabase
+      .from('tenants')
+      .select('brand_config')
+      .eq('id', tenantId)
+      .single()
+
+    const existingConfig = (tenant as { brand_config: Record<string, unknown> } | null)?.brand_config ?? {}
+
+    const updatedBrandConfig = {
+      ...existingConfig,
+      tone: data.tone || null,
+      fonts: {
+        ...(typeof existingConfig.fonts === 'object' && existingConfig.fonts ? existingConfig.fonts as Record<string, unknown> : {}),
+        preference: data.font_preference || null,
+      },
+      seo: {
+        target_keywords: data.target_keywords || null,
+        service_area: data.service_area || null,
+        key_phrases: data.key_phrases || null,
+      },
+      content: {
+        usp: data.usp,
+        value_propositions: data.value_propositions || null,
+        about_narrative: data.about_narrative || null,
+        primary_cta: data.primary_cta || null,
+      },
+      assets: {
+        hero_image_preference: data.hero_image_preference || null,
+      },
+      inspiration: {
+        urls: data.inspiration_urls || null,
+      },
+      functionality: {
+        contact_form: data.functionality_contact_form ?? true,
+        booking: data.functionality_booking ?? true,
+        gallery: data.functionality_gallery ?? false,
+        ecommerce: data.functionality_ecommerce ?? false,
+        blog: data.functionality_blog ?? false,
+      },
+    }
+
     const { error } = await supabase
       .from('tenants')
       .update({
         calendly_url:            data.calendly_url || null,
         financing_enabled:       data.financing_enabled,
         usp:                     data.usp || null,
+        brand_config:            updatedBrandConfig,
         package_tier:            packageTier,
         status:                  'pending_review',
         onboarding_step:         5,
