@@ -2,6 +2,11 @@
     "chat.tools.terminal.autoApprove": {
         "mkdir": true,
         "mv": true,
-        "base64": true
+        "base64": true,
+        "git remote": true,
+        "git config": true,
+        "true": true,
+        "git lfs": true,
+        "git ls-remote": true
     }
 }
