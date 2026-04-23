@@ -466,6 +466,7 @@ export interface ClientReviewSession {
   reviewToken: string
   feedback: ClientVariantFeedback
   mix: ClientVariantMix
+  versions: ClientReviewVersion[]
 }
 
 export interface ClientVariantFeedback {
@@ -479,6 +480,14 @@ export interface ClientVariantFeedback {
 export interface ClientVariantMix {
   sourceTemplates: string[]
   submittedAt: string | null
+}
+
+export interface ClientReviewVersion {
+  id: string
+  changeSource: string
+  summary: string | null
+  templateSlug: string | null
+  createdAt: string
 }
 
 export async function getClientReviewSession(reviewKey: string): Promise<ActionResult<ClientReviewSession>> {
@@ -530,6 +539,13 @@ export async function getClientReviewSession(reviewKey: string): Promise<ActionR
       .eq('tenant_id', tenantId)
       .single()
 
+    const { data: versionsRows } = await supabase
+      .from('tenant_site_versions')
+      .select('id, change_source, summary, template_slug, created_at')
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false })
+      .limit(12)
+
     const brandConfig = (tenant as { brand_config?: Record<string, unknown> }).brand_config ?? {}
     const businessName = typeof brandConfig.business_name === 'string'
       ? brandConfig.business_name
@@ -554,6 +570,13 @@ export async function getClientReviewSession(reviewKey: string): Promise<ActionR
           sourceTemplates: (siteConfig as { client_mix_source_templates?: string[] | null } | null)?.client_mix_source_templates ?? [],
           submittedAt: (siteConfig as { client_mix_submitted_at?: string | null } | null)?.client_mix_submitted_at ?? null,
         },
+        versions: ((versionsRows ?? []) as Array<Record<string, unknown>>).map((row) => ({
+          id: String(row.id ?? ''),
+          changeSource: String(row.change_source ?? 'unknown_change'),
+          summary: (row.summary as string | null | undefined) ?? null,
+          templateSlug: (row.template_slug as string | null | undefined) ?? null,
+          createdAt: String(row.created_at ?? new Date().toISOString()),
+        })),
       },
     }
   } catch (err) {

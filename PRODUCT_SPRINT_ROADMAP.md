@@ -29,7 +29,7 @@ Acceptance criteria:
 - Client can open a review URL and compare all three options.
 - Client can choose one and trigger a persisted "selected" state.
 
-## Sprint 3: Iteration and Remix Loop
+## Sprint 3: Iteration and Remix Loop (Completed)
 Goal: support structured feedback and iterative regeneration.
 
 Deliverables:

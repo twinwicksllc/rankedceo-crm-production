@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, useTransition } from 'react'
-import type { ClientVariantFeedback, ClientVariantMix } from '@/lib/waas/actions/admin'
+import type { ClientReviewVersion, ClientVariantFeedback, ClientVariantMix } from '@/lib/waas/actions/admin'
 import { mixClientVariantsByReviewToken, regenerateSelectedVariantByReviewToken, selectClientVariantByReviewToken } from '@/lib/waas/actions/admin'
 
 type Viewport = 'desktop' | 'tablet' | 'mobile'
@@ -26,6 +26,7 @@ export function ReviewClient({
   initialSelectedTemplate,
   initialFeedback,
   initialMix,
+  versions,
 }: {
   tenantId: string
   slug: string
@@ -34,6 +35,7 @@ export function ReviewClient({
   initialSelectedTemplate: string | null
   initialFeedback: ClientVariantFeedback
   initialMix: ClientVariantMix
+  versions: ClientReviewVersion[]
 }) {
   const [viewport, setViewport] = useState<Viewport>('desktop')
   const [selected, setSelected] = useState<string | null>(initialSelectedTemplate)
@@ -267,6 +269,34 @@ export function ReviewClient({
               {isPending ? 'Saving mixed direction…' : 'Save Mixed Direction'}
             </button>
           </div>
+        </section>
+
+        <section className="mb-6 rounded-2xl border border-white/15 bg-white/[0.03] p-4 backdrop-blur sm:p-5">
+          <div className="mb-3">
+            <h2 className="text-lg font-semibold">Iteration Timeline</h2>
+            <p className="mt-1 text-sm text-white/60">
+              Your prior versions are tracked and available to the team for rollback.
+            </p>
+          </div>
+
+          {versions.length === 0 ? (
+            <p className="text-sm text-white/50">No iterations yet. Save a selection or regenerate to create version history.</p>
+          ) : (
+            <div className="space-y-2">
+              {versions.slice(0, 8).map((version) => (
+                <div key={version.id} className="rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2">
+                  <p className="text-sm text-white/85">
+                    {version.templateSlug ? `Template: ${version.templateSlug}` : 'Template snapshot'}
+                  </p>
+                  <p className="text-xs text-white/55">
+                    {version.changeSource.replace(/_/g, ' ')}
+                    {version.summary ? ` • ${version.summary}` : ''}
+                  </p>
+                  <p className="mt-1 text-[11px] text-white/40">{new Date(version.createdAt).toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
