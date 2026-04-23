@@ -37,6 +37,14 @@ export interface AdminTenantListItem extends WaasTenant {
   client_review_token?: string | null
 }
 
+export interface TenantSiteVersion {
+  id: string
+  change_source: string
+  summary: string | null
+  template_slug: string | null
+  created_at: string
+}
+
 // ---------------------------------------------------------------------------
 // Get all pending + active tenants for the dashboard table
 // ---------------------------------------------------------------------------
@@ -101,6 +109,7 @@ export interface TenantDetailData {
   domainRequests: WaasDomainRequest[]
   audit:          Record<string, unknown> | null
   siteConfig:     (TenantSiteConfig & { site_templates?: { slug: string } | null }) | null
+  versions:       TenantSiteVersion[]
 }
 
 export async function getTenantDetail(tenantId: string): Promise<ActionResult<TenantDetailData>> {
@@ -140,6 +149,13 @@ export async function getTenantDetail(tenantId: string): Promise<ActionResult<Te
       .eq('tenant_id', tenantId)
       .single()
 
+    const { data: versionsRows } = await supabase
+      .from('tenant_site_versions')
+      .select('id, change_source, summary, template_slug, created_at')
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false })
+      .limit(10)
+
     return {
       success: true,
       data: {
@@ -147,6 +163,7 @@ export async function getTenantDetail(tenantId: string): Promise<ActionResult<Te
         domainRequests: (domains ?? []) as WaasDomainRequest[],
         audit,
         siteConfig: (siteConfig as (TenantSiteConfig & { site_templates?: { slug: string } | null }) | null) ?? null,
+        versions: (versionsRows ?? []) as TenantSiteVersion[],
       },
     }
   } catch (err) {
@@ -336,6 +353,7 @@ export async function applyTemplate(
 
     revalidatePath(`/admin/dashboard/${tenantId}`)
     revalidatePath('/_sites', 'layout')
+    await saveTenantSiteVersion(tenantId, 'template_applied', `Applied template ${templateSlug}`)
 
     return { success: true }
   } catch (err) {
@@ -346,6 +364,58 @@ export async function applyTemplate(
 
 function generateReviewToken(): string {
   return crypto.randomUUID().replace(/-/g, '')
+}
+
+async function saveTenantSiteVersion(
+  tenantId: string,
+  source: string,
+  summary?: string,
+): Promise<void> {
+  try {
+    const supabase = getAdminClient()
+    const { data: siteConfig } = await supabase
+      .from('tenant_site_config')
+      .select('template_id, active_sections_json, custom_css, meta_title, meta_description, og_image_url, client_selected_template_slug, client_selected_at, client_feedback_tone, client_feedback_cta_intensity, client_feedback_layout_preference, client_feedback_notes, client_feedback_submitted_at, deployment_url, deployed_at, last_preview_at, site_templates(slug)')
+      .eq('tenant_id', tenantId)
+      .single()
+
+    if (!siteConfig) return
+
+    const row = siteConfig as Record<string, unknown>
+    const templateSlug = (row.site_templates as { slug?: string } | null | undefined)?.slug ?? null
+
+    const snapshot = {
+      template_id: row.template_id ?? null,
+      active_sections_json: row.active_sections_json ?? [],
+      custom_css: row.custom_css ?? null,
+      meta_title: row.meta_title ?? null,
+      meta_description: row.meta_description ?? null,
+      og_image_url: row.og_image_url ?? null,
+      client_selected_template_slug: row.client_selected_template_slug ?? null,
+      client_selected_at: row.client_selected_at ?? null,
+      client_feedback_tone: row.client_feedback_tone ?? null,
+      client_feedback_cta_intensity: row.client_feedback_cta_intensity ?? null,
+      client_feedback_layout_preference: row.client_feedback_layout_preference ?? null,
+      client_feedback_notes: row.client_feedback_notes ?? null,
+      client_feedback_submitted_at: row.client_feedback_submitted_at ?? null,
+      deployment_url: row.deployment_url ?? null,
+      deployed_at: row.deployed_at ?? null,
+      last_preview_at: row.last_preview_at ?? null,
+    }
+
+    await supabase
+      .from('tenant_site_versions')
+      .insert({
+        tenant_id: tenantId,
+        change_source: source,
+        summary: summary ?? null,
+        template_slug: templateSlug,
+        snapshot_json: snapshot,
+        created_at: new Date().toISOString(),
+      })
+  } catch {
+    // Backward-safe: if migration not applied, skip version write.
+  }
 }
 
 export async function ensureClientReviewToken(tenantId: string): Promise<ActionResult<string>> {
@@ -537,8 +607,87 @@ export async function selectClientVariantByReviewToken(
       return { success: true }
     }
 
+    await saveTenantSiteVersion(
+      tenantId,
+      'client_selected_variant',
+      `Client selected ${templateSlug} with feedback preferences`,
+    )
+
     revalidatePath(`/admin/dashboard/${tenantId}`)
     revalidatePath(`/review/${reviewToken}`)
+    return { success: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
+export async function rollbackTenantSiteVersion(
+  tenantId: string,
+  versionId: string,
+): Promise<ActionResult<void>> {
+  try {
+    const supabase = getAdminClient()
+    const { data: versionRow, error: versionError } = await supabase
+      .from('tenant_site_versions')
+      .select('snapshot_json, template_slug')
+      .eq('id', versionId)
+      .eq('tenant_id', tenantId)
+      .single()
+
+    if (versionError || !versionRow) {
+      return { success: false, error: versionError?.message ?? 'Version snapshot not found' }
+    }
+
+    const row = versionRow as { snapshot_json?: Record<string, unknown> | null; template_slug?: string | null }
+    const snapshot = row.snapshot_json ?? {}
+
+    let templateId = (snapshot.template_id as string | null | undefined) ?? null
+    if (!templateId && row.template_slug) {
+      const { data: template } = await supabase
+        .from('site_templates')
+        .select('id')
+        .eq('slug', row.template_slug)
+        .single()
+      templateId = (template as { id?: string } | null)?.id ?? null
+    }
+
+    const payload: Record<string, unknown> = {
+      template_id: templateId,
+      active_sections_json: snapshot.active_sections_json ?? [],
+      custom_css: snapshot.custom_css ?? null,
+      meta_title: snapshot.meta_title ?? null,
+      meta_description: snapshot.meta_description ?? null,
+      og_image_url: snapshot.og_image_url ?? null,
+      client_selected_template_slug: snapshot.client_selected_template_slug ?? null,
+      client_selected_at: snapshot.client_selected_at ?? null,
+      client_feedback_tone: snapshot.client_feedback_tone ?? null,
+      client_feedback_cta_intensity: snapshot.client_feedback_cta_intensity ?? null,
+      client_feedback_layout_preference: snapshot.client_feedback_layout_preference ?? null,
+      client_feedback_notes: snapshot.client_feedback_notes ?? null,
+      client_feedback_submitted_at: snapshot.client_feedback_submitted_at ?? null,
+      deployment_url: snapshot.deployment_url ?? null,
+      deployed_at: snapshot.deployed_at ?? null,
+      last_preview_at: snapshot.last_preview_at ?? null,
+      updated_at: new Date().toISOString(),
+    }
+
+    const { error: updateError } = await supabase
+      .from('tenant_site_config')
+      .update(payload)
+      .eq('tenant_id', tenantId)
+
+    if (updateError) {
+      return { success: false, error: updateError.message }
+    }
+
+    await saveTenantSiteVersion(tenantId, 'rollback_applied', 'Rolled back to a previous site configuration version')
+
+    revalidatePath('/admin/dashboard')
+    revalidatePath(`/admin/dashboard/${tenantId}`)
+    revalidatePath('/_sites', 'layout')
+    revalidatePath(`/_preview/${tenantId}`)
+
     return { success: true }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error'

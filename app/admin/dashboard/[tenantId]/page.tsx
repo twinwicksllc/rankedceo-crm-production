@@ -11,6 +11,7 @@ import { ensureClientReviewToken, getTenantDetail } from '@/lib/waas/actions/adm
 import { DeploySiteButton }    from './deploy-site-button'
 import { DomainStatusManager } from './domain-status-manager'
 import { PreviewTab }          from './preview-tab'
+import { VersionRollbackButton } from './version-rollback-button'
 import type { WaasDomainRequest } from '@/lib/waas/types'
 
 interface PageProps {
@@ -22,7 +23,7 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
   const result = await getTenantDetail(params.tenantId)
   if (!result.success || !result.data) notFound()
 
-  const { tenant, domainRequests, audit } = result.data
+  const { tenant, domainRequests, audit, versions } = result.data
   const siteConfig = result.data.siteConfig
   const brand   = tenant.brand_config
   const colors  = brand?.colors
@@ -251,6 +252,33 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
                 ) : (
                   <p className="text-white/50 text-xs">Waiting for client selection.</p>
                 )}
+
+                <div className="mt-5 border-t border-white/10 pt-4">
+                  <p className="text-white/50 text-[11px] uppercase tracking-wide mb-3">Recent Version History</p>
+                  {versions.length === 0 ? (
+                    <p className="text-white/40 text-xs">No snapshots yet. They will appear as templates and feedback change.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {versions.map((version) => (
+                        <div key={version.id} className="flex items-start justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                          <div>
+                            <p className="text-white/80 text-xs font-medium">
+                              {version.template_slug ? `Template: ${version.template_slug}` : 'Template snapshot'}
+                            </p>
+                            <p className="text-white/45 text-[11px]">
+                              {version.change_source.replace(/_/g, ' ')}
+                              {version.summary ? ` • ${version.summary}` : ''}
+                            </p>
+                            <p className="text-white/35 text-[10px] mt-0.5">
+                              {new Date(version.created_at).toLocaleString()}
+                            </p>
+                          </div>
+                          <VersionRollbackButton tenantId={tenant.id} versionId={version.id} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
