@@ -8,6 +8,7 @@ import type { Metadata } from 'next'
 import { AuditReportClient } from './client'
 import { createWaasClient } from '@/lib/waas/supabase'
 import type { WaasAuditRow as WaasAudit } from '@/lib/waas/supabase'
+import { extractAuditIdFromRouteParam } from '@/lib/waas/utils/audit-report-url'
 
 // ---------------------------------------------------------------------------
 // Metadata
@@ -28,11 +29,11 @@ interface PageProps {
 }
 
 export default async function AuditReportPage({ params }: PageProps) {
-  const { auditId } = params
+  const { auditId: rawAuditParam } = params
+  const auditId = extractAuditIdFromRouteParam(rawAuditParam)
 
-  // Basic UUID validation — prevent unnecessary DB round trips
-  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-  if (!UUID_RE.test(auditId)) {
+  // Backward-compatible: accepts UUID only or slug-UUID path segment.
+  if (!auditId) {
     notFound()
   }
 

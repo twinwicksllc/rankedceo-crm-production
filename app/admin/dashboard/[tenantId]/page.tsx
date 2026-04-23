@@ -1,3 +1,4 @@
+import { buildAuditReportPath } from '@/lib/waas/utils/audit-report-url'
 // =============================================================================
 // AdvantagePoint — Tenant Detail View (Server Component)
 // Brand Sheet, Audit Results, Domain Requests, Deploy Site, Live Preview
@@ -202,7 +203,11 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
                 <h2 className="text-white font-semibold text-sm">Original Audit</h2>
                 {audit && (
                   <Link
-                    href={`/audit/${(audit as { id: string }).id}`}
+                    href={buildAuditReportPath((audit as { id: string }).id, {
+                      requestorCompany: (audit as { requestor_company?: string | null }).requestor_company ?? null,
+                      requestorName: (audit as { requestor_name?: string | null }).requestor_name ?? null,
+                      targetUrl: (audit as { target_url?: string | null }).target_url ?? null,
+                    })}
                     className="text-blue-400 hover:text-blue-300 text-xs font-medium transition-colors"
                     target="_blank"
                   >

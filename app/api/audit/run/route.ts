@@ -11,6 +11,7 @@ import type { WaasAuditInsert, WaasAuditUpdate } from '@/lib/waas/supabase'
 import type { AuditSeoProvider } from '@/lib/waas/types'
 import { runFullAudit } from '@/lib/waas/services/audit-engine'
 import { extractDomain } from '@/lib/waas/services/serper'
+import { buildAuditReportPath } from '@/lib/waas/utils/audit-report-url'
 
 const AUDIT_EXPIRY_DAYS = 30
 
@@ -155,7 +156,11 @@ export async function POST(req: NextRequest) {
       status:            engineResult.manualReview ? 'failed' : 'completed',
       manual_review:     engineResult.manualReview,
       elapsed_ms:        elapsed,
-      report_url:        `/audit/${auditId}`,
+      report_url:        buildAuditReportPath(auditId, {
+        requestorCompany: requestor_company ? String(requestor_company) : null,
+        requestorName: requestor_name ? String(requestor_name) : null,
+        targetUrl: normalizedTarget,
+      }),
       poll_url:          `/api/waas/audits/${auditId}/status`,
       summary: {
         overall_score:   engineResult.reportData.summary?.overall_score ?? 0,
