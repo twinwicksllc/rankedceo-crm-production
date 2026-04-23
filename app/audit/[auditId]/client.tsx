@@ -547,7 +547,6 @@ function HeroSection({
                 borderRadius: 20,
                 fontSize:     '0.72rem',
                 fontWeight:   600,
-                <em style={{ color: isLight ? 'rgba(15,23,42,0.8)' : 'rgba(255,255,255,0.7)' }}>
                 display:      'flex',
                 alignItems:   'center',
                 gap:          5,
