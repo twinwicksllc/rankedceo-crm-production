@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react'
 import type { ClientVariantFeedback, ClientVariantMix } from '@/lib/waas/actions/admin'
-import { mixClientVariantsByReviewToken, selectClientVariantByReviewToken } from '@/lib/waas/actions/admin'
+import { mixClientVariantsByReviewToken, regenerateSelectedVariantByReviewToken, selectClientVariantByReviewToken } from '@/lib/waas/actions/admin'
 
 type Viewport = 'desktop' | 'tablet' | 'mobile'
 
@@ -98,6 +98,19 @@ export function ReviewClient({
         ? `Saved mixed direction with ${mixPrimary} as primary and influences from ${mixSourceTemplates.join(', ')}.`
         : `Saved mixed direction with ${mixPrimary} as primary.`
       setMessage(summary)
+    })
+  }
+
+  const handleRegenerate = () => {
+    setMessage(null)
+    startTransition(async () => {
+      const templateSlug = selected ?? mixPrimary
+      const result = await regenerateSelectedVariantByReviewToken(reviewToken, templateSlug)
+      if (!result.success) {
+        setMessage(result.error ?? 'Failed to regenerate your selected direction. Please try again.')
+        return
+      }
+      setMessage(`Regenerated ${templateSlug} using your saved feedback and preferences.`)
     })
   }
 
@@ -305,6 +318,19 @@ export function ReviewClient({
         <div className="mt-8 text-center text-xs text-white/45">
           After selection, our team will finalize content polish and deploy your chosen direction.
           <div className="mt-1">Live path: /_sites/{slug}</div>
+          <div className="mt-4">
+            <button
+              onClick={handleRegenerate}
+              disabled={isPending}
+              className={`rounded-xl px-4 py-2 text-xs font-semibold transition-all ${
+                isPending
+                  ? 'cursor-not-allowed bg-white/10 text-white/40'
+                  : 'bg-amber-500 text-slate-950 hover:bg-amber-400'
+              }`}
+            >
+              {isPending ? 'Regenerating…' : 'Regenerate Selected Direction'}
+            </button>
+          </div>
         </div>
       </div>
     </main>

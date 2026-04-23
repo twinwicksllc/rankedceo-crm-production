@@ -8,9 +8,9 @@
 import { createClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import type { WaasTenant, WaasDomainRequest } from '@/lib/waas/types'
-import { ALL_TEMPLATES } from '@/lib/waas/templates/registry'
+import { ALL_TEMPLATES, getTemplate } from '@/lib/waas/templates/registry'
 import { recommendTemplates, type TemplateRecommendation } from '@/lib/waas/services/template-recommender'
-import type { TenantSiteConfig } from '@/lib/waas/templates/types'
+import type { TenantSiteConfig, SectionConfig, SectionId } from '@/lib/waas/templates/types'
 
 // ---------------------------------------------------------------------------
 // Raw service-role client
@@ -702,6 +702,173 @@ export async function mixClientVariantsByReviewToken(
 
     revalidatePath(`/admin/dashboard/${tenantId}`)
     revalidatePath(`/review/${reviewToken}`)
+    return { success: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
+function setSectionConfig(
+  sections: SectionConfig[],
+  sectionId: SectionId,
+  changes: Partial<SectionConfig>,
+): SectionConfig[] {
+  return sections.map((section) => {
+    if (section.section !== sectionId) return section
+    return {
+      ...section,
+      ...changes,
+      config: {
+        ...section.config,
+        ...(changes.config ?? {}),
+      },
+    }
+  })
+}
+
+function normalizeSectionOrder(sections: SectionConfig[]): SectionConfig[] {
+  return [...sections]
+    .sort((a, b) => a.order - b.order)
+    .map((section, index) => ({ ...section, order: index + 1 }))
+}
+
+export async function regenerateSelectedVariantByReviewToken(
+  reviewToken: string,
+  preferredTemplateSlug?: string,
+): Promise<ActionResult<void>> {
+  try {
+    const supabase = getAdminClient()
+
+    let tenantId: string | null = null
+    const { data: byToken } = await supabase
+      .from('tenant_site_config')
+      .select('tenant_id')
+      .eq('client_review_token', reviewToken)
+      .single()
+
+    if (byToken) {
+      tenantId = (byToken as { tenant_id: string }).tenant_id
+    } else {
+      tenantId = reviewToken
+    }
+
+    const { data: siteConfig } = await supabase
+      .from('tenant_site_config')
+      .select('template_id, client_selected_template_slug, client_feedback_tone, client_feedback_cta_intensity, client_feedback_layout_preference, client_mix_source_templates, site_templates(slug)')
+      .eq('tenant_id', tenantId)
+      .single()
+
+    const row = (siteConfig ?? {}) as Record<string, unknown>
+    const linkedTemplateSlug = (row.site_templates as { slug?: string } | null | undefined)?.slug ?? null
+    const selectedTemplateSlug = (row.client_selected_template_slug as string | null | undefined) ?? null
+    const baseTemplateSlug = preferredTemplateSlug?.trim() || selectedTemplateSlug || linkedTemplateSlug || 'modern'
+
+    const tone = (row.client_feedback_tone as string | null | undefined) ?? null
+    const ctaIntensity = (row.client_feedback_cta_intensity as string | null | undefined) ?? null
+    const layoutPreference = (row.client_feedback_layout_preference as string | null | undefined) ?? null
+    const mixSourceTemplates = (row.client_mix_source_templates as string[] | null | undefined) ?? []
+
+    let regeneratedSections = getTemplate(baseTemplateSlug).default_layout_json.map((section) => ({
+      ...section,
+      config: { ...section.config },
+    }))
+
+    // Tone adjustments
+    if (tone === 'professional' || tone === 'premium') {
+      regeneratedSections = setSectionConfig(regeneratedSections, 'trust', {
+        enabled: true,
+        config: { variant: 'full-width' },
+      })
+    }
+    if (tone === 'friendly') {
+      regeneratedSections = setSectionConfig(regeneratedSections, 'hero', {
+        config: { variant: 'centered' },
+      })
+    }
+    if (tone === 'direct') {
+      regeneratedSections = setSectionConfig(regeneratedSections, 'hero', {
+        config: { variant: 'split' },
+      })
+    }
+
+    // CTA intensity adjustments
+    if (ctaIntensity === 'soft') {
+      regeneratedSections = setSectionConfig(regeneratedSections, 'booking', {
+        config: { variant: 'inline' },
+      })
+      regeneratedSections = setSectionConfig(regeneratedSections, 'financing', {
+        enabled: false,
+      })
+    }
+    if (ctaIntensity === 'strong') {
+      regeneratedSections = setSectionConfig(regeneratedSections, 'booking', {
+        config: { variant: 'modal-trigger' },
+      })
+      regeneratedSections = setSectionConfig(regeneratedSections, 'financing', {
+        enabled: true,
+      })
+    }
+
+    // Layout preference adjustments
+    if (layoutPreference === 'compact') {
+      regeneratedSections = setSectionConfig(regeneratedSections, 'services', {
+        config: { columns: 2 },
+      })
+    }
+    if (layoutPreference === 'spacious') {
+      regeneratedSections = setSectionConfig(regeneratedSections, 'services', {
+        config: { columns: 3 },
+      })
+    }
+
+    // Mix influence adjustments
+    if (mixSourceTemplates.includes('bold')) {
+      regeneratedSections = setSectionConfig(regeneratedSections, 'hero', {
+        config: { variant: 'split' },
+      })
+      regeneratedSections = setSectionConfig(regeneratedSections, 'financing', {
+        enabled: true,
+      })
+    }
+    if (mixSourceTemplates.includes('trust-first')) {
+      regeneratedSections = setSectionConfig(regeneratedSections, 'reviews', {
+        enabled: true,
+        order: 2,
+      })
+    }
+    if (mixSourceTemplates.includes('modern')) {
+      regeneratedSections = setSectionConfig(regeneratedSections, 'hero', {
+        config: { variant: 'centered' },
+      })
+    }
+
+    regeneratedSections = normalizeSectionOrder(regeneratedSections)
+
+    const { error: updateError } = await supabase
+      .from('tenant_site_config')
+      .update({
+        active_sections_json: regeneratedSections,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('tenant_id', tenantId)
+
+    if (updateError) {
+      return { success: false, error: updateError.message }
+    }
+
+    await saveTenantSiteVersion(
+      tenantId,
+      'client_regenerated_variant',
+      `Regenerated ${baseTemplateSlug} using saved feedback${mixSourceTemplates.length ? ` and mix (${mixSourceTemplates.join(', ')})` : ''}`,
+    )
+
+    revalidatePath('/admin/dashboard')
+    revalidatePath(`/admin/dashboard/${tenantId}`)
+    revalidatePath(`/review/${reviewToken}`)
+    revalidatePath('/_sites', 'layout')
+    revalidatePath(`/_preview/${tenantId}`)
+
     return { success: true }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error'
