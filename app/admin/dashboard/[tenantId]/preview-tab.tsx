@@ -98,6 +98,21 @@ export function PreviewTab({ tenantId, slug, currentTheme }: PreviewTabProps) {
           Choose a template layout. Click &ldquo;Apply Theme&rdquo; to update the live site.
         </p>
 
+        <div className="mb-5 flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-cyan-300/85">Client Review</p>
+            <p className="text-xs text-white/50">Share the comparison page so clients can choose their preferred direction.</p>
+          </div>
+          <a
+            href={`/review/${tenantId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-lg border border-cyan-400/40 bg-cyan-500/20 px-3 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/30 transition-all"
+          >
+            Open Review Page ↗
+          </a>
+        </div>
+
         <div className="mb-6 rounded-xl border border-indigo-500/25 bg-indigo-500/8 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
             <div>

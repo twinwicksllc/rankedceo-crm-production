@@ -1,6 +1,6 @@
 # RankedCEO Next Product Sprint Roadmap
 
-## Sprint 1: AI Variant Direction (In Progress)
+## Sprint 1: AI Variant Direction (Completed)
 Goal: move from manual theme toggles to AI-guided variant recommendations using onboarding data.
 
 Deliverables:
@@ -13,7 +13,7 @@ Acceptance criteria:
 - Each recommendation includes: template slug, short label, rationale, confidence, and section highlights.
 - Recommending works with and without GEMINI_API_KEY (fallback logic).
 
-## Sprint 2: Client Comparison Experience
+## Sprint 2: Client Comparison Experience (In Progress)
 Goal: provide a client-facing A/B/C selection experience (not admin-only).
 
 Deliverables:
