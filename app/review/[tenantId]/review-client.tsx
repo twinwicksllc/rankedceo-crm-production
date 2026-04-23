@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState, useTransition } from 'react'
+import type { ClientVariantFeedback } from '@/lib/waas/actions/admin'
 import { selectClientVariantByReviewToken } from '@/lib/waas/actions/admin'
 
 type Viewport = 'desktop' | 'tablet' | 'mobile'
@@ -23,16 +24,22 @@ export function ReviewClient({
   businessName,
   reviewToken,
   initialSelectedTemplate,
+  initialFeedback,
 }: {
   tenantId: string
   slug: string
   businessName: string
   reviewToken: string
   initialSelectedTemplate: string | null
+  initialFeedback: ClientVariantFeedback
 }) {
   const [viewport, setViewport] = useState<Viewport>('desktop')
   const [selected, setSelected] = useState<string | null>(initialSelectedTemplate)
   const [message, setMessage] = useState<string | null>(null)
+  const [feedbackTone, setFeedbackTone] = useState<string>(initialFeedback.tone ?? '')
+  const [feedbackCtaIntensity, setFeedbackCtaIntensity] = useState<string>(initialFeedback.ctaIntensity ?? '')
+  const [feedbackLayoutPreference, setFeedbackLayoutPreference] = useState<string>(initialFeedback.layoutPreference ?? '')
+  const [feedbackNotes, setFeedbackNotes] = useState<string>(initialFeedback.notes ?? '')
   const [isPending, startTransition] = useTransition()
 
   const previewBase = useMemo(() => `/_preview/${tenantId}`, [tenantId])
@@ -40,13 +47,18 @@ export function ReviewClient({
   const handleSelect = (templateSlug: string) => {
     setMessage(null)
     startTransition(async () => {
-      const result = await selectClientVariantByReviewToken(reviewToken, templateSlug)
+      const result = await selectClientVariantByReviewToken(reviewToken, templateSlug, {
+        tone: feedbackTone || null,
+        ctaIntensity: feedbackCtaIntensity || null,
+        layoutPreference: feedbackLayoutPreference || null,
+        notes: feedbackNotes || null,
+      })
       if (!result.success) {
         setMessage(result.error ?? 'Failed to select this option. Please try again.')
         return
       }
       setSelected(templateSlug)
-      setMessage(`Selected ${templateSlug} as the active direction. Our team has been notified for final deployment prep.`)
+      setMessage(`Selected ${templateSlug} and saved your feedback. Our team has been notified for final deployment prep.`)
     })
   }
 
@@ -84,6 +96,73 @@ export function ReviewClient({
             {message}
           </div>
         )}
+
+        <section className="mb-6 rounded-2xl border border-white/15 bg-white/[0.03] p-4 backdrop-blur sm:p-5">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Tell us how to refine your chosen direction</h2>
+            <p className="mt-1 text-sm text-white/60">
+              Optional, but helpful. We save this feedback when you select a variant.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <label className="text-sm">
+              <div className="mb-2 text-white/70">Tone</div>
+              <select
+                value={feedbackTone}
+                onChange={(e) => setFeedbackTone(e.target.value)}
+                className="w-full rounded-xl border border-white/15 bg-slate-900/80 px-3 py-2 text-white outline-none transition focus:border-cyan-400"
+              >
+                <option value="">No preference</option>
+                <option value="professional">More professional</option>
+                <option value="friendly">More friendly</option>
+                <option value="premium">More premium</option>
+                <option value="direct">More direct</option>
+              </select>
+            </label>
+
+            <label className="text-sm">
+              <div className="mb-2 text-white/70">CTA intensity</div>
+              <select
+                value={feedbackCtaIntensity}
+                onChange={(e) => setFeedbackCtaIntensity(e.target.value)}
+                className="w-full rounded-xl border border-white/15 bg-slate-900/80 px-3 py-2 text-white outline-none transition focus:border-cyan-400"
+              >
+                <option value="">No preference</option>
+                <option value="soft">Softer</option>
+                <option value="balanced">Balanced</option>
+                <option value="strong">Stronger</option>
+              </select>
+            </label>
+
+            <label className="text-sm">
+              <div className="mb-2 text-white/70">Layout preference</div>
+              <select
+                value={feedbackLayoutPreference}
+                onChange={(e) => setFeedbackLayoutPreference(e.target.value)}
+                className="w-full rounded-xl border border-white/15 bg-slate-900/80 px-3 py-2 text-white outline-none transition focus:border-cyan-400"
+              >
+                <option value="">No preference</option>
+                <option value="compact">More compact</option>
+                <option value="balanced">Balanced spacing</option>
+                <option value="spacious">More spacious</option>
+              </select>
+            </label>
+          </div>
+
+          <label className="mt-4 block text-sm">
+            <div className="mb-2 text-white/70">Notes</div>
+            <textarea
+              value={feedbackNotes}
+              onChange={(e) => setFeedbackNotes(e.target.value)}
+              maxLength={3000}
+              rows={4}
+              placeholder="Anything you want us to change before launch..."
+              className="w-full rounded-xl border border-white/15 bg-slate-900/80 px-3 py-2 text-white outline-none transition placeholder:text-white/35 focus:border-cyan-400"
+            />
+            <div className="mt-1 text-right text-xs text-white/45">{feedbackNotes.length}/3000</div>
+          </label>
+        </section>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           {VARIANTS.map((variant) => {

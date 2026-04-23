@@ -59,6 +59,11 @@ export interface TenantSiteConfig {
   client_review_token:  string | null
   client_selected_template_slug: string | null
   client_selected_at:   string | null
+  client_feedback_tone: string | null
+  client_feedback_cta_intensity: string | null
+  client_feedback_layout_preference: string | null
+  client_feedback_notes: string | null
+  client_feedback_submitted_at: string | null
   deployment_url:       string | null
   deployed_at:          string | null
   last_preview_at:      string | null

@@ -15,6 +15,7 @@ export default async function ReviewPage({ params }: { params: { tenantId: strin
       businessName={session.businessName}
       reviewToken={session.reviewToken}
       initialSelectedTemplate={session.selectedTemplateSlug}
+      initialFeedback={session.feedback}
     />
   )
 }

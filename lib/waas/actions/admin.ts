@@ -392,6 +392,15 @@ export interface ClientReviewSession {
   businessName: string
   selectedTemplateSlug: string | null
   reviewToken: string
+  feedback: ClientVariantFeedback
+}
+
+export interface ClientVariantFeedback {
+  tone: string | null
+  ctaIntensity: string | null
+  layoutPreference: string | null
+  notes: string | null
+  submittedAt: string | null
 }
 
 export async function getClientReviewSession(reviewKey: string): Promise<ActionResult<ClientReviewSession>> {
@@ -439,7 +448,7 @@ export async function getClientReviewSession(reviewKey: string): Promise<ActionR
 
     const { data: siteConfig } = await supabase
       .from('tenant_site_config')
-      .select('client_selected_template_slug')
+      .select('client_selected_template_slug, client_feedback_tone, client_feedback_cta_intensity, client_feedback_layout_preference, client_feedback_notes, client_feedback_submitted_at')
       .eq('tenant_id', tenantId)
       .single()
 
@@ -456,6 +465,13 @@ export async function getClientReviewSession(reviewKey: string): Promise<ActionR
         businessName,
         selectedTemplateSlug: (siteConfig as { client_selected_template_slug?: string | null } | null)?.client_selected_template_slug ?? null,
         reviewToken: safeToken,
+        feedback: {
+          tone: (siteConfig as { client_feedback_tone?: string | null } | null)?.client_feedback_tone ?? null,
+          ctaIntensity: (siteConfig as { client_feedback_cta_intensity?: string | null } | null)?.client_feedback_cta_intensity ?? null,
+          layoutPreference: (siteConfig as { client_feedback_layout_preference?: string | null } | null)?.client_feedback_layout_preference ?? null,
+          notes: (siteConfig as { client_feedback_notes?: string | null } | null)?.client_feedback_notes ?? null,
+          submittedAt: (siteConfig as { client_feedback_submitted_at?: string | null } | null)?.client_feedback_submitted_at ?? null,
+        },
       },
     }
   } catch (err) {
@@ -469,6 +485,12 @@ export async function getClientReviewSession(reviewKey: string): Promise<ActionR
 export async function selectClientVariantByReviewToken(
   reviewToken: string,
   templateSlug: string,
+  feedback?: {
+    tone?: string | null
+    ctaIntensity?: string | null
+    layoutPreference?: string | null
+    notes?: string | null
+  }
 ): Promise<ActionResult<void>> {
   try {
     const supabase = getAdminClient()
@@ -495,6 +517,11 @@ export async function selectClientVariantByReviewToken(
     const metadataUpdate: Record<string, unknown> = {
       client_selected_template_slug: templateSlug,
       client_selected_at: new Date().toISOString(),
+      client_feedback_tone: feedback?.tone ?? null,
+      client_feedback_cta_intensity: feedback?.ctaIntensity ?? null,
+      client_feedback_layout_preference: feedback?.layoutPreference ?? null,
+      client_feedback_notes: feedback?.notes?.trim() ? feedback.notes.trim().slice(0, 3000) : null,
+      client_feedback_submitted_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
 
