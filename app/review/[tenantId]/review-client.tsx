@@ -1,8 +1,8 @@
 'use client'
 
 import { useMemo, useState, useTransition } from 'react'
-import type { ClientVariantFeedback } from '@/lib/waas/actions/admin'
-import { selectClientVariantByReviewToken } from '@/lib/waas/actions/admin'
+import type { ClientVariantFeedback, ClientVariantMix } from '@/lib/waas/actions/admin'
+import { mixClientVariantsByReviewToken, selectClientVariantByReviewToken } from '@/lib/waas/actions/admin'
 
 type Viewport = 'desktop' | 'tablet' | 'mobile'
 
@@ -25,6 +25,7 @@ export function ReviewClient({
   reviewToken,
   initialSelectedTemplate,
   initialFeedback,
+  initialMix,
 }: {
   tenantId: string
   slug: string
@@ -32,6 +33,7 @@ export function ReviewClient({
   reviewToken: string
   initialSelectedTemplate: string | null
   initialFeedback: ClientVariantFeedback
+  initialMix: ClientVariantMix
 }) {
   const [viewport, setViewport] = useState<Viewport>('desktop')
   const [selected, setSelected] = useState<string | null>(initialSelectedTemplate)
@@ -40,6 +42,8 @@ export function ReviewClient({
   const [feedbackCtaIntensity, setFeedbackCtaIntensity] = useState<string>(initialFeedback.ctaIntensity ?? '')
   const [feedbackLayoutPreference, setFeedbackLayoutPreference] = useState<string>(initialFeedback.layoutPreference ?? '')
   const [feedbackNotes, setFeedbackNotes] = useState<string>(initialFeedback.notes ?? '')
+  const [mixPrimary, setMixPrimary] = useState<string>(initialSelectedTemplate ?? 'modern')
+  const [mixSourceTemplates, setMixSourceTemplates] = useState<string[]>(initialMix.sourceTemplates ?? [])
   const [isPending, startTransition] = useTransition()
 
   const previewBase = useMemo(() => `/_preview/${tenantId}`, [tenantId])
@@ -59,6 +63,41 @@ export function ReviewClient({
       }
       setSelected(templateSlug)
       setMessage(`Selected ${templateSlug} and saved your feedback. Our team has been notified for final deployment prep.`)
+    })
+  }
+
+  const toggleMixTemplate = (slug: string) => {
+    setMixSourceTemplates((prev) => {
+      if (prev.includes(slug)) return prev.filter(item => item !== slug)
+      return [...prev, slug]
+    })
+  }
+
+  const handleSaveMixedDirection = () => {
+    setMessage(null)
+    startTransition(async () => {
+      const result = await mixClientVariantsByReviewToken(
+        reviewToken,
+        mixPrimary,
+        mixSourceTemplates,
+        {
+          tone: feedbackTone || null,
+          ctaIntensity: feedbackCtaIntensity || null,
+          layoutPreference: feedbackLayoutPreference || null,
+          notes: feedbackNotes || null,
+        },
+      )
+
+      if (!result.success) {
+        setMessage(result.error ?? 'Failed to save mixed direction. Please try again.')
+        return
+      }
+
+      setSelected(mixPrimary)
+      const summary = mixSourceTemplates.length
+        ? `Saved mixed direction with ${mixPrimary} as primary and influences from ${mixSourceTemplates.join(', ')}.`
+        : `Saved mixed direction with ${mixPrimary} as primary.`
+      setMessage(summary)
     })
   }
 
@@ -162,6 +201,59 @@ export function ReviewClient({
             />
             <div className="mt-1 text-right text-xs text-white/45">{feedbackNotes.length}/3000</div>
           </label>
+
+          <div className="mt-5 border-t border-white/10 pt-4">
+            <h3 className="text-sm font-semibold text-white/90">Mix From A/B/C</h3>
+            <p className="mt-1 text-xs text-white/55">
+              Pick a primary direction and optionally blend signals from the others.
+            </p>
+
+            <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <label className="text-sm">
+                <div className="mb-2 text-white/70">Primary direction</div>
+                <select
+                  value={mixPrimary}
+                  onChange={(e) => setMixPrimary(e.target.value)}
+                  className="w-full rounded-xl border border-white/15 bg-slate-900/80 px-3 py-2 text-white outline-none transition focus:border-cyan-400"
+                >
+                  {VARIANTS.map((variant) => (
+                    <option key={variant.slug} value={variant.slug}>{variant.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="text-sm">
+                <div className="mb-2 text-white/70">Influence from</div>
+                <div className="flex flex-wrap gap-2">
+                  {VARIANTS.map((variant) => (
+                    <button
+                      key={variant.slug}
+                      type="button"
+                      onClick={() => toggleMixTemplate(variant.slug)}
+                      className={`rounded-full border px-3 py-1 text-xs font-medium transition ${mixSourceTemplates.includes(variant.slug)
+                        ? 'border-cyan-300/60 bg-cyan-400/20 text-cyan-100'
+                        : 'border-white/15 bg-white/5 text-white/65 hover:bg-white/10'
+                      }`}
+                    >
+                      {variant.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={handleSaveMixedDirection}
+              disabled={isPending}
+              className={`mt-4 rounded-xl px-4 py-2 text-sm font-semibold transition-all ${
+                isPending
+                  ? 'cursor-not-allowed bg-white/10 text-white/40'
+                  : 'bg-violet-500 text-white hover:bg-violet-400'
+              }`}
+            >
+              {isPending ? 'Saving mixed direction…' : 'Save Mixed Direction'}
+            </button>
+          </div>
         </section>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">

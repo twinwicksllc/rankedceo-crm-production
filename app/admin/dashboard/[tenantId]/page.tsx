@@ -248,6 +248,12 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
                       Template: {siteConfig.client_selected_template_slug}
                       {siteConfig.client_selected_at ? ` • ${new Date(siteConfig.client_selected_at).toLocaleString()}` : ''}
                     </p>
+                    {Array.isArray(siteConfig.client_mix_source_templates) && siteConfig.client_mix_source_templates.length > 0 && (
+                      <p className="text-violet-200/90 text-xs">
+                        Mixed with: {siteConfig.client_mix_source_templates.join(', ')}
+                        {siteConfig.client_mix_submitted_at ? ` • ${new Date(siteConfig.client_mix_submitted_at).toLocaleString()}` : ''}
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <p className="text-white/50 text-xs">Waiting for client selection.</p>

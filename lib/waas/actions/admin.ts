@@ -375,7 +375,7 @@ async function saveTenantSiteVersion(
     const supabase = getAdminClient()
     const { data: siteConfig } = await supabase
       .from('tenant_site_config')
-      .select('template_id, active_sections_json, custom_css, meta_title, meta_description, og_image_url, client_selected_template_slug, client_selected_at, client_feedback_tone, client_feedback_cta_intensity, client_feedback_layout_preference, client_feedback_notes, client_feedback_submitted_at, deployment_url, deployed_at, last_preview_at, site_templates(slug)')
+      .select('template_id, active_sections_json, custom_css, meta_title, meta_description, og_image_url, client_selected_template_slug, client_selected_at, client_feedback_tone, client_feedback_cta_intensity, client_feedback_layout_preference, client_feedback_notes, client_feedback_submitted_at, client_mix_source_templates, client_mix_submitted_at, deployment_url, deployed_at, last_preview_at, site_templates(slug)')
       .eq('tenant_id', tenantId)
       .single()
 
@@ -398,6 +398,8 @@ async function saveTenantSiteVersion(
       client_feedback_layout_preference: row.client_feedback_layout_preference ?? null,
       client_feedback_notes: row.client_feedback_notes ?? null,
       client_feedback_submitted_at: row.client_feedback_submitted_at ?? null,
+      client_mix_source_templates: row.client_mix_source_templates ?? [],
+      client_mix_submitted_at: row.client_mix_submitted_at ?? null,
       deployment_url: row.deployment_url ?? null,
       deployed_at: row.deployed_at ?? null,
       last_preview_at: row.last_preview_at ?? null,
@@ -463,6 +465,7 @@ export interface ClientReviewSession {
   selectedTemplateSlug: string | null
   reviewToken: string
   feedback: ClientVariantFeedback
+  mix: ClientVariantMix
 }
 
 export interface ClientVariantFeedback {
@@ -470,6 +473,11 @@ export interface ClientVariantFeedback {
   ctaIntensity: string | null
   layoutPreference: string | null
   notes: string | null
+  submittedAt: string | null
+}
+
+export interface ClientVariantMix {
+  sourceTemplates: string[]
   submittedAt: string | null
 }
 
@@ -518,7 +526,7 @@ export async function getClientReviewSession(reviewKey: string): Promise<ActionR
 
     const { data: siteConfig } = await supabase
       .from('tenant_site_config')
-      .select('client_selected_template_slug, client_feedback_tone, client_feedback_cta_intensity, client_feedback_layout_preference, client_feedback_notes, client_feedback_submitted_at')
+      .select('client_selected_template_slug, client_feedback_tone, client_feedback_cta_intensity, client_feedback_layout_preference, client_feedback_notes, client_feedback_submitted_at, client_mix_source_templates, client_mix_submitted_at')
       .eq('tenant_id', tenantId)
       .single()
 
@@ -541,6 +549,10 @@ export async function getClientReviewSession(reviewKey: string): Promise<ActionR
           layoutPreference: (siteConfig as { client_feedback_layout_preference?: string | null } | null)?.client_feedback_layout_preference ?? null,
           notes: (siteConfig as { client_feedback_notes?: string | null } | null)?.client_feedback_notes ?? null,
           submittedAt: (siteConfig as { client_feedback_submitted_at?: string | null } | null)?.client_feedback_submitted_at ?? null,
+        },
+        mix: {
+          sourceTemplates: (siteConfig as { client_mix_source_templates?: string[] | null } | null)?.client_mix_source_templates ?? [],
+          submittedAt: (siteConfig as { client_mix_submitted_at?: string | null } | null)?.client_mix_submitted_at ?? null,
         },
       },
     }
@@ -592,6 +604,8 @@ export async function selectClientVariantByReviewToken(
       client_feedback_layout_preference: feedback?.layoutPreference ?? null,
       client_feedback_notes: feedback?.notes?.trim() ? feedback.notes.trim().slice(0, 3000) : null,
       client_feedback_submitted_at: new Date().toISOString(),
+      client_mix_source_templates: null,
+      client_mix_submitted_at: null,
       updated_at: new Date().toISOString(),
     }
 
@@ -612,6 +626,79 @@ export async function selectClientVariantByReviewToken(
       'client_selected_variant',
       `Client selected ${templateSlug} with feedback preferences`,
     )
+
+    revalidatePath(`/admin/dashboard/${tenantId}`)
+    revalidatePath(`/review/${reviewToken}`)
+    return { success: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
+export async function mixClientVariantsByReviewToken(
+  reviewToken: string,
+  primaryTemplateSlug: string,
+  mixSourceTemplates: string[],
+  feedback?: {
+    tone?: string | null
+    ctaIntensity?: string | null
+    layoutPreference?: string | null
+    notes?: string | null
+  }
+): Promise<ActionResult<void>> {
+  try {
+    const supabase = getAdminClient()
+
+    let tenantId: string | null = null
+    const { data: byToken } = await supabase
+      .from('tenant_site_config')
+      .select('tenant_id')
+      .eq('client_review_token', reviewToken)
+      .single()
+
+    if (byToken) {
+      tenantId = (byToken as { tenant_id: string }).tenant_id
+    } else {
+      tenantId = reviewToken
+    }
+
+    const apply = await applyTemplate(tenantId, primaryTemplateSlug)
+    if (!apply.success) {
+      return { success: false, error: apply.error ?? 'Failed to apply mixed template direction' }
+    }
+
+    const normalizedMix = Array.from(new Set(mixSourceTemplates.filter(Boolean))).slice(0, 3)
+
+    const metadataUpdate: Record<string, unknown> = {
+      client_selected_template_slug: primaryTemplateSlug,
+      client_selected_at: new Date().toISOString(),
+      client_feedback_tone: feedback?.tone ?? null,
+      client_feedback_cta_intensity: feedback?.ctaIntensity ?? null,
+      client_feedback_layout_preference: feedback?.layoutPreference ?? null,
+      client_feedback_notes: feedback?.notes?.trim() ? feedback.notes.trim().slice(0, 3000) : null,
+      client_feedback_submitted_at: new Date().toISOString(),
+      client_mix_source_templates: normalizedMix,
+      client_mix_submitted_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+
+    const { error } = await supabase
+      .from('tenant_site_config')
+      .update(metadataUpdate)
+      .eq('tenant_id', tenantId)
+
+    if (error) {
+      revalidatePath(`/admin/dashboard/${tenantId}`)
+      revalidatePath(`/review/${reviewToken}`)
+      return { success: true }
+    }
+
+    const mixSummary = normalizedMix.length
+      ? `Client selected ${primaryTemplateSlug} mixed with ${normalizedMix.join(', ')}`
+      : `Client selected ${primaryTemplateSlug} as mixed direction`
+
+    await saveTenantSiteVersion(tenantId, 'client_mixed_variant', mixSummary)
 
     revalidatePath(`/admin/dashboard/${tenantId}`)
     revalidatePath(`/review/${reviewToken}`)
@@ -666,6 +753,8 @@ export async function rollbackTenantSiteVersion(
       client_feedback_layout_preference: snapshot.client_feedback_layout_preference ?? null,
       client_feedback_notes: snapshot.client_feedback_notes ?? null,
       client_feedback_submitted_at: snapshot.client_feedback_submitted_at ?? null,
+      client_mix_source_templates: snapshot.client_mix_source_templates ?? [],
+      client_mix_submitted_at: snapshot.client_mix_submitted_at ?? null,
       deployment_url: snapshot.deployment_url ?? null,
       deployed_at: snapshot.deployed_at ?? null,
       last_preview_at: snapshot.last_preview_at ?? null,
