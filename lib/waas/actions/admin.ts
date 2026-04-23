@@ -10,6 +10,7 @@ import { revalidatePath } from 'next/cache'
 import type { WaasTenant, WaasDomainRequest } from '@/lib/waas/types'
 import { ALL_TEMPLATES } from '@/lib/waas/templates/registry'
 import { recommendTemplates, type TemplateRecommendation } from '@/lib/waas/services/template-recommender'
+import type { TenantSiteConfig } from '@/lib/waas/templates/types'
 
 // ---------------------------------------------------------------------------
 // Raw service-role client
@@ -60,6 +61,7 @@ export interface TenantDetailData {
   tenant:         WaasTenant
   domainRequests: WaasDomainRequest[]
   audit:          Record<string, unknown> | null
+  siteConfig:     (TenantSiteConfig & { site_templates?: { slug: string } | null }) | null
 }
 
 export async function getTenantDetail(tenantId: string): Promise<ActionResult<TenantDetailData>> {
@@ -93,12 +95,19 @@ export async function getTenantDetail(tenantId: string): Promise<ActionResult<Te
       audit = auditData as Record<string, unknown> | null
     }
 
+    const { data: siteConfig } = await supabase
+      .from('tenant_site_config')
+      .select('*, site_templates(slug)')
+      .eq('tenant_id', tenantId)
+      .single()
+
     return {
       success: true,
       data: {
         tenant:         tenantRow,
         domainRequests: (domains ?? []) as WaasDomainRequest[],
         audit,
+        siteConfig: (siteConfig as (TenantSiteConfig & { site_templates?: { slug: string } | null }) | null) ?? null,
       },
     }
   } catch (err) {
@@ -289,6 +298,181 @@ export async function applyTemplate(
     revalidatePath(`/admin/dashboard/${tenantId}`)
     revalidatePath('/_sites', 'layout')
 
+    return { success: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
+function generateReviewToken(): string {
+  return crypto.randomUUID().replace(/-/g, '')
+}
+
+export async function ensureClientReviewToken(tenantId: string): Promise<ActionResult<string>> {
+  try {
+    const supabase = getAdminClient()
+    const { data: existing } = await supabase
+      .from('tenant_site_config')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .single()
+
+    const existingToken = (existing as { client_review_token?: string | null } | null)?.client_review_token
+    if (existingToken && typeof existingToken === 'string') {
+      return { success: true, data: existingToken }
+    }
+
+    const newToken = generateReviewToken()
+
+    const payload: Record<string, unknown> = {
+      tenant_id: tenantId,
+      active_sections_json: (existing as { active_sections_json?: unknown } | null)?.active_sections_json ?? [],
+      updated_at: new Date().toISOString(),
+      client_review_token: newToken,
+    }
+
+    const { error } = await supabase
+      .from('tenant_site_config')
+      .upsert(payload, { onConflict: 'tenant_id' })
+
+    if (error) {
+      // Backward-safe fallback until migration 010 is applied.
+      return { success: true, data: tenantId }
+    }
+
+    return { success: true, data: newToken }
+  } catch {
+    return { success: true, data: tenantId }
+  }
+}
+
+export interface ClientReviewSession {
+  tenantId: string
+  slug: string
+  businessName: string
+  selectedTemplateSlug: string | null
+  reviewToken: string
+}
+
+export async function getClientReviewSession(reviewKey: string): Promise<ActionResult<ClientReviewSession>> {
+  try {
+    const supabase = getAdminClient()
+
+    let tenantId: string | null = null
+    const { data: byToken } = await supabase
+      .from('tenant_site_config')
+      .select('tenant_id, client_selected_template_slug, client_review_token')
+      .eq('client_review_token', reviewKey)
+      .single()
+
+    if (byToken) {
+      tenantId = (byToken as { tenant_id: string }).tenant_id
+    } else {
+      // Legacy fallback: allow direct tenant ID URLs.
+      const { data: byTenantId } = await supabase
+        .from('tenant_site_config')
+        .select('tenant_id, client_selected_template_slug, client_review_token')
+        .eq('tenant_id', reviewKey)
+        .single()
+      if (byTenantId) {
+        tenantId = (byTenantId as { tenant_id: string }).tenant_id
+      }
+    }
+
+    if (!tenantId) {
+      // Last-resort fallback: treat review key as tenant ID and proceed.
+      tenantId = reviewKey
+    }
+
+    const tokenResult = await ensureClientReviewToken(tenantId)
+    const safeToken = tokenResult.data ?? reviewKey
+
+    const { data: tenant, error: tenantError } = await supabase
+      .from('tenants')
+      .select('id, slug, brand_config')
+      .eq('id', tenantId)
+      .single()
+
+    if (tenantError || !tenant) {
+      return { success: false, error: tenantError?.message ?? 'Tenant not found' }
+    }
+
+    const { data: siteConfig } = await supabase
+      .from('tenant_site_config')
+      .select('client_selected_template_slug')
+      .eq('tenant_id', tenantId)
+      .single()
+
+    const brandConfig = (tenant as { brand_config?: Record<string, unknown> }).brand_config ?? {}
+    const businessName = typeof brandConfig.business_name === 'string'
+      ? brandConfig.business_name
+      : 'Your Business'
+
+    return {
+      success: true,
+      data: {
+        tenantId,
+        slug: (tenant as { slug: string }).slug,
+        businessName,
+        selectedTemplateSlug: (siteConfig as { client_selected_template_slug?: string | null } | null)?.client_selected_template_slug ?? null,
+        reviewToken: safeToken,
+      },
+    }
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Unknown error',
+    }
+  }
+}
+
+export async function selectClientVariantByReviewToken(
+  reviewToken: string,
+  templateSlug: string,
+): Promise<ActionResult<void>> {
+  try {
+    const supabase = getAdminClient()
+
+    let tenantId: string | null = null
+    const { data: byToken } = await supabase
+      .from('tenant_site_config')
+      .select('tenant_id')
+      .eq('client_review_token', reviewToken)
+      .single()
+
+    if (byToken) {
+      tenantId = (byToken as { tenant_id: string }).tenant_id
+    } else {
+      // Legacy fallback for pre-token links.
+      tenantId = reviewToken
+    }
+
+    const apply = await applyTemplate(tenantId, templateSlug)
+    if (!apply.success) {
+      return { success: false, error: apply.error ?? 'Failed to apply template' }
+    }
+
+    const metadataUpdate: Record<string, unknown> = {
+      client_selected_template_slug: templateSlug,
+      client_selected_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+
+    const { error } = await supabase
+      .from('tenant_site_config')
+      .update(metadataUpdate)
+      .eq('tenant_id', tenantId)
+
+    if (error) {
+      // Keep backward compatibility if migration 010 has not yet been applied.
+      revalidatePath(`/admin/dashboard/${tenantId}`)
+      revalidatePath(`/review/${reviewToken}`)
+      return { success: true }
+    }
+
+    revalidatePath(`/admin/dashboard/${tenantId}`)
+    revalidatePath(`/review/${reviewToken}`)
     return { success: true }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error'

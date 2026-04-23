@@ -20,6 +20,8 @@ Deliverables:
 - Build a client review page with three options side-by-side.
 - Add desktop/tablet/mobile viewport toggles.
 - Add selection workflow: approve one variant and mark status for deployment queue.
+- Add share-token review links (no raw tenant id required).
+- Persist explicit selection metadata (selected template + timestamp).
 
 Acceptance criteria:
 - Client can open a review URL and compare all three options.

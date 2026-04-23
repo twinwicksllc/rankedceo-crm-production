@@ -56,6 +56,9 @@ export interface TenantSiteConfig {
   meta_title:           string | null
   meta_description:     string | null
   og_image_url:         string | null
+  client_review_token:  string | null
+  client_selected_template_slug: string | null
+  client_selected_at:   string | null
   deployment_url:       string | null
   deployed_at:          string | null
   last_preview_at:      string | null

@@ -15,6 +15,9 @@ interface PreviewTabProps {
   tenantId:    string
   slug:        string
   currentTheme: string | null
+  reviewToken?: string | null
+  clientSelectedTemplate?: string | null
+  clientSelectedAt?: string | null
 }
 
 const THEMES: { name: ThemeName; label: string; description: string; icon: string }[] = [
@@ -38,7 +41,7 @@ const THEMES: { name: ThemeName; label: string; description: string; icon: strin
   },
 ]
 
-export function PreviewTab({ tenantId, slug, currentTheme }: PreviewTabProps) {
+export function PreviewTab({ tenantId, slug, currentTheme, reviewToken, clientSelectedTemplate, clientSelectedAt }: PreviewTabProps) {
   const [activeTheme, setActiveTheme] = useState<string>(currentTheme ?? 'modern')
   const [applying, setApplying]       = useState(false)
   const [applied, setApplied]         = useState(false)
@@ -104,7 +107,7 @@ export function PreviewTab({ tenantId, slug, currentTheme }: PreviewTabProps) {
             <p className="text-xs text-white/50">Share the comparison page so clients can choose their preferred direction.</p>
           </div>
           <a
-            href={`/review/${tenantId}`}
+            href={`/review/${reviewToken ?? tenantId}`}
             target="_blank"
             rel="noopener noreferrer"
             className="rounded-lg border border-cyan-400/40 bg-cyan-500/20 px-3 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/30 transition-all"
@@ -112,6 +115,16 @@ export function PreviewTab({ tenantId, slug, currentTheme }: PreviewTabProps) {
             Open Review Page ↗
           </a>
         </div>
+
+        {clientSelectedTemplate && (
+          <div className="mb-4 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-4 py-3">
+            <p className="text-[11px] uppercase tracking-wider text-emerald-300/90 font-semibold">Client Approved</p>
+            <p className="text-sm text-emerald-100 mt-1">
+              Selected variant: <span className="font-semibold">{clientSelectedTemplate}</span>
+              {clientSelectedAt ? ` • ${new Date(clientSelectedAt).toLocaleString()}` : ''}
+            </p>
+          </div>
+        )}
 
         <div className="mb-6 rounded-xl border border-indigo-500/25 bg-indigo-500/8 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-3">

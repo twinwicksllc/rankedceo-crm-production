@@ -7,7 +7,7 @@ import { buildAuditReportPath } from '@/lib/waas/utils/audit-report-url'
 import React          from 'react'
 import Link           from 'next/link'
 import { notFound }   from 'next/navigation'
-import { getTenantDetail } from '@/lib/waas/actions/admin'
+import { ensureClientReviewToken, getTenantDetail } from '@/lib/waas/actions/admin'
 import { DeploySiteButton }    from './deploy-site-button'
 import { DomainStatusManager } from './domain-status-manager'
 import { PreviewTab }          from './preview-tab'
@@ -23,9 +23,12 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
   if (!result.success || !result.data) notFound()
 
   const { tenant, domainRequests, audit } = result.data
+  const siteConfig = result.data.siteConfig
   const brand   = tenant.brand_config
   const colors  = brand?.colors
   const activeTab = searchParams?.tab ?? 'overview'
+  const tokenResult = await ensureClientReviewToken(tenant.id)
+  const reviewToken = tokenResult.data ?? tenant.id
 
   return (
     <div>
@@ -223,6 +226,33 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
                 )}
               </div>
             </div>
+
+            <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
+                <h2 className="text-white font-semibold text-sm">Client Review Status</h2>
+                <a
+                  href={`/review/${reviewToken}`}
+                  className="text-cyan-300 hover:text-cyan-200 text-xs font-medium transition-colors"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Open Review ↗
+                </a>
+              </div>
+              <div className="p-5 text-sm">
+                {siteConfig?.client_selected_template_slug ? (
+                  <div className="space-y-2">
+                    <p className="text-emerald-300 font-semibold">Client has selected a direction.</p>
+                    <p className="text-white/70 text-xs">
+                      Template: {siteConfig.client_selected_template_slug}
+                      {siteConfig.client_selected_at ? ` • ${new Date(siteConfig.client_selected_at).toLocaleString()}` : ''}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-white/50 text-xs">Waiting for client selection.</p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -232,7 +262,10 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
         <PreviewTab
           tenantId={tenant.id}
           slug={tenant.slug}
-          currentTheme={null}
+          currentTheme={siteConfig?.site_templates?.slug ?? null}
+          reviewToken={reviewToken}
+          clientSelectedTemplate={siteConfig?.client_selected_template_slug ?? null}
+          clientSelectedAt={siteConfig?.client_selected_at ?? null}
         />
       )}
     </div>

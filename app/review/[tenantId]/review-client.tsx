@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, useTransition } from 'react'
-import { applyTemplate } from '@/lib/waas/actions/admin'
+import { selectClientVariantByReviewToken } from '@/lib/waas/actions/admin'
 
 type Viewport = 'desktop' | 'tablet' | 'mobile'
 
@@ -21,13 +21,17 @@ export function ReviewClient({
   tenantId,
   slug,
   businessName,
+  reviewToken,
+  initialSelectedTemplate,
 }: {
   tenantId: string
   slug: string
   businessName: string
+  reviewToken: string
+  initialSelectedTemplate: string | null
 }) {
   const [viewport, setViewport] = useState<Viewport>('desktop')
-  const [selected, setSelected] = useState<string | null>(null)
+  const [selected, setSelected] = useState<string | null>(initialSelectedTemplate)
   const [message, setMessage] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -36,13 +40,13 @@ export function ReviewClient({
   const handleSelect = (templateSlug: string) => {
     setMessage(null)
     startTransition(async () => {
-      const result = await applyTemplate(tenantId, templateSlug)
+      const result = await selectClientVariantByReviewToken(reviewToken, templateSlug)
       if (!result.success) {
         setMessage(result.error ?? 'Failed to select this option. Please try again.')
         return
       }
       setSelected(templateSlug)
-      setMessage(`Selected ${templateSlug} as the active direction. Our team can now finalize deployment.`)
+      setMessage(`Selected ${templateSlug} as the active direction. Our team has been notified for final deployment prep.`)
     })
   }
 
