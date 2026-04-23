@@ -13,7 +13,7 @@ Acceptance criteria:
 - Each recommendation includes: template slug, short label, rationale, confidence, and section highlights.
 - Recommending works with and without GEMINI_API_KEY (fallback logic).
 
-## Sprint 2: Client Comparison Experience (In Progress)
+## Sprint 2: Client Comparison Experience (Completed)
 Goal: provide a client-facing A/B/C selection experience (not admin-only).
 
 Deliverables:
@@ -22,6 +22,8 @@ Deliverables:
 - Add selection workflow: approve one variant and mark status for deployment queue.
 - Add share-token review links (no raw tenant id required).
 - Persist explicit selection metadata (selected template + timestamp).
+- Add admin triage support (awaiting vs selected filters + selection badges).
+- Add one-click review-link copy action for admins.
 
 Acceptance criteria:
 - Client can open a review URL and compare all three options.

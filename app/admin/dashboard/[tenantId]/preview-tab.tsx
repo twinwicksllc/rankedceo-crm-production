@@ -49,6 +49,7 @@ export function PreviewTab({ tenantId, slug, currentTheme, reviewToken, clientSe
   const [iframeKey, setIframeKey]     = useState(0)
   const [recommendations, setRecommendations] = useState<TemplateRecommendation[]>([])
   const [generating, setGenerating] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   // Build preview URL — points to tenant subdomain or local _sites route
   const previewUrl = slug
@@ -92,6 +93,19 @@ export function PreviewTab({ tenantId, slug, currentTheme, reviewToken, clientSe
     }
   }, [tenantId])
 
+  const handleCopyReviewLink = useCallback(async () => {
+    if (typeof window === 'undefined' || !navigator?.clipboard) return
+    const path = `/review/${reviewToken ?? tenantId}`
+    const absolute = `${window.location.origin}${path}`
+    try {
+      await navigator.clipboard.writeText(absolute)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1800)
+    } catch {
+      setCopied(false)
+    }
+  }, [reviewToken, tenantId])
+
   return (
     <div className="flex flex-col gap-6">
       {/* Theme Switcher */}
@@ -106,14 +120,22 @@ export function PreviewTab({ tenantId, slug, currentTheme, reviewToken, clientSe
             <p className="text-xs font-semibold uppercase tracking-wider text-cyan-300/85">Client Review</p>
             <p className="text-xs text-white/50">Share the comparison page so clients can choose their preferred direction.</p>
           </div>
-          <a
-            href={`/review/${reviewToken ?? tenantId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-lg border border-cyan-400/40 bg-cyan-500/20 px-3 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/30 transition-all"
-          >
-            Open Review Page ↗
-          </a>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleCopyReviewLink}
+              className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/15 transition-all"
+            >
+              {copied ? 'Copied' : 'Copy Link'}
+            </button>
+            <a
+              href={`/review/${reviewToken ?? tenantId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-lg border border-cyan-400/40 bg-cyan-500/20 px-3 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/30 transition-all"
+            >
+              Open Review Page ↗
+            </a>
+          </div>
         </div>
 
         {clientSelectedTemplate && (

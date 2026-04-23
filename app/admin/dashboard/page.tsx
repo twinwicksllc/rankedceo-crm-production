@@ -7,6 +7,7 @@ import React from 'react'
 import Link from 'next/link'
 import { getAdminTenants, getAdminStats } from '@/lib/waas/actions/admin'
 import type { WaasTenant } from '@/lib/waas/types'
+import type { AdminTenantListItem } from '@/lib/waas/actions/admin'
 
 // ---------------------------------------------------------------------------
 // Status badge
@@ -33,17 +34,34 @@ function StatusBadge({ status }: { status: WaasTenant['status'] }) {
 // Page
 // ---------------------------------------------------------------------------
 
-export default async function AdminDashboardPage() {
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams?: { review?: string }
+}) {
   const [tenantsResult, statsResult] = await Promise.all([
     getAdminTenants(),
     getAdminStats(),
   ])
 
-  const tenants = tenantsResult.data ?? []
+  const tenants = (tenantsResult.data ?? []) as AdminTenantListItem[]
   const stats   = statsResult.data ?? { pendingCount: 0, activeCount: 0, totalLeads: 0 }
 
-  const pending = tenants.filter(t => t.status === 'pending_review' || t.status === 'onboarding')
-  const active  = tenants.filter(t => t.status === 'active')
+  const reviewFilter = searchParams?.review === 'selected' || searchParams?.review === 'awaiting'
+    ? searchParams.review
+    : 'all'
+
+  const selectedCount = tenants.filter(t => Boolean(t.client_selected_template_slug)).length
+  const awaitingCount = tenants.length - selectedCount
+
+  const filteredTenants = tenants.filter((tenant) => {
+    if (reviewFilter === 'selected') return Boolean(tenant.client_selected_template_slug)
+    if (reviewFilter === 'awaiting') return !tenant.client_selected_template_slug
+    return true
+  })
+
+  const pending = filteredTenants.filter(t => t.status === 'pending_review' || t.status === 'onboarding')
+  const active  = filteredTenants.filter(t => t.status === 'active')
 
   return (
     <div>
@@ -102,6 +120,26 @@ export default async function AdminDashboardPage() {
               </span>
             )}
           </h2>
+
+          <div className="flex items-center gap-2">
+            {[
+              { key: 'all', label: 'All', count: tenants.length },
+              { key: 'awaiting', label: 'Awaiting Client', count: awaitingCount },
+              { key: 'selected', label: 'Client Selected', count: selectedCount },
+            ].map((item) => (
+              <Link
+                key={item.key}
+                href={item.key === 'all' ? '/admin/dashboard' : `/admin/dashboard?review=${item.key}`}
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition-all ${
+                  reviewFilter === item.key
+                    ? 'border-cyan-400/50 bg-cyan-500/15 text-cyan-200'
+                    : 'border-white/10 bg-white/5 text-white/50 hover:text-white/80'
+                }`}
+              >
+                {item.label} · {item.count}
+              </Link>
+            ))}
+          </div>
         </div>
 
         {pending.length === 0 ? (
@@ -144,7 +182,7 @@ export default async function AdminDashboardPage() {
 // Tenant Table
 // ---------------------------------------------------------------------------
 
-function TenantTable({ tenants }: { tenants: WaasTenant[] }) {
+function TenantTable({ tenants }: { tenants: AdminTenantListItem[] }) {
   return (
     <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
       {/* Desktop table */}
@@ -152,7 +190,7 @@ function TenantTable({ tenants }: { tenants: WaasTenant[] }) {
         <table className="w-full">
           <thead>
             <tr className="border-b border-white/10">
-              {['Business', 'Trade', 'Location', 'Package', 'Status', 'Submitted', ''].map(h => (
+              {['Business', 'Trade', 'Location', 'Package', 'Status', 'Review', 'Submitted', ''].map(h => (
                 <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-white/40 uppercase tracking-wider">
                   {h}
                 </th>
@@ -189,16 +227,37 @@ function TenantTable({ tenants }: { tenants: WaasTenant[] }) {
                 <td className="px-5 py-4">
                   <StatusBadge status={t.status} />
                 </td>
+                <td className="px-5 py-4">
+                  {t.client_selected_template_slug ? (
+                    <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] text-emerald-300">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-300" />
+                      {t.client_selected_template_slug}
+                    </div>
+                  ) : (
+                    <div className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] text-white/45">
+                      Awaiting
+                    </div>
+                  )}
+                </td>
                 <td className="px-5 py-4 text-white/40 text-xs">
                   {new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                 </td>
                 <td className="px-5 py-4">
-                  <Link
-                    href={`/admin/dashboard/${t.id}`}
-                    className="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors"
-                  >
-                    Review →
-                  </Link>
+                  <div className="flex items-center gap-3">
+                    <Link
+                      href={`/review/${t.client_review_token ?? t.id}`}
+                      target="_blank"
+                      className="text-cyan-300 hover:text-cyan-200 text-xs font-medium transition-colors"
+                    >
+                      Client Link ↗
+                    </Link>
+                    <Link
+                      href={`/admin/dashboard/${t.id}`}
+                      className="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors"
+                    >
+                      Review →
+                    </Link>
+                  </div>
                 </td>
               </tr>
             ))}

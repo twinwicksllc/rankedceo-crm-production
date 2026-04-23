@@ -31,11 +31,17 @@ export interface ActionResult<T = null> {
   error?:  string
 }
 
+export interface AdminTenantListItem extends WaasTenant {
+  client_selected_template_slug?: string | null
+  client_selected_at?: string | null
+  client_review_token?: string | null
+}
+
 // ---------------------------------------------------------------------------
 // Get all pending + active tenants for the dashboard table
 // ---------------------------------------------------------------------------
 
-export async function getAdminTenants(): Promise<ActionResult<WaasTenant[]>> {
+export async function getAdminTenants(): Promise<ActionResult<AdminTenantListItem[]>> {
   try {
     const supabase = getAdminClient()
     const { data, error } = await supabase
@@ -46,7 +52,40 @@ export async function getAdminTenants(): Promise<ActionResult<WaasTenant[]>> {
       .order('created_at', { ascending: false })
 
     if (error) return { success: false, error: error.message }
-    return { success: true, data: (data ?? []) as WaasTenant[] }
+
+    const tenants = (data ?? []) as WaasTenant[]
+    if (tenants.length === 0) {
+      return { success: true, data: [] }
+    }
+
+    const tenantIds = tenants.map(item => item.id)
+    const { data: siteConfigRows } = await supabase
+      .from('tenant_site_config')
+      .select('tenant_id, client_review_token, client_selected_template_slug, client_selected_at')
+      .in('tenant_id', tenantIds)
+
+    const siteConfigMap = new Map<string, {
+      client_review_token?: string | null
+      client_selected_template_slug?: string | null
+      client_selected_at?: string | null
+    }>()
+
+    for (const row of (siteConfigRows ?? []) as Array<Record<string, unknown>>) {
+      const tenantId = row.tenant_id as string | undefined
+      if (!tenantId) continue
+      siteConfigMap.set(tenantId, {
+        client_review_token: (row.client_review_token as string | null | undefined) ?? null,
+        client_selected_template_slug: (row.client_selected_template_slug as string | null | undefined) ?? null,
+        client_selected_at: (row.client_selected_at as string | null | undefined) ?? null,
+      })
+    }
+
+    const enriched = tenants.map((tenant) => ({
+      ...tenant,
+      ...siteConfigMap.get(tenant.id),
+    }))
+
+    return { success: true, data: enriched }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error'
     return { success: false, error: msg }
