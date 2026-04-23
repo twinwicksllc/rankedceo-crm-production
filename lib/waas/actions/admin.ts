@@ -8,6 +8,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import type { WaasTenant, WaasDomainRequest } from '@/lib/waas/types'
+import { ALL_TEMPLATES } from '@/lib/waas/templates/registry'
+import { recommendTemplates, type TemplateRecommendation } from '@/lib/waas/services/template-recommender'
 
 // ---------------------------------------------------------------------------
 // Raw service-role client
@@ -172,6 +174,43 @@ export interface AdminStats {
   pendingCount: number
   activeCount:  number
   totalLeads:   number
+}
+
+export async function generateTemplateRecommendations(
+  tenantId: string
+): Promise<ActionResult<TemplateRecommendation[]>> {
+  try {
+    const supabase = getAdminClient()
+    const { data: tenant, error } = await supabase
+      .from('tenants')
+      .select('brand_config, target_industry, target_location, usp, calendly_url, financing_enabled')
+      .eq('id', tenantId)
+      .single()
+
+    if (error || !tenant) {
+      return { success: false, error: error?.message ?? 'Tenant not found' }
+    }
+
+    const brandConfig = (tenant as { brand_config?: Record<string, unknown> }).brand_config ?? {}
+
+    const recommendations = await recommendTemplates(
+      {
+        businessName: typeof brandConfig.business_name === 'string' ? brandConfig.business_name : 'Business',
+        industry: (tenant as { target_industry?: string | null }).target_industry ?? null,
+        location: (tenant as { target_location?: string | null }).target_location ?? null,
+        usp: (tenant as { usp?: string | null }).usp ?? null,
+        financingEnabled: Boolean((tenant as { financing_enabled?: boolean | null }).financing_enabled),
+        hasBooking: Boolean((tenant as { calendly_url?: string | null }).calendly_url),
+        tone: typeof brandConfig.tone === 'string' ? brandConfig.tone : null,
+      },
+      ALL_TEMPLATES,
+    )
+
+    return { success: true, data: recommendations }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
 }
 
 export async function getAdminStats(): Promise<ActionResult<AdminStats>> {

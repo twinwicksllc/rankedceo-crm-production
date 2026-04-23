@@ -8,7 +8,8 @@
 import { useState, useCallback } from 'react'
 import type { ThemeName }        from '@/lib/waas/templates/types'
 import { ALL_TEMPLATES }         from '@/lib/waas/templates/registry'
-import { applyTemplate }         from '@/lib/waas/actions/admin'
+import { applyTemplate, generateTemplateRecommendations } from '@/lib/waas/actions/admin'
+import type { TemplateRecommendation } from '@/lib/waas/services/template-recommender'
 
 interface PreviewTabProps {
   tenantId:    string
@@ -43,6 +44,8 @@ export function PreviewTab({ tenantId, slug, currentTheme }: PreviewTabProps) {
   const [applied, setApplied]         = useState(false)
   const [error, setError]             = useState<string | null>(null)
   const [iframeKey, setIframeKey]     = useState(0)
+  const [recommendations, setRecommendations] = useState<TemplateRecommendation[]>([])
+  const [generating, setGenerating] = useState(false)
 
   // Build preview URL — points to tenant subdomain or local _sites route
   const previewUrl = slug
@@ -70,6 +73,22 @@ export function PreviewTab({ tenantId, slug, currentTheme }: PreviewTabProps) {
     }
   }, [tenantId, activeTheme])
 
+  const handleGenerateRecommendations = useCallback(async () => {
+    setGenerating(true)
+    setError(null)
+    try {
+      const result = await generateTemplateRecommendations(tenantId)
+      if (!result.success || !result.data) {
+        throw new Error(result.error ?? 'Failed to generate recommendations')
+      }
+      setRecommendations(result.data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate recommendations')
+    } finally {
+      setGenerating(false)
+    }
+  }, [tenantId])
+
   return (
     <div className="flex flex-col gap-6">
       {/* Theme Switcher */}
@@ -78,6 +97,54 @@ export function PreviewTab({ tenantId, slug, currentTheme }: PreviewTabProps) {
         <p className="text-white/50 text-sm mb-6">
           Choose a template layout. Click &ldquo;Apply Theme&rdquo; to update the live site.
         </p>
+
+        <div className="mb-6 rounded-xl border border-indigo-500/25 bg-indigo-500/8 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <div>
+              <p className="text-white text-sm font-semibold">AI Variant Direction (Sprint 1)</p>
+              <p className="text-white/50 text-xs">Generate ranked template recommendations from onboarding profile data.</p>
+            </div>
+            <button
+              onClick={handleGenerateRecommendations}
+              disabled={generating}
+              className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+                generating
+                  ? 'bg-indigo-500/40 text-white/50 cursor-not-allowed'
+                  : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+              }`}
+            >
+              {generating ? 'Generating…' : 'Generate Recommendations'}
+            </button>
+          </div>
+
+          {recommendations.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {recommendations.map((rec, index) => (
+                <div key={`${rec.templateSlug}-${index}`} className="rounded-lg border border-white/10 bg-white/5 p-3">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className="text-[10px] uppercase tracking-wider text-indigo-300 font-semibold">#{index + 1} Recommendation</span>
+                    <span className="text-[10px] text-white/60">{rec.confidence}% fit</span>
+                  </div>
+                  <p className="text-white text-sm font-semibold mb-1">{rec.label}</p>
+                  <p className="text-white/60 text-xs mb-3 leading-relaxed">{rec.rationale}</p>
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {rec.highlights.slice(0, 4).map((item) => (
+                      <span key={item} className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/60">
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => handleThemeSelect(rec.templateSlug)}
+                    className="w-full rounded-md border border-indigo-500/40 bg-indigo-500/20 px-2 py-1.5 text-xs text-indigo-200 hover:bg-indigo-500/30 transition-all"
+                  >
+                    Use This Direction
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           {THEMES.map(theme => (
