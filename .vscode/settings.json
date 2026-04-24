@@ -7,6 +7,8 @@
         "git config": true,
         "true": true,
         "git lfs": true,
-        "git ls-remote": true
+        "git ls-remote": true,
+        "set": true,
+        "gh": true
     }
 }
