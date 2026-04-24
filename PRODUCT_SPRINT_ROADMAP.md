@@ -41,7 +41,7 @@ Acceptance criteria:
 - User can submit feedback and receive a regenerated variant.
 - Prior version remains accessible for rollback.
 
-## Sprint 4: Deployment + QA Automation
+## Sprint 4: Deployment + QA Automation (In Progress)
 Goal: make handoff/deploy repeatable and production-safe.
 
 Deliverables:
@@ -52,3 +52,9 @@ Deliverables:
 Acceptance criteria:
 - Deploy flow blocks on failed validation.
 - Deployed version includes immutable config snapshot.
+
+Prep progress:
+- Added server-side deploy readiness report with hard blockers for SEO metadata, contact hooks, and core section presence.
+- Added deploy gating so admin deploy action is blocked until all fail checks are resolved.
+- Added immutable deployment audit table migration (`014_waas_deploy_audit_trail.sql`) for package snapshot history.
+- Updated deploy UI to run readiness checks before confirmation and display pass/warn/fail results.
