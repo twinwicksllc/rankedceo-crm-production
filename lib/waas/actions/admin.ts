@@ -45,12 +45,21 @@ export interface TenantSiteVersion {
   created_at: string
 }
 
+export interface TenantDeploymentRecord {
+  id: string
+  deployed_by: string
+  source_version_id: string | null
+  deployment_payload_json: Record<string, unknown> | null
+  created_at: string
+}
+
 export interface TenantDetailData {
   tenant:         WaasTenant
   domainRequests: WaasDomainRequest[]
   audit:          Record<string, unknown> | null
   siteConfig:     (TenantSiteConfig & { site_templates?: { slug: string } | null }) | null
   versions:       TenantSiteVersion[]
+  deployments:    TenantDeploymentRecord[]
 }
 
 export interface DeployReadinessCheck {
@@ -187,6 +196,18 @@ export async function getTenantDetail(tenantId: string): Promise<ActionResult<Te
       .order('created_at', { ascending: false })
       .limit(10)
 
+    let deploymentsRows: Array<Record<string, unknown>> = []
+    const { data: deploymentsData, error: deploymentsError } = await supabase
+      .from('tenant_site_deployments')
+      .select('id, deployed_by, source_version_id, deployment_payload_json, created_at')
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    if (!deploymentsError) {
+      deploymentsRows = (deploymentsData ?? []) as Array<Record<string, unknown>>
+    }
+
     return {
       success: true,
       data: {
@@ -195,6 +216,15 @@ export async function getTenantDetail(tenantId: string): Promise<ActionResult<Te
         audit,
         siteConfig: (siteConfig as (TenantSiteConfig & { site_templates?: { slug: string } | null }) | null) ?? null,
         versions: (versionsRows ?? []) as TenantSiteVersion[],
+        deployments: deploymentsRows.map((row) => ({
+          id: typeof row.id === 'string' ? row.id : '',
+          deployed_by: typeof row.deployed_by === 'string' ? row.deployed_by : 'admin_console',
+          source_version_id: typeof row.source_version_id === 'string' ? row.source_version_id : null,
+          deployment_payload_json: row.deployment_payload_json && typeof row.deployment_payload_json === 'object'
+            ? (row.deployment_payload_json as Record<string, unknown>)
+            : null,
+          created_at: typeof row.created_at === 'string' ? row.created_at : new Date().toISOString(),
+        })),
       },
     }
   } catch (err) {

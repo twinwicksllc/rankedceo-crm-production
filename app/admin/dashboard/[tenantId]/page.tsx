@@ -7,7 +7,7 @@ import { buildAuditReportPath } from '@/lib/waas/utils/audit-report-url'
 import React          from 'react'
 import Link           from 'next/link'
 import { notFound }   from 'next/navigation'
-import { ensureClientReviewToken, getTenantDetail } from '@/lib/waas/actions/admin'
+import { ensureClientReviewToken, getDeployReadiness, getTenantDetail } from '@/lib/waas/actions/admin'
 import { DeploySiteButton }    from './deploy-site-button'
 import { DomainStatusManager } from './domain-status-manager'
 import { PreviewTab }          from './preview-tab'
@@ -23,12 +23,14 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
   const result = await getTenantDetail(params.tenantId)
   if (!result.success || !result.data) notFound()
 
-  const { tenant, domainRequests, audit, versions } = result.data
+  const { tenant, domainRequests, audit, versions, deployments } = result.data
   const siteConfig = result.data.siteConfig
   const brand   = tenant.brand_config
   const colors  = brand?.colors
   const activeTab = searchParams?.tab ?? 'overview'
   const tokenResult = await ensureClientReviewToken(tenant.id)
+  const readinessResult = await getDeployReadiness(tenant.id)
+  const deployReadiness = readinessResult.success ? readinessResult.data ?? null : null
   const reviewToken = tokenResult.data ?? tenant.id
 
   return (
@@ -285,6 +287,102 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
                     </div>
                   )}
                 </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
+                <h2 className="text-white font-semibold text-sm">Deployment Package</h2>
+                {deployReadiness ? (
+                  <span className={`text-[11px] px-2 py-1 rounded-full border ${deployReadiness.ready ? 'text-emerald-300 border-emerald-500/40 bg-emerald-500/10' : 'text-amber-300 border-amber-500/40 bg-amber-500/10'}`}>
+                    {deployReadiness.ready ? 'Ready to Deploy' : 'Needs Fixes'}
+                  </span>
+                ) : (
+                  <span className="text-[11px] px-2 py-1 rounded-full border border-white/15 text-white/50">Unavailable</span>
+                )}
+              </div>
+              <div className="p-5 space-y-4">
+                {!deployReadiness ? (
+                  <p className="text-white/40 text-xs">Readiness report is unavailable for this tenant.</p>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                        <p className="text-white/35 text-[10px] uppercase tracking-wide">Selected Template</p>
+                        <p className="text-white/80 text-xs mt-1">{deployReadiness.packageSummary.selectedTemplateSlug ?? 'Not selected'}</p>
+                      </div>
+                      <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                        <p className="text-white/35 text-[10px] uppercase tracking-wide">Enabled Sections</p>
+                        <p className="text-white/80 text-xs mt-1">{deployReadiness.packageSummary.sectionCount}</p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                      <p className="text-white/35 text-[10px] uppercase tracking-wide mb-1">Section List</p>
+                      {deployReadiness.packageSummary.enabledSections.length === 0 ? (
+                        <p className="text-white/50 text-xs">No enabled sections detected.</p>
+                      ) : (
+                        <p className="text-white/80 text-xs">
+                          {deployReadiness.packageSummary.enabledSections.join(', ')}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <p className="text-white/35 text-[10px] uppercase tracking-wide">Metadata</p>
+                      <p className="text-white/70 text-xs">Title: {deployReadiness.packageSummary.metaTitle ?? 'Missing'}</p>
+                      <p className="text-white/70 text-xs">Description: {deployReadiness.packageSummary.metaDescription ?? 'Missing'}</p>
+                      <p className="text-white/70 text-xs">OG Image: {deployReadiness.packageSummary.ogImageUrl ?? 'Missing'}</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <p className="text-white/35 text-[10px] uppercase tracking-wide">Contact Hooks</p>
+                      <p className="text-white/70 text-xs">
+                        Calendly: {deployReadiness.packageSummary.contactHooks.hasCalendly ? 'Yes' : 'No'} • Phone: {deployReadiness.packageSummary.contactHooks.hasPhone ? 'Yes' : 'No'} • Email: {deployReadiness.packageSummary.contactHooks.hasEmail ? 'Yes' : 'No'}
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5 pt-1.5 border-t border-white/10">
+                      <p className="text-white/35 text-[10px] uppercase tracking-wide">Readiness Checks</p>
+                      {deployReadiness.checks.map((check) => (
+                        <p key={check.id} className={`text-[11px] ${check.status === 'pass' ? 'text-emerald-300' : check.status === 'warn' ? 'text-amber-300' : 'text-red-300'}`}>
+                          {check.status.toUpperCase()} • {check.label}
+                        </p>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-white/10">
+                <h2 className="text-white font-semibold text-sm">Deployment Audit Trail</h2>
+              </div>
+              <div className="p-5">
+                {deployments.length === 0 ? (
+                  <p className="text-white/40 text-xs">No deployment snapshots recorded yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {deployments.map((deployment) => {
+                      const payload = deployment.deployment_payload_json ?? {}
+                      const templateSlug = typeof payload.selectedTemplateSlug === 'string' ? payload.selectedTemplateSlug : null
+                      const sectionCount = typeof payload.sectionCount === 'number' ? payload.sectionCount : null
+
+                      return (
+                        <div key={deployment.id} className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                          <p className="text-white/85 text-xs font-medium">
+                            {templateSlug ? `Template: ${templateSlug}` : 'Deployment snapshot'}
+                          </p>
+                          <p className="text-white/50 text-[11px] mt-0.5">
+                            By {deployment.deployed_by} • {new Date(deployment.created_at).toLocaleString()}
+                            {sectionCount !== null ? ` • ${sectionCount} sections` : ''}
+                          </p>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -58,3 +58,5 @@ Prep progress:
 - Added deploy gating so admin deploy action is blocked until all fail checks are resolved.
 - Added immutable deployment audit table migration (`014_waas_deploy_audit_trail.sql`) for package snapshot history.
 - Updated deploy UI to run readiness checks before confirmation and display pass/warn/fail results.
+- Added deployment package summary panel in tenant detail so admins can review snapshot contents pre-handoff.
+- Added deployment audit trail panel in tenant detail to show recent deployment history and payload highlights.
