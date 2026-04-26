@@ -55,12 +55,41 @@ export interface PageSpeedDiagnostic {
 }
 
 const REQUIRED_CATEGORIES = ['performance', 'seo', 'accessibility', 'best-practices'] as const
+const PAGESPEED_TIMEOUT_MS = 90_000
+const PAGESPEED_503_RETRY_DELAY_MS = 2_000
 
 export class PageSpeedDataError extends Error {
   constructor(message: string) {
     super(message)
     this.name = 'PageSpeedDataError'
   }
+}
+
+type PageSpeedFailureReason = 'timeout' | 'http-503' | 'http-error' | 'network-error' | 'parse-error'
+
+interface PageSpeedFetchError {
+  reason: PageSpeedFailureReason
+  status?: number
+  message: string
+}
+
+interface PageSpeedFetchResult {
+  data: Record<string, any> | null
+  error: PageSpeedFetchError | null
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function isTimeoutError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false
+
+  const e = err as { name?: string; message?: string }
+  return e.name === 'TimeoutError' ||
+    e.name === 'AbortError' ||
+    e.message?.toLowerCase().includes('timed out') === true ||
+    e.message?.toLowerCase().includes('timeout') === true
 }
 
 // ---------------------------------------------------------------------------
@@ -184,7 +213,7 @@ function extractOpportunities(
 async function fetchPageSpeed(
   url:      string,
   strategy: 'mobile' | 'desktop'
-): Promise<Record<string, any> | null> {
+): Promise<PageSpeedFetchResult> {
   const apiKey = process.env.PAGESPEED_API_KEY
 
   const endpoint = new URL('https://www.googleapis.com/pagespeedonline/v5/runPagespeed')
@@ -196,22 +225,69 @@ async function fetchPageSpeed(
   endpoint.searchParams.append('category', 'best-practices')
   if (apiKey) endpoint.searchParams.set('key', apiKey)
 
-  try {
-    const response = await fetch(endpoint.toString(), {
-      cache: 'no-store',
-      signal: AbortSignal.timeout(30_000),   // 30s timeout
-    })
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      const response = await fetch(endpoint.toString(), {
+        cache: 'no-store',
+        signal: AbortSignal.timeout(PAGESPEED_TIMEOUT_MS),
+      })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error(`[PageSpeed] ${strategy} error ${response.status}:`, errorText.slice(0, 200))
-      return null
+      if (!response.ok) {
+        const errorText = await response.text()
+
+        if (response.status === 503 && attempt === 1) {
+          console.warn(
+            `[PageSpeed] ${strategy} returned 503. Retrying once after ${PAGESPEED_503_RETRY_DELAY_MS}ms.`
+          )
+          await sleep(PAGESPEED_503_RETRY_DELAY_MS)
+          continue
+        }
+
+        console.error(`[PageSpeed] ${strategy} error ${response.status}:`, errorText.slice(0, 200))
+        return {
+          data: null,
+          error: {
+            reason: response.status === 503 ? 'http-503' : 'http-error',
+            status: response.status,
+            message: errorText.slice(0, 200) || `HTTP ${response.status}`,
+          },
+        }
+      }
+
+      return {
+        data: await response.json(),
+        error: null,
+      }
+    } catch (err) {
+      if (isTimeoutError(err)) {
+        console.error(`[PageSpeed] ${strategy} timeout after ${PAGESPEED_TIMEOUT_MS}ms.`)
+        return {
+          data: null,
+          error: {
+            reason: 'timeout',
+            message: `Timeout after ${PAGESPEED_TIMEOUT_MS}ms`,
+          },
+        }
+      }
+
+      console.error(`[PageSpeed] ${strategy} fetch error:`, err)
+      return {
+        data: null,
+        error: {
+          reason: 'network-error',
+          message: String(err),
+        },
+      }
     }
+  }
 
-    return await response.json()
-  } catch (err) {
-    console.error(`[PageSpeed] ${strategy} fetch error:`, err)
-    return null
+  return {
+    data: null,
+    error: {
+      reason: 'http-503',
+      status: 503,
+      message: 'PageSpeed service unavailable after retry.',
+    },
   }
 }
 
@@ -220,21 +296,33 @@ async function fetchPageSpeed(
 // ---------------------------------------------------------------------------
 export async function runPageSpeedAudit(url: string): Promise<PageSpeedReport | null> {
   // Run mobile and desktop in parallel
-  const [mobileData, desktopData] = await Promise.all([
+  const [mobileResult, desktopResult] = await Promise.all([
     fetchPageSpeed(url, 'mobile'),
     fetchPageSpeed(url, 'desktop'),
   ])
 
+  const mobileData = mobileResult.data
+  const desktopData = desktopResult.data
+
+  if (!mobileData && !desktopData) {
+    throw new PageSpeedDataError(
+      `Both PageSpeed strategies failed. mobile=${mobileResult.error?.reason ?? 'unknown'} desktop=${desktopResult.error?.reason ?? 'unknown'}`
+    )
+  }
+
   // We use mobile categories as the primary SEO/UX signal in report summaries.
-  // If mobile is unavailable, return null so the caller can trigger manual review.
+  // If mobile is unavailable, we still cannot produce stable summary fields.
   if (!mobileData) return null
 
-  if (!desktopData) {
+  const desktopTimedOut = desktopResult.error?.reason === 'timeout'
+  if (!desktopData && desktopTimedOut) {
+    console.warn('[PageSpeed] Desktop strategy timed out; using mobile metrics/categories as fallback for desktop.')
+  } else if (!desktopData) {
     console.warn('[PageSpeed] Desktop strategy unavailable; using mobile-only fallback for desktop metrics.')
   }
 
   const mobileLH  = mobileData?.lighthouseResult  ?? {}
-  const desktopLH = desktopData?.lighthouseResult ?? {}
+  const desktopLH = desktopData?.lighthouseResult ?? mobileLH
 
   const mobileMetrics  = extractMetrics(mobileLH)
   const desktopMetrics = extractMetrics(desktopLH)
