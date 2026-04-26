@@ -6,7 +6,7 @@
 // Red = Your Site | Green = RankedCEO Benchmark / Top Competitors
 // =============================================================================
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import {
   buildGetStartedUrl,
   getAuditFunnelProperties,
@@ -141,12 +141,29 @@ interface AuditReportClientProps {
 function AuditReportClientContent({ audit: initialAudit }: AuditReportClientProps) {
   const [audit,    setAudit]    = useState<WaasAudit>(initialAudit)
   const [attempts, setAttempts] = useState(0)
+  const dataUnavailableTracked = useRef(false)
 
   const isRunning  = audit.status === 'pending' || audit.status === 'running'
   const isComplete = audit.status === 'completed'
   const isFailed   = audit.status === 'failed'
   const isExpired  = audit.status === 'expired'
   const isManual   = audit.manual_review === true
+  const reportData = audit.report_data as ExtendedReportData | null
+  const isDataUnavailable = reportData?.data_unavailable === true
+
+  useEffect(() => {
+    if (!isDataUnavailable || dataUnavailableTracked.current !== false) return
+
+    const searchParams = new URLSearchParams(window.location.search)
+    trackEvent('audit_data_unavailable_fallback_shown', {
+      ...getAuditFunnelProperties(searchParams, audit.id),
+      status: audit.status,
+      manualReview: audit.manual_review,
+      reason: reportData?.data_unavailable_reason ?? 'unknown',
+    })
+
+    dataUnavailableTracked.current = true
+  }, [isDataUnavailable, audit.id, audit.status, audit.manual_review, reportData?.data_unavailable_reason])
 
   // ── Polling ──────────────────────────────────────────────────────────────
   const poll = useCallback(async () => {
@@ -182,6 +199,21 @@ function AuditReportClientContent({ audit: initialAudit }: AuditReportClientProp
           targetUrl={audit.target_url}
           competitorUrls={audit.competitor_urls}
           status={audit.status as 'pending' | 'running'}
+        />
+      </PageShell>
+    )
+  }
+
+  if (isDataUnavailable) {
+    return (
+      <PageShell>
+        <ManualAuditState
+          targetUrl={audit.target_url}
+          auditId={audit.id}
+          errorMessage={reportData?.data_unavailable_reason ?? audit.error_message}
+          badgeLabel="Concierge Queue Active"
+          title="High Traffic: Manual Review Queued"
+          subtitle={`We're seeing elevated scan traffic right now, so ${extractDomain(audit.target_url)} has been routed to our concierge audit queue. A strategist is already assigned and your full report will arrive within 1 business day.`}
         />
       </PageShell>
     )
@@ -1190,6 +1222,22 @@ function PageShell({
         gap: 12,
         flexWrap: 'wrap',
       }}>
+          <a
+            href="/audit/start"
+            style={{
+              padding:        '7px 14px',
+              background:     isLight ? 'rgba(15,23,42,0.06)' : 'rgba(255,255,255,0.06)',
+              color:          isLight ? '#0f172a' : '#ffffff',
+              textDecoration: 'none',
+              borderRadius:   8,
+              border:         isLight ? '1px solid rgba(15,23,42,0.12)' : '1px solid rgba(255,255,255,0.14)',
+              fontSize:       '0.78rem',
+              fontWeight:     700,
+              whiteSpace:     'nowrap',
+            }}
+          >
+            ← Run Another Audit
+          </a>
         {expiresAt && <ExpiryCountdown expiresAt={expiresAt} compact />}
         {auditId && (
           <a

@@ -190,7 +190,13 @@ export async function runPageSpeedAudit(url: string): Promise<PageSpeedReport | 
     fetchPageSpeed(url, 'desktop'),
   ])
 
-  if (!mobileData && !desktopData) return null
+  // We use mobile categories as the primary SEO/UX signal in report summaries.
+  // If mobile is unavailable, return null so the caller can trigger manual review.
+  if (!mobileData) return null
+
+  if (!desktopData) {
+    console.warn('[PageSpeed] Desktop strategy unavailable; using mobile-only fallback for desktop metrics.')
+  }
 
   const mobileLH  = mobileData?.lighthouseResult  ?? {}
   const desktopLH = desktopData?.lighthouseResult ?? {}

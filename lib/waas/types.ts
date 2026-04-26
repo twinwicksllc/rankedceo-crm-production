@@ -322,6 +322,8 @@ export interface AuditReportData {
   opportunities?:     AuditOpportunity[]
   provider_meta?:     AuditProviderMeta
   keyword_performance?: AuditKeywordPerformance
+  data_unavailable?:  boolean
+  data_unavailable_reason?: string
 }
 
 // ---------------------------------------------------------------------------

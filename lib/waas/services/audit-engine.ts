@@ -286,6 +286,7 @@ export async function runFullAudit(
   location:        string | null = null
 ): Promise<AuditEngineResult> {
   const provider   = (process.env.WAAS_SEO_PROVIDER ?? 'mock') as AuditSeoProvider
+  const usingLiveProviders = provider !== 'mock'
   const detectedLocation = location ?? 'Chicago, IL'
   const keywords = await generateTopIndustryKeywords(targetUrl, industry, detectedLocation, 5)
   let   manualReview     = false
@@ -323,6 +324,10 @@ export async function runFullAudit(
   } else {
     try {
       pageSpeed = await runPageSpeedAudit(targetUrl)
+      if (!pageSpeed && !manualReview) {
+        manualReview = true
+        manualReviewNote = 'PageSpeed API returned no analyzable data.'
+      }
     } catch (err) {
       console.error('[AuditEngine] PageSpeed failed:', err)
       if (!manualReview) {
@@ -338,6 +343,9 @@ export async function runFullAudit(
     manualReviewNote = 'Both search rankings and PageSpeed APIs failed. Site may be unscrapable.'
   }
 
+  // Persist guard: when live provider dependencies fail, avoid writing synthetic 0/100 summaries.
+  const dataUnavailable = usingLiveProviders && (rankReports.length === 0 || !pageSpeed)
+
   // ── 3. Compute gap analysis ─────────────────────────────────────────────
   const gapAnalysis  = computeGapAnalysis(targetUrl, rankReports)
   const leaderboard  = buildLeaderboard(targetUrl, competitorUrls, rankReports)
@@ -345,6 +353,33 @@ export async function runFullAudit(
   const { score, grade } = computeOverallScore(pageSpeed, rankReports, targetUrl)
 
   // ── 4. Build report_data ────────────────────────────────────────────────
+  const providerMeta = {
+    provider:   provider,
+    fetched_at: new Date().toISOString(),
+    request_id: crypto.randomUUID(),
+  }
+
+  if (dataUnavailable) {
+    const guardedReport: AuditReportData = {
+      provider_meta: providerMeta,
+      keyword_performance: keywordPerformance,
+      ...(({
+        data_unavailable: true,
+        data_unavailable_reason: manualReviewNote ?? 'External SEO provider data unavailable.',
+        keywords_used: keywords,
+      }) as unknown as Partial<AuditReportData>),
+    }
+
+    return {
+      reportData: guardedReport,
+      provider,
+      keywordsUsed:     keywords,
+      locationDetected: detectedLocation,
+      manualReview,
+      manualReviewNote,
+    }
+  }
+
   const targetDomain = extractDomain(targetUrl)
 
   const reportData: AuditReportData = {
@@ -439,11 +474,7 @@ export async function runFullAudit(
         estimated_impact: o.impact === 'critical' ? 'high' as const : o.impact === 'warning' ? 'medium' as const : 'low' as const,
       })) ?? []),
     ],
-    provider_meta: {
-      provider:   provider,
-      fetched_at: new Date().toISOString(),
-      request_id: crypto.randomUUID(),
-    },
+    provider_meta: providerMeta,
     // Extended data stored in report_data for the UI
     ...(({
       leaderboard,

@@ -19,6 +19,9 @@ interface ManualAuditStateProps {
   auditId:      string
   errorMessage: string | null
   adminEmail?:  string
+  badgeLabel?:  string
+  title?:       string
+  subtitle?:    string
 }
 
 export function ManualAuditState({
@@ -26,6 +29,9 @@ export function ManualAuditState({
   auditId,
   errorMessage,
   adminEmail = 'darrick@rankedceo.com',
+  badgeLabel,
+  title = 'Manual Audit Required',
+  subtitle,
 }: ManualAuditStateProps) {
   const [ctaUrl, setCtaUrl] = useState(`/get-started?tier=standard&auditId=${auditId}`)
 
@@ -35,6 +41,14 @@ export function ManualAuditState({
   })()
 
   const shortAuditId = auditId.slice(0, 8).toUpperCase()
+  const message = subtitle ?? (
+    <>
+      Our automated scanner couldn't fully analyze{' '}
+      <strong style={{ color: '#FCD34D' }}>{targetDomain}</strong>{' '}
+      right now — but don't worry. A member of the RankedCEO team has been
+      notified and will complete your report manually.
+    </>
+  )
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search)
@@ -75,6 +89,26 @@ export function ManualAuditState({
       </div>
 
       {/* Headline */}
+      {badgeLabel && (
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '5px 12px',
+          marginBottom: 12,
+          borderRadius: 999,
+          border: '1px solid rgba(16,185,129,0.35)',
+          background: 'rgba(16,185,129,0.12)',
+          color: '#6EE7B7',
+          fontSize: '0.72rem',
+          fontWeight: 700,
+          letterSpacing: '0.03em',
+          textTransform: 'uppercase',
+        }}>
+          ● {badgeLabel}
+        </div>
+      )}
+
       <h1 style={{
         margin:     '0 0 12px',
         fontSize:   'clamp(1.4rem, 4vw, 2rem)',
@@ -82,7 +116,7 @@ export function ManualAuditState({
         color:      '#ffffff',
         lineHeight: 1.2,
       }}>
-        Manual Audit Required
+        {title}
       </h1>
 
       {/* Sub-headline */}
@@ -95,10 +129,7 @@ export function ManualAuditState({
         marginLeft: 'auto',
         marginRight: 'auto',
       }}>
-        Our automated scanner couldn't fully analyze{' '}
-        <strong style={{ color: '#FCD34D' }}>{targetDomain}</strong>{' '}
-        right now — but don't worry. A member of the RankedCEO team has been
-        notified and will complete your report manually.
+        {message}
       </p>
 
       {/* Status card */}

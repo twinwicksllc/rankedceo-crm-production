@@ -64,13 +64,15 @@ function parseGeminiKeywords(text: string): string[] {
       return parsed.keywords.filter((v: unknown): v is string => typeof v === 'string')
     }
   } catch {
-    // Fall through to newline parsing.
+    return []
   }
 
-  return cleaned
-    .split('\n')
-    .map(line => line.trim())
-    .filter(Boolean)
+  return []
+}
+
+// Test hook for parser behavior; keeps runtime code path unchanged.
+export function parseGeminiKeywordsForTest(text: string): string[] {
+  return parseGeminiKeywords(text)
 }
 
 export async function generateTopIndustryKeywords(
