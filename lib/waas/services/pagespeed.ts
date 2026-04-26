@@ -54,6 +54,15 @@ export interface PageSpeedDiagnostic {
   score:       number | null
 }
 
+const REQUIRED_CATEGORIES = ['performance', 'seo', 'accessibility', 'best-practices'] as const
+
+export class PageSpeedDataError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'PageSpeedDataError'
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Convert 0-1 score to letter grade
 // ---------------------------------------------------------------------------
@@ -88,14 +97,40 @@ function extractMetrics(
 // Extract category scores
 // ---------------------------------------------------------------------------
 function extractCategoryScores(
-  lighthouseResult: Record<string, any>
+  lighthouseResult: Record<string, any>,
+  strategy: 'mobile' | 'desktop'
 ): PageSpeedCategoryScores {
   const cats = lighthouseResult?.categories ?? {}
 
-  const perf  = Math.round((cats.performance?.score    ?? 0) * 100)
-  const seo   = Math.round((cats.seo?.score            ?? 0) * 100)
-  const a11y  = Math.round((cats.accessibility?.score  ?? 0) * 100)
-  const bp    = Math.round((cats['best-practices']?.score ?? 0) * 100)
+  const scores: Record<(typeof REQUIRED_CATEGORIES)[number], number> = {
+    performance: 0,
+    seo: 0,
+    accessibility: 0,
+    'best-practices': 0,
+  }
+
+  for (const category of REQUIRED_CATEGORIES) {
+    const rawScore = cats?.[category]?.score
+
+    if (rawScore === null || rawScore === undefined) {
+      throw new PageSpeedDataError(
+        `[PageSpeed] ${strategy} response missing category score for "${category}".`
+      )
+    }
+
+    if (typeof rawScore !== 'number' || Number.isNaN(rawScore)) {
+      throw new PageSpeedDataError(
+        `[PageSpeed] ${strategy} response has invalid category score for "${category}": ${String(rawScore)}`
+      )
+    }
+
+    scores[category] = Math.round(rawScore * 100)
+  }
+
+  const perf = scores.performance
+  const seo = scores.seo
+  const a11y = scores.accessibility
+  const bp = scores['best-practices']
 
   return {
     performance:   { score: perf,  grade: scoreToGrade(perf)  },
@@ -155,10 +190,10 @@ async function fetchPageSpeed(
   const endpoint = new URL('https://www.googleapis.com/pagespeedonline/v5/runPagespeed')
   endpoint.searchParams.set('url',      url)
   endpoint.searchParams.set('strategy', strategy)
-  endpoint.searchParams.set('category', 'performance')
-  endpoint.searchParams.set('category', 'seo')
-  endpoint.searchParams.set('category', 'accessibility')
-  endpoint.searchParams.set('category', 'best-practices')
+  endpoint.searchParams.append('category', 'performance')
+  endpoint.searchParams.append('category', 'seo')
+  endpoint.searchParams.append('category', 'accessibility')
+  endpoint.searchParams.append('category', 'best-practices')
   if (apiKey) endpoint.searchParams.set('key', apiKey)
 
   try {
@@ -204,8 +239,8 @@ export async function runPageSpeedAudit(url: string): Promise<PageSpeedReport | 
   const mobileMetrics  = extractMetrics(mobileLH)
   const desktopMetrics = extractMetrics(desktopLH)
 
-  const mobileCats  = extractCategoryScores(mobileLH)
-  const desktopCats = extractCategoryScores(desktopLH)
+  const mobileCats  = extractCategoryScores(mobileLH, 'mobile')
+  const desktopCats = extractCategoryScores(desktopLH, 'desktop')
 
   const opportunities = extractOpportunities(mobileLH)
   const diagnostics   = extractDiagnostics(mobileLH)

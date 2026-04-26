@@ -49,6 +49,22 @@ export function extractDomain(url: string): string {
   }
 }
 
+function normalizeSerperLocation(location: string): string {
+  const cleaned = location.trim()
+  return cleaned.length > 0 ? cleaned : 'United States'
+}
+
+function inferGlFromLocation(location: string): string {
+  const value = location.toLowerCase()
+
+  if (/(united states|usa|u\.s\.|\b[a-z]{2},\s*[a-z]{2}\b)/.test(value)) return 'us'
+  if (/(united kingdom|uk|england|scotland|wales|northern ireland)/.test(value)) return 'uk'
+  if (/canada/.test(value)) return 'ca'
+  if (/australia/.test(value)) return 'au'
+
+  return 'us'
+}
+
 // ---------------------------------------------------------------------------
 // Run a single Serper search and return organic results
 // ---------------------------------------------------------------------------
@@ -64,6 +80,9 @@ async function serperSearch(
   }
 
   try {
+    const normalizedLocation = normalizeSerperLocation(location)
+    const gl = inferGlFromLocation(normalizedLocation)
+
     const response = await fetch('https://google.serper.dev/search', {
       method:  'POST',
       headers: {
@@ -71,10 +90,11 @@ async function serperSearch(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        q:    query,
-        num:  numResults,
-        gl:   'us',
-        hl:   'en',
+        q:         query,
+        num:       numResults,
+        gl,
+        hl:        'en',
+        location:  normalizedLocation,
       }),
       // No cache — always fresh results
       cache: 'no-store',
@@ -128,12 +148,18 @@ export async function getSearchRankings(
   keyword:         string,
   location:        string = 'Chicago, IL'
 ): Promise<SearchRankReport | null> {
-  const query = `${keyword} ${location}`
+  const queryWithLocation = `${keyword} ${location}`
 
-  const searchResults = await serperSearch(query, location, 100)
-  if (!searchResults) return null
+  let searchResults = await serperSearch(queryWithLocation, location, 100)
+  let organic = searchResults?.organic ?? []
 
-  const organic = searchResults.organic ?? []
+  // Retry without location suffix if provider returned empty results for localized query.
+  if (organic.length === 0) {
+    searchResults = await serperSearch(keyword, location, 100)
+    organic = searchResults?.organic ?? []
+  }
+
+  if (!searchResults || organic.length === 0) return null
 
   const targetDomain = extractDomain(targetUrl)
   const targetRank   = findDomainRank(targetDomain, organic)

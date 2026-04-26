@@ -289,6 +289,7 @@ export async function runFullAudit(
   const usingLiveProviders = provider !== 'mock'
   const detectedLocation = location ?? 'Chicago, IL'
   const keywords = await generateTopIndustryKeywords(targetUrl, industry, detectedLocation, 5)
+  const totalKeywords = keywords.length
   let   manualReview     = false
   let   manualReviewNote: string | null = null
 
@@ -314,6 +315,11 @@ export async function runFullAudit(
       manualReview = true
       manualReviewNote = 'Search API failed for all evaluated keywords.'
     }
+  }
+
+  const failedKeywordFetches = Math.max(0, totalKeywords - rankReports.length)
+  if (failedKeywordFetches > 0 && rankReports.length > 0) {
+    manualReviewNote = `${failedKeywordFetches} keyword search request(s) failed and were excluded from ranking analysis.`
   }
 
   // ── 2. Run PageSpeed ────────────────────────────────────────────────────
@@ -357,6 +363,11 @@ export async function runFullAudit(
     provider:   provider,
     fetched_at: new Date().toISOString(),
     request_id: crypto.randomUUID(),
+    ...({
+      keyword_requests: totalKeywords,
+      keyword_successes: rankReports.length,
+      keyword_failures: failedKeywordFetches,
+    } as Record<string, unknown>),
   }
 
   if (dataUnavailable) {

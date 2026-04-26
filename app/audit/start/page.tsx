@@ -101,6 +101,9 @@ function AuditStartPageContent() {
 
       <div className="relative mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
+          <p className={`mb-3 text-xs font-bold uppercase tracking-[0.18em] ${isLight ? 'text-cyan-700' : 'text-cyan-300'}`}>
+            Audit Pro by RankedCEO
+          </p>
           <h1 className={`text-4xl font-extrabold tracking-tight sm:text-5xl ${isLight ? 'text-slate-800' : 'text-white'}`}>
             See how you <span className="bg-gradient-to-r from-cyan-500 to-emerald-500 bg-clip-text text-transparent">stack up</span>
             <br />
