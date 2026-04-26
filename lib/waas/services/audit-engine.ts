@@ -224,37 +224,18 @@ function buildLeaderboard(
 // Compute overall audit score (0-100)
 // ---------------------------------------------------------------------------
 function computeOverallScore(
-  pageSpeed:   PageSpeedReport | null,
-  rankReports: SearchRankReport[],
-  targetUrl:   string
+  performanceScore: number,
+  seoScore: number,
+  mobileScore: number,
+  accessibilityScore: number
 ): { score: number; grade: 'A' | 'B' | 'C' | 'D' | 'F' } {
-  let score = 0
-  let weight = 0
+  const weightedTotal =
+    (performanceScore * 0.40) +
+    (seoScore * 0.30) +
+    (mobileScore * 0.20) +
+    (accessibilityScore * 0.10)
 
-  // PageSpeed performance (40% weight)
-  if (pageSpeed) {
-    score  += pageSpeed.overallScore * 0.40
-    weight += 0.40
-  }
-
-  // Ranking (60% weight — split across keywords)
-  const targetDomain = extractDomain(targetUrl)
-  if (rankReports.length > 0) {
-    const rankScores: number[] = rankReports.map(report => {
-      const pos = report.targetResult.position
-      if (!pos) return 0
-      if (pos <= 3)  return 95
-      if (pos <= 10) return 75
-      if (pos <= 20) return 50
-      if (pos <= 50) return 25
-      return 10
-    })
-    const avgRankScore = rankScores.reduce((s, v) => s + v, 0) / rankScores.length
-    score  += avgRankScore * 0.60
-    weight += 0.60
-  }
-
-  const finalScore = weight > 0 ? Math.round(score / weight) : 0
+  const finalScore = Math.round(weightedTotal)
 
   let grade: 'A' | 'B' | 'C' | 'D' | 'F'
   if (finalScore >= 80) grade = 'A'
@@ -357,7 +338,16 @@ export async function runFullAudit(
   const gapAnalysis  = computeGapAnalysis(targetUrl, rankReports)
   const leaderboard  = buildLeaderboard(targetUrl, competitorUrls, rankReports)
   const keywordPerformance = computeKeywordPerformance(rankReports, keywords.length)
-  const { score, grade } = computeOverallScore(pageSpeed, rankReports, targetUrl)
+  const performanceScore = pageSpeed?.mobile.categoryScores.performance.score  ?? 0
+  const seoScore = pageSpeed?.mobile.categoryScores.seo.score ?? 0
+  const mobileScore = pageSpeed?.mobile.categoryScores.performance.score ?? 0
+  const accessibilityScore = pageSpeed?.mobile.categoryScores.accessibility.score ?? 0
+  const { score, grade } = computeOverallScore(
+    performanceScore,
+    seoScore,
+    mobileScore,
+    accessibilityScore,
+  )
 
   // ── 4. Build report_data ────────────────────────────────────────────────
   const providerMeta = {
@@ -404,10 +394,37 @@ export async function runFullAudit(
   const reportData: AuditReportData = {
     summary: {
       overall_score:       score,
-      performance_score:   pageSpeed?.mobile.categoryScores.performance.score  ?? 0,
-      seo_score:           pageSpeed?.mobile.categoryScores.seo.score          ?? 0,
-      mobile_score:        pageSpeed?.mobile.categoryScores.performance.score  ?? 0,
-      accessibility_score: pageSpeed?.mobile.categoryScores.accessibility.score ?? 0,
+      performance_score:   performanceScore,
+      seo_score:           seoScore,
+      mobile_score:        mobileScore,
+      accessibility_score: accessibilityScore,
+      overall_score_formula: '0.40*performance + 0.30*seo + 0.20*mobile + 0.10*accessibility',
+      overall_score_components: [
+        {
+          label: 'Performance',
+          weight: 0.40,
+          score: performanceScore,
+          contribution: Number((performanceScore * 0.40).toFixed(1)),
+        },
+        {
+          label: 'SEO',
+          weight: 0.30,
+          score: seoScore,
+          contribution: Number((seoScore * 0.30).toFixed(1)),
+        },
+        {
+          label: 'Mobile',
+          weight: 0.20,
+          score: mobileScore,
+          contribution: Number((mobileScore * 0.20).toFixed(1)),
+        },
+        {
+          label: 'Accessibility',
+          weight: 0.10,
+          score: accessibilityScore,
+          contribution: Number((accessibilityScore * 0.10).toFixed(1)),
+        },
+      ],
       top_search_result:   keywordPerformance.topSearchResult,
       bottom_search_result: keywordPerformance.bottomSearchResult,
       mean_position:       keywordPerformance.meanPosition,

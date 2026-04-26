@@ -134,6 +134,14 @@ function getScoreColor(score: number): string {
   return '#EF4444'
 }
 
+function gradeFromScore(score: number): 'A' | 'B' | 'C' | 'D' | 'F' {
+  if (score >= 80) return 'A'
+  if (score >= 65) return 'B'
+  if (score >= 50) return 'C'
+  if (score >= 35) return 'D'
+  return 'F'
+}
+
 const POLL_INTERVAL_MS = 4_000
 const POLL_MAX_ATTEMPTS = 45  // ~3 minutes max
 
@@ -309,8 +317,15 @@ function FullReport({ audit }: { audit: WaasAudit }) {
   const report       = audit.report_data as ExtendedReportData
   const targetDomain = extractDomain(audit.target_url)
   const summary      = report.summary
-  const grade        = report.grade ?? 'F'
-  const score        = summary?.overall_score ?? 0
+  const score = summary
+    ? Math.round(
+        (summary.performance_score * 0.40) +
+        (summary.seo_score * 0.30) +
+        (summary.mobile_score * 0.20) +
+        (summary.accessibility_score * 0.10)
+      )
+    : 0
+  const grade: 'A' | 'B' | 'C' | 'D' | 'F' = gradeFromScore(score)
   const leaderboard  = report.leaderboard ?? []
   const gapAnalysis  = report.gap_analysis
   const pageSpeed    = report.page_speed_full
@@ -329,6 +344,7 @@ function FullReport({ audit }: { audit: WaasAudit }) {
         score={score}
         grade={grade}
         keyword={primaryKeyword}
+        summary={summary}
         completedAt={audit.completed_at}
       />
 
@@ -350,6 +366,11 @@ function FullReport({ audit }: { audit: WaasAudit }) {
         </Section>
       )}
 
+      {/* ── KEYWORDS USED ────────────────────────────────────────────────── */}
+      <Section title="🧩 Keywords Evaluated" subtitle="The exact search queries used for this ranking audit">
+        <KeywordsUsedPanel keywords={keywords} />
+      </Section>
+
       {/* ── KEYWORD PERFORMANCE ───────────────────────────────────────────── */}
       {summary && (summary.top_search_result || summary.bottom_search_result || summary.mean_position !== null) && (
         <Section title="🔎 Keyword Performance" subtitle="Best term, weakest term, and average position across the top 5 keywords">
@@ -370,7 +391,12 @@ function FullReport({ audit }: { audit: WaasAudit }) {
       {/* ── GAP ANALYSIS ──────────────────────────────────────────────────── */}
       {gapAnalysis && (
         <Section title="🎯 Competitor Gap Analysis" subtitle="Keywords your competitors are using to steal your leads">
-          <GapAnalysis gapAnalysis={gapAnalysis} targetDomain={targetDomain} />
+          <GapAnalysis
+            gapAnalysis={gapAnalysis}
+            targetDomain={targetDomain}
+            measuredKeywords={summary?.measured_keywords ?? 0}
+            evaluatedKeywords={summary?.evaluated_keywords ?? 0}
+          />
         </Section>
       )}
 
@@ -391,7 +417,7 @@ function FullReport({ audit }: { audit: WaasAudit }) {
                     url,
                     domain,
                     bestPosition:    lbEntry?.bestPosition ?? null,
-                    keywordsRanking: compData?.keywords_ranking ?? 0,
+                    keywordsRanking: compData ? compData.keywords_ranking : null,
                     topKeywords:     compData?.top_keywords ?? (lbEntry?.bestPosition ? [primaryKeyword] : []),
                   }}
                   targetDomain={targetDomain}
@@ -452,13 +478,14 @@ function FullReport({ audit }: { audit: WaasAudit }) {
 // ---------------------------------------------------------------------------
 
 function HeroSection({
-  targetDomain, targetUrl, score, grade, keyword, completedAt,
+  targetDomain, targetUrl, score, grade, keyword, summary, completedAt,
 }: {
   targetDomain: string
   targetUrl:    string
   score:        number
   grade:        'A' | 'B' | 'C' | 'D' | 'F'
   keyword:      string
+  summary?:     AuditReportData['summary']
   completedAt:  string | null
 }) {
   const { theme } = useOnboardingTheme()
@@ -466,6 +493,17 @@ function HeroSection({
   const gradeColor = getGradeColor(grade)
   const scoreColor = getScoreColor(score)
   const isUrgent   = score < 50
+  const performanceScore = summary?.performance_score ?? 0
+  const seoScore = summary?.seo_score ?? 0
+  const mobileScore = summary?.mobile_score ?? 0
+  const accessibilityScore = summary?.accessibility_score ?? 0
+  const weightedRaw =
+    (performanceScore * 0.40) +
+    (seoScore * 0.30) +
+    (mobileScore * 0.20) +
+    (accessibilityScore * 0.10)
+  const measuredKeywords = summary?.measured_keywords ?? 0
+  const evaluatedKeywords = summary?.evaluated_keywords ?? 0
 
   return (
     <div style={{
@@ -519,6 +557,40 @@ function HeroSection({
             })}
           </div>
         )}
+      </div>
+
+      {/* Transparent score formula */}
+      <div style={{
+        marginTop: 14,
+        padding: '10px 12px',
+        borderRadius: 10,
+        border: isLight ? '1px solid rgba(15,23,42,0.14)' : '1px solid rgba(255,255,255,0.12)',
+        background: isLight ? 'rgba(15,23,42,0.03)' : 'rgba(255,255,255,0.03)',
+      }}>
+        <div style={{
+          fontSize: '0.7rem',
+          fontWeight: 700,
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+          color: isLight ? 'rgba(15,23,42,0.6)' : 'rgba(255,255,255,0.45)',
+          marginBottom: 5,
+        }}>
+          How Overall Score Is Calculated
+        </div>
+        <div style={{
+          fontSize: '0.82rem',
+          lineHeight: 1.45,
+          color: isLight ? 'rgba(15,23,42,0.82)' : 'rgba(255,255,255,0.78)',
+        }}>
+          (Performance {performanceScore} × 40%) + (SEO {seoScore} × 30%) + (Mobile {mobileScore} × 20%) + (Accessibility {accessibilityScore} × 10%) = {weightedRaw.toFixed(1)} → {score}
+        </div>
+        <div style={{
+          marginTop: 4,
+          fontSize: '0.76rem',
+          color: isLight ? 'rgba(15,23,42,0.62)' : 'rgba(255,255,255,0.56)',
+        }}>
+          Ranking visibility is shown separately: {measuredKeywords}/{evaluatedKeywords} evaluated keywords currently ranking in the top 100.
+        </div>
       </div>
 
       {/* Main content */}
@@ -646,12 +718,42 @@ function ScoreBreakdown({ summary, grade }: {
 }) {
   const { theme } = useOnboardingTheme()
   const isLight = theme === 'light'
+  const performanceContribution = summary.performance_score * 0.40
+  const seoContribution = summary.seo_score * 0.30
+  const mobileContribution = summary.mobile_score * 0.20
+  const accessibilityContribution = summary.accessibility_score * 0.10
+  const rawOverall = performanceContribution + seoContribution + mobileContribution + accessibilityContribution
   const metrics = [
-    { label: 'Overall SEO Score',  value: summary.overall_score,       icon: '🏆', weight: 'Primary'   },
-    { label: 'Performance',        value: summary.performance_score,    icon: '⚡', weight: '40% weight' },
-    { label: 'SEO',                value: summary.seo_score,            icon: '🔍', weight: '30% weight' },
-    { label: 'Mobile',             value: summary.mobile_score,         icon: '📱', weight: '20% weight' },
-    { label: 'Accessibility',      value: summary.accessibility_score,  icon: '♿', weight: '10% weight' },
+    {
+      label: 'Overall SEO Score',
+      value: Math.round(rawOverall),
+      icon: '🏆',
+      weight: `${performanceContribution.toFixed(1)} + ${seoContribution.toFixed(1)} + ${mobileContribution.toFixed(1)} + ${accessibilityContribution.toFixed(1)} = ${rawOverall.toFixed(1)} → ${Math.round(rawOverall)}`,
+    },
+    {
+      label: 'Performance',
+      value: summary.performance_score,
+      icon: '⚡',
+      weight: `40% × ${summary.performance_score} = ${performanceContribution.toFixed(1)} pts`,
+    },
+    {
+      label: 'SEO',
+      value: summary.seo_score,
+      icon: '🔍',
+      weight: `30% × ${summary.seo_score} = ${seoContribution.toFixed(1)} pts`,
+    },
+    {
+      label: 'Mobile',
+      value: summary.mobile_score,
+      icon: '📱',
+      weight: `20% × ${summary.mobile_score} = ${mobileContribution.toFixed(1)} pts`,
+    },
+    {
+      label: 'Accessibility',
+      value: summary.accessibility_score,
+      icon: '♿',
+      weight: `10% × ${summary.accessibility_score} = ${accessibilityContribution.toFixed(1)} pts`,
+    },
   ]
 
   return (
@@ -711,6 +813,50 @@ function ScoreBreakdown({ summary, grade }: {
 function formatPosition(position: number | null | undefined): string {
   if (position === null || position === undefined) return 'Not ranked'
   return position >= 101 ? 'Not ranked (Top 100)' : `#${position}`
+}
+
+function KeywordsUsedPanel({ keywords }: { keywords: string[] }) {
+  const { theme } = useOnboardingTheme()
+  const isLight = theme === 'light'
+
+  if (keywords.length === 0) {
+    return (
+      <div style={{
+        borderRadius: 10,
+        border: isLight ? '1px solid rgba(15,23,42,0.14)' : '1px solid rgba(255,255,255,0.12)',
+        background: isLight ? 'rgba(15,23,42,0.03)' : 'rgba(255,255,255,0.03)',
+        padding: '12px 14px',
+        fontSize: '0.85rem',
+        color: isLight ? 'rgba(15,23,42,0.6)' : 'rgba(255,255,255,0.55)',
+      }}>
+        No keyword list was saved for this audit run.
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+      {keywords.map((keyword) => (
+        <span
+          key={keyword}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            padding: '6px 10px',
+            borderRadius: 999,
+            border: isLight ? '1px solid rgba(37,99,235,0.22)' : '1px solid rgba(59,130,246,0.32)',
+            background: isLight ? 'rgba(59,130,246,0.08)' : 'rgba(59,130,246,0.18)',
+            color: isLight ? '#1d4ed8' : '#bfdbfe',
+            fontSize: '0.78rem',
+            fontWeight: 600,
+            lineHeight: 1.2,
+          }}
+        >
+          {keyword}
+        </span>
+      ))}
+    </div>
+  )
 }
 
 function KeywordPerformancePanel({ summary, providerMeta }: {
@@ -1123,6 +1269,8 @@ function TechnicalIssues({ issues }: { issues: NonNullable<AuditReportData['tech
 // ---------------------------------------------------------------------------
 
 function Opportunities({ opportunities }: { opportunities: NonNullable<AuditReportData['opportunities']> }) {
+  const { theme } = useOnboardingTheme()
+  const isLight = theme === 'light'
   const IMPACT_CONFIG = {
     high:   { color: '#EF4444', label: 'High Impact',   icon: '🔥' },
     medium: { color: '#F59E0B', label: 'Medium Impact', icon: '⚡' },
@@ -1166,7 +1314,7 @@ function Opportunities({ opportunities }: { opportunities: NonNullable<AuditRepo
                 </span>
                 <span style={{
                   fontSize:   '0.68rem',
-                  color:      'rgba(255,255,255,0.3)',
+                  color:      isLight ? 'rgba(15,23,42,0.55)' : 'rgba(255,255,255,0.36)',
                   textTransform: 'capitalize',
                 }}>
                   {opp.type.replace(/_/g, ' ')}
@@ -1174,7 +1322,7 @@ function Opportunities({ opportunities }: { opportunities: NonNullable<AuditRepo
               </div>
               <div style={{
                 fontSize:   '0.82rem',
-                color:      'rgba(255,255,255,0.7)',
+                color:      isLight ? 'rgba(15,23,42,0.78)' : 'rgba(255,255,255,0.75)',
                 lineHeight: 1.4,
               }}>
                 {opp.description}

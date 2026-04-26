@@ -7,6 +7,7 @@
 // =============================================================================
 
 import { useEffect, useState } from 'react'
+import { useOnboardingTheme } from '@/app/get-started/theme-context'
 
 interface ExpiryCountdownProps {
   expiresAt: string   // ISO timestamp
@@ -37,6 +38,8 @@ function pad(n: number): string {
 }
 
 export function ExpiryCountdown({ expiresAt, compact = false }: ExpiryCountdownProps) {
+  const { theme } = useOnboardingTheme()
+  const isLight = theme === 'light'
   const [timeLeft, setTimeLeft] = useState<TimeLeft>(() => calcTimeLeft(expiresAt))
 
   useEffect(() => {
@@ -68,7 +71,7 @@ export function ExpiryCountdown({ expiresAt, compact = false }: ExpiryCountdownP
         borderRadius: 20,
         padding:      '4px 12px',
         fontSize:     '0.75rem',
-        color:        accentColor,
+        color:        isLight ? '#0f172a' : accentColor,
         fontWeight:   600,
       }}>
         <span style={{ fontSize: '0.8rem' }}>
@@ -88,8 +91,10 @@ export function ExpiryCountdown({ expiresAt, compact = false }: ExpiryCountdownP
       padding:      '16px 20px',
       borderRadius: 12,
       background:   expired
-        ? 'rgba(107,114,128,0.1)'
-        : `linear-gradient(135deg, ${accentColor}15 0%, rgba(0,0,0,0.2) 100%)`,
+        ? (isLight ? 'rgba(107,114,128,0.08)' : 'rgba(107,114,128,0.1)')
+        : isLight
+          ? `linear-gradient(135deg, ${accentColor}14 0%, rgba(15,23,42,0.05) 100%)`
+          : `linear-gradient(135deg, ${accentColor}15 0%, rgba(0,0,0,0.2) 100%)`,
       border:       `1px solid ${accentColor}30`,
     }}>
       {expired ? (
@@ -98,12 +103,12 @@ export function ExpiryCountdown({ expiresAt, compact = false }: ExpiryCountdownP
           <div style={{
             fontSize:   '0.9rem',
             fontWeight: 700,
-            color:      '#9CA3AF',
+            color:      isLight ? '#475569' : '#9CA3AF',
             marginBottom: 4,
           }}>
             Report Expired
           </div>
-          <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)' }}>
+          <div style={{ fontSize: '0.78rem', color: isLight ? 'rgba(15,23,42,0.55)' : 'rgba(255,255,255,0.4)' }}>
             Run a new audit to get a fresh report
           </div>
         </div>
@@ -113,7 +118,7 @@ export function ExpiryCountdown({ expiresAt, compact = false }: ExpiryCountdownP
           <div>
             <div style={{
               fontSize:     '0.7rem',
-              color:        'rgba(255,255,255,0.45)',
+              color:        isLight ? 'rgba(15,23,42,0.62)' : 'rgba(255,255,255,0.48)',
               textTransform: 'uppercase',
               letterSpacing: '0.07em',
               marginBottom:  4,
@@ -122,7 +127,7 @@ export function ExpiryCountdown({ expiresAt, compact = false }: ExpiryCountdownP
             </div>
             <div style={{
               fontSize:   '0.8rem',
-              color:      'rgba(255,255,255,0.55)',
+              color:      isLight ? 'rgba(15,23,42,0.72)' : 'rgba(255,255,255,0.6)',
             }}>
               {critical
                 ? 'Save your report now before it disappears'
@@ -133,11 +138,11 @@ export function ExpiryCountdown({ expiresAt, compact = false }: ExpiryCountdownP
 
           {/* Right: clock */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <TimeUnit value={pad(timeLeft.hours)}   label="HRS"  color={accentColor} />
+            <TimeUnit value={pad(timeLeft.hours)}   label="HRS"  color={accentColor} isLight={isLight} />
             <Colon color={accentColor} />
-            <TimeUnit value={pad(timeLeft.minutes)} label="MIN"  color={accentColor} />
+            <TimeUnit value={pad(timeLeft.minutes)} label="MIN"  color={accentColor} isLight={isLight} />
             <Colon color={accentColor} />
-            <TimeUnit value={pad(timeLeft.seconds)} label="SEC"  color={accentColor} />
+            <TimeUnit value={pad(timeLeft.seconds)} label="SEC"  color={accentColor} isLight={isLight} />
           </div>
         </div>
       )}
@@ -151,7 +156,7 @@ export function ExpiryCountdown({ expiresAt, compact = false }: ExpiryCountdownP
           background:   'rgba(239,68,68,0.12)',
           border:       '1px solid rgba(239,68,68,0.3)',
           fontSize:     '0.75rem',
-          color:        '#FCA5A5',
+          color:        isLight ? '#991b1b' : '#FCA5A5',
           textAlign:    'center',
         }}>
           ⚠️ Less than 24 hours left — <strong>download your PDF</strong> or{' '}
@@ -162,7 +167,7 @@ export function ExpiryCountdown({ expiresAt, compact = false }: ExpiryCountdownP
   )
 }
 
-function TimeUnit({ value, label, color }: { value: string; label: string; color: string }) {
+function TimeUnit({ value, label, color, isLight }: { value: string; label: string; color: string; isLight: boolean }) {
   return (
     <div style={{
       textAlign:  'center',
@@ -184,7 +189,7 @@ function TimeUnit({ value, label, color }: { value: string; label: string; color
       </div>
       <div style={{
         fontSize:     '0.6rem',
-        color:        'rgba(255,255,255,0.35)',
+        color:        isLight ? 'rgba(15,23,42,0.58)' : 'rgba(255,255,255,0.4)',
         textTransform: 'uppercase',
         letterSpacing: '0.08em',
         marginTop:    2,

@@ -226,6 +226,13 @@ export interface AuditSummary {
   seo_score:           number
   mobile_score:        number
   accessibility_score: number
+  overall_score_formula?: string
+  overall_score_components?: Array<{
+    label: string
+    weight: number
+    score: number
+    contribution: number
+  }>
   top_search_result?: {
     keyword: string
     position: number | null

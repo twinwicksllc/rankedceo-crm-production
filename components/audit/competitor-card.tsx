@@ -5,11 +5,13 @@
 // Per-competitor breakdown: best position, keyword count, PageSpeed comparison
 // =============================================================================
 
+import { useOnboardingTheme } from '@/app/get-started/theme-context'
+
 interface CompetitorMetrics {
   url:             string
   domain:          string
   bestPosition:    number | null
-  keywordsRanking: number
+  keywordsRanking: number | null
   topKeywords:     string[]
 }
 
@@ -54,8 +56,12 @@ export function CompetitorCard({
   targetScore,
   targetGrade,
 }: CompetitorCardProps) {
+  const { theme } = useOnboardingTheme()
+  const isLight = theme === 'light'
   const posColor    = getPositionColor(competitor.bestPosition)
   const posLabel    = getPositionLabel(competitor.bestPosition)
+  const hasKeywordData = competitor.keywordsRanking !== null
+  const keywordsRankingValue = competitor.keywordsRanking ?? 0
   const isBeating   = competitor.bestPosition !== null && competitor.bestPosition <= 10
   const rankColor   = RANK_COLORS[rank - 1] ?? '#22C55E'
 
@@ -66,8 +72,10 @@ export function CompetitorCard({
 
   return (
     <div style={{
-      background:   'linear-gradient(135deg, rgba(34,197,94,0.08) 0%, rgba(0,0,0,0.3) 100%)',
-      border:       '1px solid rgba(34,197,94,0.2)',
+      background:   isLight
+        ? 'linear-gradient(135deg, rgba(34,197,94,0.10) 0%, rgba(15,23,42,0.04) 100%)'
+        : 'linear-gradient(135deg, rgba(34,197,94,0.08) 0%, rgba(0,0,0,0.3) 100%)',
+      border:       isLight ? '1px solid rgba(34,197,94,0.26)' : '1px solid rgba(34,197,94,0.2)',
       borderRadius: 12,
       padding:      '16px 18px',
       position:     'relative',
@@ -95,14 +103,14 @@ export function CompetitorCard({
         <div style={{
           fontSize:   '0.95rem',
           fontWeight: 700,
-          color:      '#ffffff',
+          color:      isLight ? '#0f172a' : '#ffffff',
           marginBottom: 2,
         }}>
           {competitor.domain}
         </div>
         <div style={{
           fontSize: '0.72rem',
-          color:    'rgba(255,255,255,0.4)',
+          color:    isLight ? 'rgba(15,23,42,0.62)' : 'rgba(255,255,255,0.42)',
           wordBreak: 'break-all',
         }}>
           {competitor.url}
@@ -123,22 +131,25 @@ export function CompetitorCard({
           sub={posLabel}
           color={posColor}
           glow
+          isLight={isLight}
         />
 
         {/* Keywords ranking */}
         <MetricBubble
           label="Keywords"
-          value={String(competitor.keywordsRanking)}
-          sub="ranking"
+          value={hasKeywordData ? String(keywordsRankingValue) : 'N/A'}
+          sub={hasKeywordData ? 'ranking' : 'data unavailable'}
           color="#60A5FA"
+          isLight={isLight}
         />
 
         {/* Threat level */}
         <MetricBubble
           label="Threat"
-          value={isBeating ? 'HIGH' : 'LOW'}
-          sub={isBeating ? 'Beating you' : 'Not a threat'}
-          color={isBeating ? '#EF4444' : '#22C55E'}
+          value={!hasKeywordData ? 'UNKNOWN' : isBeating ? 'HIGH' : 'LOW'}
+          sub={!hasKeywordData ? 'not enough SERP data' : isBeating ? 'Beating you' : 'Not a threat'}
+          color={!hasKeywordData ? '#94A3B8' : isBeating ? '#EF4444' : '#22C55E'}
+          isLight={isLight}
         />
       </div>
 
@@ -147,7 +158,7 @@ export function CompetitorCard({
         <div>
           <div style={{
             fontSize:     '0.7rem',
-            color:        'rgba(255,255,255,0.4)',
+            color:        isLight ? 'rgba(15,23,42,0.62)' : 'rgba(255,255,255,0.45)',
             marginBottom: 6,
             textTransform: 'uppercase',
             letterSpacing: '0.06em',
@@ -160,9 +171,9 @@ export function CompetitorCard({
                 key={i}
                 style={{
                   fontSize:     '0.72rem',
-                  color:        '#22C55E',
-                  background:   'rgba(34,197,94,0.1)',
-                  border:       '1px solid rgba(34,197,94,0.25)',
+                  color:        isLight ? '#166534' : '#22C55E',
+                  background:   isLight ? 'rgba(34,197,94,0.14)' : 'rgba(34,197,94,0.1)',
+                  border:       isLight ? '1px solid rgba(34,197,94,0.32)' : '1px solid rgba(34,197,94,0.25)',
                   borderRadius: 4,
                   padding:      '2px 8px',
                 }}
@@ -171,6 +182,21 @@ export function CompetitorCard({
               </span>
             ))}
           </div>
+        </div>
+      )}
+
+      {!hasKeywordData && (
+        <div style={{
+          marginTop: 10,
+          padding: '8px 12px',
+          borderRadius: 7,
+          background: isLight ? 'rgba(59,130,246,0.10)' : 'rgba(59,130,246,0.12)',
+          border: isLight ? '1px solid rgba(59,130,246,0.30)' : '1px solid rgba(59,130,246,0.25)',
+          fontSize: '0.75rem',
+          color: isLight ? 'rgba(15,23,42,0.78)' : '#BFDBFE',
+          lineHeight: 1.4,
+        }}>
+          Competitor keyword count is unavailable for this scan. This usually means no ranked competitor matches were found for the evaluated keyword set.
         </div>
       )}
 
@@ -204,13 +230,14 @@ export function CompetitorCard({
 // ---------------------------------------------------------------------------
 
 function MetricBubble({
-  label, value, sub, color, glow = false,
+  label, value, sub, color, glow = false, isLight,
 }: {
   label: string
   value: string
   sub:   string
   color: string
   glow?: boolean
+  isLight: boolean
 }) {
   return (
     <div style={{
@@ -223,7 +250,7 @@ function MetricBubble({
     }}>
       <div style={{
         fontSize:   '0.68rem',
-        color:      'rgba(255,255,255,0.4)',
+        color:      isLight ? 'rgba(15,23,42,0.64)' : 'rgba(255,255,255,0.45)',
         marginBottom: 3,
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
@@ -242,7 +269,7 @@ function MetricBubble({
       </div>
       <div style={{
         fontSize: '0.68rem',
-        color:    'rgba(255,255,255,0.4)',
+        color:    isLight ? 'rgba(15,23,42,0.62)' : 'rgba(255,255,255,0.45)',
       }}>
         {sub}
       </div>
