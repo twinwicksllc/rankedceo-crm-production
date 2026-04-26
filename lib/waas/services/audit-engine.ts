@@ -9,7 +9,7 @@ import {
   extractDomain,
   type SearchRankReport,
 } from './serper'
-import { generateTopIndustryKeywords } from './keyword-generator'
+import { generateIndustryKeywordPlan } from './keyword-generator'
 import {
   runPageSpeedAudit,
   getMockPageSpeedReport,
@@ -287,8 +287,9 @@ export async function runFullAudit(
 ): Promise<AuditEngineResult> {
   const provider   = (process.env.WAAS_SEO_PROVIDER ?? 'mock') as AuditSeoProvider
   const usingLiveProviders = provider !== 'mock'
-  const detectedLocation = location ?? 'Chicago, IL'
-  const keywords = await generateTopIndustryKeywords(targetUrl, industry, detectedLocation, 5)
+  const keywordPlan = await generateIndustryKeywordPlan(targetUrl, industry, location, 5)
+  const detectedLocation = location ?? keywordPlan.detectedLocation ?? 'Chicago, IL'
+  const keywords = keywordPlan.keywords
   const totalKeywords = keywords.length
   let   manualReview     = false
   let   manualReviewNote: string | null = null
@@ -364,6 +365,13 @@ export async function runFullAudit(
     fetched_at: new Date().toISOString(),
     request_id: crypto.randomUUID(),
     ...({
+      keyword_provider: keywordPlan.provider,
+      keyword_detected_location: keywordPlan.detectedLocation,
+      keyword_detected_industry: keywordPlan.detectedIndustry,
+      keyword_detected_address: keywordPlan.detectedAddress,
+      keyword_confidence_score: keywordPlan.confidenceScore,
+      keyword_confidence_label: keywordPlan.confidenceLabel,
+      keyword_confidence_reasons: keywordPlan.confidenceReasons,
       keyword_requests: totalKeywords,
       keyword_successes: rankReports.length,
       keyword_failures: failedKeywordFetches,

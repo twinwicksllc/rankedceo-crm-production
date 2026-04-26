@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { parseGeminiKeywordsForTest } from './keyword-generator'
+import { parseAiKeywordPlanForTest, parseGeminiKeywordsForTest } from './keyword-generator'
 
 test('parses valid JSON array keyword output', () => {
   const input = JSON.stringify([
@@ -49,4 +49,42 @@ test('rejects markdown fenced but invalid JSON payloads', () => {
   const result = parseGeminiKeywordsForTest(input)
 
   assert.deepEqual(result, [])
+})
+
+test('parses structured keyword plan JSON', () => {
+  const input = JSON.stringify({
+    industry: 'plumbing services',
+    location: 'Nashville, TN',
+    address: '123 Main St, Nashville, TN 37201',
+    keywords: [
+      'emergency plumber nashville',
+      'water heater repair nashville',
+      'drain cleaning nashville tn',
+      'sewer line repair nashville',
+      'licensed plumber near me nashville',
+    ],
+  })
+
+  const result = parseAiKeywordPlanForTest(input)
+
+  assert.deepEqual(result, {
+    industry: 'plumbing services',
+    location: 'Nashville, TN',
+    address: '123 Main St, Nashville, TN 37201',
+    keywords: [
+      'emergency plumber nashville',
+      'water heater repair nashville',
+      'drain cleaning nashville tn',
+      'sewer line repair nashville',
+      'licensed plumber near me nashville',
+    ],
+  })
+})
+
+test('returns null for non-json keyword plan payloads', () => {
+  const input = 'not a json object'
+
+  const result = parseAiKeywordPlanForTest(input)
+
+  assert.equal(result, null)
 })

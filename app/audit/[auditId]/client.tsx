@@ -39,6 +39,13 @@ interface ExtendedReportData extends AuditReportData {
   keywords_used?:    string[]
 }
 
+interface KeywordProviderMeta {
+  keyword_provider?: 'gemini' | 'perplexity' | 'fallback'
+  keyword_confidence_score?: number
+  keyword_confidence_label?: 'high' | 'medium' | 'low'
+  keyword_confidence_reasons?: string[]
+}
+
 interface LeaderboardEntry {
   rank:         number
   url:          string
@@ -346,7 +353,10 @@ function FullReport({ audit }: { audit: WaasAudit }) {
       {/* ── KEYWORD PERFORMANCE ───────────────────────────────────────────── */}
       {summary && (summary.top_search_result || summary.bottom_search_result || summary.mean_position !== null) && (
         <Section title="🔎 Keyword Performance" subtitle="Best term, weakest term, and average position across the top 5 keywords">
-          <KeywordPerformancePanel summary={summary} />
+          <KeywordPerformancePanel
+            summary={summary}
+            providerMeta={report.provider_meta as KeywordProviderMeta | undefined}
+          />
         </Section>
       )}
 
@@ -703,8 +713,9 @@ function formatPosition(position: number | null | undefined): string {
   return position >= 101 ? 'Not ranked (Top 100)' : `#${position}`
 }
 
-function KeywordPerformancePanel({ summary }: {
+function KeywordPerformancePanel({ summary, providerMeta }: {
   summary: NonNullable<AuditReportData['summary']>
+  providerMeta?: KeywordProviderMeta
 }) {
   const { theme } = useOnboardingTheme()
   const isLight = theme === 'light'
@@ -713,6 +724,16 @@ function KeywordPerformancePanel({ summary }: {
   const mean = summary.mean_position
   const evaluated = summary.evaluated_keywords ?? 0
   const measured = summary.measured_keywords ?? 0
+  const confidenceScore = providerMeta?.keyword_confidence_score
+  const confidenceLabel = providerMeta?.keyword_confidence_label
+  const confidenceReasons = providerMeta?.keyword_confidence_reasons ?? []
+  const provider = providerMeta?.keyword_provider
+
+  const confidenceColor = confidenceLabel === 'high'
+    ? '#22C55E'
+    : confidenceLabel === 'medium'
+      ? '#F59E0B'
+      : '#EF4444'
 
   const cards = [
     {
@@ -740,6 +761,52 @@ function KeywordPerformancePanel({ summary }: {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {(confidenceScore !== undefined || confidenceLabel || provider) && (
+        <div style={{
+          borderRadius: 10,
+          border: `1px solid ${confidenceColor}40`,
+          background: isLight ? `${confidenceColor}12` : `${confidenceColor}14`,
+          padding: '10px 12px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 4,
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+            flexWrap: 'wrap',
+          }}>
+            <span style={{
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              color: confidenceColor,
+            }}>
+              Keyword Confidence
+            </span>
+            <span style={{
+              fontSize: '0.75rem',
+              color: isLight ? 'rgba(15,23,42,0.72)' : 'rgba(255,255,255,0.78)',
+            }}>
+              {(confidenceLabel ?? 'unknown').toUpperCase()}
+              {confidenceScore !== undefined ? ` · ${confidenceScore}/100` : ''}
+              {provider ? ` · ${provider}` : ''}
+            </span>
+          </div>
+          {confidenceReasons.length > 0 && (
+            <div style={{
+              fontSize: '0.74rem',
+              color: isLight ? 'rgba(15,23,42,0.64)' : 'rgba(255,255,255,0.64)',
+              lineHeight: 1.45,
+            }}>
+              {confidenceReasons.slice(0, 2).join(' · ')}
+            </div>
+          )}
+        </div>
+      )}
       <div style={{
         fontSize: '0.75rem',
         color: isLight ? 'rgba(15,23,42,0.55)' : 'rgba(255,255,255,0.45)',

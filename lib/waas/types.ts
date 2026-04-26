@@ -310,6 +310,13 @@ export interface AuditProviderMeta {
   provider:   AuditSeoProvider
   fetched_at: string   // ISO timestamp
   request_id: string
+  keyword_provider?: 'gemini' | 'perplexity' | 'fallback'
+  keyword_detected_location?: string | null
+  keyword_detected_industry?: string | null
+  keyword_detected_address?: string | null
+  keyword_confidence_score?: number
+  keyword_confidence_label?: 'high' | 'medium' | 'low'
+  keyword_confidence_reasons?: string[]
 }
 
 export interface AuditReportData {
