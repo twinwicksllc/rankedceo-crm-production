@@ -5,6 +5,8 @@
 // Shows 1st–5th position with red (target) vs green (competitors) theme
 // =============================================================================
 
+import { useOnboardingTheme } from '@/app/get-started/theme-context'
+
 interface LeaderboardEntry {
   rank:         number
   url:          string
@@ -21,20 +23,23 @@ interface RankingLeaderboardProps {
 }
 
 export function RankingLeaderboard({ entries, keyword, location }: RankingLeaderboardProps) {
+  const { theme } = useOnboardingTheme()
+  const isLight = theme === 'light'
+
   return (
     <div>
       {/* Header */}
       <div style={{
         marginBottom:  16,
         padding:       '10px 16px',
-        background:    'rgba(255,255,255,0.04)',
+        background:    isLight ? 'rgba(15,23,42,0.04)' : 'rgba(255,255,255,0.04)',
         borderRadius:  8,
-        border:        '1px solid rgba(255,255,255,0.08)',
+        border:        isLight ? '1px solid rgba(15,23,42,0.14)' : '1px solid rgba(255,255,255,0.08)',
       }}>
-        <p style={{ margin: 0, fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)' }}>
+        <p style={{ margin: 0, fontSize: '0.82rem', color: isLight ? 'rgba(15,23,42,0.62)' : 'rgba(255,255,255,0.5)' }}>
           Google search ranking for
         </p>
-        <p style={{ margin: '2px 0 0', fontSize: '0.9rem', fontWeight: 600, color: 'rgba(255,255,255,0.9)' }}>
+        <p style={{ margin: '2px 0 0', fontSize: '0.95rem', fontWeight: 700, color: isLight ? 'rgba(15,23,42,0.9)' : 'rgba(255,255,255,0.9)' }}>
           "{keyword}" · {location}
         </p>
       </div>
@@ -51,8 +56,8 @@ export function RankingLeaderboard({ entries, keyword, location }: RankingLeader
         marginTop:  12,
         display:    'flex',
         gap:        16,
-        fontSize:   '0.72rem',
-        color:      'rgba(255,255,255,0.4)',
+        fontSize:   '0.78rem',
+        color:      isLight ? 'rgba(15,23,42,0.6)' : 'rgba(255,255,255,0.4)',
       }}>
         <span>🔴 Your site</span>
         <span>🟢 Competitors</span>
@@ -63,6 +68,8 @@ export function RankingLeaderboard({ entries, keyword, location }: RankingLeader
 }
 
 function LeaderboardRow({ entry }: { entry: LeaderboardEntry }) {
+  const { theme } = useOnboardingTheme()
+  const isLight = theme === 'light'
   const isTarget  = entry.isTarget
   const hasRank   = entry.bestPosition !== null
   const rankColor = isTarget ? '#EF4444' : '#22C55E'
@@ -118,9 +125,9 @@ function LeaderboardRow({ entry }: { entry: LeaderboardEntry }) {
           flexWrap:   'wrap',
         }}>
           <span style={{
-            fontSize:     '0.9rem',
+            fontSize:     '0.95rem',
             fontWeight:   700,
-            color:        isTarget ? '#FCA5A5' : 'rgba(255,255,255,0.9)',
+            color:        isTarget ? (isLight ? '#DC2626' : '#FCA5A5') : (isLight ? 'rgba(15,23,42,0.9)' : 'rgba(255,255,255,0.9)'),
             whiteSpace:   'nowrap',
             overflow:     'hidden',
             textOverflow: 'ellipsis',
@@ -144,7 +151,7 @@ function LeaderboardRow({ entry }: { entry: LeaderboardEntry }) {
             </span>
           )}
         </div>
-        <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>
+        <div style={{ fontSize: '0.78rem', color: isLight ? 'rgba(15,23,42,0.6)' : 'rgba(255,255,255,0.35)', marginTop: 2 }}>
           {entry.url.length > 40 ? entry.url.slice(0, 40) + '…' : entry.url}
         </div>
       </div>
@@ -154,7 +161,7 @@ function LeaderboardRow({ entry }: { entry: LeaderboardEntry }) {
         {hasRank ? (
           <>
             <div style={{
-              fontSize:   '1.4rem',
+              fontSize:   '1.5rem',
               fontWeight: 900,
               color:      rankColor,
               lineHeight: 1,
@@ -162,14 +169,14 @@ function LeaderboardRow({ entry }: { entry: LeaderboardEntry }) {
             }}>
               #{entry.bestPosition}
             </div>
-            <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)' }}>
+            <div style={{ fontSize: '0.72rem', color: isLight ? 'rgba(15,23,42,0.58)' : 'rgba(255,255,255,0.35)' }}>
               Google
             </div>
           </>
         ) : (
           <div style={{
-            fontSize:  '0.8rem',
-            color:     'rgba(255,255,255,0.25)',
+            fontSize:  '0.85rem',
+            color:     isLight ? 'rgba(15,23,42,0.52)' : 'rgba(255,255,255,0.25)',
             fontStyle: 'italic',
           }}>
             Not ranked

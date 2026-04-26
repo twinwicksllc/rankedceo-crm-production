@@ -550,11 +550,13 @@ function HeroSection({
           <p style={{
             margin:     '0 0 16px',
             fontSize:   '0.9rem',
-            color:      'rgba(255,255,255,0.55)',
+            color:      isLight ? 'rgba(15,23,42,0.75)' : 'rgba(255,255,255,0.55)',
             lineHeight: 1.5,
           }}>
             Google ranking analysis for{' '}
-            <em style={{ color: 'rgba(255,255,255,0.7)' }}>"{keyword}"</em>
+            <em style={{ color: isLight ? 'rgba(15,23,42,0.9)' : 'rgba(255,255,255,0.7)' }}>
+              "{keyword}"
+            </em>
             {' '}and related local searches.
           </p>
 
@@ -614,7 +616,7 @@ function HeroSection({
         </span>
         <span style={{
           fontSize:  '0.82rem',
-          color:     'rgba(255,255,255,0.55)',
+          color:     isLight ? 'rgba(15,23,42,0.72)' : 'rgba(255,255,255,0.55)',
           wordBreak: 'break-all',
         }}>
           {targetUrl}
@@ -632,6 +634,8 @@ function ScoreBreakdown({ summary, grade }: {
   summary: NonNullable<AuditReportData['summary']>
   grade:   string
 }) {
+  const { theme } = useOnboardingTheme()
+  const isLight = theme === 'light'
   const metrics = [
     { label: 'Overall SEO Score',  value: summary.overall_score,       icon: '🏆', weight: 'Primary'   },
     { label: 'Performance',        value: summary.performance_score,    icon: '⚡', weight: '40% weight' },
@@ -655,8 +659,8 @@ function ScoreBreakdown({ summary, grade }: {
             style={{
               background:   isPrimary
                 ? `linear-gradient(135deg, ${color}20, rgba(0,0,0,0.3))`
-                : 'rgba(255,255,255,0.04)',
-              border:       `1px solid ${isPrimary ? color + '40' : 'rgba(255,255,255,0.08)'}`,
+                : isLight ? 'rgba(15,23,42,0.04)' : 'rgba(255,255,255,0.04)',
+              border:       `1px solid ${isPrimary ? color + '40' : (isLight ? 'rgba(15,23,42,0.16)' : 'rgba(255,255,255,0.08)')}`,
               borderRadius: 12,
               padding:      '16px',
               textAlign:    'center',
@@ -674,16 +678,16 @@ function ScoreBreakdown({ summary, grade }: {
               {value}
             </div>
             <div style={{
-              fontSize:   '0.75rem',
+              fontSize:   '0.8rem',
               fontWeight: 600,
-              color:      'rgba(255,255,255,0.7)',
+              color:      isLight ? 'rgba(15,23,42,0.78)' : 'rgba(255,255,255,0.7)',
               marginBottom: 3,
             }}>
               {label}
             </div>
             <div style={{
-              fontSize: '0.65rem',
-              color:    'rgba(255,255,255,0.3)',
+              fontSize: '0.72rem',
+              color:    isLight ? 'rgba(15,23,42,0.58)' : 'rgba(255,255,255,0.3)',
             }}>
               {weight}
             </div>
@@ -750,9 +754,9 @@ function KeywordPerformancePanel({ summary }: {
         {cards.map(card => (
           <div key={card.label} style={{
             borderRadius: 12,
-            padding: '14px 16px',
             background: isLight ? `${card.color}12` : `${card.color}10`,
             border: `1px solid ${card.color}35`,
+            padding: '14px 16px',
           }}>
             <div style={{
               fontSize: '0.68rem',
