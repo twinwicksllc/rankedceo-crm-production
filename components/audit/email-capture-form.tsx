@@ -7,6 +7,7 @@
 // =============================================================================
 
 import { useState } from 'react'
+import { useOnboardingTheme } from '@/app/get-started/theme-context'
 
 interface EmailCaptureFormProps {
   auditId:      string
@@ -28,6 +29,8 @@ export function EmailCaptureForm({
   targetDomain,
   onCaptured,
 }: EmailCaptureFormProps) {
+  const { theme } = useOnboardingTheme()
+  const isLight = theme === 'light'
   const [form,   setForm]   = useState<FormState>({ name: '', email: '', phone: '', company: '' })
   const [status, setStatus] = useState<SubmitStatus>('idle')
   const [error,  setError]  = useState<string | null>(null)
@@ -81,8 +84,10 @@ export function EmailCaptureForm({
   if (status === 'success') {
     return (
       <div style={{
-        background:   'linear-gradient(135deg, rgba(34,197,94,0.15), rgba(0,0,0,0.3))',
-        border:       '1px solid rgba(34,197,94,0.35)',
+        background:   isLight
+          ? 'linear-gradient(135deg, rgba(34,197,94,0.16), rgba(15,23,42,0.04))'
+          : 'linear-gradient(135deg, rgba(34,197,94,0.15), rgba(0,0,0,0.3))',
+        border:       isLight ? '1px solid rgba(34,197,94,0.4)' : '1px solid rgba(34,197,94,0.35)',
         borderRadius: 14,
         padding:      '24px',
         textAlign:    'center',
@@ -98,7 +103,7 @@ export function EmailCaptureForm({
         </div>
         <div style={{
           fontSize: '0.82rem',
-          color:    'rgba(255,255,255,0.55)',
+          color:    isLight ? 'rgba(15,23,42,0.68)' : 'rgba(255,255,255,0.55)',
           marginBottom: 16,
         }}>
           Your PDF report is being prepared. Check your downloads folder.
@@ -133,8 +138,10 @@ export function EmailCaptureForm({
         style={{
           width:        '100%',
           padding:      '14px 20px',
-          background:   'linear-gradient(135deg, rgba(37,99,235,0.2), rgba(0,0,0,0.3))',
-          border:       '1px solid rgba(37,99,235,0.4)',
+          background:   isLight
+            ? 'linear-gradient(135deg, rgba(37,99,235,0.24), rgba(15,23,42,0.08))'
+            : 'linear-gradient(135deg, rgba(37,99,235,0.2), rgba(0,0,0,0.3))',
+          border:       isLight ? '1px solid rgba(37,99,235,0.5)' : '1px solid rgba(37,99,235,0.4)',
           borderRadius: 12,
           cursor:       'pointer',
           display:      'flex',
@@ -149,14 +156,14 @@ export function EmailCaptureForm({
             <div style={{
               fontSize:   '0.9rem',
               fontWeight: 700,
-              color:      '#ffffff',
+              color:      isLight ? '#0f172a' : '#ffffff',
               marginBottom: 2,
             }}>
               Download Full PDF Report
             </div>
             <div style={{
               fontSize: '0.75rem',
-              color:    'rgba(255,255,255,0.45)',
+              color:    isLight ? 'rgba(15,23,42,0.68)' : 'rgba(255,255,255,0.45)',
             }}>
               Board-ready audit for {targetDomain} — shareable with your team
             </div>
@@ -164,11 +171,11 @@ export function EmailCaptureForm({
         </div>
         <div style={{
           padding:      '6px 14px',
-          background:   'rgba(37,99,235,0.4)',
+          background:   isLight ? 'rgba(37,99,235,0.35)' : 'rgba(37,99,235,0.4)',
           borderRadius: 7,
           fontSize:     '0.78rem',
           fontWeight:   600,
-          color:        '#93C5FD',
+          color:        isLight ? '#0f172a' : '#93C5FD',
           whiteSpace:   'nowrap',
           flexShrink:   0,
         }}>
@@ -181,15 +188,17 @@ export function EmailCaptureForm({
   // ── Expanded form ──────────────────────────────────────────────────────────
   return (
     <div style={{
-      background:   'linear-gradient(135deg, rgba(37,99,235,0.12), rgba(0,0,0,0.4))',
-      border:       '1px solid rgba(37,99,235,0.35)',
+      background:   isLight
+        ? 'linear-gradient(135deg, rgba(37,99,235,0.16), rgba(15,23,42,0.06))'
+        : 'linear-gradient(135deg, rgba(37,99,235,0.12), rgba(0,0,0,0.4))',
+      border:       isLight ? '1px solid rgba(37,99,235,0.45)' : '1px solid rgba(37,99,235,0.35)',
       borderRadius: 14,
       overflow:     'hidden',
     }}>
       {/* Header */}
       <div style={{
         padding:    '16px 20px 14px',
-        borderBottom: '1px solid rgba(255,255,255,0.07)',
+        borderBottom: isLight ? '1px solid rgba(15,23,42,0.12)' : '1px solid rgba(255,255,255,0.07)',
         display:    'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -200,13 +209,13 @@ export function EmailCaptureForm({
             <div style={{
               fontSize:   '0.9rem',
               fontWeight: 700,
-              color:      '#ffffff',
+              color:      isLight ? '#0f172a' : '#ffffff',
             }}>
               Download Your PDF Report
             </div>
             <div style={{
               fontSize: '0.72rem',
-              color:    'rgba(255,255,255,0.4)',
+              color:    isLight ? 'rgba(15,23,42,0.65)' : 'rgba(255,255,255,0.4)',
             }}>
               Free — no credit card required
             </div>
@@ -217,7 +226,7 @@ export function EmailCaptureForm({
           style={{
             background: 'none',
             border:     'none',
-            color:      'rgba(255,255,255,0.35)',
+            color:      isLight ? 'rgba(15,23,42,0.55)' : 'rgba(255,255,255,0.35)',
             cursor:     'pointer',
             fontSize:   '1rem',
             padding:    4,

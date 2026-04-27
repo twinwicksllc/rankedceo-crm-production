@@ -1213,10 +1213,56 @@ function VitalMetric({ label, value, good, warn, desc }: {
 // ---------------------------------------------------------------------------
 
 function TechnicalIssues({ issues }: { issues: NonNullable<AuditReportData['technical_issues']> }) {
+  const { theme } = useOnboardingTheme()
+  const isLight = theme === 'light'
   const SEVERITY_CONFIG = {
     critical: { color: '#EF4444', icon: '🚨', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.25)' },
     warning:  { color: '#F59E0B', icon: '⚠️', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.25)' },
     info:     { color: '#60A5FA', icon: 'ℹ️', bg: 'rgba(96,165,250,0.08)', border: 'rgba(96,165,250,0.25)' },
+  }
+
+  const explainIssue = (type: string): { why: string; action: string } => {
+    const normalized = type.toLowerCase().replace(/[_\s-]+/g, '-')
+
+    if (normalized.includes('crawlable-anchor') || normalized.includes('crawlable')) {
+      return {
+        why: 'Google relies on crawlable links to discover and index your important pages. If links are not crawlable, those pages may not rank.',
+        action: 'We replace or fix blocked/non-standard links so search bots can follow your key service and location pages.',
+      }
+    }
+
+    if (normalized.includes('image-alt') || normalized.includes('alt')) {
+      return {
+        why: 'Alt text helps search engines understand image context and improves accessibility for screen readers. Missing alt text is a missed SEO signal.',
+        action: 'We add descriptive, keyword-relevant alt text to important images and templates without keyword stuffing.',
+      }
+    }
+
+    if (normalized.includes('meta-description')) {
+      return {
+        why: 'Weak or missing meta descriptions reduce click-through from search results, even when your page ranks.',
+        action: 'We rewrite compelling meta descriptions to improve click-through and match local search intent.',
+      }
+    }
+
+    if (normalized.includes('document-title')) {
+      return {
+        why: 'Title tags are one of the strongest on-page SEO signals for relevance and ranking.',
+        action: 'We rewrite title tags for key pages with clear local-intent targeting and proper length.',
+      }
+    }
+
+    if (normalized.includes('structured-data')) {
+      return {
+        why: 'Structured data helps search engines interpret your business details and can unlock richer search results.',
+        action: 'We implement or correct schema markup for organization, services, and local business entities.',
+      }
+    }
+
+    return {
+      why: 'This technical issue can limit how well search engines understand, crawl, or trust your pages.',
+      action: 'We apply a targeted technical fix, then re-test to confirm the issue is resolved and rankings can improve.',
+    }
   }
 
   // Sort: critical first
@@ -1226,15 +1272,41 @@ function TechnicalIssues({ issues }: { issues: NonNullable<AuditReportData['tech
   })
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{
+        borderRadius: 10,
+        padding: '10px 12px',
+        border: isLight ? '1px solid rgba(37,99,235,0.18)' : '1px solid rgba(59,130,246,0.25)',
+        background: isLight ? 'rgba(59,130,246,0.06)' : 'rgba(59,130,246,0.10)',
+      }}>
+        <div style={{
+          fontSize: '0.74rem',
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+          color: isLight ? '#1d4ed8' : '#93c5fd',
+          marginBottom: 4,
+        }}>
+          What This Means For You
+        </div>
+        <div style={{
+          fontSize: '0.8rem',
+          lineHeight: 1.45,
+          color: isLight ? 'rgba(15,23,42,0.76)' : 'rgba(255,255,255,0.72)',
+        }}>
+          Each issue below includes why it affects rankings and exactly what we'll do differently for your site to fix it.
+        </div>
+      </div>
+
       {sorted.map((issue, i) => {
         const cfg = SEVERITY_CONFIG[issue.severity] ?? SEVERITY_CONFIG.info
+        const explanation = explainIssue(issue.type)
         return (
           <div key={i} style={{
             display:      'flex',
             alignItems:   'flex-start',
             gap:          10,
-            padding:      '10px 14px',
+            padding:      '12px 14px',
             background:   cfg.bg,
             border:       `1px solid ${cfg.border}`,
             borderRadius: 8,
@@ -1251,10 +1323,63 @@ function TechnicalIssues({ issues }: { issues: NonNullable<AuditReportData['tech
               </div>
               <div style={{
                 fontSize:   '0.75rem',
-                color:      'rgba(255,255,255,0.55)',
+                color:      isLight ? 'rgba(15,23,42,0.74)' : 'rgba(255,255,255,0.7)',
                 lineHeight: 1.4,
+                marginBottom: 8,
               }}>
                 {issue.description}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{
+                  borderRadius: 7,
+                  padding: '7px 9px',
+                  background: isLight ? 'rgba(15,23,42,0.04)' : 'rgba(255,255,255,0.04)',
+                  border: isLight ? '1px solid rgba(15,23,42,0.10)' : '1px solid rgba(255,255,255,0.08)',
+                }}>
+                  <div style={{
+                    fontSize: '0.67rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    color: isLight ? 'rgba(15,23,42,0.6)' : 'rgba(255,255,255,0.5)',
+                    marginBottom: 2,
+                  }}>
+                    Why You Should Care
+                  </div>
+                  <div style={{
+                    fontSize: '0.74rem',
+                    lineHeight: 1.4,
+                    color: isLight ? 'rgba(15,23,42,0.75)' : 'rgba(255,255,255,0.72)',
+                  }}>
+                    {explanation.why}
+                  </div>
+                </div>
+
+                <div style={{
+                  borderRadius: 7,
+                  padding: '7px 9px',
+                  background: isLight ? 'rgba(34,197,94,0.08)' : 'rgba(34,197,94,0.10)',
+                  border: isLight ? '1px solid rgba(34,197,94,0.30)' : '1px solid rgba(34,197,94,0.25)',
+                }}>
+                  <div style={{
+                    fontSize: '0.67rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    color: isLight ? '#166534' : '#86efac',
+                    marginBottom: 2,
+                  }}>
+                    What We Will Do Differently
+                  </div>
+                  <div style={{
+                    fontSize: '0.74rem',
+                    lineHeight: 1.4,
+                    color: isLight ? 'rgba(15,23,42,0.78)' : 'rgba(255,255,255,0.78)',
+                  }}>
+                    {explanation.action}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
