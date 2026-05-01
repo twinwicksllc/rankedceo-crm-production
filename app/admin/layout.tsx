@@ -18,13 +18,38 @@ export const metadata: Metadata = {
   robots: 'noindex, nofollow',
 }
 
+function parseAdminAllowlist(): string[] {
+  const raw = process.env.WAAS_ADMIN_EMAILS ?? process.env.WAAS_ADMIN_EMAIL ?? ''
+  return raw
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean)
+}
+
+function isAdminSession(session: Awaited<ReturnType<ReturnType<typeof createServerComponentClient>['auth']['getSession']>>['data']['session']): boolean {
+  const user = session?.user
+  if (!user) return false
+
+  const email = user.email?.toLowerCase() ?? ''
+  const allowlist = parseAdminAllowlist()
+
+  const hasAllowlistedEmail = allowlist.length > 0 && allowlist.includes(email)
+  const hasAdminRoleFlag = user.app_metadata?.role === 'waas_admin' || user.app_metadata?.waas_admin === true || user.app_metadata?.waas_admin === 'true'
+
+  return hasAllowlistedEmail || hasAdminRoleFlag
+}
+
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   // Auth check via CRM Supabase (same auth as the main CRM dashboard)
   const supabase = createServerComponentClient({ cookies })
   const { data: { session } } = await supabase.auth.getSession()
 
   if (!session) {
-    redirect('/login?next=/admin/dashboard')
+    redirect('/login?next=/admin/dashboard&adminOnly=1')
+  }
+
+  if (!isAdminSession(session)) {
+    redirect('/login?error=Admin%20access%20required&next=/admin/dashboard&adminOnly=1')
   }
 
   return (

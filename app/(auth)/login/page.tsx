@@ -65,6 +65,8 @@ function LoginForm() {
   const searchParams = useSearchParams()
   const redirectTo   = searchParams.get('redirectTo') ?? searchParams.get('next') ?? '/dashboard'
   const urlError     = searchParams.get('error')
+  const adminOnlyFlag = searchParams.get('adminOnly') === '1'
+  const adminOnly = adminOnlyFlag || redirectTo.startsWith('/admin')
 
   const [email,       setEmail]       = useState('')
   const [password,    setPassword]    = useState('')
@@ -213,7 +215,7 @@ function LoginForm() {
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">Welcome back</CardTitle>
           <CardDescription className="text-center">
-            Sign in to your RankedCEO account
+            {adminOnly ? 'Sign in with an approved admin account' : 'Sign in to your RankedCEO account'}
           </CardDescription>
         </CardHeader>
 
@@ -337,14 +339,16 @@ function LoginForm() {
           )}
         </CardContent>
 
-        <CardFooter className="flex flex-col space-y-2">
-          <p className="text-sm text-center text-muted-foreground">
-            Don't have an account?{' '}
-            <Link href="/signup" className="text-primary hover:underline font-medium">
-              Sign up free
-            </Link>
-          </p>
-        </CardFooter>
+        {!adminOnly && (
+          <CardFooter className="flex flex-col space-y-2">
+            <p className="text-sm text-center text-muted-foreground">
+              Don't have an account?{' '}
+              <Link href="/signup" className="text-primary hover:underline font-medium">
+                Sign up free
+              </Link>
+            </p>
+          </CardFooter>
+        )}
       </Card>
     </div>
   )
