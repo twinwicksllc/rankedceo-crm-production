@@ -115,7 +115,13 @@ export function StepDomainWishlist({ domains, setDomains, onNext, onBack, isLoad
               className="h-full px-3 bg-white/10 text-white text-sm font-medium border-l border-white/10 outline-none cursor-pointer [&_option]:bg-[#0A0F1E]"
             >
               {EXTENSIONS.map(ext => (
-                <option key={ext} value={ext}>{ext}</option>
+                <option
+                  key={ext}
+                  value={ext}
+                  style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}
+                >
+                  {ext}
+                </option>
               ))}
             </select>
           </div>
