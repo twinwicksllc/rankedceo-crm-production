@@ -41,6 +41,9 @@ function normalizeKeyword(value: string): string {
     .replace(/^[-*\d.\s]+/, '')
     .replace(/^"|"$/g, '')
     .replace(/^'|'$/g, '')
+    .replace(/^[_*`~]+|[_*`~]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function dedupeAndLimit(list: string[], max: number): string[] {
