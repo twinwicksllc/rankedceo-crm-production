@@ -70,23 +70,23 @@ export function AuditLandingContent() {
         </div>
       </div>
 
-      <section className="py-20">
+      <section className="py-20 lg:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-3xl text-center">
-            <div className={`mb-6 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ${
+            <div className={`mb-6 lg:mb-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ${
               isLight ? 'bg-green-100 text-green-700' : 'bg-emerald-500/15 text-emerald-300'
             }`}>
               <Clock className="h-4 w-4" />
               <span>Results in under 2 minutes</span>
             </div>
-            <h1 className={`mb-6 text-4xl font-bold tracking-tight sm:text-6xl ${isLight ? 'text-slate-900' : 'text-white'}`}>
+            <h1 className={`mb-6 lg:mb-4 text-4xl font-bold tracking-tight sm:text-6xl ${isLight ? 'text-slate-900' : 'text-white'}`}>
               See Your SEO Gaps
               <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 {' '}
                 vs. Competitors
               </span>
             </h1>
-            <p className={`mb-8 text-lg ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+            <p className={`mb-8 lg:mb-6 text-lg ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
               Enter your competitor's website URL and get instant insights into their SEO strategy,
               performance scores, and growth opportunities. Stop guessing - start competing.
             </p>
@@ -115,9 +115,9 @@ export function AuditLandingContent() {
         </div>
       </section>
 
-      <section id="features" className={`py-20 ${isLight ? 'bg-white' : 'bg-[#071534]'}`}>
+      <section id="features" className={`py-20 lg:py-16 ${isLight ? 'bg-white' : 'bg-[#071534]'}`}>
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-16 text-center">
+          <div className="mb-16 lg:mb-12 text-center">
             <h2 className={`mb-4 text-3xl font-bold sm:text-4xl ${isLight ? 'text-slate-900' : 'text-white'}`}>
               What the Audit Tells You
             </h2>
@@ -126,7 +126,7 @@ export function AuditLandingContent() {
             </p>
           </div>
 
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-8 lg:gap-6 md:grid-cols-2 lg:grid-cols-3">
             {[
               {
                 icon: BarChart3,
@@ -178,11 +178,11 @@ export function AuditLandingContent() {
         </div>
       </section>
 
-      <section className={`py-20 ${
+      <section className={`py-20 lg:py-16 ${
         isLight ? 'bg-gradient-to-br from-slate-900 to-slate-800' : 'bg-gradient-to-br from-[#040f2b] to-[#071c4a]'
       }`}>
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-16 text-center">
+          <div className="mb-16 lg:mb-12 text-center">
             <h2 className="mb-4 text-3xl font-bold text-white sm:text-4xl">
               How It Works
             </h2>
@@ -191,7 +191,7 @@ export function AuditLandingContent() {
             </p>
           </div>
 
-          <div className="grid gap-8 md:grid-cols-3">
+          <div className="grid gap-8 lg:gap-6 md:grid-cols-3">
             {[
               {
                 step: '01',
@@ -210,7 +210,7 @@ export function AuditLandingContent() {
               },
             ].map((item, i) => (
               <div key={i} className="relative">
-                <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 text-2xl font-bold text-white">
+                <div className="mb-6 lg:mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 text-2xl font-bold text-white">
                   {item.step}
                 </div>
                 <h3 className="mb-3 text-xl font-semibold text-white">{item.title}</h3>
@@ -224,9 +224,9 @@ export function AuditLandingContent() {
         </div>
       </section>
 
-      <section className={`py-20 ${isLight ? 'bg-white' : 'bg-[#071534]'}`}>
+      <section className={`py-20 lg:py-16 ${isLight ? 'bg-white' : 'bg-[#071534]'}`}>
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <div className={`rounded-3xl border p-8 text-center sm:p-12 ${
+          <div className={`rounded-3xl border p-8 text-center sm:p-12 lg:p-10 ${
             isLight
               ? 'border-blue-200 bg-gradient-to-br from-blue-50 to-purple-50 shadow-lg'
               : 'border-cyan-300/30 bg-gradient-to-br from-[#0b1f49] to-[#112e68] shadow-[0_0_40px_rgba(14,165,233,0.18)]'
@@ -234,7 +234,7 @@ export function AuditLandingContent() {
             <h2 className={`mb-4 text-3xl font-bold sm:text-4xl ${isLight ? 'text-slate-900' : 'text-white'}`}>
               Ready to Outrank Your Competitors?
             </h2>
-            <p className={`mb-8 text-lg ${isLight ? 'text-slate-600' : 'text-slate-200'}`}>
+            <p className={`mb-8 lg:mb-6 text-lg ${isLight ? 'text-slate-600' : 'text-slate-200'}`}>
               Start your free audit today. No credit card required. Get insights in under 2 minutes.
             </p>
             <Link
@@ -249,7 +249,7 @@ export function AuditLandingContent() {
         </div>
       </section>
 
-      <footer className={`border-t py-12 ${
+      <footer className={`border-t py-12 lg:py-10 ${
         isLight ? 'border-slate-200 bg-white' : 'border-white/10 bg-[#040f2b]'
       }`}>
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
