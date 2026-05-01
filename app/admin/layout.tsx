@@ -26,7 +26,12 @@ function parseAdminAllowlist(): string[] {
     .filter(Boolean)
 }
 
-function isAdminSession(session: Awaited<ReturnType<ReturnType<typeof createServerComponentClient>['auth']['getSession']>>['data']['session']): boolean {
+type SessionType = Awaited<ReturnType<ReturnType<typeof createServerComponentClient>['auth']['getSession']>>['data']['session']
+
+async function isAdminSession(
+  supabase: ReturnType<typeof createServerComponentClient>,
+  session: SessionType,
+): Promise<boolean> {
   const user = session?.user
   if (!user) return false
 
@@ -36,7 +41,21 @@ function isAdminSession(session: Awaited<ReturnType<ReturnType<typeof createServ
   const hasAllowlistedEmail = allowlist.length > 0 && allowlist.includes(email)
   const hasAdminRoleFlag = user.app_metadata?.role === 'waas_admin' || user.app_metadata?.waas_admin === true || user.app_metadata?.waas_admin === 'true'
 
-  return hasAllowlistedEmail || hasAdminRoleFlag
+  if (hasAllowlistedEmail || hasAdminRoleFlag) {
+    return true
+  }
+
+  const { data: dbUser } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  const dbRole = typeof dbUser?.role === 'string' ? dbUser.role.toLowerCase() : ''
+  const allowedDbRoles = new Set(['admin', 'super_admin', 'owner'])
+  const hasDbAdminRole = allowedDbRoles.has(dbRole)
+
+  return hasDbAdminRole
 }
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -48,7 +67,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect('/login?next=/admin/dashboard&adminOnly=1')
   }
 
-  if (!isAdminSession(session)) {
+  const hasAdminAccess = await isAdminSession(supabase, session)
+  if (!hasAdminAccess) {
     redirect('/login?error=Admin%20access%20required&next=/admin/dashboard&adminOnly=1')
   }
 
