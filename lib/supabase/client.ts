@@ -41,10 +41,62 @@ function normalizeSupabaseAuthStorage() {
   }
 }
 
+function expireCookie(name: string, domain?: string) {
+  const domainPart = domain ? `; domain=${domain}` : ''
+  document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; SameSite=Lax${domainPart}`
+}
+
+function normalizeSupabaseAuthCookies() {
+  if (typeof document === 'undefined') return
+
+  const entries = document.cookie
+    .split(';')
+    .map((c) => c.trim())
+    .filter(Boolean)
+
+  for (const entry of entries) {
+    const idx = entry.indexOf('=')
+    const key = idx >= 0 ? entry.slice(0, idx) : entry
+    const rawValue = idx >= 0 ? entry.slice(idx + 1) : ''
+
+    if (!key.startsWith('sb-') || !key.includes('-auth-token')) {
+      continue
+    }
+
+    const decoded = decodeURIComponent(rawValue || '')
+
+    try {
+      const parsed = JSON.parse(decoded)
+
+      if (typeof parsed === 'string') {
+        const reparsed = JSON.parse(parsed)
+        if (reparsed && typeof reparsed === 'object') {
+          document.cookie = `${key}=${encodeURIComponent(JSON.stringify(reparsed))}; Path=/; SameSite=Lax`
+          continue
+        }
+      }
+
+      if (!parsed || typeof parsed !== 'object') {
+        expireCookie(key)
+      }
+    } catch {
+      // Ignore chunk cookies and only delete obvious malformed single-value payloads.
+      if (!key.match(/\.\d+$/)) {
+        expireCookie(key)
+
+        if (typeof window !== 'undefined' && window.location.hostname.endsWith('.rankedceo.com')) {
+          expireCookie(key, '.rankedceo.com')
+        }
+      }
+    }
+  }
+}
+
 let storageNormalized = false
 
 export function createClient() {
   if (!storageNormalized) {
+    normalizeSupabaseAuthCookies()
     normalizeSupabaseAuthStorage()
     storageNormalized = true
   }
