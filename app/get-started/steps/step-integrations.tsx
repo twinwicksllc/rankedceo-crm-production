@@ -196,11 +196,11 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
               {...register('tone')}
               className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all [&_option]:bg-[#0A0F1E]"
             >
-              <option value="Professional">Professional</option>
-              <option value="Friendly">Friendly</option>
-              <option value="Edgy">Edgy</option>
-              <option value="Luxurious">Luxurious</option>
-              <option value="Bold">Bold</option>
+              <option value="Professional" style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}>Professional</option>
+              <option value="Friendly" style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}>Friendly</option>
+              <option value="Edgy" style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}>Edgy</option>
+              <option value="Luxurious" style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}>Luxurious</option>
+              <option value="Bold" style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}>Bold</option>
             </select>
           </div>
           <div>
@@ -211,10 +211,10 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
               {...register('font_preference')}
               className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all [&_option]:bg-[#0A0F1E]"
             >
-              <option value="Modern">Modern</option>
-              <option value="Classic">Classic</option>
-              <option value="Playful">Playful</option>
-              <option value="Luxury">Luxury</option>
+              <option value="Modern" style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}>Modern</option>
+              <option value="Classic" style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}>Classic</option>
+              <option value="Playful" style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}>Playful</option>
+              <option value="Luxury" style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}>Luxury</option>
             </select>
           </div>
         </div>
@@ -263,9 +263,9 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
             {...register('hero_image_preference')}
             className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all [&_option]:bg-[#0A0F1E]"
           >
-            <option value="Generate for me">Generate for me</option>
-            <option value="I will upload photos">I will upload photos</option>
-            <option value="Use quality stock photos">Use quality stock photos</option>
+            <option value="Generate for me" style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}>Generate for me</option>
+            <option value="I will upload photos" style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}>I will upload photos</option>
+            <option value="Use quality stock photos" style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}>Use quality stock photos</option>
           </select>
         </div>
 
