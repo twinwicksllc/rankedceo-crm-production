@@ -5,10 +5,9 @@
 
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { cookies } from 'next/headers'
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { AdvantagePointHeader } from '@/components/advantagepoint/header'
 import { AdvantagePointFooter } from '@/components/advantagepoint/footer'
+import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,10 +25,10 @@ function parseAdminAllowlist(): string[] {
     .filter(Boolean)
 }
 
-type SessionType = Awaited<ReturnType<ReturnType<typeof createServerComponentClient>['auth']['getSession']>>['data']['session']
+type SessionType = Awaited<ReturnType<Awaited<ReturnType<typeof createClient>>['auth']['getSession']>>['data']['session']
 
 async function isAdminSession(
-  supabase: ReturnType<typeof createServerComponentClient>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   session: SessionType,
 ): Promise<boolean> {
   const user = session?.user
@@ -60,7 +59,13 @@ async function isAdminSession(
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   // Auth check via CRM Supabase (same auth as the main CRM dashboard)
-  const supabase = createServerComponentClient({ cookies })
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login?next=/admin/dashboard&adminOnly=1')
+  }
+
   const { data: { session } } = await supabase.auth.getSession()
 
   if (!session) {
