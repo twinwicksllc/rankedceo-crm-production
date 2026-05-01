@@ -217,6 +217,11 @@ function LoginForm() {
           <CardDescription className="text-center">
             {adminOnly ? 'Sign in with an approved admin account' : 'Sign in to your RankedCEO account'}
           </CardDescription>
+          {adminOnly && (
+            <p className="text-center text-xs text-muted-foreground">
+              Admin access is restricted to approved email addresses.
+            </p>
+          )}
         </CardHeader>
 
         <CardContent className="space-y-4">
