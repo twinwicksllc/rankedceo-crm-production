@@ -20,9 +20,10 @@ interface RankingLeaderboardProps {
   entries:   LeaderboardEntry[]
   keyword:   string
   location:  string
+  maxTrackedPosition?: number
 }
 
-export function RankingLeaderboard({ entries, keyword, location }: RankingLeaderboardProps) {
+export function RankingLeaderboard({ entries, keyword, location, maxTrackedPosition = 100 }: RankingLeaderboardProps) {
   const { theme } = useOnboardingTheme()
   const isLight = theme === 'light'
 
@@ -61,7 +62,7 @@ export function RankingLeaderboard({ entries, keyword, location }: RankingLeader
       }}>
         <span>🔴 Your site</span>
         <span>🟢 Competitors</span>
-        <span>— Not in top 100</span>
+        <span>— Not in top {maxTrackedPosition}</span>
       </div>
     </div>
   )

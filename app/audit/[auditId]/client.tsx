@@ -44,6 +44,10 @@ interface KeywordProviderMeta {
   keyword_confidence_score?: number
   keyword_confidence_label?: 'high' | 'medium' | 'low'
   keyword_confidence_reasons?: string[]
+  keyword_max_tracked_position?: number
+  keyword_unranked_position_value?: number
+  keyword_serp_results_min?: number
+  keyword_serp_results_max?: number
 }
 
 interface LeaderboardEntry {
@@ -333,6 +337,9 @@ function FullReport({ audit }: { audit: WaasAudit }) {
   const competitors  = audit.competitor_urls ?? []
 
   const primaryKeyword = keywords[0] ?? 'your industry'
+  const providerMeta = report.provider_meta as KeywordProviderMeta | undefined
+  const maxTrackedPosition = summary?.max_tracked_position ?? providerMeta?.keyword_max_tracked_position ?? 100
+  const unrankedPositionValue = summary?.unranked_position_value ?? providerMeta?.keyword_unranked_position_value ?? (maxTrackedPosition + 1)
 
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto', padding: '24px 16px 60px', color: isLight ? '#0f172a' : '#ffffff' }}>
@@ -355,6 +362,7 @@ function FullReport({ audit }: { audit: WaasAudit }) {
             entries={leaderboard}
             keyword={primaryKeyword}
             location={audit.location_detected ?? 'your area'}
+            maxTrackedPosition={maxTrackedPosition}
           />
         </Section>
       )}
@@ -376,7 +384,9 @@ function FullReport({ audit }: { audit: WaasAudit }) {
         <Section title="🔎 Keyword Performance" subtitle="Best term, weakest term, and average position across the top 5 keywords">
           <KeywordPerformancePanel
             summary={summary}
-            providerMeta={report.provider_meta as KeywordProviderMeta | undefined}
+            providerMeta={providerMeta}
+            maxTrackedPosition={maxTrackedPosition}
+            unrankedPositionValue={unrankedPositionValue}
           />
         </Section>
       )}
@@ -396,6 +406,7 @@ function FullReport({ audit }: { audit: WaasAudit }) {
             targetDomain={targetDomain}
             measuredKeywords={summary?.measured_keywords ?? 0}
             evaluatedKeywords={summary?.evaluated_keywords ?? 0}
+            maxTrackedPosition={maxTrackedPosition}
           />
         </Section>
       )}
@@ -589,7 +600,7 @@ function HeroSection({
           fontSize: '0.76rem',
           color: isLight ? 'rgba(15,23,42,0.62)' : 'rgba(255,255,255,0.56)',
         }}>
-          Ranking visibility is shown separately: {measuredKeywords}/{evaluatedKeywords} evaluated keywords currently ranking in the top 100.
+          Ranking visibility is shown separately: {measuredKeywords}/{evaluatedKeywords} evaluated keywords currently ranking in the top {maxTrackedPosition}.
         </div>
       </div>
 
@@ -810,9 +821,9 @@ function ScoreBreakdown({ summary, grade }: {
   )
 }
 
-function formatPosition(position: number | null | undefined): string {
+function formatPosition(position: number | null | undefined, maxTrackedPosition: number): string {
   if (position === null || position === undefined) return 'Not ranked'
-  return position >= 101 ? 'Not ranked (Top 100)' : `#${position}`
+  return position > maxTrackedPosition ? `Not ranked (Top ${maxTrackedPosition})` : `#${position}`
 }
 
 function KeywordsUsedPanel({ keywords }: { keywords: string[] }) {
@@ -862,6 +873,8 @@ function KeywordsUsedPanel({ keywords }: { keywords: string[] }) {
 function KeywordPerformancePanel({ summary, providerMeta }: {
   summary: NonNullable<AuditReportData['summary']>
   providerMeta?: KeywordProviderMeta
+  maxTrackedPosition: number
+  unrankedPositionValue: number
 }) {
   const { theme } = useOnboardingTheme()
   const isLight = theme === 'light'
@@ -886,14 +899,14 @@ function KeywordPerformancePanel({ summary, providerMeta }: {
       label: 'Top Search Result',
       color: '#22C55E',
       keyword: top?.keyword ?? 'N/A',
-      value: formatPosition(top?.position),
+      value: formatPosition(top?.position, maxTrackedPosition),
       hint: 'Best ranking keyword',
     },
     {
       label: 'Bottom Result',
       color: '#EF4444',
       keyword: bottom?.keyword ?? 'N/A',
-      value: formatPosition(bottom?.position),
+      value: formatPosition(bottom?.position, maxTrackedPosition),
       hint: 'Weakest ranking keyword',
     },
     {
@@ -957,7 +970,7 @@ function KeywordPerformancePanel({ summary, providerMeta }: {
         fontSize: '0.75rem',
         color: isLight ? 'rgba(15,23,42,0.55)' : 'rgba(255,255,255,0.45)',
       }}>
-        Evaluated {evaluated} high-intent keywords. Unranked terms are treated as position 101 in the mean.
+        Evaluated {evaluated} high-intent keywords. Unranked terms are treated as position {unrankedPositionValue} (outside top {maxTrackedPosition}) in the mean.
       </div>
       <div style={{
         display: 'grid',

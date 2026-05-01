@@ -244,6 +244,8 @@ export interface AuditSummary {
   mean_position?:      number | null
   measured_keywords?:  number
   evaluated_keywords?: number
+  max_tracked_position?: number
+  unranked_position_value?: number
 }
 
 export interface AuditKeywordPerformance {
@@ -258,6 +260,8 @@ export interface AuditKeywordPerformance {
   meanPosition:      number | null
   measuredKeywords:  number
   evaluatedKeywords: number
+  maxTrackedPosition: number
+  unrankedPositionValue: number
 }
 
 export interface AuditRanking {
@@ -324,6 +328,10 @@ export interface AuditProviderMeta {
   keyword_confidence_score?: number
   keyword_confidence_label?: 'high' | 'medium' | 'low'
   keyword_confidence_reasons?: string[]
+  keyword_max_tracked_position?: number
+  keyword_unranked_position_value?: number
+  keyword_serp_results_min?: number
+  keyword_serp_results_max?: number
 }
 
 export interface AuditReportData {

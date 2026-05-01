@@ -23,7 +23,7 @@ export interface SerperOrganicResults {
 export interface RankResult {
   url:      string
   domain:   string
-  position: number | null   // null = not in top 100
+  position: number | null   // null = not in tracked SERP window (top N)
   title:    string
   snippet:  string
 }
@@ -31,6 +31,9 @@ export interface RankResult {
 export interface SearchRankReport {
   keyword:        string
   location:       string
+  queryUsed:      string
+  resultsReturned: number
+  maxTrackedPosition: number
   targetResult:   RankResult
   competitorResults: RankResult[]
   allResults:     SerperSearchResult[]
@@ -63,6 +66,104 @@ function inferGlFromLocation(location: string): string {
   if (/australia/.test(value)) return 'au'
 
   return 'us'
+}
+
+function normalizeTextTokens(value: string): string[] {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+}
+
+function parseLocationParts(location: string): { city: string | null; state: string | null } {
+  const parts = location.split(',').map(part => part.trim()).filter(Boolean)
+  if (parts.length === 0) return { city: null, state: null }
+
+  const city = parts[0] || null
+  const stateRaw = parts[1] || null
+  const state = stateRaw ? stateRaw.split(/\s+/)[0] : null
+
+  return { city, state }
+}
+
+function keywordContainsLocation(keyword: string, location: string): boolean {
+  const keywordLower = keyword.toLowerCase()
+  const locationLower = location.toLowerCase().trim()
+
+  if (locationLower && keywordLower.includes(locationLower)) {
+    return true
+  }
+
+  const { city, state } = parseLocationParts(location)
+  if (city && keywordLower.includes(city.toLowerCase())) {
+    return true
+  }
+
+  if (state) {
+    const stateLower = state.toLowerCase()
+    // Match a standalone state token like "il".
+    if (new RegExp(`\\b${stateLower}\\b`, 'i').test(keywordLower)) {
+      return true
+    }
+  }
+
+  // Generic geo signals likely indicating geo-intent is already present.
+  const geoSignals = ['near me', 'county', 'city', 'illinois', 'chicago']
+  if (geoSignals.some(signal => keywordLower.includes(signal))) {
+    return true
+  }
+
+  return false
+}
+
+function stripLocationFromKeyword(keyword: string, location: string): string {
+  const { city, state } = parseLocationParts(location)
+  let output = keyword
+
+  const removals = [
+    location,
+    city,
+    state,
+    state ? `${city ?? ''} ${state}`.trim() : null,
+    state ? `${city ?? ''}, ${state}`.trim() : null,
+  ].filter((value): value is string => Boolean(value && value.trim().length > 0))
+
+  for (const part of removals) {
+    output = output.replace(new RegExp(part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'ig'), ' ')
+  }
+
+  output = output
+    .replace(/\bnear me\b/ig, ' ')
+    .replace(/\bin\s+[a-z0-9\s]+\b/ig, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  return output
+}
+
+function buildQueryCandidates(keyword: string, location: string): string[] {
+  const withLocation = keywordContainsLocation(keyword, location)
+    ? keyword.trim()
+    : `${keyword.trim()} ${location.trim()}`.trim()
+  const bare = keyword.trim()
+  const broader = stripLocationFromKeyword(keyword, location)
+
+  const candidates = [withLocation, bare, broader]
+  const deduped: string[] = []
+  const seen = new Set<string>()
+
+  for (const candidate of candidates) {
+    const cleaned = candidate.trim()
+    if (!cleaned) continue
+
+    const key = normalizeTextTokens(cleaned).join(' ')
+    if (!key || seen.has(key)) continue
+    seen.add(key)
+    deduped.push(cleaned)
+  }
+
+  return deduped
 }
 
 // ---------------------------------------------------------------------------
@@ -148,47 +249,68 @@ export async function getSearchRankings(
   keyword:         string,
   location:        string = 'Chicago, IL'
 ): Promise<SearchRankReport | null> {
-  const queryWithLocation = `${keyword} ${location}`
+  const targetDomain = extractDomain(targetUrl)
+  const queries = buildQueryCandidates(keyword, location)
 
-  let searchResults = await serperSearch(queryWithLocation, location, 100)
-  let organic = searchResults?.organic ?? []
+  let bestQuery = ''
+  let bestOrganic: SerperSearchResult[] = []
+  let bestSearchResults: SerperOrganicResults | null = null
 
-  // Retry without location suffix if provider returned empty results for localized query.
-  if (organic.length === 0) {
-    searchResults = await serperSearch(keyword, location, 100)
-    organic = searchResults?.organic ?? []
+  for (const query of queries) {
+    const searchResults = await serperSearch(query, location, 100)
+    const organic = searchResults?.organic ?? []
+    if (!searchResults || organic.length === 0) continue
+
+    const targetRank = findDomainRank(targetDomain, organic)
+    const competitorRanks = competitorUrls.map(url => {
+      const domain = extractDomain(url)
+      return findDomainRank(domain, organic)
+    })
+
+    const hasAnyMatch = targetRank.position !== null || competitorRanks.some(rank => rank.position !== null)
+
+    bestQuery = query
+    bestOrganic = organic
+    bestSearchResults = searchResults
+
+    // Prefer the first query that yields at least one domain match.
+    if (hasAnyMatch) break
   }
 
-  if (!searchResults || organic.length === 0) return null
+  if (!bestSearchResults || bestOrganic.length === 0) return null
 
-  const targetDomain = extractDomain(targetUrl)
-  const targetRank   = findDomainRank(targetDomain, organic)
+  const targetRank = findDomainRank(targetDomain, bestOrganic)
 
   const competitorResults: RankResult[] = competitorUrls.map(url => {
     const domain = extractDomain(url)
-    const rank   = findDomainRank(domain, organic)
+    const rank = findDomainRank(domain, bestOrganic)
     return {
       url,
       domain,
       position: rank.position,
-      title:    rank.title,
-      snippet:  rank.snippet,
+      title: rank.title,
+      snippet: rank.snippet,
     }
   })
+
+  const maxTrackedPosition = bestSearchResults.searchParameters?.num ?? bestOrganic.length
 
   return {
     keyword,
     location,
+    queryUsed: bestQuery,
+    resultsReturned: bestOrganic.length,
+    maxTrackedPosition,
     targetResult: {
-      url:      targetUrl,
-      domain:   targetDomain,
+      url: targetUrl,
+      domain: targetDomain,
       position: targetRank.position,
-      title:    targetRank.title,
-      snippet:  targetRank.snippet,
+      title: targetRank.title,
+      snippet: targetRank.snippet,
     },
     competitorResults,
-    allResults:  organic.slice(0, 10),   // top 10 for display
-    searchedAt:  new Date().toISOString(),
+    allResults: bestOrganic.slice(0, 10),   // top 10 for display
+    searchedAt: new Date().toISOString(),
   }
 }
 
@@ -262,6 +384,9 @@ export function getMockSearchRankings(
   return {
     keyword,
     location,
+    queryUsed: keyword,
+    resultsReturned: 100,
+    maxTrackedPosition: 100,
     targetResult: {
       url:      targetUrl,
       domain:   targetDomain,

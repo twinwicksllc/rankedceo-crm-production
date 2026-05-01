@@ -59,7 +59,7 @@ function computeGapAnalysis(
           competitorRank:   comp.position,
           yourRank:         null,
           impact:           comp.position <= 3 ? 'critical' : 'warning',
-          description:      `"${report.keyword}" — ${comp.domain} ranks #${comp.position} but ${targetDomain} does not appear in top 100.`,
+            description:      `"${report.keyword}" — ${comp.domain} ranks #${comp.position} but ${targetDomain} does not appear in top ${report.maxTrackedPosition ?? 100}.`,
         })
       } else if (comp.position < targetPos) {
         // Competitor outranks us
@@ -137,11 +137,14 @@ export interface KeywordPerformanceSummary {
   meanPosition:       number | null
   measuredKeywords:   number
   evaluatedKeywords:  number
+  maxTrackedPosition: number
+  unrankedPositionValue: number
 }
 
 function computeKeywordPerformance(
   rankReports: SearchRankReport[],
-  evaluatedKeywords: number
+  evaluatedKeywords: number,
+  maxTrackedPosition: number
 ): KeywordPerformanceSummary {
   const entries = rankReports.map(report => ({
     keyword: report.keyword,
@@ -156,8 +159,9 @@ function computeKeywordPerformance(
     ? [...rankedEntries].sort((a, b) => b.position - a.position)[0]
     : null
 
-  // Include non-ranked keywords as position 101 so the mean reflects all evaluated terms.
-  const positions = entries.map(entry => entry.position ?? 101)
+  // Include non-ranked keywords as (maxTrackedPosition + 1) so the mean reflects all evaluated terms.
+  const unrankedPositionValue = maxTrackedPosition + 1
+  const positions = entries.map(entry => entry.position ?? unrankedPositionValue)
   const meanPosition = positions.length > 0
     ? Number((positions.reduce((sum, value) => sum + value, 0) / positions.length).toFixed(1))
     : null
@@ -168,6 +172,8 @@ function computeKeywordPerformance(
     meanPosition,
     measuredKeywords: rankedEntries.length,
     evaluatedKeywords,
+    maxTrackedPosition,
+    unrankedPositionValue,
   }
 }
 
@@ -277,7 +283,8 @@ export async function runFullAudit(
 
   // ── 1. Get search rankings ──────────────────────────────────────────────
   const rankReports: SearchRankReport[] = []
-
+    evaluatedKeywords: number,
+    maxTrackedPosition: number
   if (provider === 'mock') {
     for (const keyword of keywords) {
       rankReports.push(getMockSearchRankings(targetUrl, competitorUrls, keyword, detectedLocation))
@@ -334,10 +341,18 @@ export async function runFullAudit(
   // Persist guard: when live provider dependencies fail, avoid writing synthetic 0/100 summaries.
   const dataUnavailable = usingLiveProviders && (rankReports.length === 0 || !pageSpeed)
 
+  const maxTrackedPosition = rankReports.length > 0
+    ? Math.min(...rankReports.map(report => report.maxTrackedPosition ?? 100))
+    : 100
+  const unrankedPositionValue = maxTrackedPosition + 1
+  const serpResultsReturned = rankReports.map(report => report.resultsReturned ?? 0)
+  const serpResultsMin = serpResultsReturned.length > 0 ? Math.min(...serpResultsReturned) : 0
+  const serpResultsMax = serpResultsReturned.length > 0 ? Math.max(...serpResultsReturned) : 0
+
   // ── 3. Compute gap analysis ─────────────────────────────────────────────
   const gapAnalysis  = computeGapAnalysis(targetUrl, rankReports)
   const leaderboard  = buildLeaderboard(targetUrl, competitorUrls, rankReports)
-  const keywordPerformance = computeKeywordPerformance(rankReports, keywords.length)
+  const keywordPerformance = computeKeywordPerformance(rankReports, keywords.length, maxTrackedPosition)
   const performanceScore = pageSpeed?.mobile.categoryScores.performance.score  ?? 0
   const seoScore = pageSpeed?.mobile.categoryScores.seo.score ?? 0
   const mobileScore = pageSpeed?.mobile.categoryScores.performance.score ?? 0
@@ -365,6 +380,10 @@ export async function runFullAudit(
       keyword_requests: totalKeywords,
       keyword_successes: rankReports.length,
       keyword_failures: failedKeywordFetches,
+      keyword_max_tracked_position: maxTrackedPosition,
+      keyword_unranked_position_value: unrankedPositionValue,
+      keyword_serp_results_min: serpResultsMin,
+      keyword_serp_results_max: serpResultsMax,
     } as Record<string, unknown>),
   }
 
@@ -430,11 +449,13 @@ export async function runFullAudit(
       mean_position:       keywordPerformance.meanPosition,
       measured_keywords:   keywordPerformance.measuredKeywords,
       evaluated_keywords:  keywordPerformance.evaluatedKeywords,
+      max_tracked_position: keywordPerformance.maxTrackedPosition,
+      unranked_position_value: keywordPerformance.unrankedPositionValue,
     },
     rankings: rankReports.length > 0
       ? rankReports.map(report => ({
           keyword:       report.keyword,
-          position:      report.targetResult.position ?? 101,
+          position:      report.targetResult.position ?? unrankedPositionValue,
           url:           report.targetResult.url,
           search_volume: 0,   // Serper free tier doesn't include search volume
         }))

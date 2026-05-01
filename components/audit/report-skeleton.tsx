@@ -17,7 +17,7 @@ interface ReportSkeletonProps {
 const PROGRESS_STEPS = [
   { pct: 5,  label: 'Queuing audit request…',               icon: '📋' },
   { pct: 15, label: 'Checking Google rankings…',            icon: '🔍' },
-  { pct: 30, label: 'Scanning top 100 results…',            icon: '📊' },
+  { pct: 30, label: 'Scanning returned Google results…',    icon: '📊' },
   { pct: 45, label: 'Analyzing competitor positions…',      icon: '🎯' },
   { pct: 60, label: 'Running PageSpeed analysis…',          icon: '⚡' },
   { pct: 72, label: 'Computing gap analysis…',              icon: '📉' },

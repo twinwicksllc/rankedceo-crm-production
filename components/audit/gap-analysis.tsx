@@ -28,6 +28,7 @@ interface GapAnalysisProps {
   targetDomain:   string
   measuredKeywords?: number
   evaluatedKeywords?: number
+  maxTrackedPosition?: number
 }
 
 const IMPACT_CONFIG = {
@@ -36,7 +37,7 @@ const IMPACT_CONFIG = {
   info:     { color: '#60A5FA', bg: 'rgba(96,165,250,0.12)', border: 'rgba(96,165,250,0.3)', icon: 'ℹ️', label: 'Info'     },
 }
 
-export function GapAnalysis({ gapAnalysis, targetDomain, measuredKeywords = 0, evaluatedKeywords = 0 }: GapAnalysisProps) {
+export function GapAnalysis({ gapAnalysis, targetDomain, measuredKeywords = 0, evaluatedKeywords = 0, maxTrackedPosition = 100 }: GapAnalysisProps) {
   const { theme } = useOnboardingTheme()
   const isLight = theme === 'light'
   const allGaps = [...gapAnalysis.missingKeywords, ...gapAnalysis.rankingGaps]
@@ -80,7 +81,7 @@ export function GapAnalysis({ gapAnalysis, targetDomain, measuredKeywords = 0, e
           <SectionHeader
             icon="🎯"
             title="Missing Keywords"
-            subtitle={`${targetDomain} doesn't appear in top 100 results for these`}
+            subtitle={`${targetDomain} doesn't appear in top ${maxTrackedPosition} results for these`}
             color="#EF4444"
             isLight={isLight}
           />
