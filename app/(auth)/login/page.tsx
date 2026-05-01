@@ -63,7 +63,7 @@ function LoginLoading() {
 function LoginForm() {
   const router       = useRouter()
   const searchParams = useSearchParams()
-  const redirectTo   = searchParams.get('redirectTo') ?? '/dashboard'
+  const redirectTo   = searchParams.get('redirectTo') ?? searchParams.get('next') ?? '/dashboard'
   const urlError     = searchParams.get('error')
 
   const [email,       setEmail]       = useState('')
