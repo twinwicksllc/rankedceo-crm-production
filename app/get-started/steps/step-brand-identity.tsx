@@ -8,6 +8,7 @@
 import React, { useState, useRef, useCallback } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { generateTextmarkSvg, svgToDataUrl } from '@/lib/waas/utils/generate-textmark'
+import { getLogoUploadPath } from '@/lib/waas/actions/onboarding'
 
 interface Props {
   tenantId:         string
@@ -73,18 +74,18 @@ export function StepBrandIdentity({
       if (!url || !anon) throw new Error('Storage not configured')
 
       const supabase   = createClient(url, anon)
-      const ext        = file.name.split('.').pop() ?? 'png'
-      const uploadPath = `${tenantId}/logo.${ext}`
+      const pathResult = await getLogoUploadPath(tenantId, file.name)
+      if (!pathResult.success || !pathResult.data) {
+        throw new Error(pathResult.error ?? 'Failed to prepare logo upload')
+      }
+
+      const { uploadPath, publicUrl } = pathResult.data
 
       const { error: uploadErr } = await supabase.storage
         .from('logos')
         .upload(uploadPath, file, { upsert: true, contentType: file.type })
 
       if (uploadErr) throw uploadErr
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('logos')
-        .getPublicUrl(uploadPath)
 
       setLogoUrl(publicUrl)
       setUseAutoLogo(false)

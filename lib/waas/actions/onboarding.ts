@@ -57,6 +57,35 @@ function isMissingSchemaTable(errorMessage: string, tableName: string): boolean 
   return re.test(errorMessage)
 }
 
+function isMissingBucketError(errorMessage: string, bucketName: string): boolean {
+  const escaped = bucketName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const re = new RegExp(`bucket.*${escaped}.*(not found|does not exist)|not found`, 'i')
+  return re.test(errorMessage)
+}
+
+async function ensureLogosBucket(supabase: ReturnType<typeof getRawClient>): Promise<{ error: { message: string } | null }> {
+  const { data, error } = await supabase.storage.getBucket('logos')
+  if (!error && data) {
+    return { error: null }
+  }
+
+  if (error && !isMissingBucketError(error.message, 'logos')) {
+    return { error: { message: error.message } }
+  }
+
+  const { error: createError } = await supabase.storage.createBucket('logos', {
+    public: true,
+    fileSizeLimit: 5 * 1024 * 1024,
+    allowedMimeTypes: ['image/jpeg', 'image/png', 'image/svg+xml', 'image/webp'],
+  })
+
+  if (createError && !/already exists|duplicate/i.test(createError.message)) {
+    return { error: { message: createError.message } }
+  }
+
+  return { error: null }
+}
+
 async function updateTenantWithFallback(
   supabase: ReturnType<typeof getRawClient>,
   tenantId: string,
@@ -423,6 +452,12 @@ export async function getLogoUploadPath(
   try {
     const url  = process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL
     if (!url) throw new Error('NEXT_PUBLIC_WAAS_SUPABASE_URL not set')
+
+    const supabase = getRawClient()
+    const { error: bucketError } = await ensureLogosBucket(supabase)
+    if (bucketError) {
+      return { success: false, error: bucketError.message }
+    }
 
     const ext         = fileName.split('.').pop() ?? 'png'
     const uploadPath  = `${tenantId}/logo.${ext}`
