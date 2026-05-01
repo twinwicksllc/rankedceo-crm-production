@@ -6,6 +6,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 
+function applyCookieScope(request: NextRequest, options: CookieOptions): CookieOptions {
+  const host = (request.headers.get('host') || '').split(':')[0]
+  const isProductionDomain = host.endsWith('.rankedceo.com') || host === 'rankedceo.com'
+
+  return isProductionDomain
+    ? { ...options, domain: '.rankedceo.com' }
+    : options
+}
+
 function resolveSafeNext(next: string, origin: string): string {
   if (!next) return `${origin}/dashboard`
 
@@ -55,10 +64,10 @@ export async function GET(request: NextRequest) {
             return request.cookies.get(name)?.value
           },
           set(name: string, value: string, options: CookieOptions) {
-            response.cookies.set({ name, value, ...options })
+            response.cookies.set({ name, value, ...applyCookieScope(request, options) })
           },
           remove(name: string, options: CookieOptions) {
-            response.cookies.set({ name, value: '', ...options })
+            response.cookies.set({ name, value: '', ...applyCookieScope(request, options) })
           },
         },
       }
