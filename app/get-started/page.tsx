@@ -12,11 +12,11 @@ export const metadata: Metadata = {
 }
 
 interface PageProps {
-  searchParams: { auditId?: string; tier?: string }
+  searchParams: { auditId?: string; audit_id?: string; tier?: string }
 }
 
 export default function OnboardingPage({ searchParams }: PageProps) {
-  const auditId = searchParams.auditId ?? null
+  const auditId = searchParams.auditId ?? searchParams.audit_id ?? null
   const tier    = (searchParams.tier as 'hosting' | 'standard' | 'premium') ?? 'standard'
 
   return <OnboardingFlow auditId={auditId} initialTier={tier} />

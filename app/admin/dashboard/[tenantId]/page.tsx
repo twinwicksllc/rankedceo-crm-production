@@ -196,9 +196,30 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
                   <p className="text-white/30 text-sm">No domain requests submitted.</p>
                 ) : (
                   <div className="space-y-3">
-                    {domainRequests.map((req: WaasDomainRequest) => (
-                      <DomainStatusManager key={req.id} request={req} />
-                    ))}
+                    {domainRequests.map((req: WaasDomainRequest) => {
+                      const isWishlistFallback = req.id.startsWith('wishlist-')
+
+                      if (isWishlistFallback) {
+                        return (
+                          <div key={req.id} className="rounded-xl bg-white/5 border border-white/10 p-4">
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <p className="text-white text-sm font-semibold">
+                                  {req.domain_name}
+                                  <span className="text-blue-400 ml-1">{req.extension}</span>
+                                </p>
+                                <p className="text-white/35 text-[11px] mt-1">Imported from onboarding wishlist</p>
+                              </div>
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-amber-500/10 text-amber-300 border-amber-400/20">
+                                Requested
+                              </span>
+                            </div>
+                          </div>
+                        )
+                      }
+
+                      return <DomainStatusManager key={req.id} request={req} />
+                    })}
                   </div>
                 )}
               </div>

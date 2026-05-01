@@ -46,6 +46,15 @@ export interface AdminTenantListItem extends WaasTenant {
   client_review_token?: string | null
 }
 
+export interface ArchivedTenantListItem {
+  id: string
+  legal_name: string | null
+  brand_config: WaasTenant['brand_config']
+  submitted_by_email: string | null
+  deleted_at: string
+  created_at: string
+}
+
 export interface TenantSiteVersion {
   id: string
   change_source: string
@@ -220,6 +229,57 @@ export async function archiveTenant(tenantId: string): Promise<ActionResult<void
   }
 }
 
+export async function getRecentlyArchivedTenants(limit = 8): Promise<ActionResult<ArchivedTenantListItem[]>> {
+  try {
+    const supabase = getAdminClient()
+
+    const { data, error } = await supabase
+      .from('tenants')
+      .select('id, legal_name, brand_config, submitted_by_email, deleted_at, created_at')
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false })
+      .limit(limit)
+
+    if (error) {
+      if (parseMissingTenantColumn(error.message) === 'deleted_at') {
+        return { success: true, data: [] }
+      }
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, data: (data ?? []) as ArchivedTenantListItem[] }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
+export async function restoreArchivedTenant(tenantId: string): Promise<ActionResult<void>> {
+  try {
+    const supabase = getAdminClient()
+    const { error } = await supabase
+      .from('tenants')
+      .update({
+        deleted_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', tenantId)
+
+    if (error) {
+      if (parseMissingTenantColumn(error.message) === 'deleted_at') {
+        return { success: false, error: 'This environment does not support archived tenant restore.' }
+      }
+      return { success: false, error: error.message }
+    }
+
+    revalidatePath('/admin/dashboard')
+    return { success: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
 export async function archiveDuplicatePendingAttempts(): Promise<ActionResult<{ archivedCount: number }>> {
   try {
     const supabase = getAdminClient()
@@ -350,6 +410,50 @@ export async function getTenantDetail(tenantId: string): Promise<ActionResult<Te
         .eq('id', tenantRow.source_audit_id)
         .single()
       audit = auditData as Record<string, unknown> | null
+    } else if (tenantRow.submitted_by_email) {
+      // Fallback for legacy onboarding records that did not persist source_audit_id.
+      const { data: fallbackAudit } = await supabase
+        .from('audits')
+        .select('id, status, report_data, target_url, competitor_urls, completed_at')
+        .eq('requestor_email', tenantRow.submitted_by_email)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      audit = (fallbackAudit as Record<string, unknown> | null) ?? null
+    }
+
+    let resolvedDomainRequests = (domains ?? []) as WaasDomainRequest[]
+    if (resolvedDomainRequests.length === 0) {
+      // Fallback for environments where domain_requests was unavailable at onboarding time.
+      const brandConfigRecord = tenantRow.brand_config as unknown as Record<string, unknown> | undefined
+      const domainWishlist = brandConfigRecord?.domain_wishlist
+      if (Array.isArray(domainWishlist)) {
+        resolvedDomainRequests = domainWishlist.map((item, index) => {
+          const row = (item ?? {}) as Record<string, unknown>
+          const domainName = typeof row.domain_name === 'string' ? row.domain_name : ''
+          const extension = typeof row.extension === 'string' ? row.extension : '.com'
+          const normalizedStatus = typeof row.status === 'string'
+            ? row.status
+            : 'requested'
+
+          return {
+            id: `wishlist-${tenantId}-${index + 1}`,
+            tenant_id: tenantId,
+            domain_name: domainName,
+            extension,
+            full_domain: `${domainName}${extension}`,
+            status: (['requested', 'checking', 'available', 'taken', 'registered', 'connected'].includes(normalizedStatus)
+              ? normalizedStatus
+              : 'requested') as WaasDomainRequest['status'],
+            priority: Number(row.priority ?? index + 1),
+            notes: null,
+            actioned_at: null,
+            actioned_by: null,
+            created_at: tenantRow.created_at,
+            updated_at: tenantRow.updated_at,
+          }
+        }).filter((row) => row.domain_name)
+      }
     }
 
     const { data: siteConfig } = await supabase
@@ -381,7 +485,7 @@ export async function getTenantDetail(tenantId: string): Promise<ActionResult<Te
       success: true,
       data: {
         tenant:         tenantRow,
-        domainRequests: (domains ?? []) as WaasDomainRequest[],
+        domainRequests: resolvedDomainRequests,
         audit,
         siteConfig: (siteConfig as (TenantSiteConfig & { site_templates?: { slug: string } | null }) | null) ?? null,
         versions: (versionsRows ?? []) as TenantSiteVersion[],

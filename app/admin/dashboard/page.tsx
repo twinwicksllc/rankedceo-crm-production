@@ -5,9 +5,16 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { archiveDuplicatePendingAttempts, archiveTenant, getAdminTenants, getAdminStats } from '@/lib/waas/actions/admin'
+import {
+  archiveDuplicatePendingAttempts,
+  archiveTenant,
+  getAdminTenants,
+  getAdminStats,
+  getRecentlyArchivedTenants,
+  restoreArchivedTenant,
+} from '@/lib/waas/actions/admin'
 import type { WaasTenant } from '@/lib/waas/types'
-import type { AdminTenantListItem } from '@/lib/waas/actions/admin'
+import type { AdminTenantListItem, ArchivedTenantListItem } from '@/lib/waas/actions/admin'
 
 // ---------------------------------------------------------------------------
 // Status badge
@@ -44,14 +51,16 @@ export default async function AdminDashboardPage({
     await archiveDuplicatePendingAttempts()
   }
 
-  const [tenantsResult, statsResult] = await Promise.all([
+  const [tenantsResult, statsResult, archivedResult] = await Promise.all([
     getAdminTenants(),
     getAdminStats(),
+    getRecentlyArchivedTenants(6),
   ])
 
   const tenants = (tenantsResult.data ?? []) as AdminTenantListItem[]
   const stats   = statsResult.data ?? { pendingCount: 0, activeCount: 0, totalLeads: 0 }
   const tenantsLoadError = tenantsResult.success ? null : (tenantsResult.error ?? 'Unable to load tenant queue data.')
+  const archivedTenants = (archivedResult.data ?? []) as ArchivedTenantListItem[]
 
   const pendingAllCount = tenants.filter(t => t.status === 'pending_review' || t.status === 'onboarding').length
   const activeAllCount = tenants.filter(t => t.status === 'active').length
@@ -121,6 +130,42 @@ export default async function AdminDashboardPage({
       {tenantsLoadError && (
         <div className="mb-6 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
           Tenant queue data could not be fully loaded: {tenantsLoadError}
+        </div>
+      )}
+
+      {archivedTenants.length > 0 && (
+        <div className="mb-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
+            <h2 className="text-white font-semibold text-sm">Archived Recently</h2>
+            <span className="text-[11px] text-white/40">Undo available</span>
+          </div>
+          <div className="divide-y divide-white/5">
+            {archivedTenants.map((tenant) => {
+              const businessName = tenant.brand_config?.business_name ?? tenant.legal_name ?? 'Unnamed business'
+
+              return (
+                <div key={tenant.id} className="px-5 py-3.5 flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-sm text-white font-medium truncate">{businessName}</p>
+                    <p className="text-[11px] text-white/40">
+                      {tenant.submitted_by_email ?? 'No email'} • Archived {new Date(tenant.deleted_at).toLocaleString()}
+                    </p>
+                  </div>
+                  <form action={async () => {
+                    'use server'
+                    await restoreArchivedTenant(tenant.id)
+                  }}>
+                    <button
+                      type="submit"
+                      className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/20 transition-all"
+                    >
+                      Undo
+                    </button>
+                  </form>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 
