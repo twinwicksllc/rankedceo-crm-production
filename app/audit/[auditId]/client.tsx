@@ -889,6 +889,14 @@ function KeywordPerformancePanel({ summary, providerMeta, maxTrackedPosition, un
   const confidenceLabel = providerMeta?.keyword_confidence_label
   const confidenceReasons = providerMeta?.keyword_confidence_reasons ?? []
   const provider = providerMeta?.keyword_provider
+  const serpResultsMin = providerMeta?.keyword_serp_results_min
+  const serpResultsMax = providerMeta?.keyword_serp_results_max
+
+  const serpDepthLabel = serpResultsMin && serpResultsMax
+    ? serpResultsMin === serpResultsMax
+      ? `Top ${serpResultsMax}`
+      : `Top ${serpResultsMin}-${serpResultsMax}`
+    : `Top ${maxTrackedPosition}`
 
   const confidenceColor = confidenceLabel === 'high'
     ? '#22C55E'
@@ -968,6 +976,17 @@ function KeywordPerformancePanel({ summary, providerMeta, maxTrackedPosition, un
           )}
         </div>
       )}
+      <div style={{
+        borderRadius: 10,
+        border: isLight ? '1px solid rgba(59,130,246,0.22)' : '1px solid rgba(59,130,246,0.28)',
+        background: isLight ? 'rgba(59,130,246,0.08)' : 'rgba(59,130,246,0.14)',
+        padding: '10px 12px',
+        fontSize: '0.75rem',
+        color: isLight ? 'rgba(15,23,42,0.74)' : 'rgba(219,234,254,0.9)',
+        lineHeight: 1.45,
+      }}>
+        <strong>Ranking Window:</strong> {serpDepthLabel} returned results per keyword for this run. Rankings are evaluated against top {maxTrackedPosition} for this report.
+      </div>
       <div style={{
         fontSize: '0.75rem',
         color: isLight ? 'rgba(15,23,42,0.55)' : 'rgba(255,255,255,0.45)',

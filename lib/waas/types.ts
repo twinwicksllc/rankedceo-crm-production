@@ -133,7 +133,7 @@ export interface WaasDomainRequest {
 
 export interface DomainWishlistItem {
   domain_name: string
-  extension:   '.com' | '.net' | '.biz' | '.org' | '.co' | '.io'
+  extension:   '.com' | '.net' | '.org' | '.co' | '.io' | '.ai' | '.us' | '.biz' | '.info' | '.pro' | '.services'
   priority:    1 | 2 | 3
 }
 

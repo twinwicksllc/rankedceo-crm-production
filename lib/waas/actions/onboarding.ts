@@ -51,6 +51,12 @@ function isPendingReviewEnumError(errorMessage: string): boolean {
   return /invalid input value for enum .*pending_review/i.test(errorMessage)
 }
 
+function isMissingSchemaTable(errorMessage: string, tableName: string): boolean {
+  const escaped = tableName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const re = new RegExp(`Could not find the table 'public\\.${escaped}' in the schema cache`, 'i')
+  return re.test(errorMessage)
+}
+
 async function updateTenantWithFallback(
   supabase: ReturnType<typeof getRawClient>,
   tenantId: string,
@@ -211,8 +217,40 @@ export async function saveOnboardingStep2(
   try {
     const supabase = getRawClient()
 
+    // Always persist wishlist in tenant config so onboarding works even when
+    // optional domain_requests migration has not been applied in an environment.
+    const { data: tenantSnapshot } = await supabase
+      .from('tenants')
+      .select('brand_config')
+      .eq('id', tenantId)
+      .single()
+
+    const existingBrandConfig = (tenantSnapshot as { brand_config: Record<string, unknown> } | null)?.brand_config ?? {}
+    const normalizedWishlist = data.domains.map((d: DomainWishlistItem) => ({
+      domain_name: d.domain_name,
+      extension: d.extension,
+      priority: d.priority,
+      full_domain: `${d.domain_name}${d.extension}`,
+      status: 'requested',
+    }))
+
+    const { error: wishlistPersistError } = await updateTenantWithFallback(supabase, tenantId, {
+      brand_config: {
+        ...existingBrandConfig,
+        domain_wishlist: normalizedWishlist,
+      },
+      updated_at: new Date().toISOString(),
+    })
+
+    if (wishlistPersistError) {
+      return { success: false, error: wishlistPersistError.message }
+    }
+
     // Delete existing domain requests for this tenant (in case of re-submission)
-    await supabase.from('domain_requests').delete().eq('tenant_id', tenantId)
+    const { error: deleteError } = await supabase.from('domain_requests').delete().eq('tenant_id', tenantId)
+    if (deleteError && !isMissingSchemaTable(deleteError.message, 'domain_requests')) {
+      return { success: false, error: deleteError.message }
+    }
 
     // Insert new domain requests
     const requests = data.domains.map((d: DomainWishlistItem) => ({
@@ -225,7 +263,9 @@ export async function saveOnboardingStep2(
 
     if (requests.length > 0) {
       const { error } = await supabase.from('domain_requests').insert(requests)
-      if (error) return { success: false, error: error.message }
+      if (error && !isMissingSchemaTable(error.message, 'domain_requests')) {
+        return { success: false, error: error.message }
+      }
     }
 
     // Advance onboarding step

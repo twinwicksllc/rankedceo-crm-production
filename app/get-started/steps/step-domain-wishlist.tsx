@@ -7,7 +7,19 @@
 import React, { useState } from 'react'
 import type { DomainWishlistItem } from '@/lib/waas/types'
 
-const EXTENSIONS: DomainWishlistItem['extension'][] = ['.com', '.net', '.biz', '.org', '.co', '.io']
+const EXTENSIONS: DomainWishlistItem['extension'][] = [
+  '.com',
+  '.net',
+  '.org',
+  '.co',
+  '.io',
+  '.ai',
+  '.us',
+  '.biz',
+  '.info',
+  '.pro',
+  '.services',
+]
 
 interface Props {
   domains:    DomainWishlistItem[]
