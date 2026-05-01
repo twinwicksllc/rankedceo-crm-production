@@ -31,6 +31,11 @@ export interface ActionResult<T = null> {
   error?:  string
 }
 
+function parseMissingTenantColumn(errorMessage: string): string | null {
+  const match = errorMessage.match(/Could not find the '([^']+)' column of 'tenants' in the schema cache/i)
+  return match?.[1] ?? null
+}
+
 export interface AdminTenantListItem extends WaasTenant {
   client_selected_template_slug?: string | null
   client_selected_at?: string | null
@@ -103,12 +108,22 @@ export interface DeployReadinessReport {
 export async function getAdminTenants(): Promise<ActionResult<AdminTenantListItem[]>> {
   try {
     const supabase = getAdminClient()
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('tenants')
       .select('*')
       .in('status', ['pending_review', 'onboarding', 'active'])
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
+
+    if (error && parseMissingTenantColumn(error.message) === 'deleted_at') {
+      const retry = await supabase
+        .from('tenants')
+        .select('*')
+        .in('status', ['pending_review', 'onboarding', 'active'])
+        .order('created_at', { ascending: false })
+      data = retry.data
+      error = retry.error
+    }
 
     if (error) return { success: false, error: error.message }
 
@@ -570,17 +585,39 @@ export async function getAdminStats(): Promise<ActionResult<AdminStats>> {
   try {
     const supabase = getAdminClient()
 
-    const [pendingRes, activeRes, leadsRes] = await Promise.all([
-      supabase.from('tenants').select('id', { count: 'exact', head: true }).eq('status', 'pending_review'),
-      supabase.from('tenants').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+    const countTenants = async (statuses: string[]) => {
+      let result = await supabase
+        .from('tenants')
+        .select('id', { count: 'exact', head: true })
+        .in('status', statuses)
+        .is('deleted_at', null)
+
+      if (result.error && parseMissingTenantColumn(result.error.message) === 'deleted_at') {
+        result = await supabase
+          .from('tenants')
+          .select('id', { count: 'exact', head: true })
+          .in('status', statuses)
+      }
+
+      if (result.error) throw new Error(result.error.message)
+      return result.count ?? 0
+    }
+
+    const [pendingCount, activeCount, leadsRes] = await Promise.all([
+      countTenants(['pending_review', 'onboarding']),
+      countTenants(['active']),
       supabase.from('leads').select('id', { count: 'exact', head: true }),
     ])
+
+    if (leadsRes.error) {
+      throw new Error(leadsRes.error.message)
+    }
 
     return {
       success: true,
       data: {
-        pendingCount: pendingRes.count ?? 0,
-        activeCount:  activeRes.count  ?? 0,
+        pendingCount,
+        activeCount,
         totalLeads:   leadsRes.count   ?? 0,
       },
     }
@@ -642,6 +679,81 @@ export async function applyTemplate(
     revalidatePath(`/admin/dashboard/${tenantId}`)
     revalidatePath('/_sites', 'layout')
     await saveTenantSiteVersion(tenantId, 'template_applied', `Applied template ${templateSlug}`)
+
+    return { success: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
+export interface TenantSiteSettingsInput {
+  metaTitle?: string | null
+  metaDescription?: string | null
+  ogImageUrl?: string | null
+  customCss?: string | null
+}
+
+export async function updateTenantSiteSettings(
+  tenantId: string,
+  input: TenantSiteSettingsInput,
+): Promise<ActionResult<void>> {
+  'use server'
+  try {
+    const supabase = getAdminClient()
+
+    const metaTitle = input.metaTitle?.trim() || null
+    const metaDescription = input.metaDescription?.trim() || null
+    const ogImageUrl = input.ogImageUrl?.trim() || null
+    const customCss = input.customCss ?? null
+
+    if (metaTitle && metaTitle.length > 160) {
+      return { success: false, error: 'Meta title must be 160 characters or fewer.' }
+    }
+
+    if (metaDescription && metaDescription.length > 320) {
+      return { success: false, error: 'Meta description must be 320 characters or fewer.' }
+    }
+
+    if (customCss && customCss.length > 12000) {
+      return { success: false, error: 'Custom CSS exceeds 12000 character budget.' }
+    }
+
+    let activeSections: unknown[] = []
+    const { data: existingConfig } = await supabase
+      .from('tenant_site_config')
+      .select('active_sections_json')
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
+
+    if (Array.isArray((existingConfig as { active_sections_json?: unknown[] } | null)?.active_sections_json)) {
+      activeSections = (existingConfig as { active_sections_json?: unknown[] }).active_sections_json ?? []
+    }
+
+    const { error } = await supabase
+      .from('tenant_site_config')
+      .upsert(
+        {
+          tenant_id: tenantId,
+          active_sections_json: activeSections,
+          meta_title: metaTitle,
+          meta_description: metaDescription,
+          og_image_url: ogImageUrl,
+          custom_css: customCss,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'tenant_id' },
+      )
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    revalidatePath(`/admin/dashboard/${tenantId}`)
+    revalidatePath('/_sites', 'layout')
+    revalidatePath(`/_preview/${tenantId}`)
+
+    await saveTenantSiteVersion(tenantId, 'admin_site_settings_updated', 'Updated meta and site settings from command center')
 
     return { success: true }
   } catch (err) {

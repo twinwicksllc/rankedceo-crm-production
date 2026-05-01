@@ -16,7 +16,8 @@ import {
   BarChart3,
   Settings,
   Wallet,
-  CreditCard
+  CreditCard,
+  Globe
 } from 'lucide-react'
 
 const navItems = [
@@ -33,6 +34,7 @@ const navItems = [
   { href: '/commissions', label: 'Commissions', icon: Wallet },
   { href: '/reports', label: 'Reports', icon: BarChart3 },
   { href: '/billing', label: 'Billing', icon: CreditCard },
+  { href: '/admin/dashboard', label: 'Website Builder', icon: Globe },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 

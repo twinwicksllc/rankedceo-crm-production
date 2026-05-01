@@ -46,6 +46,10 @@ export default async function AdminDashboardPage({
 
   const tenants = (tenantsResult.data ?? []) as AdminTenantListItem[]
   const stats   = statsResult.data ?? { pendingCount: 0, activeCount: 0, totalLeads: 0 }
+  const tenantsLoadError = tenantsResult.success ? null : (tenantsResult.error ?? 'Unable to load tenant queue data.')
+
+  const pendingAllCount = tenants.filter(t => t.status === 'pending_review' || t.status === 'onboarding').length
+  const activeAllCount = tenants.filter(t => t.status === 'active').length
 
   const reviewFilter = searchParams?.review === 'selected' || searchParams?.review === 'awaiting'
     ? searchParams.review
@@ -76,14 +80,14 @@ export default async function AdminDashboardPage({
         {[
           {
             label: 'Pending Review',
-            value: stats.pendingCount,
+            value: pendingAllCount,
             icon:  '⏳',
             color: 'amber',
             glow:  'shadow-amber-500/10',
           },
           {
             label: 'Active Sites',
-            value: stats.activeCount,
+            value: activeAllCount,
             icon:  '🚀',
             color: 'emerald',
             glow:  'shadow-emerald-500/10',
@@ -108,6 +112,12 @@ export default async function AdminDashboardPage({
           </div>
         ))}
       </div>
+
+      {tenantsLoadError && (
+        <div className="mb-6 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
+          Tenant queue data could not be fully loaded: {tenantsLoadError}
+        </div>
+      )}
 
       {/* Pending tenants */}
       <div className="mb-10">
