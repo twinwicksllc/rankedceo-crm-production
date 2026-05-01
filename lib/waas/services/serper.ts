@@ -4,6 +4,17 @@
 // Docs: https://serper.dev/docs
 // =============================================================================
 
+const AUDIT_DEBUG = process.env.WAAS_AUDIT_DEBUG === 'true'
+
+function auditDebug(event: string, payload: Record<string, unknown>) {
+  if (!AUDIT_DEBUG) return
+  try {
+    console.log(`[AuditDebug][Serper] ${event} ${JSON.stringify(payload)}`)
+  } catch {
+    console.log(`[AuditDebug][Serper] ${event}`)
+  }
+}
+
 export interface SerperSearchResult {
   position:    number
   title:       string
@@ -184,6 +195,13 @@ async function serperSearch(
     const normalizedLocation = normalizeSerperLocation(location)
     const gl = inferGlFromLocation(normalizedLocation)
 
+    auditDebug('query:start', {
+      query,
+      location: normalizedLocation,
+      gl,
+      requestedNum: numResults,
+    })
+
     const response = await fetch('https://google.serper.dev/search', {
       method:  'POST',
       headers: {
@@ -203,12 +221,27 @@ async function serperSearch(
 
     if (!response.ok) {
       console.error(`[Serper] API error ${response.status}: ${await response.text()}`)
+      auditDebug('query:error', {
+        query,
+        status: response.status,
+      })
       return null
     }
 
-    return await response.json() as SerperOrganicResults
+    const parsed = await response.json() as SerperOrganicResults
+    auditDebug('query:success', {
+      query,
+      resultsReturned: parsed.organic?.length ?? 0,
+      providerNum: parsed.searchParameters?.num ?? null,
+      providerQuery: parsed.searchParameters?.q ?? null,
+    })
+    return parsed
   } catch (err) {
     console.error('[Serper] Fetch error:', err)
+    auditDebug('query:fetch_error', {
+      query,
+      error: String(err).slice(0, 200),
+    })
     return null
   }
 }
@@ -252,6 +285,13 @@ export async function getSearchRankings(
   const targetDomain = extractDomain(targetUrl)
   const queries = buildQueryCandidates(keyword, location)
 
+  auditDebug('keyword:start', {
+    keyword,
+    location,
+    targetDomain,
+    queryCandidates: queries,
+  })
+
   let bestQuery = ''
   let bestOrganic: SerperSearchResult[] = []
   let bestSearchResults: SerperOrganicResults | null = null
@@ -259,7 +299,13 @@ export async function getSearchRankings(
   for (const query of queries) {
     const searchResults = await serperSearch(query, location, 100)
     const organic = searchResults?.organic ?? []
-    if (!searchResults || organic.length === 0) continue
+    if (!searchResults || organic.length === 0) {
+      auditDebug('keyword:attempt_empty', {
+        keyword,
+        query,
+      })
+      continue
+    }
 
     const targetRank = findDomainRank(targetDomain, organic)
     const competitorRanks = competitorUrls.map(url => {
@@ -269,6 +315,15 @@ export async function getSearchRankings(
 
     const hasAnyMatch = targetRank.position !== null || competitorRanks.some(rank => rank.position !== null)
 
+    auditDebug('keyword:attempt_result', {
+      keyword,
+      query,
+      resultsReturned: organic.length,
+      targetPosition: targetRank.position,
+      competitorMatchedCount: competitorRanks.filter(rank => rank.position !== null).length,
+      hasAnyMatch,
+    })
+
     bestQuery = query
     bestOrganic = organic
     bestSearchResults = searchResults
@@ -277,7 +332,14 @@ export async function getSearchRankings(
     if (hasAnyMatch) break
   }
 
-  if (!bestSearchResults || bestOrganic.length === 0) return null
+  if (!bestSearchResults || bestOrganic.length === 0) {
+    auditDebug('keyword:no_results', {
+      keyword,
+      location,
+      targetDomain,
+    })
+    return null
+  }
 
   const targetRank = findDomainRank(targetDomain, bestOrganic)
 
@@ -294,6 +356,16 @@ export async function getSearchRankings(
   })
 
   const maxTrackedPosition = bestSearchResults.searchParameters?.num ?? bestOrganic.length
+
+  auditDebug('keyword:final', {
+    keyword,
+    selectedQuery: bestQuery,
+    fallbackUsed: bestQuery !== queries[0],
+    resultsReturned: bestOrganic.length,
+    maxTrackedPosition,
+    targetPosition: targetRank.position,
+    competitorMatchedCount: competitorResults.filter(result => result.position !== null).length,
+  })
 
   return {
     keyword,

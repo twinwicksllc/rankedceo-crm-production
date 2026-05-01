@@ -17,6 +17,17 @@ import {
 } from './pagespeed'
 import type { AuditReportData, AuditSeoProvider } from '../types'
 
+const AUDIT_DEBUG = process.env.WAAS_AUDIT_DEBUG === 'true'
+
+function auditDebug(event: string, payload: Record<string, unknown>) {
+  if (!AUDIT_DEBUG) return
+  try {
+    console.log(`[AuditDebug][Engine] ${event} ${JSON.stringify(payload)}`)
+  } catch {
+    console.log(`[AuditDebug][Engine] ${event}`)
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Gap Analysis
 // ---------------------------------------------------------------------------
@@ -281,12 +292,26 @@ export async function runFullAudit(
   let   manualReview     = false
   let   manualReviewNote: string | null = null
 
+  auditDebug('audit:start', {
+    provider,
+    targetUrl,
+    competitorCount: competitorUrls.length,
+    industryHint: industry,
+    locationHint: location,
+    detectedLocation,
+    keywordProvider: keywordPlan.provider,
+    keywords,
+  })
+
   // ── 1. Get search rankings ──────────────────────────────────────────────
   const rankReports: SearchRankReport[] = []
   if (provider === 'mock') {
     for (const keyword of keywords) {
       rankReports.push(getMockSearchRankings(targetUrl, competitorUrls, keyword, detectedLocation))
     }
+    auditDebug('rankings:mock_complete', {
+      keywordCount: keywords.length,
+    })
   } else {
     const searchResults = await Promise.allSettled(
       keywords.map(keyword => getSearchRankings(targetUrl, competitorUrls, keyword, detectedLocation))
@@ -295,8 +320,25 @@ export async function runFullAudit(
     for (const result of searchResults) {
       if (result.status === 'fulfilled' && result.value) {
         rankReports.push(result.value)
+      } else if (result.status === 'rejected') {
+        auditDebug('rankings:promise_rejected', {
+          error: String(result.reason).slice(0, 200),
+        })
       }
     }
+
+    auditDebug('rankings:live_complete', {
+      keywordCount: keywords.length,
+      successfulReports: rankReports.length,
+      failedReports: Math.max(0, keywords.length - rankReports.length),
+      reportSummaries: rankReports.map(report => ({
+        keyword: report.keyword,
+        queryUsed: report.queryUsed,
+        resultsReturned: report.resultsReturned,
+        maxTrackedPosition: report.maxTrackedPosition,
+        targetPosition: report.targetResult.position,
+      })),
+    })
 
     if (rankReports.length === 0) {
       manualReview = true
@@ -314,15 +356,24 @@ export async function runFullAudit(
 
   if (provider === 'mock') {
     pageSpeed = getMockPageSpeedReport(targetUrl)
+    auditDebug('pagespeed:mock_complete', {
+      available: pageSpeed !== null,
+    })
   } else {
     try {
       pageSpeed = await runPageSpeedAudit(targetUrl)
+      auditDebug('pagespeed:live_complete', {
+        available: pageSpeed !== null,
+      })
       if (!pageSpeed && !manualReview) {
         manualReview = true
         manualReviewNote = 'PageSpeed API returned no analyzable data.'
       }
     } catch (err) {
       console.error('[AuditEngine] PageSpeed failed:', err)
+      auditDebug('pagespeed:error', {
+        error: String(err).slice(0, 200),
+      })
       if (!manualReview) {
         manualReview     = true
         manualReviewNote = `PageSpeed API failed: ${String(err).slice(0, 200)}`
@@ -385,6 +436,18 @@ export async function runFullAudit(
       keyword_serp_results_max: serpResultsMax,
     } as Record<string, unknown>),
   }
+
+  auditDebug('audit:provider_meta', {
+    keywordRequests: totalKeywords,
+    keywordSuccesses: rankReports.length,
+    keywordFailures: failedKeywordFetches,
+    maxTrackedPosition,
+    serpResultsMin,
+    serpResultsMax,
+    dataUnavailable,
+    manualReview,
+    manualReviewNote,
+  })
 
   if (dataUnavailable) {
     const guardedReport: AuditReportData = {
