@@ -33,6 +33,87 @@ const PRESET_PALETTES = [
   { primary: '#374151', secondary: '#1F2937', label: 'Charcoal'      },
 ]
 
+function rgbToHex(r: number, g: number, b: number): string {
+  const toHex = (v: number) => v.toString(16).padStart(2, '0')
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase()
+}
+
+function colorDistance(a: [number, number, number], b: [number, number, number]): number {
+  const dr = a[0] - b[0]
+  const dg = a[1] - b[1]
+  const db = a[2] - b[2]
+  return Math.sqrt(dr * dr + dg * dg + db * db)
+}
+
+function quantizeChannel(v: number): number {
+  return Math.max(0, Math.min(255, Math.round(v / 16) * 16))
+}
+
+async function suggestBrandColorsFromLogo(file: File): Promise<{ primary: string; secondary: string } | null> {
+  const objectUrl = URL.createObjectURL(file)
+
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image()
+      image.onload = () => resolve(image)
+      image.onerror = () => reject(new Error('Failed to read uploaded image'))
+      image.src = objectUrl
+    })
+
+    const maxSample = 64
+    const scale = Math.max(img.width / maxSample, img.height / maxSample, 1)
+    const width = Math.max(1, Math.round(img.width / scale))
+    const height = Math.max(1, Math.round(img.height / scale))
+
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
+    if (!ctx) return null
+
+    ctx.drawImage(img, 0, 0, width, height)
+    const pixels = ctx.getImageData(0, 0, width, height).data
+
+    const counts = new Map<string, number>()
+
+    for (let i = 0; i < pixels.length; i += 4) {
+      const r = pixels[i]
+      const g = pixels[i + 1]
+      const b = pixels[i + 2]
+      const a = pixels[i + 3]
+
+      if (a < 180) continue
+
+      const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+      if (luminance < 12 || luminance > 244) continue
+
+      const qr = quantizeChannel(r)
+      const qg = quantizeChannel(g)
+      const qb = quantizeChannel(b)
+      const key = `${qr},${qg},${qb}`
+
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+
+    if (counts.size === 0) return null
+
+    const ranked = [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([key]) => key.split(',').map(Number) as [number, number, number])
+
+    const primaryRgb = ranked[0]
+    const secondaryRgb = ranked.find(rgb => colorDistance(rgb, primaryRgb) >= 72) ?? ranked[1] ?? primaryRgb
+
+    return {
+      primary: rgbToHex(primaryRgb[0], primaryRgb[1], primaryRgb[2]),
+      secondary: rgbToHex(secondaryRgb[0], secondaryRgb[1], secondaryRgb[2]),
+    }
+  } finally {
+    URL.revokeObjectURL(objectUrl)
+  }
+}
+
 export function StepBrandIdentity({
   tenantId, businessName,
   primaryColor, setPrimaryColor,
@@ -43,6 +124,7 @@ export function StepBrandIdentity({
   const [uploading,   setUploading]   = useState(false)
   const [uploadError, setUploadError] = useState('')
   const [useAutoLogo, setUseAutoLogo] = useState(!logoUrl)
+  const [logoColorsSuggested, setLogoColorsSuggested] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   // Generate auto SVG preview
@@ -67,6 +149,13 @@ export function StepBrandIdentity({
 
     setUploading(true)
     try {
+      const suggestedColors = await suggestBrandColorsFromLogo(file)
+      if (suggestedColors) {
+        setPrimaryColor(suggestedColors.primary)
+        setSecondaryColor(suggestedColors.secondary)
+        setLogoColorsSuggested(true)
+      }
+
       const formData = new FormData()
       formData.append('tenantId', tenantId)
       formData.append('file', file)
@@ -90,16 +179,18 @@ export function StepBrandIdentity({
       setUploading(false)
       if (fileRef.current) fileRef.current.value = ''
     }
-  }, [tenantId, setLogoUrl])
+  }, [tenantId, setLogoUrl, setPrimaryColor, setSecondaryColor])
 
   const handleRemoveLogo = () => {
     setLogoUrl(null)
     setUseAutoLogo(true)
+    setLogoColorsSuggested(false)
   }
 
   const handlePaletteSelect = (p: { primary: string; secondary: string }) => {
     setPrimaryColor(p.primary)
     setSecondaryColor(p.secondary)
+    setLogoColorsSuggested(false)
   }
 
   return (
@@ -239,7 +330,7 @@ export function StepBrandIdentity({
               <input
                 type="color"
                 value={primaryColor}
-                onChange={e => setPrimaryColor(e.target.value)}
+                onChange={e => { setPrimaryColor(e.target.value); setLogoColorsSuggested(false) }}
                 className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0 outline-none p-0"
               />
               <span className="text-white/60 text-sm font-mono uppercase">{primaryColor}</span>
@@ -251,13 +342,17 @@ export function StepBrandIdentity({
               <input
                 type="color"
                 value={secondaryColor}
-                onChange={e => setSecondaryColor(e.target.value)}
+                onChange={e => { setSecondaryColor(e.target.value); setLogoColorsSuggested(false) }}
                 className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0 outline-none p-0"
               />
               <span className="text-white/60 text-sm font-mono uppercase">{secondaryColor}</span>
             </div>
           </div>
         </div>
+
+        {logoColorsSuggested && (
+          <p className="mt-2 text-xs text-emerald-300/90">Suggested brand colors were extracted from your uploaded logo.</p>
+        )}
 
         {/* Live preview */}
         <div className="mt-4 p-4 rounded-xl bg-white/5 border border-white/10">
