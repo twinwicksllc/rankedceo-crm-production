@@ -141,11 +141,15 @@ function stripLocationFromKeyword(keyword: string, location: string): string {
   ].filter((value): value is string => Boolean(value && value.trim().length > 0))
 
   for (const part of removals) {
-    output = output.replace(new RegExp(part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'ig'), ' ')
+    const escaped = part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    // Protect short tokens like US states (e.g. "IL") from matching inside larger words.
+    const pattern = part.trim().length <= 3 ? `\\b${escaped}\\b` : escaped
+    output = output.replace(new RegExp(pattern, 'ig'), ' ')
   }
 
   output = output
     .replace(/\bnear me\b/ig, ' ')
+    .replace(/\bnear\b/ig, ' ')
     .replace(/\bin\s+[a-z0-9\s]+\b/ig, ' ')
     .replace(/\s+/g, ' ')
     .trim()
@@ -355,7 +359,9 @@ export async function getSearchRankings(
     }
   })
 
-  const maxTrackedPosition = bestSearchResults.searchParameters?.num ?? bestOrganic.length
+  // Use actual returned organic depth as the tracked window.
+  // Some provider plans return only top-10 even when num=100 is requested.
+  const maxTrackedPosition = bestOrganic.length
 
   auditDebug('keyword:final', {
     keyword,
