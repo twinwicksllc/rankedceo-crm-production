@@ -36,6 +36,10 @@ function parseMissingTenantColumn(errorMessage: string): string | null {
   return match?.[1] ?? null
 }
 
+function isPendingReviewEnumError(errorMessage: string): boolean {
+  return /invalid input value for enum .*pending_review/i.test(errorMessage)
+}
+
 export interface AdminTenantListItem extends WaasTenant {
   client_selected_template_slug?: string | null
   client_selected_at?: string | null
@@ -108,21 +112,46 @@ export interface DeployReadinessReport {
 export async function getAdminTenants(): Promise<ActionResult<AdminTenantListItem[]>> {
   try {
     const supabase = getAdminClient()
+    let statuses: string[] = ['pending_review', 'onboarding', 'active']
+
     let { data, error } = await supabase
       .from('tenants')
       .select('*')
-      .in('status', ['pending_review', 'onboarding', 'active'])
+      .in('status', statuses)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
+
+    if (error && isPendingReviewEnumError(error.message)) {
+      statuses = statuses.filter((status) => status !== 'pending_review')
+      const retry = await supabase
+        .from('tenants')
+        .select('*')
+        .in('status', statuses)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+      data = retry.data
+      error = retry.error
+    }
 
     if (error && parseMissingTenantColumn(error.message) === 'deleted_at') {
       const retry = await supabase
         .from('tenants')
         .select('*')
-        .in('status', ['pending_review', 'onboarding', 'active'])
+        .in('status', statuses)
         .order('created_at', { ascending: false })
       data = retry.data
       error = retry.error
+
+      if (error && isPendingReviewEnumError(error.message)) {
+        const retryStatuses = statuses.filter((status) => status !== 'pending_review')
+        const retryWithoutDeletedAt = await supabase
+          .from('tenants')
+          .select('*')
+          .in('status', retryStatuses)
+          .order('created_at', { ascending: false })
+        data = retryWithoutDeletedAt.data
+        error = retryWithoutDeletedAt.error
+      }
     }
 
     if (error) return { success: false, error: error.message }
@@ -586,17 +615,36 @@ export async function getAdminStats(): Promise<ActionResult<AdminStats>> {
     const supabase = getAdminClient()
 
     const countTenants = async (statuses: string[]) => {
+      let queryStatuses = [...statuses]
+
       let result = await supabase
         .from('tenants')
         .select('id', { count: 'exact', head: true })
-        .in('status', statuses)
+        .in('status', queryStatuses)
         .is('deleted_at', null)
+
+      if (result.error && isPendingReviewEnumError(result.error.message)) {
+        queryStatuses = queryStatuses.filter((status) => status !== 'pending_review')
+        result = await supabase
+          .from('tenants')
+          .select('id', { count: 'exact', head: true })
+          .in('status', queryStatuses)
+          .is('deleted_at', null)
+      }
 
       if (result.error && parseMissingTenantColumn(result.error.message) === 'deleted_at') {
         result = await supabase
           .from('tenants')
           .select('id', { count: 'exact', head: true })
-          .in('status', statuses)
+          .in('status', queryStatuses)
+
+        if (result.error && isPendingReviewEnumError(result.error.message)) {
+          queryStatuses = queryStatuses.filter((status) => status !== 'pending_review')
+          result = await supabase
+            .from('tenants')
+            .select('id', { count: 'exact', head: true })
+            .in('status', queryStatuses)
+        }
       }
 
       if (result.error) throw new Error(result.error.message)
