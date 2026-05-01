@@ -6,9 +6,7 @@
 // =============================================================================
 
 import React, { useState, useRef, useCallback } from 'react'
-import { createClient } from '@supabase/supabase-js'
 import { generateTextmarkSvg, svgToDataUrl } from '@/lib/waas/utils/generate-textmark'
-import { getLogoUploadPath } from '@/lib/waas/actions/onboarding'
 
 interface Props {
   tenantId:         string
@@ -69,25 +67,21 @@ export function StepBrandIdentity({
 
     setUploading(true)
     try {
-      const url  = process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL
-      const anon = process.env.NEXT_PUBLIC_WAAS_SUPABASE_ANON_KEY
-      if (!url || !anon) throw new Error('Storage not configured')
+      const formData = new FormData()
+      formData.append('tenantId', tenantId)
+      formData.append('file', file)
 
-      const supabase   = createClient(url, anon)
-      const pathResult = await getLogoUploadPath(tenantId, file.name)
-      if (!pathResult.success || !pathResult.data) {
-        throw new Error(pathResult.error ?? 'Failed to prepare logo upload')
+      const response = await fetch('/api/onboarding/logo-upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const payload = await response.json().catch(() => ({} as { error?: string; publicUrl?: string; success?: boolean }))
+      if (!response.ok || !payload.success || !payload.publicUrl) {
+        throw new Error(payload.error ?? 'Upload failed')
       }
 
-      const { uploadPath, publicUrl } = pathResult.data
-
-      const { error: uploadErr } = await supabase.storage
-        .from('logos')
-        .upload(uploadPath, file, { upsert: true, contentType: file.type })
-
-      if (uploadErr) throw uploadErr
-
-      setLogoUrl(publicUrl)
+      setLogoUrl(payload.publicUrl)
       setUseAutoLogo(false)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Upload failed'
