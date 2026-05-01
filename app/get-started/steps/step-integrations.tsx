@@ -66,7 +66,7 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
               placeholder="https://calendly.com/yourbusiness"
               className={`w-full h-12 sm:h-14 pl-10 pr-4 rounded-xl bg-slate-100 dark:bg-white/5 border ${
                 errors.calendly_url ? 'border-red-500/50' : 'border-slate-300 dark:border-white/10 focus:border-blue-500/60'
-              } text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/25 text-sm sm:text-base outline-none focus:ring-2 focus:ring-blue-500/20 transition-all`}
+              } text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-white/25 text-sm sm:text-base outline-none focus:ring-2 focus:ring-blue-500/20 transition-all`}
             />
           </div>
           {errors.calendly_url && (
@@ -124,7 +124,7 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
             placeholder="e.g. We're the only HVAC company in Chicago that offers same-day service with a 100% satisfaction guarantee. Our technicians are NATE-certified and we've never missed an appointment in 12 years."
             className={`w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-white/5 border ${
               errors.usp ? 'border-red-500/50 focus:border-red-500' : 'border-slate-300 dark:border-white/10 focus:border-blue-500/60'
-            } text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 ${
+            } text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 ${
               errors.usp ? 'focus:ring-red-500/20' : 'focus:ring-blue-500/20'
             } transition-all resize-none leading-relaxed`}
           />
@@ -149,7 +149,7 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
             {...register('value_propositions')}
             rows={2}
             placeholder="3-5 bullet-style selling points separated by commas"
-            className="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
+            className="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
           />
         </div>
 
@@ -161,7 +161,7 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
             {...register('about_narrative')}
             rows={3}
             placeholder="A short paragraph about your story, team, and values"
-            className="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
+            className="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
           />
         </div>
 
@@ -174,7 +174,7 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
               {...register('primary_cta')}
               type="text"
               placeholder="Book My Free Estimate"
-              className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+              className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
             />
           </div>
           <div>
@@ -185,7 +185,7 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
               {...register('service_area')}
               type="text"
               placeholder="Chicago, Evanston, Oak Park"
-              className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+              className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
             />
           </div>
           <div>
@@ -227,7 +227,7 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
             {...register('target_keywords')}
             type="text"
             placeholder="emergency plumber chicago, sewer repair, water heater replacement"
-            className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+            className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
           />
         </div>
 
@@ -239,7 +239,7 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
             {...register('key_phrases')}
             type="text"
             placeholder="same-day service, family-owned, licensed & insured"
-            className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+            className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
           />
         </div>
 
@@ -251,7 +251,7 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
             {...register('inspiration_urls')}
             rows={2}
             placeholder="Paste 1-3 websites you like, separated by commas"
-            className="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
+            className="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
           />
         </div>
 
