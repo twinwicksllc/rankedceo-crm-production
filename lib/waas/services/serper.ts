@@ -5,6 +5,11 @@
 // =============================================================================
 
 const AUDIT_DEBUG = process.env.WAAS_AUDIT_DEBUG === 'true'
+const SERPER_TARGET_RESULTS = (() => {
+  const parsed = Number.parseInt(process.env.WAAS_SERP_TARGET_RESULTS ?? '50', 10)
+  if (Number.isNaN(parsed)) return 50
+  return Math.max(10, Math.min(100, parsed))
+})()
 
 function auditDebug(event: string, payload: Record<string, unknown>) {
   if (!AUDIT_DEBUG) return
@@ -206,40 +211,96 @@ async function serperSearch(
       requestedNum: numResults,
     })
 
-    const response = await fetch('https://google.serper.dev/search', {
-      method:  'POST',
-      headers: {
-        'X-API-KEY':    apiKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        q:         query,
-        num:       numResults,
-        gl,
-        hl:        'en',
-        location:  normalizedLocation,
-      }),
-      // No cache — always fresh results
-      cache: 'no-store',
-    })
+    const perPage = Math.min(10, numResults)
+    const totalPages = Math.max(1, Math.ceil(numResults / perPage))
+    const mergedResults: SerperSearchResult[] = []
+    const seenLinks = new Set<string>()
+    let firstPage: SerperOrganicResults | null = null
 
-    if (!response.ok) {
-      console.error(`[Serper] API error ${response.status}: ${await response.text()}`)
-      auditDebug('query:error', {
+    for (let page = 1; page <= totalPages; page += 1) {
+      const response = await fetch('https://google.serper.dev/search', {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          q: query,
+          num: perPage,
+          page,
+          gl,
+          hl: 'en',
+          location: normalizedLocation,
+        }),
+        // No cache — always fresh results
+        cache: 'no-store',
+      })
+
+      if (!response.ok) {
+        console.error(`[Serper] API error ${response.status}: ${await response.text()}`)
+        auditDebug('query:error', {
+          query,
+          page,
+          status: response.status,
+        })
+        // Keep partial data if we already collected results.
+        break
+      }
+
+      const parsed = await response.json() as SerperOrganicResults
+      if (!firstPage) firstPage = parsed
+
+      const pageOrganic = parsed.organic ?? []
+      auditDebug('query:page_success', {
         query,
-        status: response.status,
+        page,
+        pageResults: pageOrganic.length,
+        providerNum: parsed.searchParameters?.num ?? null,
+      })
+
+      if (pageOrganic.length === 0) break
+
+      let addedThisPage = 0
+      for (const row of pageOrganic) {
+        const key = row.link || `${row.title}|${row.displayLink}`
+        if (!key || seenLinks.has(key)) continue
+        seenLinks.add(key)
+        mergedResults.push({
+          ...row,
+          position: mergedResults.length + 1,
+        })
+        addedThisPage += 1
+        if (mergedResults.length >= numResults) break
+      }
+
+      // Stop if no new rows were added (depth cap / duplicate pages).
+      if (addedThisPage === 0 || mergedResults.length >= numResults) break
+    }
+
+    if (!firstPage || mergedResults.length === 0) {
+      auditDebug('query:empty', {
+        query,
+        requestedNum: numResults,
       })
       return null
     }
 
-    const parsed = await response.json() as SerperOrganicResults
+    const aggregated: SerperOrganicResults = {
+      ...firstPage,
+      searchParameters: {
+        ...firstPage.searchParameters,
+        num: mergedResults.length,
+      },
+      organic: mergedResults,
+    }
+
     auditDebug('query:success', {
       query,
-      resultsReturned: parsed.organic?.length ?? 0,
-      providerNum: parsed.searchParameters?.num ?? null,
-      providerQuery: parsed.searchParameters?.q ?? null,
+      requestedNum: numResults,
+      resultsReturned: aggregated.organic.length,
+      providerQuery: aggregated.searchParameters?.q ?? null,
     })
-    return parsed
+    return aggregated
   } catch (err) {
     console.error('[Serper] Fetch error:', err)
     auditDebug('query:fetch_error', {
@@ -293,6 +354,7 @@ export async function getSearchRankings(
     keyword,
     location,
     targetDomain,
+    targetResultsRequested: SERPER_TARGET_RESULTS,
     queryCandidates: queries,
   })
 
@@ -301,7 +363,7 @@ export async function getSearchRankings(
   let bestSearchResults: SerperOrganicResults | null = null
 
   for (const query of queries) {
-    const searchResults = await serperSearch(query, location, 100)
+    const searchResults = await serperSearch(query, location, SERPER_TARGET_RESULTS)
     const organic = searchResults?.organic ?? []
     if (!searchResults || organic.length === 0) {
       auditDebug('keyword:attempt_empty', {
