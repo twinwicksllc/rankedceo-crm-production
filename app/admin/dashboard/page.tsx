@@ -5,7 +5,7 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { getAdminTenants, getAdminStats } from '@/lib/waas/actions/admin'
+import { archiveDuplicatePendingAttempts, archiveTenant, getAdminTenants, getAdminStats } from '@/lib/waas/actions/admin'
 import type { WaasTenant } from '@/lib/waas/types'
 import type { AdminTenantListItem } from '@/lib/waas/actions/admin'
 
@@ -39,6 +39,11 @@ export default async function AdminDashboardPage({
 }: {
   searchParams?: { review?: string }
 }) {
+  const archiveDuplicateAttemptsAction = async () => {
+    'use server'
+    await archiveDuplicatePendingAttempts()
+  }
+
   const [tenantsResult, statsResult] = await Promise.all([
     getAdminTenants(),
     getAdminStats(),
@@ -132,6 +137,17 @@ export default async function AdminDashboardPage({
           </h2>
 
           <div className="flex items-center gap-2">
+            {pending.length > 1 && (
+              <form action={archiveDuplicateAttemptsAction}>
+                <button
+                  type="submit"
+                  className="rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-200 transition-all hover:bg-amber-500/20"
+                >
+                  Archive Older Duplicates
+                </button>
+              </form>
+            )}
+
             {[
               { key: 'all', label: 'All', count: tenants.length },
               { key: 'awaiting', label: 'Awaiting Client', count: awaitingCount },
@@ -158,7 +174,7 @@ export default async function AdminDashboardPage({
             <p className="text-white/30 text-sm">No tenants pending review.</p>
           </div>
         ) : (
-          <TenantTable tenants={pending} />
+          <TenantTable tenants={pending} allowArchive />
         )}
       </div>
 
@@ -181,7 +197,7 @@ export default async function AdminDashboardPage({
             <p className="text-white/30 text-sm">No active sites yet. Deploy a pending tenant to see it here.</p>
           </div>
         ) : (
-          <TenantTable tenants={active} />
+          <TenantTable tenants={active} allowArchive={false} />
         )}
       </div>
     </div>
@@ -192,7 +208,7 @@ export default async function AdminDashboardPage({
 // Tenant Table
 // ---------------------------------------------------------------------------
 
-function TenantTable({ tenants }: { tenants: AdminTenantListItem[] }) {
+function TenantTable({ tenants, allowArchive = false }: { tenants: AdminTenantListItem[]; allowArchive?: boolean }) {
   return (
     <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
       {/* Desktop table */}
@@ -267,6 +283,19 @@ function TenantTable({ tenants }: { tenants: AdminTenantListItem[] }) {
                     >
                       Review →
                     </Link>
+                    {allowArchive && (
+                      <form action={async () => {
+                        'use server'
+                        await archiveTenant(t.id)
+                      }}>
+                        <button
+                          type="submit"
+                          className="text-red-300 hover:text-red-200 text-xs font-medium transition-colors"
+                        >
+                          Archive
+                        </button>
+                      </form>
+                    )}
                   </div>
                 </td>
               </tr>

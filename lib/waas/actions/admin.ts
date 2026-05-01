@@ -195,6 +195,131 @@ export async function getAdminTenants(): Promise<ActionResult<AdminTenantListIte
   }
 }
 
+export async function archiveTenant(tenantId: string): Promise<ActionResult<void>> {
+  try {
+    const supabase = getAdminClient()
+    const now = new Date().toISOString()
+
+    const { error } = await supabase
+      .from('tenants')
+      .update({
+        deleted_at: now,
+        updated_at: now,
+      })
+      .eq('id', tenantId)
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    revalidatePath('/admin/dashboard')
+    return { success: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
+export async function archiveDuplicatePendingAttempts(): Promise<ActionResult<{ archivedCount: number }>> {
+  try {
+    const supabase = getAdminClient()
+    let statuses: string[] = ['pending_review', 'onboarding']
+
+    let query = supabase
+      .from('tenants')
+      .select('id, created_at, submitted_by_email, legal_name, brand_config, status')
+      .in('status', statuses)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+
+    let { data, error } = await query
+
+    if (error && isPendingReviewEnumError(error.message)) {
+      statuses = statuses.filter((status) => status !== 'pending_review')
+      const retry = await supabase
+        .from('tenants')
+        .select('id, created_at, submitted_by_email, legal_name, brand_config, status')
+        .in('status', statuses)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+      data = retry.data
+      error = retry.error
+    }
+
+    if (error && parseMissingTenantColumn(error.message) === 'deleted_at') {
+      const retry = await supabase
+        .from('tenants')
+        .select('id, created_at, submitted_by_email, legal_name, brand_config, status')
+        .in('status', statuses)
+        .order('created_at', { ascending: false })
+      data = retry.data
+      error = retry.error
+    }
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    const rows = (data ?? []) as Array<Record<string, unknown>>
+    if (rows.length < 2) {
+      return { success: true, data: { archivedCount: 0 } }
+    }
+
+    const groups = new Map<string, Array<Record<string, unknown>>>()
+    for (const row of rows) {
+      const brand = (row.brand_config as Record<string, unknown> | null | undefined) ?? {}
+      const businessName = (typeof brand.business_name === 'string' && brand.business_name.trim())
+        ? brand.business_name.trim().toLowerCase()
+        : (typeof row.legal_name === 'string' ? row.legal_name.trim().toLowerCase() : 'unknown')
+
+      const email = typeof row.submitted_by_email === 'string'
+        ? row.submitted_by_email.trim().toLowerCase()
+        : ''
+
+      const key = `${businessName}::${email}`
+      const existing = groups.get(key) ?? []
+      existing.push(row)
+      groups.set(key, existing)
+    }
+
+    const archiveIds: string[] = []
+    for (const [, groupRows] of groups) {
+      if (groupRows.length < 2) continue
+      const sorted = [...groupRows].sort((a, b) => {
+        const aTime = new Date(String(a.created_at ?? 0)).getTime()
+        const bTime = new Date(String(b.created_at ?? 0)).getTime()
+        return bTime - aTime
+      })
+
+      for (const row of sorted.slice(1)) {
+        if (typeof row.id === 'string' && row.id) {
+          archiveIds.push(row.id)
+        }
+      }
+    }
+
+    if (archiveIds.length === 0) {
+      return { success: true, data: { archivedCount: 0 } }
+    }
+
+    const now = new Date().toISOString()
+    const { error: archiveError } = await supabase
+      .from('tenants')
+      .update({ deleted_at: now, updated_at: now })
+      .in('id', archiveIds)
+
+    if (archiveError) {
+      return { success: false, error: archiveError.message }
+    }
+
+    revalidatePath('/admin/dashboard')
+    return { success: true, data: { archivedCount: archiveIds.length } }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Get a single tenant with domain requests and audit data
 // ---------------------------------------------------------------------------
