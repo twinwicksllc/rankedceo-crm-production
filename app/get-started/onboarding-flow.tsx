@@ -353,7 +353,7 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
         <div className="h-5 w-5 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white text-[10px] font-bold">
           {currentStep}
         </div>
-        <span className="text-white/60 text-sm font-medium">
+        <span className="text-slate-600 dark:text-white/60 text-sm font-medium">
           Step {currentStep}: {stepLabels[currentStep - 1]}
         </span>
       </div>
@@ -381,12 +381,12 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
                     ) : i + 1}
                   </div>
                   <span className={`text-sm font-medium transition-colors ${
-                    i + 1 === currentStep ? 'text-white' : 'text-white/30'
+                    i + 1 === currentStep ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-white/30'
                   }`}>{label}</span>
                 </div>
                 {i < stepLabels.length - 1 && (
                   <div className={`flex-1 h-px transition-all duration-500 ${
-                    i + 1 < currentStep ? 'bg-blue-500' : 'bg-white/10'
+                    i + 1 < currentStep ? 'bg-blue-500' : 'bg-slate-300 dark:bg-white/10'
                   }`} />
                 )}
               </React.Fragment>
@@ -394,7 +394,7 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
           </div>
 
           {/* Glass card */}
-          <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl shadow-2xl overflow-hidden">
+          <div className="rounded-2xl bg-white/90 dark:bg-white/5 border border-slate-200 dark:border-white/10 backdrop-blur-xl shadow-2xl overflow-hidden">
             {/* Error banner */}
             {error && (
               <div className="flex items-center gap-3 px-6 py-3 bg-red-500/10 border-b border-red-500/20">
@@ -455,7 +455,7 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
           {/* Trust signals */}
           <div className="flex items-center justify-center gap-6 mt-6">
             {['🔒 Secure & Private', '⚡ Built in 48 Hours', '🎯 Local SEO Optimized'].map(signal => (
-              <span key={signal} className="text-white/25 text-xs font-medium">{signal}</span>
+              <span key={signal} className="text-slate-500 dark:text-white/25 text-xs font-medium">{signal}</span>
             ))}
           </div>
         </div>

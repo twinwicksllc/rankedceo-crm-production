@@ -36,10 +36,10 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 mb-4">
           <span className="text-blue-400 text-xs font-semibold uppercase tracking-wider">Step 4 of 4</span>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white leading-tight">
           Integrations & your edge
         </h1>
-        <p className="text-white/50 mt-2 text-sm sm:text-base">
+        <p className="text-slate-600 dark:text-white/50 mt-2 text-sm sm:text-base">
           Connect your booking system and tell us what makes you the best choice.
         </p>
       </div>
@@ -47,15 +47,15 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
       <div className="space-y-6">
         {/* Calendly URL */}
         <div>
-          <label className="block text-sm font-medium text-white/70 mb-1">
+          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-1">
             Booking / Scheduling URL
           </label>
-          <p className="text-white/35 text-xs mb-2">
+          <p className="text-slate-500 dark:text-white/35 text-xs mb-2">
             Your Calendly, Acuity, or any online booking link
           </p>
           <div className="relative">
             <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-white/30">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-slate-500 dark:text-white/30">
                 <rect x="1" y="2" width="14" height="13" rx="2" stroke="currentColor" strokeWidth="1.5"/>
                 <path d="M5 1v2M11 1v2M1 6h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
               </svg>
@@ -64,9 +64,9 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
               {...register('calendly_url')}
               type="url"
               placeholder="https://calendly.com/yourbusiness"
-              className={`w-full h-12 sm:h-14 pl-10 pr-4 rounded-xl bg-white/5 border ${
-                errors.calendly_url ? 'border-red-500/50' : 'border-white/10 focus:border-blue-500/60'
-              } text-white placeholder:text-white/25 text-sm sm:text-base outline-none focus:ring-2 focus:ring-blue-500/20 transition-all`}
+              className={`w-full h-12 sm:h-14 pl-10 pr-4 rounded-xl bg-slate-100 dark:bg-white/5 border ${
+                errors.calendly_url ? 'border-red-500/50' : 'border-slate-300 dark:border-white/10 focus:border-blue-500/60'
+              } text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/25 text-sm sm:text-base outline-none focus:ring-2 focus:ring-blue-500/20 transition-all`}
             />
           </div>
           {errors.calendly_url && (
@@ -76,10 +76,10 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
 
         {/* Financing Toggle */}
         <div>
-          <label className="block text-sm font-medium text-white/70 mb-3">
+          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-3">
             Financing Integration
           </label>
-          <label className="flex items-start gap-4 p-4 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/7 transition-all group">
+          <label className="flex items-start gap-4 p-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 cursor-pointer hover:bg-slate-200 dark:hover:bg-white/10 transition-all group">
             <div className="relative mt-0.5 shrink-0">
               <input
                 {...register('financing_enabled')}
@@ -87,7 +87,7 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
                 className="sr-only peer"
               />
               <div className={`w-11 h-6 rounded-full transition-all duration-200 ${
-                financingEnabled ? 'bg-blue-600' : 'bg-white/15'
+                financingEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-white/15'
               }`}>
                 <div className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-200 ${
                   financingEnabled ? 'translate-x-5' : 'translate-x-0'
@@ -96,14 +96,14 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <p className="text-white font-medium text-sm">
+                <p className="text-slate-900 dark:text-white font-medium text-sm">
                   Enable Financing Options
                 </p>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 font-medium border border-amber-500/20">
                   Coming Soon
                 </span>
               </div>
-              <p className="text-white/40 text-xs mt-1">
+              <p className="text-slate-600 dark:text-white/40 text-xs mt-1">
                 Integrate Optimus/Pricebook financing to offer payment plans to your customers. Increases conversion by up to 40%.
               </p>
             </div>
@@ -112,19 +112,19 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
 
         {/* USP */}
         <div>
-          <label className="block text-sm font-medium text-white/70 mb-1">
+          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-1">
             Your Unique Selling Proposition <span className="text-red-400">*</span>
           </label>
-          <p className="text-white/35 text-xs mb-2">
+          <p className="text-slate-500 dark:text-white/35 text-xs mb-2">
             What makes your business better than your competitors? Be specific — this becomes your homepage headline.
           </p>
           <textarea
             {...register('usp')}
             rows={4}
             placeholder="e.g. We're the only HVAC company in Chicago that offers same-day service with a 100% satisfaction guarantee. Our technicians are NATE-certified and we've never missed an appointment in 12 years."
-            className={`w-full px-4 py-3 rounded-xl bg-white/5 border ${
-              errors.usp ? 'border-red-500/50 focus:border-red-500' : 'border-white/10 focus:border-blue-500/60'
-            } text-white placeholder:text-white/25 text-sm outline-none focus:ring-2 ${
+            className={`w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-white/5 border ${
+              errors.usp ? 'border-red-500/50 focus:border-red-500' : 'border-slate-300 dark:border-white/10 focus:border-blue-500/60'
+            } text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 ${
               errors.usp ? 'focus:ring-red-500/20' : 'focus:ring-blue-500/20'
             } transition-all resize-none leading-relaxed`}
           />
@@ -134,7 +134,7 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
               : <span />
             }
             <span className={`text-xs ml-auto ${
-              uspValue.length > 450 ? 'text-amber-400' : 'text-white/25'
+              uspValue.length > 450 ? 'text-amber-500 dark:text-amber-400' : 'text-slate-400 dark:text-white/25'
             }`}>
               {uspValue.length}/500
             </span>
@@ -142,59 +142,59 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-white/70 mb-2">
-            Value Propositions <span className="text-white/30">(optional)</span>
+          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+            Value Propositions <span className="text-slate-400 dark:text-white/30">(optional)</span>
           </label>
           <textarea
             {...register('value_propositions')}
             rows={2}
             placeholder="3-5 bullet-style selling points separated by commas"
-            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-blue-500/60 text-white placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
+            className="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-white/70 mb-2">
-            About Us Narrative <span className="text-white/30">(optional)</span>
+          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+            About Us Narrative <span className="text-slate-400 dark:text-white/30">(optional)</span>
           </label>
           <textarea
             {...register('about_narrative')}
             rows={3}
             placeholder="A short paragraph about your story, team, and values"
-            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-blue-500/60 text-white placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
+            className="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
           />
         </div>
 
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">
-              Primary CTA <span className="text-white/30">(optional)</span>
+            <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+              Primary CTA <span className="text-slate-400 dark:text-white/30">(optional)</span>
             </label>
             <input
               {...register('primary_cta')}
               type="text"
               placeholder="Book My Free Estimate"
-              className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 focus:border-blue-500/60 text-white placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+              className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">
-              Service Area <span className="text-white/30">(optional)</span>
+            <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+              Service Area <span className="text-slate-400 dark:text-white/30">(optional)</span>
             </label>
             <input
               {...register('service_area')}
               type="text"
               placeholder="Chicago, Evanston, Oak Park"
-              className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 focus:border-blue-500/60 text-white placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+              className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">
-              Brand Tone <span className="text-white/30">(optional)</span>
+            <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+              Brand Tone <span className="text-slate-400 dark:text-white/30">(optional)</span>
             </label>
             <select
               {...register('tone')}
-              className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 focus:border-blue-500/60 text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all [&_option]:bg-[#0A0F1E]"
+              className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all [&_option]:bg-[#0A0F1E]"
             >
               <option value="Professional">Professional</option>
               <option value="Friendly">Friendly</option>
@@ -204,12 +204,12 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">
-              Typography Style <span className="text-white/30">(optional)</span>
+            <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+              Typography Style <span className="text-slate-400 dark:text-white/30">(optional)</span>
             </label>
             <select
               {...register('font_preference')}
-              className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 focus:border-blue-500/60 text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all [&_option]:bg-[#0A0F1E]"
+              className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all [&_option]:bg-[#0A0F1E]"
             >
               <option value="Modern">Modern</option>
               <option value="Classic">Classic</option>
@@ -220,48 +220,48 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-white/70 mb-2">
-            Target Keywords <span className="text-white/30">(optional)</span>
+          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+            Target Keywords <span className="text-slate-400 dark:text-white/30">(optional)</span>
           </label>
           <input
             {...register('target_keywords')}
             type="text"
             placeholder="emergency plumber chicago, sewer repair, water heater replacement"
-            className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 focus:border-blue-500/60 text-white placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+            className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-white/70 mb-2">
-            Key Phrases <span className="text-white/30">(optional)</span>
+          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+            Key Phrases <span className="text-slate-400 dark:text-white/30">(optional)</span>
           </label>
           <input
             {...register('key_phrases')}
             type="text"
             placeholder="same-day service, family-owned, licensed & insured"
-            className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 focus:border-blue-500/60 text-white placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+            className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-white/70 mb-2">
-            Inspiration URLs <span className="text-white/30">(optional)</span>
+          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+            Inspiration URLs <span className="text-slate-400 dark:text-white/30">(optional)</span>
           </label>
           <textarea
             {...register('inspiration_urls')}
             rows={2}
             placeholder="Paste 1-3 websites you like, separated by commas"
-            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-blue-500/60 text-white placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
+            className="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-white/70 mb-2">
-            Hero Image Preference <span className="text-white/30">(optional)</span>
+          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+            Hero Image Preference <span className="text-slate-400 dark:text-white/30">(optional)</span>
           </label>
           <select
             {...register('hero_image_preference')}
-            className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 focus:border-blue-500/60 text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all [&_option]:bg-[#0A0F1E]"
+            className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all [&_option]:bg-[#0A0F1E]"
           >
             <option value="Generate for me">Generate for me</option>
             <option value="I will upload photos">I will upload photos</option>
@@ -270,21 +270,21 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-white/70 mb-3">
-            Website Functionality <span className="text-white/30">(optional)</span>
+          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-3">
+            Website Functionality <span className="text-slate-400 dark:text-white/30">(optional)</span>
           </label>
           <div className="grid sm:grid-cols-2 gap-3">
             {functionalityOptions.map((option) => (
               <label
                 key={option.key}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-all"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 cursor-pointer hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
               >
                 <input
                   {...register(option.key)}
                   type="checkbox"
-                  className="h-4 w-4 rounded border-white/20 bg-white/5"
+                  className="h-4 w-4 rounded border-slate-300 dark:border-white/20 bg-white dark:bg-white/5"
                 />
-                <span className="text-white/70 text-sm">{option.label}</span>
+                <span className="text-slate-700 dark:text-white/70 text-sm">{option.label}</span>
               </label>
             ))}
           </div>
