@@ -283,8 +283,6 @@ export async function runFullAudit(
 
   // ── 1. Get search rankings ──────────────────────────────────────────────
   const rankReports: SearchRankReport[] = []
-    evaluatedKeywords: number,
-    maxTrackedPosition: number
   if (provider === 'mock') {
     for (const keyword of keywords) {
       rankReports.push(getMockSearchRankings(targetUrl, competitorUrls, keyword, detectedLocation))

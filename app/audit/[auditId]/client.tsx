@@ -353,6 +353,7 @@ function FullReport({ audit }: { audit: WaasAudit }) {
         keyword={primaryKeyword}
         summary={summary}
         completedAt={audit.completed_at}
+        maxTrackedPosition={maxTrackedPosition}
       />
 
       {/* ── LEADERBOARD ───────────────────────────────────────────────────── */}
@@ -489,7 +490,7 @@ function FullReport({ audit }: { audit: WaasAudit }) {
 // ---------------------------------------------------------------------------
 
 function HeroSection({
-  targetDomain, targetUrl, score, grade, keyword, summary, completedAt,
+  targetDomain, targetUrl, score, grade, keyword, summary, completedAt, maxTrackedPosition,
 }: {
   targetDomain: string
   targetUrl:    string
@@ -498,6 +499,7 @@ function HeroSection({
   keyword:      string
   summary?:     AuditReportData['summary']
   completedAt:  string | null
+  maxTrackedPosition: number
 }) {
   const { theme } = useOnboardingTheme()
   const isLight = theme === 'light'
@@ -870,7 +872,7 @@ function KeywordsUsedPanel({ keywords }: { keywords: string[] }) {
   )
 }
 
-function KeywordPerformancePanel({ summary, providerMeta }: {
+function KeywordPerformancePanel({ summary, providerMeta, maxTrackedPosition, unrankedPositionValue }: {
   summary: NonNullable<AuditReportData['summary']>
   providerMeta?: KeywordProviderMeta
   maxTrackedPosition: number
