@@ -336,8 +336,9 @@ export async function runFullAudit(
     manualReviewNote = 'Both search rankings and PageSpeed APIs failed. Site may be unscrapable.'
   }
 
-  // Persist guard: when live provider dependencies fail, avoid writing synthetic 0/100 summaries.
-  const dataUnavailable = usingLiveProviders && (rankReports.length === 0 || !pageSpeed)
+  // Persist guard: only enter concierge/manual fallback when BOTH live dependencies fail.
+  // If one provider succeeds, we still return a partial-but-actionable automated report.
+  const dataUnavailable = usingLiveProviders && (rankReports.length === 0 && !pageSpeed)
 
   const maxTrackedPosition = rankReports.length > 0
     ? Math.min(...rankReports.map(report => report.maxTrackedPosition ?? 100))

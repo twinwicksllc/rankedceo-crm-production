@@ -230,9 +230,9 @@ function AuditReportClientContent({ audit: initialAudit }: AuditReportClientProp
           targetUrl={audit.target_url}
           auditId={audit.id}
           errorMessage={reportData?.data_unavailable_reason ?? audit.error_message}
-          badgeLabel="Concierge Queue Active"
-          title="High Traffic: Manual Review Queued"
-          subtitle={`We're seeing elevated scan traffic right now, so ${extractDomain(audit.target_url)} has been routed to our concierge audit queue. A strategist is already assigned and your full report will arrive within 1 business day.`}
+          badgeLabel="Manual Review Queued"
+          title="Automated Scan Incomplete"
+          subtitle={`We couldn't complete every automated data check for ${extractDomain(audit.target_url)} on this run. A strategist has been assigned to finalize your report manually within 1 business day.`}
         />
       </PageShell>
     )
