@@ -289,6 +289,11 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
   const handleSendToClient = () => {
     setMessage(null)
     startTransition(async () => {
+      if (isReviewLocked) {
+        setMessage('Client review is already active. Unlock variants before starting a new send cycle.')
+        return
+      }
+
       const hasDirtyDraft = variants.some((variant) => {
         const draft = getDraft(variant)
         const signature = JSON.stringify(draft)
@@ -766,9 +771,9 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
           <button
             type="button"
             onClick={handleSendToClient}
-            disabled={isPending || variants.length === 0}
+            disabled={isPending || variants.length === 0 || isReviewLocked}
             className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-              isPending || variants.length === 0
+              isPending || variants.length === 0 || isReviewLocked
                 ? 'cursor-not-allowed bg-white/10 text-white/35'
                 : 'bg-violet-500 text-white hover:bg-violet-400'
             }`}

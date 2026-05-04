@@ -1187,6 +1187,22 @@ export async function generateAndStoreSiteVariants(
 export async function markVariantsSentToReview(tenantId: string): Promise<ActionResult<string>> {
   try {
     const supabase = getAdminClient()
+    const statuses = await getTenantVariantStatuses(tenantId)
+
+    if (statuses.includes('selected')) {
+      return {
+        success: false,
+        error: 'Client selection already exists. Regenerate variants before starting a new review cycle.',
+      }
+    }
+
+    if (statuses.includes('sent_to_review') && !statuses.includes('generated')) {
+      return {
+        success: false,
+        error: 'Variants are already in client review. Unlock variants before sending again.',
+      }
+    }
+
     const tokenResult = await ensureClientReviewToken(tenantId)
     const reviewToken = tokenResult.data ?? tenantId
 
@@ -1206,6 +1222,7 @@ export async function markVariantsSentToReview(tenantId: string): Promise<Action
         updated_at: new Date().toISOString(),
       })
       .eq('tenant_id', tenantId)
+      .eq('status', 'generated')
 
     if (error && !isMissingSchemaTable(error.message, 'tenant_site_variants')) {
       return { success: false, error: error.message }
