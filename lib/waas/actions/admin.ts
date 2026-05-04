@@ -591,6 +591,31 @@ export interface VariantReviewReadinessReport {
   issues: string[]
 }
 
+export interface VariantLifecycleEvent {
+  id: string
+  changeSource: string
+  summary: string | null
+  templateSlug: string | null
+  createdAt: string
+}
+
+export interface VariantLifecycleVariantStatus {
+  variantIndex: number
+  variantLabel: string
+  status: SiteVariantRecord['status']
+  updatedAt: string | null
+}
+
+export interface VariantLifecycleTelemetry {
+  reviewState: 'editing' | 'in_review' | 'selected'
+  selectedTemplateSlug: string | null
+  selectedAt: string | null
+  lastReviewSentAt: string | null
+  lastUnlockedAt: string | null
+  variantStatuses: VariantLifecycleVariantStatus[]
+  events: VariantLifecycleEvent[]
+}
+
 async function getTenantVariantStatuses(tenantId: string): Promise<string[]> {
   const supabase = getAdminClient()
   const { data, error } = await supabase
@@ -811,6 +836,104 @@ export async function getVariantReviewReadiness(
         variantCount: variantRows.length,
         checks,
         issues: reportIssues,
+      },
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
+export async function getVariantLifecycleTelemetry(
+  tenantId: string,
+): Promise<ActionResult<VariantLifecycleTelemetry>> {
+  try {
+    const supabase = getAdminClient()
+
+    let variantStatuses: VariantLifecycleVariantStatus[] = []
+    const { data: variantRows, error: variantError } = await supabase
+      .from('tenant_site_variants')
+      .select('variant_index, variant_label, status, updated_at')
+      .eq('tenant_id', tenantId)
+      .order('variant_index', { ascending: true })
+
+    if (!variantError) {
+      variantStatuses = ((variantRows ?? []) as Array<Record<string, unknown>>).map((row) => ({
+        variantIndex: typeof row.variant_index === 'number' ? row.variant_index : 0,
+        variantLabel: typeof row.variant_label === 'string' ? row.variant_label : 'Variant',
+        status: (typeof row.status === 'string' ? row.status : 'generated') as SiteVariantRecord['status'],
+        updatedAt: typeof row.updated_at === 'string' ? row.updated_at : null,
+      }))
+    } else if (!isMissingSchemaTable(variantError.message, 'tenant_site_variants')) {
+      return { success: false, error: variantError.message }
+    }
+
+    let selectedTemplateSlug: string | null = null
+    let selectedAt: string | null = null
+    const { data: configRow } = await supabase
+      .from('tenant_site_config')
+      .select('client_selected_template_slug, client_selected_at')
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
+
+    if (configRow && typeof configRow === 'object') {
+      const row = configRow as Record<string, unknown>
+      selectedTemplateSlug = typeof row.client_selected_template_slug === 'string'
+        ? row.client_selected_template_slug
+        : null
+      selectedAt = typeof row.client_selected_at === 'string'
+        ? row.client_selected_at
+        : null
+    }
+
+    let events: VariantLifecycleEvent[] = []
+    const lifecycleSources = [
+      'site_variants_sent_to_review',
+      'site_variants_unlocked_for_editing',
+      'client_selected_variant',
+      'client_mixed_variant',
+      'client_regenerated_variant',
+    ]
+
+    const { data: versionRows, error: versionError } = await supabase
+      .from('tenant_site_versions')
+      .select('id, change_source, summary, template_slug, created_at')
+      .eq('tenant_id', tenantId)
+      .in('change_source', lifecycleSources)
+      .order('created_at', { ascending: false })
+      .limit(20)
+
+    if (!versionError) {
+      events = ((versionRows ?? []) as Array<Record<string, unknown>>).map((row) => ({
+        id: typeof row.id === 'string' ? row.id : '',
+        changeSource: typeof row.change_source === 'string' ? row.change_source : 'unknown_change',
+        summary: typeof row.summary === 'string' ? row.summary : null,
+        templateSlug: typeof row.template_slug === 'string' ? row.template_slug : null,
+        createdAt: typeof row.created_at === 'string' ? row.created_at : new Date().toISOString(),
+      }))
+    } else if (!isMissingSchemaTable(versionError.message, 'tenant_site_versions')) {
+      return { success: false, error: versionError.message }
+    }
+
+    const reviewState: VariantLifecycleTelemetry['reviewState'] = variantStatuses.some((item) => item.status === 'selected')
+      ? 'selected'
+      : variantStatuses.some((item) => item.status === 'sent_to_review')
+        ? 'in_review'
+        : 'editing'
+
+    const lastReviewSentAt = events.find((event) => event.changeSource === 'site_variants_sent_to_review')?.createdAt ?? null
+    const lastUnlockedAt = events.find((event) => event.changeSource === 'site_variants_unlocked_for_editing')?.createdAt ?? null
+
+    return {
+      success: true,
+      data: {
+        reviewState,
+        selectedTemplateSlug,
+        selectedAt,
+        lastReviewSentAt,
+        lastUnlockedAt,
+        variantStatuses,
+        events,
       },
     }
   } catch (err) {
@@ -1113,6 +1236,12 @@ export async function unlockVariantsForEditing(tenantId: string): Promise<Action
       return { success: false, error: error.message }
     }
 
+    await saveTenantSiteVersion(
+      tenantId,
+      'site_variants_unlocked_for_editing',
+      'Admin unlocked variants for editing',
+    )
+
     revalidatePath(`/admin/dashboard/${tenantId}`)
     revalidatePath(`/review/${tenantId}`)
     return { success: true }
@@ -1227,6 +1356,12 @@ export async function markVariantsSentToReview(tenantId: string): Promise<Action
     if (error && !isMissingSchemaTable(error.message, 'tenant_site_variants')) {
       return { success: false, error: error.message }
     }
+
+    await saveTenantSiteVersion(
+      tenantId,
+      'site_variants_sent_to_review',
+      'Admin sent generated variants to client review',
+    )
 
     revalidatePath(`/admin/dashboard/${tenantId}`)
     revalidatePath(`/review/${reviewToken}`)

@@ -5,9 +5,11 @@ import type { SectionConfig } from '@/lib/waas/templates/types'
 import type {
   AdminSiteVariant,
   VariantEditHistoryEntry,
+  VariantLifecycleTelemetry,
   VariantReviewReadinessReport,
 } from '@/lib/waas/actions/admin'
 import {
+  getVariantLifecycleTelemetry,
   getVariantReviewReadiness,
   getVariantEditHistory,
   generateAndStoreSiteVariants,
@@ -185,6 +187,8 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
   const [loadingHistoryIndex, setLoadingHistoryIndex] = useState<number | null>(null)
   const [readinessReport, setReadinessReport] = useState<VariantReviewReadinessReport | null>(null)
   const [isReadinessLoading, setIsReadinessLoading] = useState(false)
+  const [lifecycleTelemetry, setLifecycleTelemetry] = useState<VariantLifecycleTelemetry | null>(null)
+  const [isLifecycleLoading, setIsLifecycleLoading] = useState(false)
 
   const isReviewLocked = useMemo(
     () => variants.some((variant) => variant.status === 'sent_to_review' || variant.status === 'selected'),
@@ -226,6 +230,17 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
     setIsReadinessLoading(false)
   }
 
+  const loadLifecycleTelemetry = async () => {
+    setIsLifecycleLoading(true)
+    const result = await getVariantLifecycleTelemetry(tenantId)
+    if (result.success && result.data) {
+      setLifecycleTelemetry(result.data)
+    } else {
+      setLifecycleTelemetry(null)
+    }
+    setIsLifecycleLoading(false)
+  }
+
   const refreshVariants = async () => {
     const result = await getSiteVariants(tenantId)
     if (result.success && result.data) {
@@ -244,7 +259,7 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
         }
         return next
       })
-      await loadReadinessReport()
+      await Promise.all([loadReadinessReport(), loadLifecycleTelemetry()])
     }
   }
 
@@ -454,7 +469,7 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
   }
 
   useEffect(() => {
-    void loadReadinessReport()
+    void Promise.all([loadReadinessReport(), loadLifecycleTelemetry()])
   }, [])
 
   const updateSection = (
@@ -688,6 +703,86 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
                 ))}
               </div>
             )}
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-2xl bg-white/5 border border-white/10 p-5">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-white text-base font-semibold">Review Lifecycle Status</h3>
+            <p className="text-white/55 text-xs mt-1">Live state and timeline of review-cycle transitions.</p>
+          </div>
+          <button
+            type="button"
+            onClick={loadLifecycleTelemetry}
+            disabled={isPending || isLifecycleLoading}
+            className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
+              isPending || isLifecycleLoading
+                ? 'cursor-not-allowed bg-white/10 text-white/35'
+                : 'bg-white/10 text-white hover:bg-white/15'
+            }`}
+          >
+            {isLifecycleLoading ? 'Refreshing…' : 'Refresh Status'}
+          </button>
+        </div>
+
+        {!lifecycleTelemetry ? (
+          <p className="text-sm text-white/45">Lifecycle telemetry unavailable. Refresh to load the latest status.</p>
+        ) : (
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
+              <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+                <p className="text-[11px] uppercase tracking-wide text-white/55">Current State</p>
+                <p className="mt-1 text-sm text-white font-semibold">{lifecycleTelemetry.reviewState.replace(/_/g, ' ')}</p>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+                <p className="text-[11px] uppercase tracking-wide text-white/55">Selected Template</p>
+                <p className="mt-1 text-sm text-white font-semibold">{lifecycleTelemetry.selectedTemplateSlug ?? 'Not selected'}</p>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+                <p className="text-[11px] uppercase tracking-wide text-white/55">Last Sent</p>
+                <p className="mt-1 text-sm text-white font-semibold">{lifecycleTelemetry.lastReviewSentAt ? new Date(lifecycleTelemetry.lastReviewSentAt).toLocaleString() : 'Never'}</p>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+                <p className="text-[11px] uppercase tracking-wide text-white/55">Last Unlock</p>
+                <p className="mt-1 text-sm text-white font-semibold">{lifecycleTelemetry.lastUnlockedAt ? new Date(lifecycleTelemetry.lastUnlockedAt).toLocaleString() : 'Never'}</p>
+              </div>
+            </div>
+
+            {lifecycleTelemetry.variantStatuses.length > 0 && (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                {lifecycleTelemetry.variantStatuses.map((variant) => (
+                  <div key={variant.variantIndex} className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+                    <p className="text-xs font-semibold text-white">Variant {variant.variantIndex}: {variant.variantLabel}</p>
+                    <p className="text-[11px] mt-1 text-cyan-200">Status: {variant.status.replace(/_/g, ' ')}</p>
+                    <p className="text-[11px] text-white/45 mt-1">
+                      {variant.updatedAt ? `Updated ${new Date(variant.updatedAt).toLocaleString()}` : 'No update timestamp'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-3">
+              <p className="text-[11px] uppercase tracking-wide text-white/60 mb-2">Recent Lifecycle Events</p>
+              {lifecycleTelemetry.events.length === 0 ? (
+                <p className="text-xs text-white/45">No lifecycle events recorded yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {lifecycleTelemetry.events.slice(0, 8).map((event) => (
+                    <div key={event.id} className="rounded border border-white/10 bg-slate-950/40 px-3 py-2">
+                      <p className="text-xs text-white/85">{event.summary ?? event.changeSource.replace(/_/g, ' ')}</p>
+                      <p className="text-[11px] text-white/45 mt-1">
+                        {event.changeSource.replace(/_/g, ' ')}
+                        {event.templateSlug ? ` • template ${event.templateSlug}` : ''}
+                      </p>
+                      <p className="text-[11px] text-white/45 mt-1">{new Date(event.createdAt).toLocaleString()}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
