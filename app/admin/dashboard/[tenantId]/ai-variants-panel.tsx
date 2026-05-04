@@ -2,64 +2,122 @@
 
 import { useMemo, useState, useTransition } from 'react'
 import type { SectionConfig } from '@/lib/waas/templates/types'
-import type { AdminSiteVariant } from '@/lib/waas/actions/admin'
-import { generateAndStoreSiteVariants, getSiteVariants, markVariantsSentToReview, updateSiteVariant } from '@/lib/waas/actions/admin'
+import type { AdminSiteVariant, VariantEditHistoryEntry } from '@/lib/waas/actions/admin'
+import {
+  getVariantEditHistory,
+  generateAndStoreSiteVariants,
+  getSiteVariants,
+  markVariantsSentToReview,
+  rollbackSiteVariantFromHistory,
+  unlockVariantsForEditing,
+  updateSiteVariant,
+} from '@/lib/waas/actions/admin'
 
 type Viewport = 'desktop' | 'mobile'
+
+interface ScalarFieldSpec {
+  key: string
+  label: string
+  multiline?: boolean
+  maxLength?: number
+}
+
+interface ObjectArrayFieldSpec {
+  key: string
+  label: string
+  multiline?: boolean
+  maxLength?: number
+}
 
 const VIEWPORT_WIDTH: Record<Viewport, string> = {
   desktop: '100%',
   mobile: '390px',
 }
 
-const SECTION_FIELD_MAP: Record<string, string[]> = {
-  hero: ['headline', 'subheadline', 'primaryCtaLabel', 'locationBadge'],
-  services: ['headline', 'subheadline', 'bottomCtaText'],
-  trust: ['headline', 'subheadline'],
-  about: ['headline', 'body'],
-  faq: ['headline', 'intro'],
-  'how-it-works': ['headline', 'intro'],
-  booking: ['headline', 'subheadline', 'primaryCtaLabel'],
-  reviews: ['headline', 'subheadline'],
+const SECTION_FIELD_MAP: Record<string, ScalarFieldSpec[]> = {
+  hero: [
+    { key: 'eyebrow', label: 'Eyebrow', maxLength: 50 },
+    { key: 'headline', label: 'Headline', maxLength: 140 },
+    { key: 'subheadline', label: 'Subheadline', multiline: true, maxLength: 320 },
+    { key: 'primaryCtaLabel', label: 'Primary CTA Label', maxLength: 60 },
+    { key: 'secondaryCtaLabel', label: 'Secondary CTA Label', maxLength: 60 },
+    { key: 'locationBadge', label: 'Location Badge', maxLength: 120 },
+  ],
+  services: [
+    { key: 'eyebrow', label: 'Eyebrow', maxLength: 50 },
+    { key: 'headline', label: 'Headline', maxLength: 140 },
+    { key: 'subheadline', label: 'Subheadline', multiline: true, maxLength: 320 },
+    { key: 'bottomCtaText', label: 'Bottom CTA Text', multiline: true, maxLength: 240 },
+  ],
+  trust: [
+    { key: 'headline', label: 'Headline', maxLength: 140 },
+    { key: 'subheadline', label: 'Subheadline', multiline: true, maxLength: 320 },
+  ],
+  about: [
+    { key: 'eyebrow', label: 'Eyebrow', maxLength: 50 },
+    { key: 'headline', label: 'Headline', maxLength: 140 },
+    { key: 'body', label: 'Body', multiline: true, maxLength: 2000 },
+  ],
+  faq: [
+    { key: 'eyebrow', label: 'Eyebrow', maxLength: 50 },
+    { key: 'headline', label: 'Headline', maxLength: 140 },
+    { key: 'intro', label: 'Intro', multiline: true, maxLength: 500 },
+  ],
+  'how-it-works': [
+    { key: 'eyebrow', label: 'Eyebrow', maxLength: 50 },
+    { key: 'headline', label: 'Headline', maxLength: 140 },
+    { key: 'intro', label: 'Intro', multiline: true, maxLength: 500 },
+  ],
+  booking: [
+    { key: 'eyebrow', label: 'Eyebrow', maxLength: 50 },
+    { key: 'headline', label: 'Headline', maxLength: 140 },
+    { key: 'subheadline', label: 'Subheadline', multiline: true, maxLength: 320 },
+    { key: 'primaryCtaLabel', label: 'Primary CTA Label', maxLength: 60 },
+  ],
+  reviews: [
+    { key: 'eyebrow', label: 'Eyebrow', maxLength: 50 },
+    { key: 'headline', label: 'Headline', maxLength: 140 },
+    { key: 'subheadline', label: 'Subheadline', multiline: true, maxLength: 320 },
+  ],
 }
 
 const STRING_ARRAY_FIELD_MAP: Record<string, { key: string; label: string; itemLabel: string }> = {
   about: { key: 'highlights', label: 'Highlights', itemLabel: 'Highlight' },
 }
 
-const OBJECT_ARRAY_FIELD_MAP: Record<string, { key: string; label: string; fields: Array<{ key: string; label: string }> }> = {
+const OBJECT_ARRAY_FIELD_MAP: Record<string, { key: string; label: string; fields: ObjectArrayFieldSpec[] }> = {
   services: {
     key: 'items',
     label: 'Service Items',
     fields: [
-      { key: 'title', label: 'Title' },
-      { key: 'description', label: 'Description' },
-      { key: 'icon', label: 'Icon' },
+      { key: 'title', label: 'Title', maxLength: 90 },
+      { key: 'description', label: 'Description', multiline: true, maxLength: 260 },
+      { key: 'icon', label: 'Icon', maxLength: 8 },
     ],
   },
   trust: {
     key: 'badges',
     label: 'Trust Badges',
     fields: [
-      { key: 'label', label: 'Label' },
-      { key: 'sub', label: 'Subtext' },
-      { key: 'icon', label: 'Icon' },
+      { key: 'label', label: 'Label', maxLength: 80 },
+      { key: 'sub', label: 'Subtext', multiline: true, maxLength: 180 },
+      { key: 'icon', label: 'Icon', maxLength: 8 },
     ],
   },
   faq: {
     key: 'items',
     label: 'FAQ Items',
     fields: [
-      { key: 'question', label: 'Question' },
-      { key: 'answer', label: 'Answer' },
+      { key: 'question', label: 'Question', multiline: true, maxLength: 180 },
+      { key: 'answer', label: 'Answer', multiline: true, maxLength: 700 },
     ],
   },
   'how-it-works': {
     key: 'steps',
     label: 'Process Steps',
     fields: [
-      { key: 'title', label: 'Title' },
-      { key: 'description', label: 'Description' },
+      { key: 'title', label: 'Title', maxLength: 100 },
+      { key: 'description', label: 'Description', multiline: true, maxLength: 320 },
     ],
   },
 }
@@ -118,6 +176,17 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
     return out
   })
   const [isPending, startTransition] = useTransition()
+  const [historyByVariant, setHistoryByVariant] = useState<Record<number, VariantEditHistoryEntry[]>>({})
+  const [loadingHistoryIndex, setLoadingHistoryIndex] = useState<number | null>(null)
+
+  const isReviewLocked = useMemo(
+    () => variants.some((variant) => variant.status === 'sent_to_review' || variant.status === 'selected'),
+    [variants],
+  )
+  const hasSelectedVariant = useMemo(
+    () => variants.some((variant) => variant.status === 'selected'),
+    [variants],
+  )
 
   const previewBase = useMemo(() => `/_preview/${tenantId}`, [tenantId])
 
@@ -165,6 +234,11 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
   const handleGenerate = () => {
     setMessage(null)
     startTransition(async () => {
+      if (isReviewLocked) {
+        setMessage('Variants are locked during active client review. Unlock variants before regenerating.')
+        return
+      }
+
       const result = await generateAndStoreSiteVariants(tenantId, notes.trim() || undefined)
       if (!result.success) {
         setMessage(result.error ?? 'Failed to generate variants.')
@@ -209,6 +283,22 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
     })
 
     setOpenVariantEditor((prev) => prev === variant.variant_index ? null : variant.variant_index)
+
+    if (openVariantEditor !== variant.variant_index) {
+      void loadVariantHistory(variant.variant_index)
+    }
+  }
+
+  const loadVariantHistory = async (variantIndex: number) => {
+    setLoadingHistoryIndex(variantIndex)
+    const result = await getVariantEditHistory(tenantId, variantIndex, 8)
+    if (result.success && result.data) {
+      setHistoryByVariant((prev) => ({
+        ...prev,
+        [variantIndex]: result.data ?? [],
+      }))
+    }
+    setLoadingHistoryIndex(null)
   }
 
   const handleSaveVariant = (variant: AdminSiteVariant) => {
@@ -216,6 +306,11 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
     setMessage(null)
 
     startTransition(async () => {
+      if (isReviewLocked) {
+        setMessage('Variants are locked during active client review. Unlock variants before saving edits.')
+        return
+      }
+
       const result = await updateSiteVariant(tenantId, variant.variant_index, {
         variantLabel: draft.variant_label,
         variantRationale: draft.variant_rationale,
@@ -243,6 +338,11 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
   const handleSaveAllDrafts = () => {
     setMessage(null)
     startTransition(async () => {
+      if (isReviewLocked) {
+        setMessage('Variants are locked during active client review. Unlock variants before saving edits.')
+        return
+      }
+
       let savedCount = 0
 
       for (const variant of variants) {
@@ -267,6 +367,34 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
 
       await refreshVariants()
       setMessage(savedCount > 0 ? `Saved ${savedCount} variant draft(s).` : 'No unsaved changes to save.')
+    })
+  }
+
+  const handleRollbackVariant = (variant: AdminSiteVariant, versionId: string) => {
+    setMessage(null)
+    startTransition(async () => {
+      const result = await rollbackSiteVariantFromHistory(tenantId, variant.variant_index, versionId)
+      if (!result.success) {
+        setMessage(result.error ?? 'Failed to roll back variant from history.')
+        return
+      }
+
+      await refreshVariants()
+      await loadVariantHistory(variant.variant_index)
+      setMessage(`Rolled back ${variant.variant_label} to selected snapshot.`)
+    })
+  }
+
+  const handleUnlockVariants = () => {
+    setMessage(null)
+    startTransition(async () => {
+      const result = await unlockVariantsForEditing(tenantId)
+      if (!result.success) {
+        setMessage(result.error ?? 'Failed to unlock variants for editing.')
+        return
+      }
+      await refreshVariants()
+      setMessage('Variants unlocked for admin editing.')
     })
   }
 
@@ -401,7 +529,7 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
     variantIndex: number,
     sectionIndex: number,
     arrayKey: string,
-    fields: Array<{ key: string; label: string }>,
+    fields: ObjectArrayFieldSpec[],
   ) => {
     updateSection(variantIndex, sectionIndex, (currentSection) => {
       const nextContent = asObject(currentSection.content)
@@ -440,6 +568,12 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
       {message && (
         <div className="rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-100">
           {message}
+        </div>
+      )}
+
+      {isReviewLocked && (
+        <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          Variant editing is locked while client review is active.
         </div>
       )}
 
@@ -483,9 +617,11 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
           <button
             type="button"
             onClick={handleGenerate}
-            disabled={isPending}
+            disabled={isPending || isReviewLocked}
             className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-              isPending ? 'cursor-not-allowed bg-white/10 text-white/35' : 'bg-cyan-500 text-slate-950 hover:bg-cyan-400'
+              isPending || isReviewLocked
+                ? 'cursor-not-allowed bg-white/10 text-white/35'
+                : 'bg-cyan-500 text-slate-950 hover:bg-cyan-400'
             }`}
           >
             {isPending ? 'Generating…' : 'Generate / Re-Generate'}
@@ -494,14 +630,27 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
           <button
             type="button"
             onClick={handleSaveAllDrafts}
-            disabled={isPending || variants.length === 0}
+            disabled={isPending || variants.length === 0 || isReviewLocked}
             className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-              isPending || variants.length === 0
+              isPending || variants.length === 0 || isReviewLocked
                 ? 'cursor-not-allowed bg-white/10 text-white/35'
                 : 'bg-emerald-500 text-white hover:bg-emerald-400'
             }`}
           >
             {isPending ? 'Saving…' : 'Save All Drafts'}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleUnlockVariants}
+            disabled={isPending || !isReviewLocked || hasSelectedVariant}
+            className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+              isPending || !isReviewLocked || hasSelectedVariant
+                ? 'cursor-not-allowed bg-white/10 text-white/35'
+                : 'bg-amber-500 text-slate-950 hover:bg-amber-400'
+            }`}
+          >
+            {isPending ? 'Unlocking…' : 'Unlock For Editing'}
           </button>
 
           <button
@@ -573,16 +722,21 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
                   <button
                     type="button"
                     onClick={() => handleToggleEditor(variant)}
-                    className="rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/10"
+                    disabled={isReviewLocked}
+                    className={`rounded-lg border px-3 py-2 text-xs font-semibold ${
+                      isReviewLocked
+                        ? 'cursor-not-allowed border-white/10 text-white/35'
+                        : 'border-white/15 text-white/80 hover:bg-white/10'
+                    }`}
                   >
                     {openVariantEditor === variant.variant_index ? 'Close Editor' : 'Edit Variant'}
                   </button>
                   <button
                     type="button"
                     onClick={() => handleResetVariant(variant)}
-                    disabled={isPending}
+                    disabled={isPending || isReviewLocked}
                     className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
-                      isPending
+                      isPending || isReviewLocked
                         ? 'cursor-not-allowed border-white/10 text-white/35'
                         : 'border-white/15 text-white/80 hover:bg-white/10'
                     }`}
@@ -592,9 +746,9 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
                   <button
                     type="button"
                     onClick={() => handleSaveVariant(variant)}
-                    disabled={isPending}
+                    disabled={isPending || isReviewLocked}
                     className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
-                      isPending
+                      isPending || isReviewLocked
                         ? 'cursor-not-allowed bg-white/10 text-white/35'
                         : 'bg-emerald-500 text-white hover:bg-emerald-400'
                     }`}
@@ -605,6 +759,7 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
 
                 {openVariantEditor === variant.variant_index && (() => {
                   const draft = getDraft(variant)
+                  const history = historyByVariant[variant.variant_index] ?? []
                   return (
                     <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3 space-y-3">
                       <label className="block">
@@ -639,7 +794,7 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
                       <div className="space-y-2">
                         <p className="text-[11px] uppercase tracking-wide text-white/60">Section Controls</p>
                         {draft.sections_json.map((section, sectionIndex) => {
-                          const fieldNames = SECTION_FIELD_MAP[section.section] ?? []
+                          const scalarFields = SECTION_FIELD_MAP[section.section] ?? []
                           const contentRecord = section.content && typeof section.content === 'object'
                             ? (section.content as Record<string, unknown>)
                             : {}
@@ -703,20 +858,38 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
                                 </button>
                               </div>
 
-                              {fieldNames.length > 0 && (
+                              {scalarFields.length > 0 && (
                                 <div className="mt-3 grid grid-cols-1 gap-2">
-                                  {fieldNames.map((fieldName) => {
-                                    const value = typeof contentRecord[fieldName] === 'string' ? contentRecord[fieldName] as string : ''
+                                  {scalarFields.map((field) => {
+                                    const value = typeof contentRecord[field.key] === 'string' ? contentRecord[field.key] as string : ''
                                     return (
-                                      <label key={fieldName} className="block">
-                                        <div className="mb-1 text-[11px] text-white/60">{startCase(fieldName)}</div>
-                                        <input
-                                          value={value}
-                                          onChange={(event) => {
-                                            updateSectionContentField(variant.variant_index, sectionIndex, fieldName, event.target.value)
-                                          }}
-                                          className="w-full rounded border border-white/15 bg-slate-800 px-2.5 py-2 text-xs text-white outline-none focus:border-cyan-400"
-                                        />
+                                      <label key={field.key} className="block">
+                                        <div className="mb-1 text-[11px] text-white/60">{field.label}</div>
+                                        {field.multiline ? (
+                                          <textarea
+                                            value={value}
+                                            maxLength={field.maxLength}
+                                            rows={3}
+                                            onChange={(event) => {
+                                              updateSectionContentField(variant.variant_index, sectionIndex, field.key, event.target.value)
+                                            }}
+                                            className="w-full rounded border border-white/15 bg-slate-800 px-2.5 py-2 text-xs text-white outline-none focus:border-cyan-400"
+                                          />
+                                        ) : (
+                                          <input
+                                            value={value}
+                                            maxLength={field.maxLength}
+                                            onChange={(event) => {
+                                              updateSectionContentField(variant.variant_index, sectionIndex, field.key, event.target.value)
+                                            }}
+                                            className="w-full rounded border border-white/15 bg-slate-800 px-2.5 py-2 text-xs text-white outline-none focus:border-cyan-400"
+                                          />
+                                        )}
+                                        {field.maxLength && (
+                                          <div className="mt-1 text-right text-[10px] text-white/45">
+                                            {value.length}/{field.maxLength}
+                                          </div>
+                                        )}
                                       </label>
                                     )
                                   })}
@@ -789,20 +962,45 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
                                           {objectArraySpec.fields.map((field) => (
                                             <label key={field.key} className="block">
                                               <div className="mb-1 text-[11px] text-white/60">{field.label}</div>
-                                              <input
-                                                value={typeof itemRecord[field.key] === 'string' ? itemRecord[field.key] as string : ''}
-                                                onChange={(event) => {
-                                                  updateSectionObjectArrayField(
-                                                    variant.variant_index,
-                                                    sectionIndex,
-                                                    objectArraySpec.key,
-                                                    itemIndex,
-                                                    field.key,
-                                                    event.target.value,
-                                                  )
-                                                }}
-                                                className="w-full rounded border border-white/15 bg-slate-800 px-2.5 py-2 text-xs text-white outline-none focus:border-cyan-400"
-                                              />
+                                              {field.multiline ? (
+                                                <textarea
+                                                  value={typeof itemRecord[field.key] === 'string' ? itemRecord[field.key] as string : ''}
+                                                  maxLength={field.maxLength}
+                                                  rows={3}
+                                                  onChange={(event) => {
+                                                    updateSectionObjectArrayField(
+                                                      variant.variant_index,
+                                                      sectionIndex,
+                                                      objectArraySpec.key,
+                                                      itemIndex,
+                                                      field.key,
+                                                      event.target.value,
+                                                    )
+                                                  }}
+                                                  className="w-full rounded border border-white/15 bg-slate-800 px-2.5 py-2 text-xs text-white outline-none focus:border-cyan-400"
+                                                />
+                                              ) : (
+                                                <input
+                                                  value={typeof itemRecord[field.key] === 'string' ? itemRecord[field.key] as string : ''}
+                                                  maxLength={field.maxLength}
+                                                  onChange={(event) => {
+                                                    updateSectionObjectArrayField(
+                                                      variant.variant_index,
+                                                      sectionIndex,
+                                                      objectArraySpec.key,
+                                                      itemIndex,
+                                                      field.key,
+                                                      event.target.value,
+                                                    )
+                                                  }}
+                                                  className="w-full rounded border border-white/15 bg-slate-800 px-2.5 py-2 text-xs text-white outline-none focus:border-cyan-400"
+                                                />
+                                              )}
+                                              {field.maxLength && (
+                                                <div className="mt-1 text-right text-[10px] text-white/45">
+                                                  {(typeof itemRecord[field.key] === 'string' ? itemRecord[field.key] as string : '').length}/{field.maxLength}
+                                                </div>
+                                              )}
                                             </label>
                                           ))}
                                         </div>
@@ -814,6 +1012,47 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
                             </div>
                           )
                         })}
+                      </div>
+
+                      <div className="rounded-lg border border-white/10 bg-slate-900/50 p-3">
+                        <div className="mb-2 flex items-center justify-between">
+                          <p className="text-[11px] uppercase tracking-wide text-white/60">Variant History</p>
+                          <button
+                            type="button"
+                            onClick={() => loadVariantHistory(variant.variant_index)}
+                            disabled={isPending || loadingHistoryIndex === variant.variant_index}
+                            className={`rounded border px-2 py-1 text-[11px] ${isPending || loadingHistoryIndex === variant.variant_index
+                              ? 'cursor-not-allowed border-white/10 text-white/35'
+                              : 'border-white/15 text-white/75 hover:bg-white/10'
+                            }`}
+                          >
+                            {loadingHistoryIndex === variant.variant_index ? 'Loading…' : 'Refresh'}
+                          </button>
+                        </div>
+
+                        {history.length === 0 ? (
+                          <p className="text-xs text-white/45">No edit snapshots yet for this variant.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {history.map((entry) => (
+                              <div key={entry.versionId} className="rounded border border-white/10 bg-slate-950/40 px-3 py-2">
+                                <p className="text-[11px] text-white/85">{entry.summary ?? 'Variant snapshot'}</p>
+                                <p className="text-[10px] text-white/45 mt-0.5">{new Date(entry.createdAt).toLocaleString()}</p>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRollbackVariant(variant, entry.versionId)}
+                                  disabled={isPending || isReviewLocked}
+                                  className={`mt-2 rounded border px-2 py-1 text-[11px] ${isPending || isReviewLocked
+                                    ? 'cursor-not-allowed border-white/10 text-white/35'
+                                    : 'border-white/15 text-white/75 hover:bg-white/10'
+                                  }`}
+                                >
+                                  Restore Snapshot
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )

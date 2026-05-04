@@ -571,6 +571,28 @@ export interface UpdateSiteVariantInput {
   sections?: SectionConfig[]
 }
 
+export interface VariantEditHistoryEntry {
+  versionId: string
+  summary: string | null
+  createdAt: string
+}
+
+async function getTenantVariantStatuses(tenantId: string): Promise<string[]> {
+  const supabase = getAdminClient()
+  const { data, error } = await supabase
+    .from('tenant_site_variants')
+    .select('status')
+    .eq('tenant_id', tenantId)
+
+  if (error) {
+    if (isMissingSchemaTable(error.message, 'tenant_site_variants')) return []
+    throw new Error(error.message)
+  }
+
+  return ((data ?? []) as Array<Record<string, unknown>>)
+    .map((row) => (typeof row.status === 'string' ? row.status : 'generated'))
+}
+
 function normalizeVariantSections(sections: SectionConfig[]): SectionConfig[] {
   return [...sections]
     .sort((a, b) => a.order - b.order)
@@ -579,6 +601,158 @@ function normalizeVariantSections(sections: SectionConfig[]): SectionConfig[] {
       order: index + 1,
       config: section.config && typeof section.config === 'object' ? section.config : {},
     }))
+}
+
+function readContentString(content: unknown, key: string): string | null {
+  if (!content || typeof content !== 'object') return null
+  const value = (content as Record<string, unknown>)[key]
+  return typeof value === 'string' ? value : null
+}
+
+function validateStringLength(value: string | null, max: number, label: string): string | null {
+  if (value && value.length > max) {
+    return `${label} must be ${max} characters or fewer.`
+  }
+  return null
+}
+
+function validateVariantSections(sections: SectionConfig[]): string | null {
+  for (const section of sections) {
+    const headline = readContentString(section.content, 'headline')
+    const subheadline = readContentString(section.content, 'subheadline')
+    const eyebrow = readContentString(section.content, 'eyebrow')
+
+    const headlineErr = validateStringLength(headline, 140, `${section.section} headline`)
+    if (headlineErr) return headlineErr
+
+    const subheadlineErr = validateStringLength(subheadline, 700, `${section.section} subheadline`)
+    if (subheadlineErr) return subheadlineErr
+
+    const eyebrowErr = validateStringLength(eyebrow, 60, `${section.section} eyebrow`)
+    if (eyebrowErr) return eyebrowErr
+
+    if (section.section === 'about') {
+      const body = readContentString(section.content, 'body')
+      const bodyErr = validateStringLength(body, 2500, 'About body')
+      if (bodyErr) return bodyErr
+
+      const highlights = section.content && typeof section.content === 'object'
+        ? (section.content as Record<string, unknown>).highlights
+        : null
+
+      if (Array.isArray(highlights)) {
+        if (highlights.length > 10) return 'About highlights are limited to 10 items.'
+        for (const item of highlights) {
+          if (typeof item !== 'string') return 'About highlights must be text items.'
+          if (item.length > 120) return 'Each About highlight must be 120 characters or fewer.'
+        }
+      }
+    }
+
+    if (section.section === 'faq') {
+      const faqItems = section.content && typeof section.content === 'object'
+        ? (section.content as Record<string, unknown>).items
+        : null
+
+      if (Array.isArray(faqItems)) {
+        if (faqItems.length > 12) return 'FAQ supports up to 12 items.'
+        for (const item of faqItems) {
+          if (!item || typeof item !== 'object') return 'FAQ items must be objects.'
+          const row = item as Record<string, unknown>
+          const question = typeof row.question === 'string' ? row.question.trim() : ''
+          const answer = typeof row.answer === 'string' ? row.answer.trim() : ''
+          if (!question) return 'Each FAQ item requires a question.'
+          if (!answer) return 'Each FAQ item requires an answer.'
+          if (question.length > 180) return 'FAQ questions must be 180 characters or fewer.'
+          if (answer.length > 700) return 'FAQ answers must be 700 characters or fewer.'
+        }
+      }
+    }
+
+    if (section.section === 'how-it-works') {
+      const steps = section.content && typeof section.content === 'object'
+        ? (section.content as Record<string, unknown>).steps
+        : null
+
+      if (Array.isArray(steps)) {
+        if (steps.length > 8) return 'How It Works supports up to 8 steps.'
+        for (const item of steps) {
+          if (!item || typeof item !== 'object') return 'How It Works steps must be objects.'
+          const row = item as Record<string, unknown>
+          const title = typeof row.title === 'string' ? row.title.trim() : ''
+          const description = typeof row.description === 'string' ? row.description.trim() : ''
+          if (!title) return 'Each How It Works step requires a title.'
+          if (!description) return 'Each How It Works step requires a description.'
+          if (title.length > 100) return 'How It Works step titles must be 100 characters or fewer.'
+          if (description.length > 320) return 'How It Works step descriptions must be 320 characters or fewer.'
+        }
+      }
+    }
+
+    if (section.section === 'services') {
+      const items = section.content && typeof section.content === 'object'
+        ? (section.content as Record<string, unknown>).items
+        : null
+
+      if (Array.isArray(items)) {
+        if (items.length > 12) return 'Services supports up to 12 items.'
+        for (const item of items) {
+          if (!item || typeof item !== 'object') return 'Service items must be objects.'
+          const row = item as Record<string, unknown>
+          const title = typeof row.title === 'string' ? row.title.trim() : ''
+          if (!title) return 'Each service item requires a title.'
+          if (title.length > 90) return 'Service item titles must be 90 characters or fewer.'
+          const description = typeof row.description === 'string' ? row.description : null
+          const descriptionErr = validateStringLength(description, 260, 'Service item description')
+          if (descriptionErr) return descriptionErr
+        }
+      }
+    }
+  }
+
+  return null
+}
+
+async function saveVariantHistorySnapshot(
+  tenantId: string,
+  variantIndex: number,
+  summary: string,
+): Promise<void> {
+  try {
+    const supabase = getAdminClient()
+    const { data: variantRow, error: variantError } = await supabase
+      .from('tenant_site_variants')
+      .select('variant_index, variant_label, variant_rationale, template_slug, sections_json')
+      .eq('tenant_id', tenantId)
+      .eq('variant_index', variantIndex)
+      .single()
+
+    if (variantError || !variantRow) return
+
+    const row = variantRow as Record<string, unknown>
+    const snapshot = {
+      type: 'site_variant_snapshot',
+      tenant_id: tenantId,
+      variant_index: row.variant_index,
+      variant_label: row.variant_label ?? null,
+      variant_rationale: row.variant_rationale ?? null,
+      template_slug: row.template_slug ?? null,
+      sections_json: row.sections_json ?? [],
+    }
+
+    await supabase
+      .from('tenant_site_versions')
+      .insert({
+        tenant_id: tenantId,
+        change_source: 'variant_edit_snapshot',
+        summary,
+        template_slug: typeof row.template_slug === 'string' ? row.template_slug : null,
+        snapshot_json: snapshot,
+        created_at: new Date().toISOString(),
+      })
+  } catch {
+    // Backward-safe: if versioning table/migration is absent, skip snapshots.
+  }
 }
 
 export async function updateSiteVariant(
@@ -592,6 +766,15 @@ export async function updateSiteVariant(
     }
 
     const supabase = getAdminClient()
+
+    const statuses = await getTenantVariantStatuses(tenantId)
+    if (statuses.includes('sent_to_review') || statuses.includes('selected')) {
+      return {
+        success: false,
+        error: 'Variant editing is locked while client review is active. Unlock variants before editing.',
+      }
+    }
+
     const patch: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     }
@@ -613,8 +796,18 @@ export async function updateSiteVariant(
 
     if (Array.isArray(input.sections)) {
       const safeSections = normalizeVariantSections(toSectionConfigList(input.sections))
+      const validationError = validateVariantSections(safeSections)
+      if (validationError) {
+        return { success: false, error: validationError }
+      }
       patch.sections_json = safeSections
     }
+
+    await saveVariantHistorySnapshot(
+      tenantId,
+      variantIndex,
+      `Snapshot before edit to variant ${variantIndex}`,
+    )
 
     const { error } = await supabase
       .from('tenant_site_variants')
@@ -632,6 +825,190 @@ export async function updateSiteVariant(
     revalidatePath(`/admin/dashboard/${tenantId}`)
     revalidatePath(`/review/${tenantId}`)
     revalidatePath(`/_preview/${tenantId}`)
+    return { success: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
+export async function getVariantEditHistory(
+  tenantId: string,
+  variantIndex: number,
+  limit = 8,
+): Promise<ActionResult<VariantEditHistoryEntry[]>> {
+  try {
+    const supabase = getAdminClient()
+    const { data, error } = await supabase
+      .from('tenant_site_versions')
+      .select('id, summary, created_at, snapshot_json, change_source')
+      .eq('tenant_id', tenantId)
+      .in('change_source', ['variant_edit_snapshot', 'variant_rollback_applied'])
+      .order('created_at', { ascending: false })
+      .limit(Math.max(10, limit * 4))
+
+    if (error) {
+      if (isMissingSchemaTable(error.message, 'tenant_site_versions')) {
+        return { success: true, data: [] }
+      }
+      return { success: false, error: error.message }
+    }
+
+    const out: VariantEditHistoryEntry[] = []
+    for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+      const snapshot = row.snapshot_json && typeof row.snapshot_json === 'object'
+        ? (row.snapshot_json as Record<string, unknown>)
+        : null
+      const snapshotVariantIndex = typeof snapshot?.variant_index === 'number'
+        ? snapshot.variant_index
+        : null
+      if (snapshotVariantIndex !== variantIndex) continue
+
+      out.push({
+        versionId: typeof row.id === 'string' ? row.id : '',
+        summary: typeof row.summary === 'string' ? row.summary : null,
+        createdAt: typeof row.created_at === 'string' ? row.created_at : new Date().toISOString(),
+      })
+
+      if (out.length >= limit) break
+    }
+
+    return { success: true, data: out }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
+export async function rollbackSiteVariantFromHistory(
+  tenantId: string,
+  variantIndex: number,
+  versionId: string,
+): Promise<ActionResult<void>> {
+  try {
+    if (!versionId) {
+      return { success: false, error: 'Version ID is required.' }
+    }
+
+    const statuses = await getTenantVariantStatuses(tenantId)
+    if (statuses.includes('sent_to_review') || statuses.includes('selected')) {
+      return {
+        success: false,
+        error: 'Variant editing is locked while client review is active. Unlock variants before rollback.',
+      }
+    }
+
+    const supabase = getAdminClient()
+    const { data: versionRow, error: versionError } = await supabase
+      .from('tenant_site_versions')
+      .select('id, snapshot_json')
+      .eq('id', versionId)
+      .eq('tenant_id', tenantId)
+      .single()
+
+    if (versionError || !versionRow) {
+      return { success: false, error: versionError?.message ?? 'Snapshot not found.' }
+    }
+
+    const snapshot = (versionRow as { snapshot_json?: Record<string, unknown> | null }).snapshot_json ?? null
+    const snapshotVariantIndex = typeof snapshot?.variant_index === 'number' ? snapshot.variant_index : null
+    if (snapshotVariantIndex !== variantIndex) {
+      return { success: false, error: 'Snapshot does not match this variant.' }
+    }
+
+    const sectionsRaw = snapshot?.sections_json
+    const safeSections = Array.isArray(sectionsRaw)
+      ? normalizeVariantSections(toSectionConfigList(sectionsRaw))
+      : null
+
+    if (!safeSections || safeSections.length === 0) {
+      return { success: false, error: 'Snapshot is missing valid section data.' }
+    }
+
+    const validationError = validateVariantSections(safeSections)
+    if (validationError) {
+      return { success: false, error: `Snapshot failed validation: ${validationError}` }
+    }
+
+    await saveVariantHistorySnapshot(
+      tenantId,
+      variantIndex,
+      `Snapshot before rollback to version ${versionId}`,
+    )
+
+    const patch: Record<string, unknown> = {
+      sections_json: safeSections,
+      updated_at: new Date().toISOString(),
+    }
+
+    if (typeof snapshot?.variant_label === 'string' && snapshot.variant_label.trim()) {
+      patch.variant_label = snapshot.variant_label.trim().slice(0, 120)
+    }
+
+    if (typeof snapshot?.variant_rationale === 'string') {
+      const normalized = snapshot.variant_rationale.trim()
+      patch.variant_rationale = normalized ? normalized.slice(0, 500) : null
+    }
+
+    const { error: updateError } = await supabase
+      .from('tenant_site_variants')
+      .update(patch)
+      .eq('tenant_id', tenantId)
+      .eq('variant_index', variantIndex)
+
+    if (updateError) {
+      if (isMissingSchemaTable(updateError.message, 'tenant_site_variants')) {
+        return { success: false, error: 'Site variant storage is not available in this environment.' }
+      }
+      return { success: false, error: updateError.message }
+    }
+
+    await saveVariantHistorySnapshot(
+      tenantId,
+      variantIndex,
+      `Rollback applied to variant ${variantIndex}`,
+    )
+
+    revalidatePath(`/admin/dashboard/${tenantId}`)
+    revalidatePath(`/review/${tenantId}`)
+    revalidatePath(`/_preview/${tenantId}`)
+    return { success: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
+export async function unlockVariantsForEditing(tenantId: string): Promise<ActionResult<void>> {
+  try {
+    const supabase = getAdminClient()
+    const statuses = await getTenantVariantStatuses(tenantId)
+
+    if (statuses.includes('selected')) {
+      return {
+        success: false,
+        error: 'Cannot unlock because a client selection already exists. Regenerate variants or clear selection first.',
+      }
+    }
+
+    const { error } = await supabase
+      .from('tenant_site_variants')
+      .update({
+        status: 'generated',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('tenant_id', tenantId)
+      .eq('status', 'sent_to_review')
+
+    if (error) {
+      if (isMissingSchemaTable(error.message, 'tenant_site_variants')) {
+        return { success: false, error: 'Site variant storage is not available in this environment.' }
+      }
+      return { success: false, error: error.message }
+    }
+
+    revalidatePath(`/admin/dashboard/${tenantId}`)
+    revalidatePath(`/review/${tenantId}`)
     return { success: true }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error'
