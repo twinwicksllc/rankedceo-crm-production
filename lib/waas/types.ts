@@ -3,6 +3,8 @@
 // Mirrors the Supabase schema defined in migrations/waas/001 & 002
 // =============================================================================
 
+import type { SectionConfig } from '@/lib/waas/templates/types'
+
 // ---------------------------------------------------------------------------
 // ENUMS
 // ---------------------------------------------------------------------------
@@ -218,6 +220,14 @@ export interface SiteVariantRecord {
   generated_at: string
   created_at: string
   updated_at: string
+}
+
+export interface GeneratedSiteVariant {
+  variantIndex: number
+  variantLabel: string
+  variantRationale: string
+  templateSlug: string
+  sections: SectionConfig[]
 }
 
 // For creating a new tenant

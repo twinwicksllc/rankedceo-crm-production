@@ -94,6 +94,15 @@ function asObject(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' ? (value as Record<string, unknown>) : {}
 }
 
+function normalizeSectionOrders(sections: SectionConfig[]): SectionConfig[] {
+  return [...sections]
+    .sort((a, b) => a.order - b.order)
+    .map((section, index) => ({
+      ...section,
+      order: index + 1,
+    }))
+}
+
 export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: string; initialVariants: AdminSiteVariant[] }) {
   const [variants, setVariants] = useState<AdminSiteVariant[]>(initialVariants)
   const [notes, setNotes] = useState('')
@@ -101,6 +110,13 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
   const [viewport, setViewport] = useState<Viewport>('desktop')
   const [openVariantEditor, setOpenVariantEditor] = useState<number | null>(null)
   const [drafts, setDrafts] = useState<Record<number, VariantDraft>>({})
+  const [savedSignatures, setSavedSignatures] = useState<Record<number, string>>(() => {
+    const out: Record<number, string> = {}
+    for (const variant of initialVariants) {
+      out[variant.variant_index] = JSON.stringify(toDraft(variant))
+    }
+    return out
+  })
   const [isPending, startTransition] = useTransition()
 
   const previewBase = useMemo(() => `/_preview/${tenantId}`, [tenantId])
@@ -116,6 +132,13 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
         }
         return next
       })
+      setSavedSignatures(() => {
+        const next: Record<number, string> = {}
+        for (const variant of result.data ?? []) {
+          next[variant.variant_index] = JSON.stringify(toDraft(variant))
+        }
+        return next
+      })
     }
   }
 
@@ -128,9 +151,13 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
       const fallback = variants.find((item) => item.variant_index === variantIndex)
       if (!fallback) return prev
       const current = prev[variantIndex] ?? toDraft(fallback)
+      const nextDraft = updater(current)
       return {
         ...prev,
-        [variantIndex]: updater(current),
+        [variantIndex]: {
+          ...nextDraft,
+          sections_json: normalizeSectionOrders(nextDraft.sections_json),
+        },
       }
     })
   }
@@ -151,6 +178,17 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
   const handleSendToClient = () => {
     setMessage(null)
     startTransition(async () => {
+      const hasDirtyDraft = variants.some((variant) => {
+        const draft = getDraft(variant)
+        const signature = JSON.stringify(draft)
+        return signature !== (savedSignatures[variant.variant_index] ?? '')
+      })
+
+      if (hasDirtyDraft) {
+        setMessage('You have unsaved variant edits. Save changes before sending to client review.')
+        return
+      }
+
       const result = await markVariantsSentToReview(tenantId)
       if (!result.success) {
         setMessage(result.error ?? 'Failed to send variants to review.')
@@ -194,6 +232,44 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
     })
   }
 
+  const handleResetVariant = (variant: AdminSiteVariant) => {
+    setDrafts((prev) => ({
+      ...prev,
+      [variant.variant_index]: toDraft(variant),
+    }))
+    setMessage(`Reset unsaved edits for ${variant.variant_label}.`)
+  }
+
+  const handleSaveAllDrafts = () => {
+    setMessage(null)
+    startTransition(async () => {
+      let savedCount = 0
+
+      for (const variant of variants) {
+        const draft = getDraft(variant)
+        const signature = JSON.stringify(draft)
+        const savedSignature = savedSignatures[variant.variant_index] ?? ''
+        if (signature === savedSignature) continue
+
+        const result = await updateSiteVariant(tenantId, variant.variant_index, {
+          variantLabel: draft.variant_label,
+          variantRationale: draft.variant_rationale,
+          sections: draft.sections_json,
+        })
+
+        if (!result.success) {
+          setMessage(result.error ?? `Failed while saving ${variant.variant_label}.`)
+          return
+        }
+
+        savedCount += 1
+      }
+
+      await refreshVariants()
+      setMessage(savedCount > 0 ? `Saved ${savedCount} variant draft(s).` : 'No unsaved changes to save.')
+    })
+  }
+
   const updateSection = (
     variantIndex: number,
     sectionIndex: number,
@@ -204,7 +280,28 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
         if (index !== sectionIndex) return section
         return updater(section)
       })
-      return { ...current, sections_json: nextSections }
+      return { ...current, sections_json: normalizeSectionOrders(nextSections) }
+    })
+  }
+
+  const moveSection = (
+    variantIndex: number,
+    sectionIndex: number,
+    direction: 'up' | 'down',
+  ) => {
+    setDraft(variantIndex, (current) => {
+      const list = [...current.sections_json]
+      const targetIndex = direction === 'up' ? sectionIndex - 1 : sectionIndex + 1
+      if (targetIndex < 0 || targetIndex >= list.length) return current
+
+      const temp = list[sectionIndex]
+      list[sectionIndex] = list[targetIndex]
+      list[targetIndex] = temp
+
+      return {
+        ...current,
+        sections_json: normalizeSectionOrders(list),
+      }
     })
   }
 
@@ -396,6 +493,19 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
 
           <button
             type="button"
+            onClick={handleSaveAllDrafts}
+            disabled={isPending || variants.length === 0}
+            className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+              isPending || variants.length === 0
+                ? 'cursor-not-allowed bg-white/10 text-white/35'
+                : 'bg-emerald-500 text-white hover:bg-emerald-400'
+            }`}
+          >
+            {isPending ? 'Saving…' : 'Save All Drafts'}
+          </button>
+
+          <button
+            type="button"
             onClick={handleSendToClient}
             disabled={isPending || variants.length === 0}
             className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
@@ -417,6 +527,21 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
           {variants.map((variant) => (
             <section key={variant.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+              {(() => {
+                const draft = getDraft(variant)
+                const isDirty = JSON.stringify(draft) !== (savedSignatures[variant.variant_index] ?? '')
+
+                return (
+                  <div className="mb-2">
+                    {isDirty && (
+                      <span className="inline-flex text-[10px] uppercase tracking-wide rounded-full border border-amber-300/40 bg-amber-500/10 px-2 py-1 text-amber-200">
+                        Unsaved Changes
+                      </span>
+                    )}
+                  </div>
+                )
+              })()}
+
               <div className="mb-3 flex items-start justify-between gap-3">
                 <div>
                   <p className="text-white font-semibold">{variant.variant_label}</p>
@@ -451,6 +576,18 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
                     className="rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/10"
                   >
                     {openVariantEditor === variant.variant_index ? 'Close Editor' : 'Edit Variant'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleResetVariant(variant)}
+                    disabled={isPending}
+                    className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+                      isPending
+                        ? 'cursor-not-allowed border-white/10 text-white/35'
+                        : 'border-white/15 text-white/80 hover:bg-white/10'
+                    }`}
+                  >
+                    Reset Draft
                   </button>
                   <button
                     type="button"
@@ -548,6 +685,22 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
                                     className="w-16 rounded border border-white/15 bg-slate-800 px-2 py-1 text-xs text-white"
                                   />
                                 </label>
+                                <button
+                                  type="button"
+                                  onClick={() => moveSection(variant.variant_index, sectionIndex, 'up')}
+                                  disabled={sectionIndex === 0}
+                                  className={`rounded border px-2 py-1 text-[11px] ${sectionIndex === 0 ? 'cursor-not-allowed border-white/10 text-white/30' : 'border-white/15 text-white/75 hover:bg-white/10'}`}
+                                >
+                                  Up
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => moveSection(variant.variant_index, sectionIndex, 'down')}
+                                  disabled={sectionIndex === draft.sections_json.length - 1}
+                                  className={`rounded border px-2 py-1 text-[11px] ${sectionIndex === draft.sections_json.length - 1 ? 'cursor-not-allowed border-white/10 text-white/30' : 'border-white/15 text-white/75 hover:bg-white/10'}`}
+                                >
+                                  Down
+                                </button>
                               </div>
 
                               {fieldNames.length > 0 && (

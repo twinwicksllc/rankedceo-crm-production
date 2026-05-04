@@ -571,6 +571,16 @@ export interface UpdateSiteVariantInput {
   sections?: SectionConfig[]
 }
 
+function normalizeVariantSections(sections: SectionConfig[]): SectionConfig[] {
+  return [...sections]
+    .sort((a, b) => a.order - b.order)
+    .map((section, index) => ({
+      ...section,
+      order: index + 1,
+      config: section.config && typeof section.config === 'object' ? section.config : {},
+    }))
+}
+
 export async function updateSiteVariant(
   tenantId: string,
   variantIndex: number,
@@ -602,7 +612,8 @@ export async function updateSiteVariant(
     }
 
     if (Array.isArray(input.sections)) {
-      patch.sections_json = input.sections
+      const safeSections = normalizeVariantSections(toSectionConfigList(input.sections))
+      patch.sections_json = safeSections
     }
 
     const { error } = await supabase

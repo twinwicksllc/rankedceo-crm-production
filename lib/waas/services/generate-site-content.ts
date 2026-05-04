@@ -1,4 +1,4 @@
-import type { WaasTenant } from '@/lib/waas/types'
+import type { GeneratedSiteVariant, WaasTenant } from '@/lib/waas/types'
 import { getTemplate } from '@/lib/waas/templates/registry'
 import type {
   AboutSectionContent,
@@ -10,14 +10,6 @@ import type {
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 const GEMINI_MODEL = 'gemini-2.5-pro'
-
-export interface GeneratedSiteVariant {
-  variantIndex: number
-  variantLabel: string
-  variantRationale: string
-  templateSlug: string
-  sections: SectionConfig[]
-}
 
 interface GenerationProfile {
   businessName: string
