@@ -24,6 +24,15 @@ import {
 
 type Viewport = 'desktop' | 'mobile'
 
+type LifecycleSourceFilter =
+  | 'all'
+  | 'site_variants_review_reopened'
+  | 'site_variants_sent_to_review'
+  | 'site_variants_unlocked_for_editing'
+  | 'client_selected_variant'
+  | 'client_mixed_variant'
+  | 'client_regenerated_variant'
+
 const LIFECYCLE_REASON_OPTIONS: Array<{ value: VariantLifecycleReasonCategory; label: string }> = [
   { value: 'workflow_transition', label: 'Workflow Transition' },
   { value: 'content_revision', label: 'Content Revision' },
@@ -202,6 +211,7 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
   const [isLifecycleLoading, setIsLifecycleLoading] = useState(false)
   const [reopenReason, setReopenReason] = useState('')
   const [reopenReasonCategory, setReopenReasonCategory] = useState<VariantLifecycleReasonCategory>('content_revision')
+  const [eventSourceFilter, setEventSourceFilter] = useState<LifecycleSourceFilter>('all')
   const [eventReasonCategoryFilter, setEventReasonCategoryFilter] = useState<'all' | VariantLifecycleReasonCategory>('all')
   const [eventActorFilter, setEventActorFilter] = useState<'all' | VariantLifecycleTelemetry['events'][number]['actorType']>('all')
 
@@ -219,11 +229,41 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
   const filteredLifecycleEvents = useMemo(() => {
     if (!lifecycleTelemetry) return []
     return lifecycleTelemetry.events.filter((event) => {
+      const sourceMatches = eventSourceFilter === 'all' || event.changeSource === eventSourceFilter
       const reasonMatches = eventReasonCategoryFilter === 'all' || event.reasonCategory === eventReasonCategoryFilter
       const actorMatches = eventActorFilter === 'all' || event.actorType === eventActorFilter
-      return reasonMatches && actorMatches
+      return sourceMatches && reasonMatches && actorMatches
     })
-  }, [lifecycleTelemetry, eventReasonCategoryFilter, eventActorFilter])
+  }, [lifecycleTelemetry, eventSourceFilter, eventReasonCategoryFilter, eventActorFilter])
+
+  const applyEventPreset = (
+    preset: 'all' | 'reopen_admin' | 'client_requests' | 'system_transitions',
+  ) => {
+    if (preset === 'all') {
+      setEventSourceFilter('all')
+      setEventReasonCategoryFilter('all')
+      setEventActorFilter('all')
+      return
+    }
+
+    if (preset === 'reopen_admin') {
+      setEventSourceFilter('site_variants_review_reopened')
+      setEventReasonCategoryFilter('all')
+      setEventActorFilter('admin_user')
+      return
+    }
+
+    if (preset === 'client_requests') {
+      setEventSourceFilter('all')
+      setEventReasonCategoryFilter('client_request')
+      setEventActorFilter('all')
+      return
+    }
+
+    setEventSourceFilter('all')
+    setEventReasonCategoryFilter('workflow_transition')
+    setEventActorFilter('system')
+  }
 
   const hasDirtyDrafts = useMemo(() => {
     return variants.some((variant) => {
@@ -804,6 +844,53 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
 
             <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-3">
               <p className="text-[11px] uppercase tracking-wide text-white/60 mb-2">Recent Lifecycle Events</p>
+              <div className="mb-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => applyEventPreset('all')}
+                  className={`rounded-full border px-2.5 py-1 text-[11px] transition ${
+                    eventSourceFilter === 'all' && eventReasonCategoryFilter === 'all' && eventActorFilter === 'all'
+                      ? 'border-cyan-300/60 bg-cyan-400/20 text-cyan-100'
+                      : 'border-white/15 bg-white/5 text-white/65 hover:bg-white/10'
+                  }`}
+                >
+                  All Events
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyEventPreset('reopen_admin')}
+                  className={`rounded-full border px-2.5 py-1 text-[11px] transition ${
+                    eventSourceFilter === 'site_variants_review_reopened' && eventActorFilter === 'admin_user'
+                      ? 'border-cyan-300/60 bg-cyan-400/20 text-cyan-100'
+                      : 'border-white/15 bg-white/5 text-white/65 hover:bg-white/10'
+                  }`}
+                >
+                  Reopen by Admin
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyEventPreset('client_requests')}
+                  className={`rounded-full border px-2.5 py-1 text-[11px] transition ${
+                    eventReasonCategoryFilter === 'client_request' && eventSourceFilter === 'all'
+                      ? 'border-cyan-300/60 bg-cyan-400/20 text-cyan-100'
+                      : 'border-white/15 bg-white/5 text-white/65 hover:bg-white/10'
+                  }`}
+                >
+                  Client Requests
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyEventPreset('system_transitions')}
+                  className={`rounded-full border px-2.5 py-1 text-[11px] transition ${
+                    eventReasonCategoryFilter === 'workflow_transition' && eventActorFilter === 'system'
+                      ? 'border-cyan-300/60 bg-cyan-400/20 text-cyan-100'
+                      : 'border-white/15 bg-white/5 text-white/65 hover:bg-white/10'
+                  }`}
+                >
+                  System Transitions
+                </button>
+              </div>
+
               <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <label className="text-[11px] text-white/70">
                   Filter by Reason Category
@@ -839,6 +926,10 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
                   </select>
                 </label>
               </div>
+
+              <p className="mb-2 text-[11px] text-white/45">
+                Showing {Math.min(8, filteredLifecycleEvents.length)} of {filteredLifecycleEvents.length} filtered events.
+              </p>
 
               {filteredLifecycleEvents.length === 0 ? (
                 <p className="text-xs text-white/45">No lifecycle events recorded yet.</p>
