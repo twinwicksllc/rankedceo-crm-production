@@ -1,9 +1,14 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import type { SectionConfig } from '@/lib/waas/templates/types'
-import type { AdminSiteVariant, VariantEditHistoryEntry } from '@/lib/waas/actions/admin'
+import type {
+  AdminSiteVariant,
+  VariantEditHistoryEntry,
+  VariantReviewReadinessReport,
+} from '@/lib/waas/actions/admin'
 import {
+  getVariantReviewReadiness,
   getVariantEditHistory,
   generateAndStoreSiteVariants,
   getSiteVariants,
@@ -178,6 +183,8 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
   const [isPending, startTransition] = useTransition()
   const [historyByVariant, setHistoryByVariant] = useState<Record<number, VariantEditHistoryEntry[]>>({})
   const [loadingHistoryIndex, setLoadingHistoryIndex] = useState<number | null>(null)
+  const [readinessReport, setReadinessReport] = useState<VariantReviewReadinessReport | null>(null)
+  const [isReadinessLoading, setIsReadinessLoading] = useState(false)
 
   const isReviewLocked = useMemo(
     () => variants.some((variant) => variant.status === 'sent_to_review' || variant.status === 'selected'),
@@ -189,6 +196,35 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
   )
 
   const previewBase = useMemo(() => `/_preview/${tenantId}`, [tenantId])
+
+  const hasDirtyDrafts = useMemo(() => {
+    return variants.some((variant) => {
+      const draft = drafts[variant.variant_index] ?? toDraft(variant)
+      return JSON.stringify(draft) !== (savedSignatures[variant.variant_index] ?? '')
+    })
+  }, [variants, drafts, savedSignatures])
+
+  useEffect(() => {
+    const handler = (event: BeforeUnloadEvent) => {
+      if (!hasDirtyDrafts) return
+      event.preventDefault()
+      event.returnValue = ''
+    }
+
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [hasDirtyDrafts])
+
+  const loadReadinessReport = async () => {
+    setIsReadinessLoading(true)
+    const result = await getVariantReviewReadiness(tenantId)
+    if (result.success && result.data) {
+      setReadinessReport(result.data)
+    } else {
+      setReadinessReport(null)
+    }
+    setIsReadinessLoading(false)
+  }
 
   const refreshVariants = async () => {
     const result = await getSiteVariants(tenantId)
@@ -208,6 +244,7 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
         }
         return next
       })
+      await loadReadinessReport()
     }
   }
 
@@ -260,6 +297,19 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
 
       if (hasDirtyDraft) {
         setMessage('You have unsaved variant edits. Save changes before sending to client review.')
+        return
+      }
+
+      const readinessResult = await getVariantReviewReadiness(tenantId)
+      if (readinessResult.success && readinessResult.data) {
+        setReadinessReport(readinessResult.data)
+      }
+      if (!readinessResult.success || !readinessResult.data?.ready) {
+        setMessage(
+          readinessResult.error
+          ?? readinessResult.data?.issues[0]
+          ?? 'Variants are not ready for client review.',
+        )
         return
       }
 
@@ -397,6 +447,10 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
       setMessage('Variants unlocked for admin editing.')
     })
   }
+
+  useEffect(() => {
+    void loadReadinessReport()
+  }, [])
 
   const updateSection = (
     variantIndex: number,
@@ -576,6 +630,62 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
           Variant editing is locked while client review is active.
         </div>
       )}
+
+      <div className="rounded-2xl bg-white/5 border border-white/10 p-5">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-white text-base font-semibold">Review Readiness Checklist</h3>
+            <p className="text-white/55 text-xs mt-1">Preflight checks required before sending variants to client review.</p>
+          </div>
+          <button
+            type="button"
+            onClick={loadReadinessReport}
+            disabled={isPending || isReadinessLoading}
+            className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
+              isPending || isReadinessLoading
+                ? 'cursor-not-allowed bg-white/10 text-white/35'
+                : 'bg-white/10 text-white hover:bg-white/15'
+            }`}
+          >
+            {isReadinessLoading ? 'Refreshing…' : 'Refresh Checklist'}
+          </button>
+        </div>
+
+        {!readinessReport ? (
+          <p className="text-sm text-white/45">Checklist unavailable. Refresh to re-check readiness.</p>
+        ) : (
+          <div className="space-y-3">
+            <div className={`rounded-lg border px-3 py-2 text-sm ${
+              readinessReport.ready
+                ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200'
+                : 'border-amber-400/30 bg-amber-500/10 text-amber-200'
+            }`}>
+              {readinessReport.ready
+                ? `Ready for review. ${readinessReport.variantCount} variants validated.`
+                : `Not ready. ${readinessReport.issues.length} issue(s) found.`}
+            </div>
+
+            {readinessReport.checks.length > 0 && (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                {readinessReport.checks.map((check) => (
+                  <div key={check.variantIndex} className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+                    <p className="text-xs font-semibold text-white">Variant {check.variantIndex}</p>
+                    <p className={`text-[11px] mt-1 ${check.ready ? 'text-emerald-300' : 'text-amber-300'}`}>
+                      {check.ready ? 'Ready' : 'Needs fixes'}
+                    </p>
+                    <p className="text-[11px] text-white/45 mt-1">
+                      Enabled: {check.enabledSections.length > 0 ? check.enabledSections.join(', ') : 'none'}
+                    </p>
+                    {!check.ready && check.issues.length > 0 && (
+                      <p className="text-[11px] text-amber-200 mt-1">{check.issues[0]}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       <div className="rounded-2xl bg-white/5 border border-white/10 p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

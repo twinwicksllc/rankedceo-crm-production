@@ -577,6 +577,20 @@ export interface VariantEditHistoryEntry {
   createdAt: string
 }
 
+export interface VariantReviewReadinessCheck {
+  variantIndex: number
+  ready: boolean
+  issues: string[]
+  enabledSections: string[]
+}
+
+export interface VariantReviewReadinessReport {
+  ready: boolean
+  variantCount: number
+  checks: VariantReviewReadinessCheck[]
+  issues: string[]
+}
+
 async function getTenantVariantStatuses(tenantId: string): Promise<string[]> {
   const supabase = getAdminClient()
   const { data, error } = await supabase
@@ -711,6 +725,98 @@ function validateVariantSections(sections: SectionConfig[]): string | null {
   }
 
   return null
+}
+
+function getVariantCoreSectionFailures(sections: SectionConfig[]): string[] {
+  const enabled = new Set(sections.filter((section) => section.enabled).map((section) => section.section))
+  const required: Array<SectionId> = ['hero', 'services', 'booking']
+  return required.filter((section) => !enabled.has(section))
+}
+
+function validateVariantReviewReadiness(
+  variantIndex: number,
+  sections: SectionConfig[],
+): string | null {
+  const contentValidation = validateVariantSections(sections)
+  if (contentValidation) {
+    return `Variant ${variantIndex}: ${contentValidation}`
+  }
+
+  const coreSectionFailures = getVariantCoreSectionFailures(sections)
+  if (coreSectionFailures.length > 0) {
+    return `Variant ${variantIndex}: missing required enabled sections (${coreSectionFailures.join(', ')}).`
+  }
+
+  return null
+}
+
+export async function getVariantReviewReadiness(
+  tenantId: string,
+): Promise<ActionResult<VariantReviewReadinessReport>> {
+  try {
+    const supabase = getAdminClient()
+    const { data: variants, error: variantsError } = await supabase
+      .from('tenant_site_variants')
+      .select('variant_index, sections_json')
+      .eq('tenant_id', tenantId)
+      .order('variant_index', { ascending: true })
+
+    if (variantsError) {
+      if (isMissingSchemaTable(variantsError.message, 'tenant_site_variants')) {
+        return { success: false, error: 'Site variants are not available in this environment.' }
+      }
+      return { success: false, error: variantsError.message }
+    }
+
+    const variantRows = (variants ?? []) as Array<Record<string, unknown>>
+    const checks: VariantReviewReadinessCheck[] = []
+    const reportIssues: string[] = []
+
+    if (variantRows.length < 3) {
+      reportIssues.push('Cannot send to client review until 3 variants are generated.')
+    }
+
+    for (const row of variantRows) {
+      const variantIndex = typeof row.variant_index === 'number' ? row.variant_index : 0
+      const sectionsRaw = Array.isArray(row.sections_json) ? row.sections_json : []
+      const sections = normalizeVariantSections(toSectionConfigList(sectionsRaw))
+      const enabledSections = sections.filter((section) => section.enabled).map((section) => section.section)
+      const issues: string[] = []
+
+      if (sections.length === 0) {
+        issues.push('No valid sections configured.')
+      } else {
+        const readinessError = validateVariantReviewReadiness(variantIndex, sections)
+        if (readinessError) {
+          issues.push(readinessError.replace(new RegExp(`^Variant ${variantIndex}:\\s*`), ''))
+        }
+      }
+
+      if (issues.length > 0) {
+        reportIssues.push(`Variant ${variantIndex}: ${issues.join(' ')}`)
+      }
+
+      checks.push({
+        variantIndex,
+        ready: issues.length === 0,
+        issues,
+        enabledSections,
+      })
+    }
+
+    return {
+      success: true,
+      data: {
+        ready: reportIssues.length === 0,
+        variantCount: variantRows.length,
+        checks,
+        issues: reportIssues,
+      },
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
 }
 
 async function saveVariantHistorySnapshot(
@@ -1060,6 +1166,14 @@ export async function generateAndStoreSiteVariants(
       return { success: false, error: upsertError.message }
     }
 
+    for (const variant of variants) {
+      await saveVariantHistorySnapshot(
+        tenantId,
+        variant.variantIndex,
+        `Snapshot after generating variant ${variant.variantIndex}`,
+      )
+    }
+
     revalidatePath(`/admin/dashboard/${tenantId}`)
     revalidatePath(`/review/${tenantId}`)
     revalidatePath(`/_preview/${tenantId}`)
@@ -1075,6 +1189,15 @@ export async function markVariantsSentToReview(tenantId: string): Promise<Action
     const supabase = getAdminClient()
     const tokenResult = await ensureClientReviewToken(tenantId)
     const reviewToken = tokenResult.data ?? tenantId
+
+    const readiness = await getVariantReviewReadiness(tenantId)
+    if (!readiness.success || !readiness.data) {
+      return { success: false, error: readiness.error ?? 'Unable to validate variant review readiness.' }
+    }
+
+    if (!readiness.data.ready) {
+      return { success: false, error: readiness.data.issues[0] ?? 'Variants are not ready for client review.' }
+    }
 
     const { error } = await supabase
       .from('tenant_site_variants')
