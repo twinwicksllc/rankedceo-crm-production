@@ -13,9 +13,12 @@ const modernSections: SectionConfig[] = [
   { section: 'hero',      enabled: true,  order: 1, config: { variant: 'centered', showTextmark: true } },
   { section: 'trust',     enabled: true,  order: 2, config: { variant: 'badge-row' } },
   { section: 'services',  enabled: true,  order: 3, config: { columns: 3, showIcons: true } },
+  { section: 'about',     enabled: true,  order: 4, config: {} },
   { section: 'booking',   enabled: true,  order: 4, config: { variant: 'inline' } },
-  { section: 'financing', enabled: false, order: 5, config: {} },
-  { section: 'reviews',   enabled: true,  order: 6, config: { showNFC: true } },
+  { section: 'faq',       enabled: false, order: 5, config: {} },
+  { section: 'how-it-works', enabled: false, order: 6, config: {} },
+  { section: 'financing', enabled: false, order: 7, config: {} },
+  { section: 'reviews',   enabled: true,  order: 8, config: { showNFC: true } },
 ]
 
 // ---------------------------------------------------------------------------
@@ -26,9 +29,11 @@ const boldSections: SectionConfig[] = [
   { section: 'hero',      enabled: true,  order: 1, config: { variant: 'split', showTextmark: true } },
   { section: 'services',  enabled: true,  order: 2, config: { columns: 2, showIcons: true } },
   { section: 'trust',     enabled: true,  order: 3, config: { variant: 'full-width' } },
-  { section: 'financing', enabled: true,  order: 4, config: {} },
-  { section: 'booking',   enabled: true,  order: 5, config: { variant: 'modal-trigger' } },
-  { section: 'reviews',   enabled: true,  order: 6, config: { showNFC: true } },
+  { section: 'how-it-works', enabled: true, order: 4, config: {} },
+  { section: 'financing', enabled: true,  order: 5, config: {} },
+  { section: 'booking',   enabled: true,  order: 6, config: { variant: 'modal-trigger' } },
+  { section: 'faq',       enabled: false, order: 7, config: {} },
+  { section: 'reviews',   enabled: true,  order: 8, config: { showNFC: true } },
 ]
 
 // ---------------------------------------------------------------------------
@@ -39,9 +44,11 @@ const trustFirstSections: SectionConfig[] = [
   { section: 'hero',      enabled: true,  order: 1, config: { variant: 'centered', showTextmark: true } },
   { section: 'reviews',   enabled: true,  order: 2, config: { showNFC: true, variant: 'prominent' } },
   { section: 'trust',     enabled: true,  order: 3, config: { variant: 'badge-row' } },
-  { section: 'services',  enabled: true,  order: 4, config: { columns: 3, showIcons: true } },
-  { section: 'booking',   enabled: true,  order: 5, config: { variant: 'inline' } },
-  { section: 'financing', enabled: false, order: 6, config: {} },
+  { section: 'about',     enabled: true,  order: 4, config: {} },
+  { section: 'services',  enabled: true,  order: 5, config: { columns: 3, showIcons: true } },
+  { section: 'booking',   enabled: true,  order: 6, config: { variant: 'inline' } },
+  { section: 'faq',       enabled: true,  order: 7, config: {} },
+  { section: 'financing', enabled: false, order: 8, config: {} },
 ]
 
 // ---------------------------------------------------------------------------
@@ -123,6 +130,14 @@ export function resolveSections(
       ? { ...templateSection, ...override, config: { ...templateSection.config, ...override.config } }
       : templateSection
   })
+
+  // Include override-only sections that were not in the base template.
+  const templateSectionsSet = new Set(templateSections.map(section => section.section))
+  for (const override of tenantOverrides) {
+    if (!templateSectionsSet.has(override.section)) {
+      merged.push(override)
+    }
+  }
 
   return merged.sort((a, b) => a.order - b.order)
 }

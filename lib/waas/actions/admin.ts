@@ -7,10 +7,11 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
-import type { WaasTenant, WaasDomainRequest } from '@/lib/waas/types'
+import type { WaasTenant, WaasDomainRequest, SiteVariantRecord } from '@/lib/waas/types'
 import { ALL_TEMPLATES, getTemplate } from '@/lib/waas/templates/registry'
 import { recommendTemplates, type TemplateRecommendation } from '@/lib/waas/services/template-recommender'
 import type { TenantSiteConfig, SectionConfig, SectionId } from '@/lib/waas/templates/types'
+import { generateSiteVariants } from '@/lib/waas/services/generate-site-content'
 
 // ---------------------------------------------------------------------------
 // Raw service-role client
@@ -38,6 +39,12 @@ function parseMissingTenantColumn(errorMessage: string): string | null {
 
 function isPendingReviewEnumError(errorMessage: string): boolean {
   return /invalid input value for enum .*pending_review/i.test(errorMessage)
+}
+
+function isMissingSchemaTable(errorMessage: string, tableName: string): boolean {
+  const escaped = tableName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const re = new RegExp(`Could not find the table 'public\\.${escaped}' in the schema cache`, 'i')
+  return re.test(errorMessage)
 }
 
 export interface AdminTenantListItem extends WaasTenant {
@@ -69,6 +76,18 @@ export interface TenantDeploymentRecord {
   source_version_id: string | null
   deployment_payload_json: Record<string, unknown> | null
   created_at: string
+}
+
+export interface AdminSiteVariant {
+  id: string
+  variant_index: number
+  variant_label: string
+  variant_rationale: string | null
+  template_slug: string
+  sections_json: SectionConfig[]
+  generation_notes: string | null
+  status: SiteVariantRecord['status']
+  generated_at: string
 }
 
 export interface TenantDetailData {
@@ -506,6 +525,190 @@ export async function getTenantDetail(tenantId: string): Promise<ActionResult<Te
   }
 }
 
+function mapSiteVariantRow(row: Record<string, unknown>): AdminSiteVariant {
+  return {
+    id: typeof row.id === 'string' ? row.id : '',
+    variant_index: typeof row.variant_index === 'number' ? row.variant_index : 0,
+    variant_label: typeof row.variant_label === 'string' ? row.variant_label : 'Variant',
+    variant_rationale: typeof row.variant_rationale === 'string' ? row.variant_rationale : null,
+    template_slug: typeof row.template_slug === 'string' ? row.template_slug : 'modern',
+    sections_json: Array.isArray(row.sections_json) ? row.sections_json as SectionConfig[] : [],
+    generation_notes: typeof row.generation_notes === 'string' ? row.generation_notes : null,
+    status: (typeof row.status === 'string' ? row.status : 'generated') as SiteVariantRecord['status'],
+    generated_at: typeof row.generated_at === 'string' ? row.generated_at : new Date().toISOString(),
+  }
+}
+
+export async function getSiteVariants(tenantId: string): Promise<ActionResult<AdminSiteVariant[]>> {
+  try {
+    const supabase = getAdminClient()
+    const { data, error } = await supabase
+      .from('tenant_site_variants')
+      .select('id, variant_index, variant_label, variant_rationale, template_slug, sections_json, generation_notes, status, generated_at')
+      .eq('tenant_id', tenantId)
+      .order('variant_index', { ascending: true })
+
+    if (error) {
+      if (isMissingSchemaTable(error.message, 'tenant_site_variants')) {
+        return { success: true, data: [] }
+      }
+      return { success: false, error: error.message }
+    }
+
+    return {
+      success: true,
+      data: ((data ?? []) as Array<Record<string, unknown>>).map(mapSiteVariantRow),
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
+export interface UpdateSiteVariantInput {
+  variantLabel?: string
+  variantRationale?: string | null
+  sections?: SectionConfig[]
+}
+
+export async function updateSiteVariant(
+  tenantId: string,
+  variantIndex: number,
+  input: UpdateSiteVariantInput,
+): Promise<ActionResult<void>> {
+  try {
+    if (!Number.isInteger(variantIndex) || variantIndex < 1 || variantIndex > 3) {
+      return { success: false, error: 'Variant index must be between 1 and 3.' }
+    }
+
+    const supabase = getAdminClient()
+    const patch: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    }
+
+    if (typeof input.variantLabel === 'string') {
+      const normalized = input.variantLabel.trim()
+      if (!normalized) {
+        return { success: false, error: 'Variant label cannot be empty.' }
+      }
+      patch.variant_label = normalized.slice(0, 120)
+    }
+
+    if (typeof input.variantRationale === 'string') {
+      const normalized = input.variantRationale.trim()
+      patch.variant_rationale = normalized ? normalized.slice(0, 500) : null
+    } else if (input.variantRationale === null) {
+      patch.variant_rationale = null
+    }
+
+    if (Array.isArray(input.sections)) {
+      patch.sections_json = input.sections
+    }
+
+    const { error } = await supabase
+      .from('tenant_site_variants')
+      .update(patch)
+      .eq('tenant_id', tenantId)
+      .eq('variant_index', variantIndex)
+
+    if (error) {
+      if (isMissingSchemaTable(error.message, 'tenant_site_variants')) {
+        return { success: false, error: 'Site variant storage is not available in this environment.' }
+      }
+      return { success: false, error: error.message }
+    }
+
+    revalidatePath(`/admin/dashboard/${tenantId}`)
+    revalidatePath(`/review/${tenantId}`)
+    revalidatePath(`/_preview/${tenantId}`)
+    return { success: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
+export async function generateAndStoreSiteVariants(
+  tenantId: string,
+  notes?: string,
+): Promise<ActionResult<void>> {
+  try {
+    const supabase = getAdminClient()
+
+    const { data: tenant, error: tenantError } = await supabase
+      .from('tenants')
+      .select('*')
+      .eq('id', tenantId)
+      .single()
+
+    if (tenantError || !tenant) {
+      return { success: false, error: tenantError?.message ?? 'Tenant not found' }
+    }
+
+    const variants = await generateSiteVariants(tenant as WaasTenant, notes)
+    const now = new Date().toISOString()
+
+    const payload = variants.map((variant) => ({
+      tenant_id: tenantId,
+      variant_index: variant.variantIndex,
+      variant_label: variant.variantLabel,
+      variant_rationale: variant.variantRationale,
+      template_slug: variant.templateSlug,
+      sections_json: variant.sections,
+      generation_notes: notes ?? null,
+      status: 'generated',
+      generated_at: now,
+      updated_at: now,
+    }))
+
+    const { error: upsertError } = await supabase
+      .from('tenant_site_variants')
+      .upsert(payload, { onConflict: 'tenant_id,variant_index' })
+
+    if (upsertError) {
+      if (isMissingSchemaTable(upsertError.message, 'tenant_site_variants')) {
+        return { success: true }
+      }
+      return { success: false, error: upsertError.message }
+    }
+
+    revalidatePath(`/admin/dashboard/${tenantId}`)
+    revalidatePath(`/review/${tenantId}`)
+    revalidatePath(`/_preview/${tenantId}`)
+    return { success: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
+export async function markVariantsSentToReview(tenantId: string): Promise<ActionResult<string>> {
+  try {
+    const supabase = getAdminClient()
+    const tokenResult = await ensureClientReviewToken(tenantId)
+    const reviewToken = tokenResult.data ?? tenantId
+
+    const { error } = await supabase
+      .from('tenant_site_variants')
+      .update({
+        status: 'sent_to_review',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('tenant_id', tenantId)
+
+    if (error && !isMissingSchemaTable(error.message, 'tenant_site_variants')) {
+      return { success: false, error: error.message }
+    }
+
+    revalidatePath(`/admin/dashboard/${tenantId}`)
+    revalidatePath(`/review/${reviewToken}`)
+    return { success: true, data: reviewToken }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
 function toSectionConfigList(value: unknown): SectionConfig[] {
   if (!Array.isArray(value)) return []
   return value.filter((item): item is SectionConfig => {
@@ -706,6 +909,21 @@ export async function deploySite(tenantId: string, deployedBy = 'admin_console')
           : null
 
     const deployedAt = new Date().toISOString()
+
+    let selectedVariantSections: SectionConfig[] | null = null
+    const { data: selectedVariant, error: variantError } = await supabase
+      .from('tenant_site_variants')
+      .select('sections_json')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'selected')
+      .order('variant_index', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
+    if (!variantError && selectedVariant && Array.isArray((selectedVariant as { sections_json?: unknown[] }).sections_json)) {
+      selectedVariantSections = (selectedVariant as { sections_json: SectionConfig[] }).sections_json
+    }
+
     const [{ error: tenantUpdateError }, { error: configUpdateError }] = await Promise.all([
       supabase
         .from('tenants')
@@ -719,6 +937,7 @@ export async function deploySite(tenantId: string, deployedBy = 'admin_console')
         .update({
           deployment_url: deploymentUrl,
           deployed_at: deployedAt,
+          ...(selectedVariantSections ? { active_sections_json: selectedVariantSections } : {}),
           updated_at: deployedAt,
         })
         .eq('tenant_id', tenantId),
@@ -1149,6 +1368,15 @@ export interface ClientReviewSession {
   feedback: ClientVariantFeedback
   mix: ClientVariantMix
   versions: ClientReviewVersion[]
+  variants: ClientReviewVariant[]
+}
+
+export interface ClientReviewVariant {
+  variantIndex: number
+  label: string
+  rationale: string | null
+  templateSlug: string
+  status: SiteVariantRecord['status']
 }
 
 export interface ClientVariantFeedback {
@@ -1228,6 +1456,23 @@ export async function getClientReviewSession(reviewKey: string): Promise<ActionR
       .order('created_at', { ascending: false })
       .limit(12)
 
+    let variants: ClientReviewVariant[] = []
+    const { data: variantRows, error: variantError } = await supabase
+      .from('tenant_site_variants')
+      .select('variant_index, variant_label, variant_rationale, template_slug, status')
+      .eq('tenant_id', tenantId)
+      .order('variant_index', { ascending: true })
+
+    if (!variantError) {
+      variants = ((variantRows ?? []) as Array<Record<string, unknown>>).map((row) => ({
+        variantIndex: typeof row.variant_index === 'number' ? row.variant_index : 0,
+        label: typeof row.variant_label === 'string' ? row.variant_label : 'Variant',
+        rationale: typeof row.variant_rationale === 'string' ? row.variant_rationale : null,
+        templateSlug: typeof row.template_slug === 'string' ? row.template_slug : 'modern',
+        status: (typeof row.status === 'string' ? row.status : 'generated') as SiteVariantRecord['status'],
+      }))
+    }
+
     const brandConfig = (tenant as { brand_config?: Record<string, unknown> }).brand_config ?? {}
     const businessName = typeof brandConfig.business_name === 'string'
       ? brandConfig.business_name
@@ -1259,6 +1504,7 @@ export async function getClientReviewSession(reviewKey: string): Promise<ActionR
           templateSlug: (row.template_slug as string | null | undefined) ?? null,
           createdAt: String(row.created_at ?? new Date().toISOString()),
         })),
+        variants,
       },
     }
   } catch (err) {
@@ -1332,6 +1578,23 @@ export async function selectClientVariantByReviewToken(
       `Client selected ${templateSlug} with feedback preferences`,
     )
 
+    const { error: clearStatusError } = await supabase
+      .from('tenant_site_variants')
+      .update({ status: 'sent_to_review', updated_at: new Date().toISOString() })
+      .eq('tenant_id', tenantId)
+
+    if (!clearStatusError) {
+      const { error: markSelectedError } = await supabase
+        .from('tenant_site_variants')
+        .update({ status: 'selected', updated_at: new Date().toISOString() })
+        .eq('tenant_id', tenantId)
+        .eq('template_slug', templateSlug)
+
+      if (markSelectedError && !isMissingSchemaTable(markSelectedError.message, 'tenant_site_variants')) {
+        return { success: false, error: markSelectedError.message }
+      }
+    }
+
     revalidatePath(`/admin/dashboard/${tenantId}`)
     revalidatePath(`/review/${reviewToken}`)
     return { success: true }
@@ -1404,6 +1667,23 @@ export async function mixClientVariantsByReviewToken(
       : `Client selected ${primaryTemplateSlug} as mixed direction`
 
     await saveTenantSiteVersion(tenantId, 'client_mixed_variant', mixSummary)
+
+    const { error: clearStatusError } = await supabase
+      .from('tenant_site_variants')
+      .update({ status: 'sent_to_review', updated_at: new Date().toISOString() })
+      .eq('tenant_id', tenantId)
+
+    if (!clearStatusError) {
+      const { error: markSelectedError } = await supabase
+        .from('tenant_site_variants')
+        .update({ status: 'selected', updated_at: new Date().toISOString() })
+        .eq('tenant_id', tenantId)
+        .eq('template_slug', primaryTemplateSlug)
+
+      if (markSelectedError && !isMissingSchemaTable(markSelectedError.message, 'tenant_site_variants')) {
+        return { success: false, error: markSelectedError.message }
+      }
+    }
 
     revalidatePath(`/admin/dashboard/${tenantId}`)
     revalidatePath(`/review/${reviewToken}`)

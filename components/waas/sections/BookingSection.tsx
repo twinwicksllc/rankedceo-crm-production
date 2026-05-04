@@ -7,11 +7,12 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import type { ResolvedTenant, SectionConfig } from '@/lib/waas/templates/types'
+import type { BookingSectionContent, ResolvedTenant, SectionConfig } from '@/lib/waas/templates/types'
 
 interface BookingSectionProps {
   tenant: ResolvedTenant
   config: SectionConfig['config']
+  content?: BookingSectionContent
 }
 
 // Inline Calendly embed (client component)
@@ -44,7 +45,7 @@ function CalendlyInline({ url, primaryColor }: { url: string; primaryColor: stri
   )
 }
 
-export function BookingSection({ tenant, config }: BookingSectionProps) {
+export function BookingSection({ tenant, config, content }: BookingSectionProps) {
   const variant      = (config.variant as string) ?? 'inline'
   const calendlyUrl  = tenant.calendly_url
   const businessName = tenant.brand_config.business_name ?? tenant.legal_name ?? 'Us'
@@ -65,13 +66,13 @@ export function BookingSection({ tenant, config }: BookingSectionProps) {
             className="font-brand-heading text-3xl sm:text-4xl font-bold mb-4"
             style={{ color: 'var(--brand-text)' }}
           >
-            Ready to Get Started?
+            {content?.headline ?? 'Ready to Get Started?'}
           </h2>
           <p
             className="font-brand-body text-lg mb-8"
             style={{ color: 'var(--brand-text)', opacity: 0.65 }}
           >
-            Contact {businessName} today for a free estimate. We respond fast.
+            {content?.subheadline ?? `Contact ${businessName} today for a free estimate. We respond fast.`}
           </p>
           {phone && (
             <a
@@ -79,7 +80,7 @@ export function BookingSection({ tenant, config }: BookingSectionProps) {
               className="inline-flex items-center gap-3 px-8 py-4 text-xl font-bold rounded-xl text-white transition-opacity hover:opacity-90"
               style={{ backgroundColor: 'var(--brand-primary)' }}
             >
-              📞 Call Now: {phone}
+              📞 {content?.primaryCtaLabel ?? `Call Now: ${phone}`}
             </a>
           )}
         </div>
@@ -103,19 +104,19 @@ export function BookingSection({ tenant, config }: BookingSectionProps) {
               color:           'var(--brand-primary)',
             }}
           >
-            Book Online
+            {content?.eyebrow ?? 'Book Online'}
           </span>
           <h2
             className="font-brand-heading text-3xl sm:text-4xl font-bold mb-4"
             style={{ color: 'var(--brand-text)' }}
           >
-            Schedule with {businessName}
+            {content?.headline ?? `Schedule with ${businessName}`}
           </h2>
           <p
             className="font-brand-body text-lg max-w-xl mx-auto"
             style={{ color: 'var(--brand-text)', opacity: 0.65 }}
           >
-            Pick a time that works for you. We'll confirm within minutes.
+            {content?.subheadline ?? "Pick a time that works for you. We'll confirm within minutes."}
           </p>
         </div>
 
@@ -137,7 +138,7 @@ export function BookingSection({ tenant, config }: BookingSectionProps) {
               className="inline-flex items-center gap-3 px-10 py-5 text-xl font-bold rounded-2xl text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl"
               style={{ backgroundColor: 'var(--brand-primary)' }}
             >
-              📅 Book a Free Estimate
+              📅 {content?.primaryCtaLabel ?? 'Book a Free Estimate'}
             </a>
             <p
               className="mt-4 text-sm font-brand-body"

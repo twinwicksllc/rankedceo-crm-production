@@ -7,12 +7,13 @@ import { buildAuditReportPath } from '@/lib/waas/utils/audit-report-url'
 import React          from 'react'
 import Link           from 'next/link'
 import { notFound }   from 'next/navigation'
-import { ensureClientReviewToken, getDeployReadiness, getTenantDetail } from '@/lib/waas/actions/admin'
+import { ensureClientReviewToken, getDeployReadiness, getSiteVariants, getTenantDetail } from '@/lib/waas/actions/admin'
 import { DeploySiteButton }    from './deploy-site-button'
 import { DomainStatusManager } from './domain-status-manager'
 import { PreviewTab }          from './preview-tab'
 import { SiteSettingsForm }    from './site-settings-form'
 import { VersionRollbackButton } from './version-rollback-button'
+import { AIVariantsPanel } from './ai-variants-panel'
 import type { WaasDomainRequest } from '@/lib/waas/types'
 
 interface PageProps {
@@ -31,6 +32,8 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
   const activeTab = searchParams?.tab ?? 'overview'
   const tokenResult = await ensureClientReviewToken(tenant.id)
   const readinessResult = await getDeployReadiness(tenant.id)
+  const variantsResult = await getSiteVariants(tenant.id)
+  const variants = variantsResult.success && variantsResult.data ? variantsResult.data : []
   const deployReadiness = readinessResult.success ? readinessResult.data ?? null : null
   const reviewToken = tokenResult.data ?? tenant.id
 
@@ -80,6 +83,7 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
         {[
           { key: 'overview', label: '📋 Overview' },
           { key: 'preview',  label: '🌐 Live Preview' },
+          { key: 'ai-variants', label: '✨ AI Variants' },
         ].map(tab => (
           <Link
             key={tab.key}
@@ -424,6 +428,10 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
             </div>
           </div>
         </div>
+      )}
+
+      {activeTab === 'ai-variants' && (
+        <AIVariantsPanel tenantId={tenant.id} initialVariants={variants} />
       )}
 
       {/* Tab: Live Preview */}

@@ -6,11 +6,18 @@ import { mixClientVariantsByReviewToken, regenerateSelectedVariantByReviewToken,
 
 type Viewport = 'desktop' | 'tablet' | 'mobile'
 
-const VARIANTS = [
+const DEFAULT_VARIANTS = [
   { slug: 'modern', label: 'Modern', tone: 'Clean & minimal' },
   { slug: 'bold', label: 'Bold', tone: 'High-energy conversion style' },
   { slug: 'trust-first', label: 'Trust-First', tone: 'Social proof first' },
 ] as const
+
+interface ReviewVariant {
+  slug: string
+  label: string
+  tone: string
+  variantIndex?: number
+}
 
 const VIEWPORT_WIDTH: Record<Viewport, string> = {
   desktop: '100%',
@@ -27,6 +34,7 @@ export function ReviewClient({
   initialFeedback,
   initialMix,
   versions,
+  variants,
 }: {
   tenantId: string
   slug: string
@@ -36,7 +44,27 @@ export function ReviewClient({
   initialFeedback: ClientVariantFeedback
   initialMix: ClientVariantMix
   versions: ClientReviewVersion[]
+  variants: Array<{
+    variantIndex: number
+    label: string
+    rationale: string | null
+    templateSlug: string
+    status: string
+  }>
 }) {
+  const resolvedVariants = useMemo<ReviewVariant[]>(() => {
+    if (variants.length > 0) {
+      return variants.map((variant) => ({
+        slug: variant.templateSlug,
+        label: variant.label,
+        tone: variant.rationale ?? 'AI-generated direction',
+        variantIndex: variant.variantIndex,
+      }))
+    }
+
+    return [...DEFAULT_VARIANTS]
+  }, [variants])
+
   const [viewport, setViewport] = useState<Viewport>('desktop')
   const [selected, setSelected] = useState<string | null>(initialSelectedTemplate)
   const [message, setMessage] = useState<string | null>(null)
@@ -44,7 +72,7 @@ export function ReviewClient({
   const [feedbackCtaIntensity, setFeedbackCtaIntensity] = useState<string>(initialFeedback.ctaIntensity ?? '')
   const [feedbackLayoutPreference, setFeedbackLayoutPreference] = useState<string>(initialFeedback.layoutPreference ?? '')
   const [feedbackNotes, setFeedbackNotes] = useState<string>(initialFeedback.notes ?? '')
-  const [mixPrimary, setMixPrimary] = useState<string>(initialSelectedTemplate ?? 'modern')
+  const [mixPrimary, setMixPrimary] = useState<string>(initialSelectedTemplate ?? resolvedVariants[0]?.slug ?? 'modern')
   const [mixSourceTemplates, setMixSourceTemplates] = useState<string[]>(initialMix.sourceTemplates ?? [])
   const [isPending, startTransition] = useTransition()
 
@@ -231,8 +259,8 @@ export function ReviewClient({
                   onChange={(e) => setMixPrimary(e.target.value)}
                   className="w-full rounded-xl border border-white/15 bg-slate-900/80 px-3 py-2 text-white outline-none transition focus:border-cyan-400"
                 >
-                  {VARIANTS.map((variant) => (
-                    <option key={variant.slug} value={variant.slug}>{variant.label}</option>
+                  {resolvedVariants.map((variant) => (
+                    <option key={`${variant.slug}-${variant.variantIndex ?? variant.label}`} value={variant.slug}>{variant.label}</option>
                   ))}
                 </select>
               </label>
@@ -240,9 +268,9 @@ export function ReviewClient({
               <div className="text-sm">
                 <div className="mb-2 text-white/70">Influence from</div>
                 <div className="flex flex-wrap gap-2">
-                  {VARIANTS.map((variant) => (
+                  {resolvedVariants.map((variant) => (
                     <button
-                      key={variant.slug}
+                      key={`${variant.slug}-${variant.variantIndex ?? variant.label}`}
                       type="button"
                       onClick={() => toggleMixTemplate(variant.slug)}
                       className={`rounded-full border px-3 py-1 text-xs font-medium transition ${mixSourceTemplates.includes(variant.slug)
@@ -300,11 +328,14 @@ export function ReviewClient({
         </section>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-          {VARIANTS.map((variant) => {
+          {resolvedVariants.map((variant) => {
             const isSelected = selected === variant.slug
+            const previewSrc = typeof variant.variantIndex === 'number'
+              ? `${previewBase}?variant=${variant.variantIndex}`
+              : `${previewBase}?template=${variant.slug}`
 
             return (
-              <section key={variant.slug} className="rounded-2xl border border-white/15 bg-white/[0.03] p-4 backdrop-blur">
+              <section key={`${variant.slug}-${variant.variantIndex ?? variant.label}`} className="rounded-2xl border border-white/15 bg-white/[0.03] p-4 backdrop-blur">
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <div>
                     <h2 className="text-lg font-semibold">{variant.label}</h2>
@@ -321,7 +352,7 @@ export function ReviewClient({
                   <div className="mx-auto overflow-hidden rounded-lg border border-white/10 bg-white" style={{ width: VIEWPORT_WIDTH[viewport], maxWidth: '100%' }}>
                     <iframe
                       title={`${variant.label} preview`}
-                      src={`${previewBase}?template=${variant.slug}`}
+                      src={previewSrc}
                       className="h-[620px] w-full border-0"
                       loading="lazy"
                       sandbox="allow-same-origin allow-scripts allow-forms"

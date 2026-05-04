@@ -4,11 +4,12 @@
 // Supports 'badge-row' and 'full-width' variants
 // =============================================================================
 
-import type { ResolvedTenant, SectionConfig } from '@/lib/waas/templates/types'
+import type { ResolvedTenant, SectionConfig, TrustSectionContent } from '@/lib/waas/templates/types'
 
 interface TrustBarProps {
   tenant:     ResolvedTenant
   config:     SectionConfig['config']
+  content?:   TrustSectionContent
   auditData?: AuditSummary | null
 }
 
@@ -29,10 +30,11 @@ const DEFAULT_BADGES = [
   { icon: '🔒', label: 'Satisfaction Guarantee', sub: '100% satisfaction or we fix it' },
 ]
 
-export function TrustBar({ tenant, config, auditData }: TrustBarProps) {
+export function TrustBar({ tenant, config, content, auditData }: TrustBarProps) {
   const variant      = (config.variant as string) ?? 'badge-row'
   const businessName = tenant.brand_config.business_name ?? tenant.legal_name ?? 'We'
   const location     = tenant.target_location ?? 'the area'
+  const badges = content?.badges?.length ? content.badges : DEFAULT_BADGES
 
   if (variant === 'full-width') {
     return (
@@ -44,8 +46,11 @@ export function TrustBar({ tenant, config, auditData }: TrustBarProps) {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="font-brand-heading text-3xl sm:text-4xl font-bold text-white mb-4">
-              Why {location} Trusts {businessName}
+              {content?.headline ?? `Why ${location} Trusts ${businessName}`}
             </h2>
+            {content?.subheadline && (
+              <p className="text-white/70 text-base max-w-2xl mx-auto mb-4">{content.subheadline}</p>
+            )}
             {auditData && (
               <p className="text-white/70 text-lg max-w-2xl mx-auto">
                 Our SEO score of <strong className="text-white">{auditData.overall_score}/100</strong> means
@@ -55,12 +60,12 @@ export function TrustBar({ tenant, config, auditData }: TrustBarProps) {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {DEFAULT_BADGES.map(({ icon, label, sub }) => (
+            {badges.map(({ icon, label, sub }) => (
               <div
                 key={label}
                 className="flex items-start gap-4 p-6 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20"
               >
-                <span className="text-3xl flex-shrink-0" aria-hidden="true">{icon}</span>
+                <span className="text-3xl flex-shrink-0" aria-hidden="true">{icon ?? '⭐'}</span>
                 <div>
                   <h3 className="font-brand-heading font-bold text-white text-lg">{label}</h3>
                   <p className="font-brand-body text-white/70 text-sm mt-1">{sub}</p>
@@ -106,13 +111,13 @@ export function TrustBar({ tenant, config, auditData }: TrustBarProps) {
       <div className="max-w-7xl mx-auto">
         {/* Scrollable badge row */}
         <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
-          {DEFAULT_BADGES.map(({ icon, label }) => (
+          {badges.map(({ icon, label }) => (
             <div
               key={label}
               className="flex items-center gap-2 px-5 py-3 rounded-full text-sm font-semibold whitespace-nowrap bg-white shadow-sm"
               style={{ color: 'var(--brand-primary)' }}
             >
-              <span aria-hidden="true">{icon}</span>
+              <span aria-hidden="true">{icon ?? '⭐'}</span>
               <span>{label}</span>
             </div>
           ))}

@@ -13,6 +13,98 @@ export type SectionId =
   | 'financing'
   | 'booking'
   | 'reviews'
+  | 'about'
+  | 'faq'
+  | 'how-it-works'
+
+export interface HeroSectionContent {
+  eyebrow?: string
+  headline?: string
+  subheadline?: string
+  primaryCtaLabel?: string
+  secondaryCtaLabel?: string
+  locationBadge?: string
+}
+
+export interface ServiceItemContent {
+  title: string
+  description?: string
+  icon?: string
+}
+
+export interface ServicesSectionContent {
+  eyebrow?: string
+  headline?: string
+  subheadline?: string
+  items?: ServiceItemContent[]
+  bottomCtaText?: string
+}
+
+export interface TrustBadgeContent {
+  icon?: string
+  label: string
+  sub?: string
+}
+
+export interface TrustSectionContent {
+  headline?: string
+  subheadline?: string
+  badges?: TrustBadgeContent[]
+}
+
+export interface AboutSectionContent {
+  eyebrow?: string
+  headline?: string
+  body?: string
+  highlights?: string[]
+}
+
+export interface FAQItemContent {
+  question: string
+  answer: string
+}
+
+export interface FAQSectionContent {
+  eyebrow?: string
+  headline?: string
+  intro?: string
+  items?: FAQItemContent[]
+}
+
+export interface ProcessStepContent {
+  title: string
+  description: string
+}
+
+export interface HowItWorksSectionContent {
+  eyebrow?: string
+  headline?: string
+  intro?: string
+  steps?: ProcessStepContent[]
+}
+
+export interface BookingSectionContent {
+  eyebrow?: string
+  headline?: string
+  subheadline?: string
+  primaryCtaLabel?: string
+}
+
+export interface ReviewsSectionContent {
+  eyebrow?: string
+  headline?: string
+  subheadline?: string
+}
+
+export type SectionContent =
+  | HeroSectionContent
+  | ServicesSectionContent
+  | TrustSectionContent
+  | AboutSectionContent
+  | FAQSectionContent
+  | HowItWorksSectionContent
+  | BookingSectionContent
+  | ReviewsSectionContent
 
 // ---------------------------------------------------------------------------
 // Section configuration (per-section render options)
@@ -23,6 +115,7 @@ export interface SectionConfig {
   enabled:  boolean
   order:    number
   config:   Record<string, unknown>
+  content?: SectionContent
 }
 
 // ---------------------------------------------------------------------------

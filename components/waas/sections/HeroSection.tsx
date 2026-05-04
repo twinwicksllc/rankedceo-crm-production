@@ -5,22 +5,24 @@
 // =============================================================================
 
 import Image from 'next/image'
-import type { ResolvedTenant, SectionConfig } from '@/lib/waas/templates/types'
+import type { HeroSectionContent, ResolvedTenant, SectionConfig } from '@/lib/waas/templates/types'
 import { generateTextmarkSvg, svgToDataUrl } from '@/lib/waas/utils/generate-textmark'
 import { getBrandColor } from '@/lib/waas/utils/theme'
 
 interface HeroSectionProps {
   tenant:  ResolvedTenant
   config:  SectionConfig['config']
+  content?: HeroSectionContent
 }
 
-export function HeroSection({ tenant, config }: HeroSectionProps) {
+export function HeroSection({ tenant, config, content }: HeroSectionProps) {
   const { brand_config } = tenant
   const variant      = (config.variant as string) ?? 'centered'
   const showTextmark = config.showTextmark !== false
 
   const businessName = brand_config.business_name ?? tenant.legal_name ?? 'Your Business'
-  const tagline      = brand_config.tagline ?? tenant.usp ?? 'Professional Services You Can Trust'
+  const tagline      = content?.headline ?? brand_config.tagline ?? tenant.usp ?? 'Professional Services You Can Trust'
+  const subheadline  = content?.subheadline ?? `Trusted ${tenant.primary_trade ?? tenant.target_industry ?? 'service'} professionals serving ${tenant.target_location ?? 'your local area'}.`
   const phone        = brand_config.contact?.phone
   const primaryColor = getBrandColor(brand_config, 'primary')
 
@@ -69,8 +71,7 @@ export function HeroSection({ tenant, config }: HeroSectionProps) {
                 {tagline}
               </h1>
               <p className="font-brand-body text-xl text-white/80 mb-8 max-w-lg">
-                Serving {tenant.target_location ?? 'your area'} with expert{' '}
-                {tenant.primary_trade ?? tenant.target_industry ?? 'home services'}.
+                {subheadline}
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 {calendlyUrl ? (
@@ -80,7 +81,7 @@ export function HeroSection({ tenant, config }: HeroSectionProps) {
                     rel="noopener noreferrer"
                     className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-xl text-white border-2 border-white hover:bg-white/10 transition-colors"
                   >
-                    📅 Book a Free Estimate
+                    📅 {content?.primaryCtaLabel ?? 'Book a Free Estimate'}
                   </a>
                 ) : null}
                 {phone && (
@@ -151,8 +152,7 @@ export function HeroSection({ tenant, config }: HeroSectionProps) {
           className="font-brand-body text-xl mb-10 max-w-2xl mx-auto"
           style={{ color: 'var(--brand-text)', opacity: 0.7 }}
         >
-          Trusted {tenant.primary_trade ?? tenant.target_industry ?? 'service'} professionals
-          serving {tenant.target_location ?? 'your local area'}.
+          {subheadline}
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -164,7 +164,7 @@ export function HeroSection({ tenant, config }: HeroSectionProps) {
               className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-xl text-white transition-opacity hover:opacity-90"
               style={{ backgroundColor: 'var(--brand-primary)' }}
             >
-              📅 Book a Free Estimate
+              📅 {content?.primaryCtaLabel ?? 'Book a Free Estimate'}
             </a>
           ) : null}
           {phone && (
@@ -187,7 +187,7 @@ export function HeroSection({ tenant, config }: HeroSectionProps) {
             className="mt-8 text-sm font-medium"
             style={{ color: 'var(--brand-text)', opacity: 0.5 }}
           >
-            📍 Proudly serving {tenant.target_location}
+            📍 {content?.locationBadge ?? `Proudly serving ${tenant.target_location}`}
           </p>
         )}
       </div>

@@ -15,6 +15,7 @@ import type {
   DomainWishlistItem,
 } from '@/lib/waas/types'
 
+import { generateAndStoreSiteVariants } from '@/lib/waas/actions/admin'
 // ---------------------------------------------------------------------------
 // Raw client helper (bypasses ExactMatch type system)
 // ---------------------------------------------------------------------------
@@ -431,6 +432,9 @@ export async function saveOnboardingStep4(
     })
 
     if (error) return { success: false, error: error.message }
+
+    // Fire-and-forget to avoid blocking onboarding completion on AI latency.
+    void generateAndStoreSiteVariants(tenantId)
 
     revalidatePath('/admin/dashboard')
     return { success: true }

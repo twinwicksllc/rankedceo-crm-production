@@ -3,11 +3,12 @@
 // Displays the primary trade services in a responsive grid
 // =============================================================================
 
-import type { ResolvedTenant, SectionConfig } from '@/lib/waas/templates/types'
+import type { ResolvedTenant, SectionConfig, ServicesSectionContent } from '@/lib/waas/templates/types'
 
 interface ServiceGridProps {
   tenant: ResolvedTenant
   config: SectionConfig['config']
+  content?: ServicesSectionContent
 }
 
 // Trade → services mapping
@@ -86,11 +87,18 @@ const TRADE_SERVICES: Record<string, { icon: string; label: string }[]> = {
   ],
 }
 
-export function ServiceGrid({ tenant, config }: ServiceGridProps) {
+export function ServiceGrid({ tenant, config, content }: ServiceGridProps) {
   const columns  = (config.columns as number) ?? 3
   const showIcons = config.showIcons !== false
   const trade    = tenant.primary_trade ?? tenant.target_industry ?? 'default'
   const services = TRADE_SERVICES[trade] ?? TRADE_SERVICES.default
+  const serviceItems = content?.items?.length
+    ? content.items.map((item) => ({
+      icon: item.icon ?? '⭐',
+      label: item.title,
+      description: item.description,
+    }))
+    : services.map((item) => ({ ...item, description: undefined }))
   const businessName = tenant.brand_config.business_name ?? tenant.legal_name ?? 'Our Team'
 
   const gridClass = columns === 2
@@ -113,26 +121,25 @@ export function ServiceGrid({ tenant, config }: ServiceGridProps) {
               color:            'var(--brand-primary)',
             }}
           >
-            Our Services
+            {content?.eyebrow ?? 'Our Services'}
           </span>
           <h2
             className="font-brand-heading text-3xl sm:text-4xl font-bold mb-4"
             style={{ color: 'var(--brand-text)' }}
           >
-            What {businessName} Does Best
+            {content?.headline ?? `What ${businessName} Does Best`}
           </h2>
           <p
             className="font-brand-body text-lg max-w-2xl mx-auto"
             style={{ color: 'var(--brand-text)', opacity: 0.65 }}
           >
-            From routine maintenance to emergency calls, we handle it all with
-            expert care and transparent pricing.
+            {content?.subheadline ?? 'From routine maintenance to emergency calls, we handle it all with expert care and transparent pricing.'}
           </p>
         </div>
 
         {/* Service cards */}
         <div className={`grid ${gridClass} gap-6`}>
-          {services.map(({ icon, label }) => (
+          {serviceItems.map(({ icon, label, description }) => (
             <div
               key={label}
               className="group flex items-start gap-4 p-6 rounded-2xl border transition-all hover:-translate-y-1 hover:shadow-lg"
@@ -161,7 +168,7 @@ export function ServiceGrid({ tenant, config }: ServiceGridProps) {
                   className="font-brand-body text-sm"
                   style={{ color: 'var(--brand-text)', opacity: 0.6 }}
                 >
-                  Professional, reliable, and backed by our satisfaction guarantee.
+                  {description ?? 'Professional, reliable, and backed by our satisfaction guarantee.'}
                 </p>
               </div>
             </div>
@@ -174,7 +181,7 @@ export function ServiceGrid({ tenant, config }: ServiceGridProps) {
             className="font-brand-body text-base mb-4"
             style={{ color: 'var(--brand-text)', opacity: 0.6 }}
           >
-            Don't see what you need? We offer more services than listed here.
+            {content?.bottomCtaText ?? "Don't see what you need? We offer more services than listed here."}
           </p>
           {tenant.brand_config.contact?.phone && (
             <a

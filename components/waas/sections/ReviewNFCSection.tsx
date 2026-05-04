@@ -3,11 +3,12 @@
 // Google Reviews display + NFC tool promotion
 // =============================================================================
 
-import type { ResolvedTenant, SectionConfig } from '@/lib/waas/templates/types'
+import type { ResolvedTenant, ReviewsSectionContent, SectionConfig } from '@/lib/waas/templates/types'
 
 interface ReviewNFCSectionProps {
   tenant: ResolvedTenant
   config: SectionConfig['config']
+  content?: ReviewsSectionContent
 }
 
 // Sample review placeholders (in production, pulled from Google API)
@@ -56,7 +57,7 @@ function StarRating({ rating }: { rating: number }) {
   )
 }
 
-export function ReviewNFCSection({ tenant, config }: ReviewNFCSectionProps) {
+export function ReviewNFCSection({ tenant, config, content }: ReviewNFCSectionProps) {
   const showNFC      = config.showNFC !== false
   const variant      = (config.variant as string) ?? 'standard'
   const businessName = tenant.brand_config.business_name ?? tenant.legal_name ?? 'Us'
@@ -81,14 +82,19 @@ export function ReviewNFCSection({ tenant, config }: ReviewNFCSectionProps) {
               color:           'var(--brand-primary)',
             }}
           >
-            Customer Reviews
+            {content?.eyebrow ?? 'Customer Reviews'}
           </span>
           <h2
             className="font-brand-heading text-3xl sm:text-4xl font-bold mb-4"
             style={{ color: 'var(--brand-text)' }}
           >
-            What Our Customers Say
+            {content?.headline ?? 'What Our Customers Say'}
           </h2>
+          {content?.subheadline && (
+            <p className="font-brand-body text-sm mb-3" style={{ color: 'var(--brand-text)', opacity: 0.7 }}>
+              {content.subheadline}
+            </p>
+          )}
 
           {/* Aggregate rating */}
           <div className="flex items-center justify-center gap-3 mb-2">

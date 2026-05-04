@@ -199,6 +199,27 @@ export interface OnboardingFormData {
   email?:        string
 }
 
+// ---------------------------------------------------------------------------
+// AI SITE VARIANTS
+// ---------------------------------------------------------------------------
+
+export type SiteVariantStatus = 'generated' | 'sent_to_review' | 'selected'
+
+export interface SiteVariantRecord {
+  id: string
+  tenant_id: string
+  variant_index: number
+  variant_label: string
+  variant_rationale: string | null
+  template_slug: string
+  sections_json: Record<string, unknown>[]
+  generation_notes: string | null
+  status: SiteVariantStatus
+  generated_at: string
+  created_at: string
+  updated_at: string
+}
+
 // For creating a new tenant
 export interface CreateWaasTenantInput {
   slug:            string

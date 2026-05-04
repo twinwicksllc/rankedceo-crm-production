@@ -3,13 +3,28 @@
 // Dynamically loops through enabled sections and renders them in order
 // =============================================================================
 
-import type { ResolvedTenant, SectionConfig, TenantSiteConfig } from '@/lib/waas/templates/types'
+import type {
+  AboutSectionContent,
+  BookingSectionContent,
+  FAQSectionContent,
+  HeroSectionContent,
+  HowItWorksSectionContent,
+  ResolvedTenant,
+  ReviewsSectionContent,
+  SectionConfig,
+  ServicesSectionContent,
+  TenantSiteConfig,
+  TrustSectionContent,
+} from '@/lib/waas/templates/types'
 import { HeroSection }       from '@/components/waas/sections/HeroSection'
 import { ServiceGrid }       from '@/components/waas/sections/ServiceGrid'
 import { TrustBar }          from '@/components/waas/sections/TrustBar'
 import { FinancingBlock }    from '@/components/waas/sections/FinancingBlock'
 import { BookingSection }    from '@/components/waas/sections/BookingSection'
 import { ReviewNFCSection }  from '@/components/waas/sections/ReviewNFCSection'
+import { AboutSection }      from '@/components/waas/sections/AboutSection'
+import { FAQSection }        from '@/components/waas/sections/FAQSection'
+import { HowItWorksSection } from '@/components/waas/sections/HowItWorksSection'
 
 interface SectionRendererProps {
   tenant:     ResolvedTenant
@@ -29,17 +44,23 @@ function renderSection(
 
   switch (section.section) {
     case 'hero':
-      return <HeroSection key="hero" {...props} />
+      return <HeroSection key={`hero-${section.order}`} tenant={tenant} config={section.config} content={section.content as HeroSectionContent | undefined} />
     case 'services':
-      return <ServiceGrid key="services" {...props} />
+      return <ServiceGrid key={`services-${section.order}`} tenant={tenant} config={section.config} content={section.content as ServicesSectionContent | undefined} />
     case 'trust':
-      return <TrustBar key="trust" {...props} />
+      return <TrustBar key={`trust-${section.order}`} tenant={tenant} config={section.config} content={section.content as TrustSectionContent | undefined} />
     case 'financing':
-      return <FinancingBlock key="financing" {...props} />
+      return <FinancingBlock key={`financing-${section.order}`} {...props} />
     case 'booking':
-      return <BookingSection key="booking" {...props} />
+      return <BookingSection key={`booking-${section.order}`} tenant={tenant} config={section.config} content={section.content as BookingSectionContent | undefined} />
     case 'reviews':
-      return <ReviewNFCSection key="reviews" {...props} />
+      return <ReviewNFCSection key={`reviews-${section.order}`} tenant={tenant} config={section.config} content={section.content as ReviewsSectionContent | undefined} />
+    case 'about':
+      return <AboutSection key={`about-${section.order}`} tenant={tenant} content={section.content as AboutSectionContent | undefined} />
+    case 'faq':
+      return <FAQSection key={`faq-${section.order}`} tenant={tenant} content={section.content as FAQSectionContent | undefined} />
+    case 'how-it-works':
+      return <HowItWorksSection key={`how-it-works-${section.order}`} tenant={tenant} content={section.content as HowItWorksSectionContent | undefined} />
     default:
       return null
   }
