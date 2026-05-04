@@ -16,6 +16,7 @@ import {
   getSiteVariants,
   markVariantsSentToReview,
   rollbackSiteVariantFromHistory,
+  reopenVariantReviewCycle,
   unlockVariantsForEditing,
   updateSiteVariant,
 } from '@/lib/waas/actions/admin'
@@ -189,6 +190,7 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
   const [isReadinessLoading, setIsReadinessLoading] = useState(false)
   const [lifecycleTelemetry, setLifecycleTelemetry] = useState<VariantLifecycleTelemetry | null>(null)
   const [isLifecycleLoading, setIsLifecycleLoading] = useState(false)
+  const [reopenReason, setReopenReason] = useState('')
 
   const isReviewLocked = useMemo(
     () => variants.some((variant) => variant.status === 'sent_to_review' || variant.status === 'selected'),
@@ -465,6 +467,20 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
       }
       await refreshVariants()
       setMessage('Variants unlocked for admin editing.')
+    })
+  }
+
+  const handleReopenReviewCycle = () => {
+    setMessage(null)
+    startTransition(async () => {
+      const result = await reopenVariantReviewCycle(tenantId, reopenReason)
+      if (!result.success) {
+        setMessage(result.error ?? 'Failed to reopen review cycle.')
+        return
+      }
+      setReopenReason('')
+      await refreshVariants()
+      setMessage('Review cycle reopened. Variant lock was cleared and status timeline updated.')
     })
   }
 
@@ -782,6 +798,37 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
                   ))}
                 </div>
               )}
+            </div>
+
+            <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-3">
+              <p className="text-[11px] uppercase tracking-wide text-amber-200">Reopen Review Cycle</p>
+              <p className="text-xs text-amber-100/85 mt-1">
+                Use this only after a client selection when you need to reopen editing and restart review.
+              </p>
+              <label className="mt-2 block text-xs text-amber-100/90">
+                Reason (required, min 10 chars)
+                <textarea
+                  value={reopenReason}
+                  onChange={(event) => setReopenReason(event.target.value)}
+                  maxLength={500}
+                  rows={3}
+                  placeholder="Example: client requested new offer messaging before final approval"
+                  className="mt-1 w-full rounded border border-amber-300/35 bg-slate-900/75 px-2.5 py-2 text-xs text-white outline-none focus:border-amber-300"
+                />
+              </label>
+              <div className="mt-1 text-right text-[10px] text-amber-100/70">{reopenReason.trim().length}/500</div>
+              <button
+                type="button"
+                onClick={handleReopenReviewCycle}
+                disabled={isPending || !hasSelectedVariant || reopenReason.trim().length < 10}
+                className={`mt-2 rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                  isPending || !hasSelectedVariant || reopenReason.trim().length < 10
+                    ? 'cursor-not-allowed bg-white/10 text-white/35'
+                    : 'bg-amber-400 text-slate-950 hover:bg-amber-300'
+                }`}
+              >
+                {isPending ? 'Reopening…' : 'Reopen Review Cycle'}
+              </button>
             </div>
           </div>
         )}

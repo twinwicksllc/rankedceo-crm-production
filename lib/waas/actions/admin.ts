@@ -616,6 +616,13 @@ export interface VariantLifecycleTelemetry {
   events: VariantLifecycleEvent[]
 }
 
+function normalizeLifecycleReason(reason: string | null | undefined): string | null {
+  if (typeof reason !== 'string') return null
+  const normalized = reason.trim().replace(/\s+/g, ' ')
+  if (!normalized) return null
+  return normalized.slice(0, 500)
+}
+
 async function getTenantVariantStatuses(tenantId: string): Promise<string[]> {
   const supabase = getAdminClient()
   const { data, error } = await supabase
@@ -890,6 +897,7 @@ export async function getVariantLifecycleTelemetry(
     const lifecycleSources = [
       'site_variants_sent_to_review',
       'site_variants_unlocked_for_editing',
+      'site_variants_review_reopened',
       'client_selected_variant',
       'client_mixed_variant',
       'client_regenerated_variant',
@@ -1244,6 +1252,70 @@ export async function unlockVariantsForEditing(tenantId: string): Promise<Action
 
     revalidatePath(`/admin/dashboard/${tenantId}`)
     revalidatePath(`/review/${tenantId}`)
+    return { success: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
+export async function reopenVariantReviewCycle(
+  tenantId: string,
+  reason: string,
+): Promise<ActionResult<void>> {
+  try {
+    const supabase = getAdminClient()
+    const normalizedReason = normalizeLifecycleReason(reason)
+    if (!normalizedReason || normalizedReason.length < 10) {
+      return { success: false, error: 'Provide a reopen reason of at least 10 characters.' }
+    }
+
+    const statuses = await getTenantVariantStatuses(tenantId)
+    if (!statuses.includes('selected')) {
+      return {
+        success: false,
+        error: 'No selected variant exists. Use unlock when review is active without a final selection.',
+      }
+    }
+
+    const { error: statusError } = await supabase
+      .from('tenant_site_variants')
+      .update({
+        status: 'generated',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('tenant_id', tenantId)
+      .in('status', ['selected', 'sent_to_review'])
+
+    if (statusError) {
+      if (isMissingSchemaTable(statusError.message, 'tenant_site_variants')) {
+        return { success: false, error: 'Site variant storage is not available in this environment.' }
+      }
+      return { success: false, error: statusError.message }
+    }
+
+    const { error: configError } = await supabase
+      .from('tenant_site_config')
+      .update({
+        client_selected_template_slug: null,
+        client_selected_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('tenant_id', tenantId)
+
+    if (configError && !isMissingSchemaTable(configError.message, 'tenant_site_config')) {
+      return { success: false, error: configError.message }
+    }
+
+    await saveTenantSiteVersion(
+      tenantId,
+      'site_variants_review_reopened',
+      `Admin reopened review cycle. Reason: ${normalizedReason}`,
+    )
+
+    revalidatePath(`/admin/dashboard/${tenantId}`)
+    revalidatePath(`/review/${tenantId}`)
+    revalidatePath(`/_preview/${tenantId}`)
     return { success: true }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error'
