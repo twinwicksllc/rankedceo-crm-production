@@ -7,6 +7,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
+import { createClient as createServerClient } from '@/lib/supabase/server'
 import type { WaasTenant, WaasDomainRequest, SiteVariantRecord } from '@/lib/waas/types'
 import { ALL_TEMPLATES, getTemplate } from '@/lib/waas/templates/registry'
 import { recommendTemplates, type TemplateRecommendation } from '@/lib/waas/services/template-recommender'
@@ -597,6 +598,12 @@ export interface VariantLifecycleEvent {
   summary: string | null
   templateSlug: string | null
   createdAt: string
+  reasonCategory: VariantLifecycleReasonCategory | null
+  reasonText: string | null
+  actorType: 'admin_user' | 'authenticated_user' | 'public_client' | 'system'
+  operatorId: string | null
+  operatorEmail: string | null
+  operatorRole: string | null
 }
 
 export interface VariantLifecycleVariantStatus {
@@ -616,11 +623,116 @@ export interface VariantLifecycleTelemetry {
   events: VariantLifecycleEvent[]
 }
 
+export type VariantLifecycleReasonCategory =
+  | 'workflow_transition'
+  | 'content_revision'
+  | 'client_request'
+  | 'compliance_update'
+  | 'quality_issue'
+  | 'other'
+
+interface VariantLifecycleEventMeta {
+  reasonCategory: VariantLifecycleReasonCategory
+  reasonText: string | null
+  actorType: 'admin_user' | 'authenticated_user' | 'public_client' | 'system'
+  operatorId: string | null
+  operatorEmail: string | null
+  operatorRole: string | null
+}
+
+interface SaveTenantSiteVersionOptions {
+  lifecycleMeta?: {
+    reasonCategory?: VariantLifecycleReasonCategory | null
+    reasonText?: string | null
+  }
+}
+
+const LIFECYCLE_REASON_CATEGORY_SET = new Set<VariantLifecycleReasonCategory>([
+  'workflow_transition',
+  'content_revision',
+  'client_request',
+  'compliance_update',
+  'quality_issue',
+  'other',
+])
+
+const VARIANT_LIFECYCLE_SOURCES = [
+  'site_variants_sent_to_review',
+  'site_variants_unlocked_for_editing',
+  'site_variants_review_reopened',
+  'client_selected_variant',
+  'client_mixed_variant',
+  'client_regenerated_variant',
+] as const
+
 function normalizeLifecycleReason(reason: string | null | undefined): string | null {
   if (typeof reason !== 'string') return null
   const normalized = reason.trim().replace(/\s+/g, ' ')
   if (!normalized) return null
   return normalized.slice(0, 500)
+}
+
+function isVariantLifecycleSource(source: string): boolean {
+  return VARIANT_LIFECYCLE_SOURCES.includes(source as (typeof VARIANT_LIFECYCLE_SOURCES)[number])
+}
+
+function getDefaultReasonCategoryForSource(source: string): VariantLifecycleReasonCategory {
+  if (source === 'site_variants_review_reopened') return 'content_revision'
+  if (source === 'site_variants_unlocked_for_editing') return 'workflow_transition'
+  if (source === 'site_variants_sent_to_review') return 'workflow_transition'
+  if (source.startsWith('client_')) return 'client_request'
+  return 'other'
+}
+
+function normalizeReasonCategory(
+  value: VariantLifecycleReasonCategory | string | null | undefined,
+  fallback: VariantLifecycleReasonCategory,
+): VariantLifecycleReasonCategory {
+  if (typeof value !== 'string') return fallback
+  return LIFECYCLE_REASON_CATEGORY_SET.has(value as VariantLifecycleReasonCategory)
+    ? (value as VariantLifecycleReasonCategory)
+    : fallback
+}
+
+async function resolveLifecycleOperatorIdentity(source: string): Promise<{
+  actorType: 'admin_user' | 'authenticated_user' | 'public_client' | 'system'
+  operatorId: string | null
+  operatorEmail: string | null
+  operatorRole: string | null
+}> {
+  try {
+    const supabase = await createServerClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return {
+        actorType: source.startsWith('client_') ? 'public_client' : 'system',
+        operatorId: null,
+        operatorEmail: null,
+        operatorRole: null,
+      }
+    }
+
+    const operatorRole = typeof user.app_metadata?.role === 'string'
+      ? user.app_metadata.role
+      : (typeof user.user_metadata?.role === 'string' ? user.user_metadata.role : null)
+
+    const isAdmin = operatorRole === 'waas_admin' || user.app_metadata?.waas_admin === true || user.app_metadata?.waas_admin === 'true'
+
+    return {
+      actorType: isAdmin ? 'admin_user' : 'authenticated_user',
+      operatorId: user.id,
+      operatorEmail: typeof user.email === 'string' ? user.email : null,
+      operatorRole,
+    }
+  } catch {
+    return {
+      actorType: source.startsWith('client_') ? 'public_client' : 'system',
+      operatorId: null,
+      operatorEmail: null,
+      operatorRole: null,
+    }
+  }
 }
 
 async function getTenantVariantStatuses(tenantId: string): Promise<string[]> {
@@ -894,25 +1006,39 @@ export async function getVariantLifecycleTelemetry(
     }
 
     let events: VariantLifecycleEvent[] = []
-    const lifecycleSources = [
-      'site_variants_sent_to_review',
-      'site_variants_unlocked_for_editing',
-      'site_variants_review_reopened',
-      'client_selected_variant',
-      'client_mixed_variant',
-      'client_regenerated_variant',
-    ]
-
     const { data: versionRows, error: versionError } = await supabase
       .from('tenant_site_versions')
-      .select('id, change_source, summary, template_slug, created_at')
+      .select('id, change_source, summary, template_slug, created_at, snapshot_json')
       .eq('tenant_id', tenantId)
-      .in('change_source', lifecycleSources)
+      .in('change_source', [...VARIANT_LIFECYCLE_SOURCES])
       .order('created_at', { ascending: false })
       .limit(20)
 
     if (!versionError) {
       events = ((versionRows ?? []) as Array<Record<string, unknown>>).map((row) => ({
+        ...(function parseMeta() {
+          const snapshot = row.snapshot_json && typeof row.snapshot_json === 'object'
+            ? (row.snapshot_json as Record<string, unknown>)
+            : null
+          const meta = snapshot?.lifecycle_event_meta && typeof snapshot.lifecycle_event_meta === 'object'
+            ? (snapshot.lifecycle_event_meta as Record<string, unknown>)
+            : null
+
+          const reasonCategory = typeof meta?.reasonCategory === 'string'
+            ? normalizeReasonCategory(meta.reasonCategory, getDefaultReasonCategoryForSource(String(row.change_source ?? '')))
+            : getDefaultReasonCategoryForSource(String(row.change_source ?? ''))
+
+          return {
+            reasonCategory,
+            reasonText: typeof meta?.reasonText === 'string' ? meta.reasonText : null,
+            actorType: (typeof meta?.actorType === 'string'
+              ? meta.actorType
+              : (String(row.change_source ?? '').startsWith('client_') ? 'public_client' : 'system')) as VariantLifecycleEvent['actorType'],
+            operatorId: typeof meta?.operatorId === 'string' ? meta.operatorId : null,
+            operatorEmail: typeof meta?.operatorEmail === 'string' ? meta.operatorEmail : null,
+            operatorRole: typeof meta?.operatorRole === 'string' ? meta.operatorRole : null,
+          }
+        })(),
         id: typeof row.id === 'string' ? row.id : '',
         changeSource: typeof row.change_source === 'string' ? row.change_source : 'unknown_change',
         summary: typeof row.summary === 'string' ? row.summary : null,
@@ -1216,7 +1342,11 @@ export async function rollbackSiteVariantFromHistory(
   }
 }
 
-export async function unlockVariantsForEditing(tenantId: string): Promise<ActionResult<void>> {
+export async function unlockVariantsForEditing(
+  tenantId: string,
+  reasonCategory: VariantLifecycleReasonCategory = 'workflow_transition',
+  reasonText?: string,
+): Promise<ActionResult<void>> {
   try {
     const supabase = getAdminClient()
     const statuses = await getTenantVariantStatuses(tenantId)
@@ -1248,6 +1378,12 @@ export async function unlockVariantsForEditing(tenantId: string): Promise<Action
       tenantId,
       'site_variants_unlocked_for_editing',
       'Admin unlocked variants for editing',
+      {
+        lifecycleMeta: {
+          reasonCategory,
+          reasonText: normalizeLifecycleReason(reasonText) ?? null,
+        },
+      },
     )
 
     revalidatePath(`/admin/dashboard/${tenantId}`)
@@ -1262,6 +1398,7 @@ export async function unlockVariantsForEditing(tenantId: string): Promise<Action
 export async function reopenVariantReviewCycle(
   tenantId: string,
   reason: string,
+  reasonCategory: VariantLifecycleReasonCategory = 'content_revision',
 ): Promise<ActionResult<void>> {
   try {
     const supabase = getAdminClient()
@@ -1311,6 +1448,12 @@ export async function reopenVariantReviewCycle(
       tenantId,
       'site_variants_review_reopened',
       `Admin reopened review cycle. Reason: ${normalizedReason}`,
+      {
+        lifecycleMeta: {
+          reasonCategory,
+          reasonText: normalizedReason,
+        },
+      },
     )
 
     revalidatePath(`/admin/dashboard/${tenantId}`)
@@ -1433,6 +1576,12 @@ export async function markVariantsSentToReview(tenantId: string): Promise<Action
       tenantId,
       'site_variants_sent_to_review',
       'Admin sent generated variants to client review',
+      {
+        lifecycleMeta: {
+          reasonCategory: 'workflow_transition',
+          reasonText: null,
+        },
+      },
     )
 
     revalidatePath(`/admin/dashboard/${tenantId}`)
@@ -2001,6 +2150,7 @@ async function saveTenantSiteVersion(
   tenantId: string,
   source: string,
   summary?: string,
+  options?: SaveTenantSiteVersionOptions,
 ): Promise<string | null> {
   try {
     const supabase = getAdminClient()
@@ -2036,6 +2186,20 @@ async function saveTenantSiteVersion(
       last_preview_at: row.last_preview_at ?? null,
     }
 
+    let lifecycleEventMeta: VariantLifecycleEventMeta | null = null
+    if (isVariantLifecycleSource(source)) {
+      const operator = await resolveLifecycleOperatorIdentity(source)
+      const fallbackCategory = getDefaultReasonCategoryForSource(source)
+      lifecycleEventMeta = {
+        reasonCategory: normalizeReasonCategory(options?.lifecycleMeta?.reasonCategory, fallbackCategory),
+        reasonText: normalizeLifecycleReason(options?.lifecycleMeta?.reasonText),
+        actorType: operator.actorType,
+        operatorId: operator.operatorId,
+        operatorEmail: operator.operatorEmail,
+        operatorRole: operator.operatorRole,
+      }
+    }
+
     const { data: inserted } = await supabase
       .from('tenant_site_versions')
       .insert({
@@ -2043,7 +2207,12 @@ async function saveTenantSiteVersion(
         change_source: source,
         summary: summary ?? null,
         template_slug: templateSlug,
-        snapshot_json: snapshot,
+        snapshot_json: lifecycleEventMeta
+          ? {
+            ...snapshot,
+            lifecycle_event_meta: lifecycleEventMeta,
+          }
+          : snapshot,
         created_at: new Date().toISOString(),
       })
       .select('id')
@@ -2311,6 +2480,12 @@ export async function selectClientVariantByReviewToken(
       tenantId,
       'client_selected_variant',
       `Client selected ${templateSlug} with feedback preferences`,
+      {
+        lifecycleMeta: {
+          reasonCategory: 'client_request',
+          reasonText: normalizeLifecycleReason(feedback?.notes ?? null),
+        },
+      },
     )
 
     const { error: clearStatusError } = await supabase
@@ -2401,7 +2576,19 @@ export async function mixClientVariantsByReviewToken(
       ? `Client selected ${primaryTemplateSlug} mixed with ${normalizedMix.join(', ')}`
       : `Client selected ${primaryTemplateSlug} as mixed direction`
 
-    await saveTenantSiteVersion(tenantId, 'client_mixed_variant', mixSummary)
+    await saveTenantSiteVersion(
+      tenantId,
+      'client_mixed_variant',
+      mixSummary,
+      {
+        lifecycleMeta: {
+          reasonCategory: 'client_request',
+          reasonText: normalizeLifecycleReason(feedback?.notes ?? null) ?? (normalizedMix.length > 0
+            ? `Mixed with ${normalizedMix.join(', ')}`
+            : null),
+        },
+      },
+    )
 
     const { error: clearStatusError } = await supabase
       .from('tenant_site_variants')
@@ -2581,6 +2768,12 @@ export async function regenerateSelectedVariantByReviewToken(
       tenantId,
       'client_regenerated_variant',
       `Regenerated ${baseTemplateSlug} using saved feedback${mixSourceTemplates.length ? ` and mix (${mixSourceTemplates.join(', ')})` : ''}`,
+      {
+        lifecycleMeta: {
+          reasonCategory: 'client_request',
+          reasonText: mixSourceTemplates.length > 0 ? `Regeneration with mix: ${mixSourceTemplates.join(', ')}` : null,
+        },
+      },
     )
 
     revalidatePath('/admin/dashboard')

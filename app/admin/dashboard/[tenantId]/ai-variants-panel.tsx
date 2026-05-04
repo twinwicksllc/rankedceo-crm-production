@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from 'react'
 import type { SectionConfig } from '@/lib/waas/templates/types'
 import type {
   AdminSiteVariant,
+  VariantLifecycleReasonCategory,
   VariantEditHistoryEntry,
   VariantLifecycleTelemetry,
   VariantReviewReadinessReport,
@@ -22,6 +23,15 @@ import {
 } from '@/lib/waas/actions/admin'
 
 type Viewport = 'desktop' | 'mobile'
+
+const LIFECYCLE_REASON_OPTIONS: Array<{ value: VariantLifecycleReasonCategory; label: string }> = [
+  { value: 'workflow_transition', label: 'Workflow Transition' },
+  { value: 'content_revision', label: 'Content Revision' },
+  { value: 'client_request', label: 'Client Request' },
+  { value: 'compliance_update', label: 'Compliance Update' },
+  { value: 'quality_issue', label: 'Quality Issue' },
+  { value: 'other', label: 'Other' },
+]
 
 interface ScalarFieldSpec {
   key: string
@@ -191,6 +201,9 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
   const [lifecycleTelemetry, setLifecycleTelemetry] = useState<VariantLifecycleTelemetry | null>(null)
   const [isLifecycleLoading, setIsLifecycleLoading] = useState(false)
   const [reopenReason, setReopenReason] = useState('')
+  const [reopenReasonCategory, setReopenReasonCategory] = useState<VariantLifecycleReasonCategory>('content_revision')
+  const [eventReasonCategoryFilter, setEventReasonCategoryFilter] = useState<'all' | VariantLifecycleReasonCategory>('all')
+  const [eventActorFilter, setEventActorFilter] = useState<'all' | VariantLifecycleTelemetry['events'][number]['actorType']>('all')
 
   const isReviewLocked = useMemo(
     () => variants.some((variant) => variant.status === 'sent_to_review' || variant.status === 'selected'),
@@ -202,6 +215,15 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
   )
 
   const previewBase = useMemo(() => `/_preview/${tenantId}`, [tenantId])
+
+  const filteredLifecycleEvents = useMemo(() => {
+    if (!lifecycleTelemetry) return []
+    return lifecycleTelemetry.events.filter((event) => {
+      const reasonMatches = eventReasonCategoryFilter === 'all' || event.reasonCategory === eventReasonCategoryFilter
+      const actorMatches = eventActorFilter === 'all' || event.actorType === eventActorFilter
+      return reasonMatches && actorMatches
+    })
+  }, [lifecycleTelemetry, eventReasonCategoryFilter, eventActorFilter])
 
   const hasDirtyDrafts = useMemo(() => {
     return variants.some((variant) => {
@@ -473,7 +495,7 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
   const handleReopenReviewCycle = () => {
     setMessage(null)
     startTransition(async () => {
-      const result = await reopenVariantReviewCycle(tenantId, reopenReason)
+      const result = await reopenVariantReviewCycle(tenantId, reopenReason, reopenReasonCategory)
       if (!result.success) {
         setMessage(result.error ?? 'Failed to reopen review cycle.')
         return
@@ -782,16 +804,62 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
 
             <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-3">
               <p className="text-[11px] uppercase tracking-wide text-white/60 mb-2">Recent Lifecycle Events</p>
-              {lifecycleTelemetry.events.length === 0 ? (
+              <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <label className="text-[11px] text-white/70">
+                  Filter by Reason Category
+                  <select
+                    value={eventReasonCategoryFilter}
+                    onChange={(event) => {
+                      const value = event.target.value as 'all' | VariantLifecycleReasonCategory
+                      setEventReasonCategoryFilter(value)
+                    }}
+                    className="mt-1 w-full rounded border border-white/15 bg-slate-900/75 px-2 py-1.5 text-xs text-white outline-none focus:border-cyan-400"
+                  >
+                    <option value="all">All categories</option>
+                    {LIFECYCLE_REASON_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-[11px] text-white/70">
+                  Filter by Actor
+                  <select
+                    value={eventActorFilter}
+                    onChange={(event) => {
+                      const value = event.target.value as 'all' | VariantLifecycleTelemetry['events'][number]['actorType']
+                      setEventActorFilter(value)
+                    }}
+                    className="mt-1 w-full rounded border border-white/15 bg-slate-900/75 px-2 py-1.5 text-xs text-white outline-none focus:border-cyan-400"
+                  >
+                    <option value="all">All actors</option>
+                    <option value="admin_user">Admin user</option>
+                    <option value="authenticated_user">Authenticated user</option>
+                    <option value="public_client">Public client</option>
+                    <option value="system">System</option>
+                  </select>
+                </label>
+              </div>
+
+              {filteredLifecycleEvents.length === 0 ? (
                 <p className="text-xs text-white/45">No lifecycle events recorded yet.</p>
               ) : (
                 <div className="space-y-2">
-                  {lifecycleTelemetry.events.slice(0, 8).map((event) => (
+                  {filteredLifecycleEvents.slice(0, 8).map((event) => (
                     <div key={event.id} className="rounded border border-white/10 bg-slate-950/40 px-3 py-2">
                       <p className="text-xs text-white/85">{event.summary ?? event.changeSource.replace(/_/g, ' ')}</p>
                       <p className="text-[11px] text-white/45 mt-1">
                         {event.changeSource.replace(/_/g, ' ')}
                         {event.templateSlug ? ` • template ${event.templateSlug}` : ''}
+                      </p>
+                      <p className="text-[11px] text-white/45 mt-1">
+                        Category: {event.reasonCategory ? event.reasonCategory.replace(/_/g, ' ') : 'not set'}
+                        {event.reasonText ? ` • ${event.reasonText}` : ''}
+                      </p>
+                      <p className="text-[11px] text-white/45 mt-1">
+                        Actor: {event.actorType.replace(/_/g, ' ')}
+                        {event.operatorEmail ? ` • ${event.operatorEmail}` : ''}
+                        {!event.operatorEmail && event.operatorId ? ` • ${event.operatorId}` : ''}
+                        {event.operatorRole ? ` • role ${event.operatorRole}` : ''}
                       </p>
                       <p className="text-[11px] text-white/45 mt-1">{new Date(event.createdAt).toLocaleString()}</p>
                     </div>
@@ -805,6 +873,18 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
               <p className="text-xs text-amber-100/85 mt-1">
                 Use this only after a client selection when you need to reopen editing and restart review.
               </p>
+              <label className="mt-2 block text-xs text-amber-100/90">
+                Reason Category
+                <select
+                  value={reopenReasonCategory}
+                  onChange={(event) => setReopenReasonCategory(event.target.value as VariantLifecycleReasonCategory)}
+                  className="mt-1 w-full rounded border border-amber-300/35 bg-slate-900/75 px-2.5 py-2 text-xs text-white outline-none focus:border-amber-300"
+                >
+                  {LIFECYCLE_REASON_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
               <label className="mt-2 block text-xs text-amber-100/90">
                 Reason (required, min 10 chars)
                 <textarea
