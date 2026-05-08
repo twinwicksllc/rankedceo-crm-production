@@ -1,4 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr'
+import { type Session } from '@supabase/supabase-js'
 import * as React from 'react'
 
 // ---------------------------------------------------------------------------
@@ -144,7 +145,7 @@ if (typeof window !== 'undefined') {
 // ---------------------------------------------------------------------------
 
 export function useSession() {
-  const [session, setSession] = React.useState<ReturnType<typeof Object> | null>(null)
+  const [session, setSession] = React.useState<Session | null>(null)
   const [loading, setLoading] = React.useState(true)
 
   React.useEffect(() => {
