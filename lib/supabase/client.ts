@@ -1,43 +1,109 @@
 import { createBrowserClient } from '@supabase/ssr'
 import * as React from 'react'
 
-function normalizeSupabaseAuthStorage() {
+// ---------------------------------------------------------------------------
+// One-time auth storage/cookie normalization
+// Runs once per browser session via a sessionStorage flag so it never
+// blocks the main thread on subsequent page loads or React re-renders.
+// ---------------------------------------------------------------------------
+
+function runStorageNormalization() {
   if (typeof window === 'undefined') return
 
-  const storage = window.localStorage
-  const authTokenKeys: string[] = []
+  // Guard: only run once per browser tab session
+  const FLAG = '__sb_norm_done'
+  if (window.sessionStorage.getItem(FLAG) === '1') return
+  window.sessionStorage.setItem(FLAG, '1')
 
-  for (let i = 0; i < storage.length; i += 1) {
-    const key = storage.key(i)
-    if (!key) continue
-    if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
-      authTokenKeys.push(key)
+  // --- 1. Fix malformed localStorage auth tokens ---
+  try {
+    const ls = window.localStorage
+    for (let i = 0; i < ls.length; i++) {
+      const key = ls.key(i)
+      if (!key || !key.startsWith('sb-') || !key.endsWith('-auth-token')) continue
+      const raw = ls.getItem(key)
+      if (!raw) continue
+      try {
+        const parsed = JSON.parse(raw)
+        if (typeof parsed === 'string') {
+          // Double-encoded — unwrap it
+          const reparsed = JSON.parse(parsed)
+          if (reparsed && typeof reparsed === 'object') {
+            ls.setItem(key, JSON.stringify(reparsed))
+            continue
+          }
+        }
+        if (!parsed || typeof parsed !== 'object') {
+          ls.removeItem(key)
+        }
+      } catch {
+        ls.removeItem(key)
+      }
     }
+  } catch {
+    // localStorage may be blocked (private browsing, etc.) — safe to ignore
   }
 
-  for (const key of authTokenKeys) {
-    const raw = storage.getItem(key)
-    if (!raw) continue
-
-    try {
-      const parsed = JSON.parse(raw)
-
-      // Some broken states store JSON as a JSON-encoded string.
-      if (typeof parsed === 'string') {
-        const reparsed = JSON.parse(parsed)
-        if (reparsed && typeof reparsed === 'object') {
-          storage.setItem(key, JSON.stringify(reparsed))
-          continue
+  // --- 2. Clear stale PKCE / OAuth transient keys from both storages ---
+  try {
+    for (const storage of [window.localStorage, window.sessionStorage]) {
+      const toRemove: string[] = []
+      for (let i = 0; i < storage.length; i++) {
+        const key = storage.key(i)
+        if (!key || !key.startsWith('sb-')) continue
+        const lower = key.toLowerCase()
+        if (lower.includes('code-verifier') || lower.includes('pkce') || lower.includes('oauth')) {
+          toRemove.push(key)
         }
       }
-
-      if (!parsed || typeof parsed !== 'object') {
-        storage.removeItem(key)
-      }
-    } catch {
-      // Invalid token payload can cause auth recovery crashes; drop it.
-      storage.removeItem(key)
+      toRemove.forEach((k) => storage.removeItem(k))
     }
+  } catch {
+    // Safe to ignore
+  }
+
+  // --- 3. Fix malformed cookies (single-pass, no reflows) ---
+  // We deliberately do NOT iterate document.cookie in a tight loop because
+  // reading/writing document.cookie is synchronous and can stall the main thread.
+  // Instead we do one read, process in memory, and write only if needed.
+  try {
+    const cookieStr = document.cookie // single read
+    const entries = cookieStr.split(';').map((c) => c.trim()).filter(Boolean)
+
+    for (const entry of entries) {
+      const eqIdx = entry.indexOf('=')
+      if (eqIdx < 0) continue
+      const key = entry.slice(0, eqIdx).trim()
+      const rawValue = entry.slice(eqIdx + 1)
+
+      if (!key.startsWith('sb-') || !key.includes('-auth-token')) continue
+      // Skip chunked token parts (they are valid sub-pieces)
+      if (key.match(/\.\d+$/)) continue
+
+      const decoded = decodeURIComponent(rawValue || '')
+      try {
+        const parsed = JSON.parse(decoded)
+        if (typeof parsed === 'string') {
+          // Double-encoded — fix it (single write)
+          try {
+            const reparsed = JSON.parse(parsed)
+            if (reparsed && typeof reparsed === 'object') {
+              document.cookie = `${key}=${encodeURIComponent(JSON.stringify(reparsed))}; Path=/; SameSite=Lax`
+            }
+          } catch { /* inner JSON invalid — leave it */ }
+        } else if (!parsed || typeof parsed !== 'object') {
+          expireCookie(key)
+        }
+      } catch {
+        // Can't parse — expire it
+        expireCookie(key)
+        if (window.location.hostname.endsWith('.rankedceo.com')) {
+          expireCookie(key, '.rankedceo.com')
+        }
+      }
+    }
+  } catch {
+    // document.cookie access blocked — safe to ignore
   }
 }
 
@@ -46,83 +112,51 @@ function expireCookie(name: string, domain?: string) {
   document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; SameSite=Lax${domainPart}`
 }
 
-function normalizeSupabaseAuthCookies() {
-  if (typeof document === 'undefined') return
+// ---------------------------------------------------------------------------
+// Supabase browser client
+// createClient() is intentionally lightweight — normalization runs separately
+// at app boot (see below) and is guarded to run at most once per tab session.
+// ---------------------------------------------------------------------------
 
-  const entries = document.cookie
-    .split(';')
-    .map((c) => c.trim())
-    .filter(Boolean)
-
-  for (const entry of entries) {
-    const idx = entry.indexOf('=')
-    const key = idx >= 0 ? entry.slice(0, idx) : entry
-    const rawValue = idx >= 0 ? entry.slice(idx + 1) : ''
-
-    if (!key.startsWith('sb-') || !key.includes('-auth-token')) {
-      continue
-    }
-
-    const decoded = decodeURIComponent(rawValue || '')
-
-    try {
-      const parsed = JSON.parse(decoded)
-
-      if (typeof parsed === 'string') {
-        const reparsed = JSON.parse(parsed)
-        if (reparsed && typeof reparsed === 'object') {
-          document.cookie = `${key}=${encodeURIComponent(JSON.stringify(reparsed))}; Path=/; SameSite=Lax`
-          continue
-        }
-      }
-
-      if (!parsed || typeof parsed !== 'object') {
-        expireCookie(key)
-      }
-    } catch {
-      // Ignore chunk cookies and only delete obvious malformed single-value payloads.
-      if (!key.match(/\.\d+$/)) {
-        expireCookie(key)
-
-        if (typeof window !== 'undefined' && window.location.hostname.endsWith('.rankedceo.com')) {
-          expireCookie(key, '.rankedceo.com')
-        }
-      }
-    }
-  }
-}
-
-let storageNormalized = false
+let _client: ReturnType<typeof createBrowserClient> | null = null
 
 export function createClient() {
-  if (!storageNormalized) {
-    normalizeSupabaseAuthCookies()
-    normalizeSupabaseAuthStorage()
-    storageNormalized = true
+  // Singleton — reuse the same client instance within the same tab to avoid
+  // multiple GoTrue instances competing over the same auth state.
+  if (!_client) {
+    _client = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
   }
-
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  return _client
 }
 
-// Hook to get current session
+// Run normalization once at module load time (browser only).
+// This is outside createClient() so it never blocks auth operations.
+if (typeof window !== 'undefined') {
+  // Defer via setTimeout so it doesn't block the initial render/paint
+  setTimeout(runStorageNormalization, 0)
+}
+
+// ---------------------------------------------------------------------------
+// useSession hook
+// ---------------------------------------------------------------------------
+
 export function useSession() {
-  const [session, setSession] = React.useState<any>(null)
+  const [session, setSession] = React.useState<ReturnType<typeof Object> | null>(null)
   const [loading, setLoading] = React.useState(true)
-  const supabase = createClient()
 
   React.useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
+    const supabase = createClient()
+
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s)
       setLoading(false)
     })
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s)
       setLoading(false)
     })
 

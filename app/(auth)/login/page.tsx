@@ -78,32 +78,6 @@ function LoginForm() {
 
   const supabase = createClient()
 
-  const clearOAuthTransientState = () => {
-    if (typeof window === 'undefined') return
-
-    const storages = [window.localStorage, window.sessionStorage]
-
-    for (const storage of storages) {
-      const keysToRemove: string[] = []
-
-      for (let i = 0; i < storage.length; i += 1) {
-        const key = storage.key(i)
-        if (!key) continue
-
-        if (!key.startsWith('sb-')) continue
-
-        const lower = key.toLowerCase()
-        if (lower.includes('code-verifier') || lower.includes('pkce') || lower.includes('oauth')) {
-          keysToRemove.push(key)
-        }
-      }
-
-      for (const key of keysToRemove) {
-        storage.removeItem(key)
-      }
-    }
-  }
-
   const resolveRedirectTarget = (target: string) => {
     if (target.startsWith('/')) {
       return `${window.location.origin}${target}`
@@ -185,9 +159,6 @@ function LoginForm() {
     setGoogleLoading(true)
 
     try {
-      // Prevent stale PKCE/OAuth artifacts from previous failed attempts.
-      clearOAuthTransientState()
-
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
