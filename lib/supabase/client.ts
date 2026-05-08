@@ -1,5 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr'
-import { type Session } from '@supabase/supabase-js'
+import { type Session, type AuthChangeEvent } from '@supabase/supabase-js'
 import * as React from 'react'
 
 // ---------------------------------------------------------------------------
@@ -151,15 +151,17 @@ export function useSession() {
   React.useEffect(() => {
     const supabase = createClient()
 
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s)
+    supabase.auth.getSession().then((result) => {
+      setSession(result.data.session)
       setLoading(false)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s)
-      setLoading(false)
-    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event: AuthChangeEvent, s: Session | null) => {
+        setSession(s)
+        setLoading(false)
+      }
+    )
 
     return () => subscription.unsubscribe()
   }, [])
