@@ -1,5 +1,9 @@
 import { createBrowserClient } from '@supabase/ssr'
-import { type Session, type AuthChangeEvent } from '@supabase/supabase-js'
+import {
+  type Session,
+  type AuthChangeEvent,
+  type SupabaseClient,
+} from '@supabase/supabase-js'
 import * as React from 'react'
 
 // ---------------------------------------------------------------------------
@@ -27,7 +31,6 @@ function runStorageNormalization() {
       try {
         const parsed = JSON.parse(raw)
         if (typeof parsed === 'string') {
-          // Double-encoded — unwrap it
           const reparsed = JSON.parse(parsed)
           if (reparsed && typeof reparsed === 'object') {
             ls.setItem(key, JSON.stringify(reparsed))
@@ -64,9 +67,6 @@ function runStorageNormalization() {
   }
 
   // --- 3. Fix malformed cookies (single-pass, no reflows) ---
-  // We deliberately do NOT iterate document.cookie in a tight loop because
-  // reading/writing document.cookie is synchronous and can stall the main thread.
-  // Instead we do one read, process in memory, and write only if needed.
   try {
     const cookieStr = document.cookie // single read
     const entries = cookieStr.split(';').map((c) => c.trim()).filter(Boolean)
@@ -78,14 +78,12 @@ function runStorageNormalization() {
       const rawValue = entry.slice(eqIdx + 1)
 
       if (!key.startsWith('sb-') || !key.includes('-auth-token')) continue
-      // Skip chunked token parts (they are valid sub-pieces)
       if (key.match(/\.\d+$/)) continue
 
       const decoded = decodeURIComponent(rawValue || '')
       try {
         const parsed = JSON.parse(decoded)
         if (typeof parsed === 'string') {
-          // Double-encoded — fix it (single write)
           try {
             const reparsed = JSON.parse(parsed)
             if (reparsed && typeof reparsed === 'object') {
@@ -96,7 +94,6 @@ function runStorageNormalization() {
           expireCookie(key)
         }
       } catch {
-        // Can't parse — expire it
         expireCookie(key)
         if (window.location.hostname.endsWith('.rankedceo.com')) {
           expireCookie(key, '.rankedceo.com')
@@ -119,11 +116,12 @@ function expireCookie(name: string, domain?: string) {
 // at app boot (see below) and is guarded to run at most once per tab session.
 // ---------------------------------------------------------------------------
 
-let _client: ReturnType<typeof createBrowserClient> | null = null
+// Typed alias so callers and hooks have a stable, explicit return type
+type BrowserSupabaseClient = SupabaseClient
 
-export function createClient() {
-  // Singleton — reuse the same client instance within the same tab to avoid
-  // multiple GoTrue instances competing over the same auth state.
+let _client: BrowserSupabaseClient | null = null
+
+export function createClient(): BrowserSupabaseClient {
   if (!_client) {
     _client = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -134,9 +132,7 @@ export function createClient() {
 }
 
 // Run normalization once at module load time (browser only).
-// This is outside createClient() so it never blocks auth operations.
 if (typeof window !== 'undefined') {
-  // Defer via setTimeout so it doesn't block the initial render/paint
   setTimeout(runStorageNormalization, 0)
 }
 
@@ -149,14 +145,19 @@ export function useSession() {
   const [loading, setLoading] = React.useState(true)
 
   React.useEffect(() => {
-    const supabase = createClient()
+    const supabase: BrowserSupabaseClient = createClient()
 
-    supabase.auth.getSession().then((result) => {
-      setSession(result.data.session)
-      setLoading(false)
-    })
+    // Explicit void to satisfy no-floating-promises; typed via getSession return
+    void supabase.auth
+      .getSession()
+      .then(({ data }: { data: { session: Session | null } }) => {
+        setSession(data.session)
+        setLoading(false)
+      })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
       (_event: AuthChangeEvent, s: Session | null) => {
         setSession(s)
         setLoading(false)
