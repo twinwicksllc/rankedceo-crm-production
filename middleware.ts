@@ -69,6 +69,8 @@ const PUBLIC_CRM_PATHS = [
   '/pay',
   '/forgot-password',
   '/reset-password',
+  '/review',        // WaaS admin client review route (token-gated)
+  '/edit',          // WaaS client self-service editor (review-token-gated)
   '/api/auth',
   '/api/',
   '/_next',
