@@ -9,7 +9,7 @@
 //
 // Exports:
 //   getClientEditSession          — load session + permissions
-//   updateClientVariantContent    — patch a variant's content_json
+//   updateClientVariantContent    — patch a variant's sections_json
 //   uploadClientAsset             — register an uploaded asset CDN URL
 //   requestAiRewrite              — AI-assisted text rewrite intent
 //   submitClientApproval          — final approval by client
@@ -93,9 +93,13 @@ export async function getClientEditSession(
 
 // =============================================================================
 // 2. updateClientVariantContent
-//    JSONPath-based patch of content_json in tenant_site_variants.
+//    JSONPath-based patch of sections_json in tenant_site_variants.
 //    Writes an audit event to client_variant_edit_events.
-//    Returns the new content_json on success.
+//    Returns the new sections array on success.
+//
+//    IMPORTANT: sections_json is stored as a top-level array — but our path
+//    convention reads naturally as "sections[N].content.headline". We wrap
+//    the array in { sections: [...] } for pathing, then unwrap before save.
 // =============================================================================
 
 export interface UpdateContentArgs {
@@ -108,7 +112,7 @@ export interface UpdateContentArgs {
 
 export async function updateClientVariantContent(
   args: UpdateContentArgs,
-): Promise<ActionResult<{ contentJson: JsonValue }>> {
+): Promise<ActionResult<{ sections: JsonValue }>> {
   const { reviewToken, variantIndex, path, newValue, aiIntent } = args
 
   // --- Permission gate ---
@@ -139,10 +143,10 @@ export async function updateClientVariantContent(
   try {
     const supabase = getAdminClient()
 
-    // Fetch current variant content_json
+    // Fetch current variant sections_json
     const { data: variantRow, error: fetchErr } = await supabase
       .from('tenant_site_variants')
-      .select('id, content_json, client_edit_count')
+      .select('id, sections_json, client_edit_count')
       .eq('tenant_id', tenantId)
       .eq('variant_index', variantIndex)
       .single()
@@ -152,29 +156,33 @@ export async function updateClientVariantContent(
     }
 
     const variant = variantRow as {
-      id:               string
-      content_json:     JsonValue
+      id:                string
+      sections_json:     JsonValue
       client_edit_count: number | null
     }
 
-    const oldValue  = getValueAtPath(variant.content_json ?? {}, path)
-    const patchResult = setValueAtPath(variant.content_json ?? {}, path, newValue)
+    // Wrap the array in { sections: [...] } so path semantics read naturally
+    const wrapped = { sections: Array.isArray(variant.sections_json) ? variant.sections_json : [] }
+
+    const oldValue    = getValueAtPath(wrapped as JsonValue, path)
+    const patchResult = setValueAtPath(wrapped as JsonValue, path, newValue)
 
     if (!patchResult.ok) {
       return { success: false, error: patchResult.error }
     }
 
-    const newContentJson = patchResult.result
+    const patchedWrapped = patchResult.result as { sections: JsonValue[] }
+    const newSections    = patchedWrapped.sections
     const editType       = classifyEditType(path, newValue)
     const now            = new Date().toISOString()
 
-    // Write patched content back to variant
+    // Write patched sections back to variant
     const { error: updateErr } = await supabase
       .from('tenant_site_variants')
       .update({
-        content_json:       newContentJson,
+        sections_json:         newSections,
         client_last_edited_at: now,
-        client_edit_count:  (variant.client_edit_count ?? 0) + 1,
+        client_edit_count:     (variant.client_edit_count ?? 0) + 1,
       })
       .eq('id', variant.id)
 
@@ -206,7 +214,7 @@ export async function updateClientVariantContent(
     // Revalidate admin review path so changes are visible immediately
     revalidatePath(`/waas/clients/${tenantId}`)
 
-    return { success: true, data: { contentJson: newContentJson } }
+    return { success: true, data: { sections: newSections } }
   } catch (err) {
     return {
       success: false,
@@ -690,7 +698,7 @@ export async function getClientEditHistory(
 
 export interface UpdateBrandConfigArgs {
   reviewToken: string
-  field:       string   // e.g. "business_name", "tagline", "primary_color"
+  field:       string   // e.g. "business_name", "tagline", "colors.primary"
   newValue:    string
 }
 
@@ -721,8 +729,18 @@ export async function updateClientBrandConfig(
   try {
     const supabase = getAdminClient()
 
-    const oldValue      = brandConfig[field] ?? null
-    const updatedConfig = { ...brandConfig, [field]: newValue }
+    // Use the JSONPath patcher to support nested fields like "colors.primary"
+    // Wrap brandConfig under a synthetic root so paths read "brand_config.*"
+    const wrapped = { brand_config: brandConfig }
+    const oldValue = getValueAtPath(wrapped as JsonValue, fullPath)
+    const patchResult = setValueAtPath(wrapped as JsonValue, fullPath, newValue)
+
+    if (!patchResult.ok) {
+      return { success: false, error: patchResult.error }
+    }
+
+    const patchedWrapped = patchResult.result as { brand_config: Record<string, unknown> }
+    const updatedConfig  = patchedWrapped.brand_config
 
     const { error: updateErr } = await supabase
       .from('tenants')

@@ -150,30 +150,56 @@ const ALLOWED_PATH_PREFIXES = [
   'brand_config.',
 ] as const
 
+// Brand config keys clients can edit (matches BrandConfig interface in
+// lib/waas/templates/types.ts — real shape includes nested colors.* etc.)
 const ALLOWED_BRAND_KEYS = new Set([
   'brand_config.business_name',
   'brand_config.tagline',
-  'brand_config.primary_color',
-  'brand_config.secondary_color',
-  'brand_config.accent_color',
   'brand_config.logo_url',
-  'brand_config.hero_title',
-  'brand_config.hero_subtitle',
+  'brand_config.colors.primary',
+  'brand_config.colors.secondary',
+  'brand_config.colors.accent',
+  'brand_config.colors.background',
+  'brand_config.colors.text',
+  'brand_config.contact.phone',
+  'brand_config.contact.email',
+  'brand_config.contact.address',
+  'brand_config.contact.city',
+  'brand_config.contact.state',
+  'brand_config.contact.zip',
+  'brand_config.social.facebook',
+  'brand_config.social.instagram',
+  'brand_config.social.google',
+  'brand_config.social.yelp',
 ])
 
+// Top-level leaf keys inside sections[N].content (matches the Section*Content
+// interfaces in lib/waas/templates/types.ts — all camelCase)
 const ALLOWED_SECTION_CONTENT_KEYS = new Set([
+  'eyebrow',
   'headline',
   'subheadline',
-  'body_text',
-  'cta_text',
-  'cta_url',
-  'image_url',
+  'body',
+  'intro',
+  'primaryCtaLabel',
+  'secondaryCtaLabel',
+  'locationBadge',
+  'bottomCtaText',
+  'image_url',        // generic image fields (future-proof)
   'image_alt',
-  'caption',
-  'label',
+])
+
+// Keys permitted on items in arrays like services[i], faq[i], steps[i],
+// badges[i], highlights[i].  Values that are themselves arrays-of-strings
+// are matched separately below (highlights[i]).
+const ALLOWED_ARRAY_ITEM_KEYS = new Set([
   'title',
   'description',
-  'items',
+  'label',
+  'sub',
+  'icon',
+  'question',
+  'answer',
 ])
 
 export type PathValidationResult =
@@ -204,8 +230,8 @@ export function validateEditPath(path: string): PathValidationResult {
   }
 
   // Section content paths — validate the leaf key
-  // Pattern: sections[N].content.<allowed_key>
-  const sectionContentMatch = path.match(/^sections\[\d+\]\.content\.(.+)$/)
+  // Pattern 1: sections[N].content.<allowed_key>
+  const sectionContentMatch = path.match(/^sections\[\d+\]\.content\.([a-zA-Z0-9_]+)$/)
   if (sectionContentMatch) {
     const leafKey = sectionContentMatch[1]
     if (!ALLOWED_SECTION_CONTENT_KEYS.has(leafKey)) {
@@ -213,6 +239,30 @@ export function validateEditPath(path: string): PathValidationResult {
     }
     return { valid: true }
   }
+
+  // Pattern 2: sections[N].content.<arrayField>[M].<allowed_item_key>
+  //   e.g. sections[2].content.items[0].title
+  //        sections[3].content.steps[1].description
+  //        sections[4].content.badges[0].label
+  const arrayItemMatch = path.match(
+    /^sections\[\d+\]\.content\.([a-zA-Z0-9_]+)\[\d+\]\.([a-zA-Z0-9_]+)$/,
+  )
+  if (arrayItemMatch) {
+    const arrayField = arrayItemMatch[1]
+    const leafKey    = arrayItemMatch[2]
+    const allowedArrayFields = new Set(['items', 'steps', 'badges', 'faq'])
+    if (!allowedArrayFields.has(arrayField)) {
+      return { valid: false, reason: `Array field '${arrayField}' is not editable by clients` }
+    }
+    if (!ALLOWED_ARRAY_ITEM_KEYS.has(leafKey)) {
+      return { valid: false, reason: `Item key '${leafKey}' is not editable by clients` }
+    }
+    return { valid: true }
+  }
+
+  // Pattern 3: sections[N].content.highlights[M]  (string array, no leaf key)
+  const highlightMatch = path.match(/^sections\[\d+\]\.content\.highlights\[\d+\]$/)
+  if (highlightMatch) return { valid: true }
 
   // sections[N].enabled is also allowed (section toggle)
   const sectionEnabledMatch = path.match(/^sections\[\d+\]\.enabled$/)
