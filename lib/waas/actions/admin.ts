@@ -2863,3 +2863,81 @@ export async function rollbackTenantSiteVersion(
     return { success: false, error: msg }
   }
 }
+
+// =============================================================================
+// reorderVariantSections
+// =============================================================================
+// Reorders sections within a single site variant using a new ordered list of
+// SectionId strings. All other section fields (enabled, config, content) are
+// preserved exactly. The order values are rewritten as 1-based contiguous
+// integers matching the supplied orderedIds sequence.
+//
+// This is a thin intent-specific wrapper around updateSiteVariant so the
+// client component never ships raw SectionConfig objects over the wire.
+// =============================================================================
+
+export async function reorderVariantSections(
+  tenantId:        string,
+  variantIndex:    number,
+  orderedIds:      SectionId[],
+): Promise<ActionResult<void>> {
+  try {
+    if (!tenantId) return { success: false, error: 'Missing tenantId' }
+    if (!Number.isInteger(variantIndex) || variantIndex < 1 || variantIndex > 3) {
+      return { success: false, error: 'Variant index must be 1–3' }
+    }
+    if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+      return { success: false, error: 'orderedIds must be a non-empty array' }
+    }
+
+    // Detect duplicate section IDs
+    const seen = new Set<string>()
+    for (const id of orderedIds) {
+      if (seen.has(id)) return { success: false, error: `Duplicate section id: ${id}` }
+      seen.add(id)
+    }
+
+    // Fetch the current variant so we can preserve all non-order fields
+    const variantsResult = await getSiteVariants(tenantId)
+    if (!variantsResult.success || !variantsResult.data) {
+      return { success: false, error: variantsResult.error ?? 'Failed to load variants' }
+    }
+
+    const variant = variantsResult.data.find((v) => v.variant_index === variantIndex)
+    if (!variant) {
+      return { success: false, error: `Variant ${variantIndex} not found for tenant ${tenantId}` }
+    }
+
+    // Build a lookup map: SectionId → existing SectionConfig
+    const sectionMap = new Map<string, SectionConfig>(
+      variant.sections_json.map((s) => [s.section, s]),
+    )
+
+    // Validate: every supplied id must exist in the current sections
+    for (const id of orderedIds) {
+      if (!sectionMap.has(id)) {
+        return { success: false, error: `Section "${id}" does not exist in variant ${variantIndex}` }
+      }
+    }
+
+    // Build the reordered list, assigning fresh 1-based order values
+    const reordered: SectionConfig[] = orderedIds.map((id, index) => ({
+      ...sectionMap.get(id)!,
+      order: index + 1,
+    }))
+
+    // Any sections that were NOT in orderedIds are appended at the end
+    // (safety net — should not happen in normal usage but prevents data loss)
+    let tail = variant.sections_json.length + 1
+    for (const section of variant.sections_json) {
+      if (!seen.has(section.section)) {
+        reordered.push({ ...section, order: tail++ })
+      }
+    }
+
+    return updateSiteVariant(tenantId, variantIndex, { sections: reordered })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
