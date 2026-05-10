@@ -7,6 +7,9 @@
 //   - onToggle handler for section visibility switches
 //   - variantIndex passed to InlineEditModal for image uploads
 //   - AI usage counter badge in top bar
+// Phase 5.5 additions:
+//   - Edit history panel (clock icon in top bar)
+//   - Undo per-event via undoClientEdit server action
 // =============================================================================
 
 import { useCallback, useMemo, useRef, useState, useTransition } from 'react'
@@ -16,6 +19,7 @@ import { groupEditableFields }        from '@/lib/waas/client-edit/editable-fiel
 import { FieldNavigator }             from './field-navigator'
 import { InlineEditModal }            from './inline-edit-modal'
 import { ApprovalPanel }              from './approval-panel'
+import { EditHistoryPanel }           from './edit-history-panel'
 import {
   updateClientVariantContent,
   updateClientBrandConfig,
@@ -52,6 +56,7 @@ export function EditorShell({ session, initialFields }: EditorShellProps) {
   const [toast, setToast]         = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
   const [previewVersion, setPV]   = useState(0)
   const [showApproval, setSA]     = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
   const [isSaving, startSave]     = useTransition()
   const toastTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
   const aiUseCount  = useRef(0)
@@ -240,6 +245,20 @@ export function EditorShell({ session, initialFields }: EditorShellProps) {
             <span className="text-xs text-slate-500">Saving…</span>
           )}
 
+          {/* Edit history button */}
+          <button
+            type="button"
+            onClick={() => setShowHistory(true)}
+            aria-label="Edit history"
+            title="Edit history"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-300"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="8" cy="8" r="6.25" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M8 5v3.5l2 1.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+
           {session.permissions.canApprove && (
             <button
               type="button"
@@ -319,6 +338,20 @@ export function EditorShell({ session, initialFields }: EditorShellProps) {
             )
             setTimeout(() => window.location.reload(), 1200)
           }}
+        />
+      )}
+
+      {/* Edit history panel */}
+      {showHistory && (
+        <EditHistoryPanel
+          reviewToken={session.reviewToken}
+          variantIndex={session.selectedVariantIndex}
+          isLocked={session.approvalLocked}
+          onUndo={() => {
+            setPV((v) => v + 1)
+            showToast('success', 'Change undone ✓')
+          }}
+          onClose={() => setShowHistory(false)}
         />
       )}
 
