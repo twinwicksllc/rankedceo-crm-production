@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import type { SectionConfig } from '@/lib/waas/templates/types'
+import type { SectionId } from '@/lib/waas/templates/types'
 import type {
   AdminSiteVariant,
   VariantLifecycleReasonCategory,
@@ -20,7 +21,9 @@ import {
   reopenVariantReviewCycle,
   unlockVariantsForEditing,
   updateSiteVariant,
+  reorderVariantSections,
 } from '@/lib/waas/actions/admin'
+import { SectionReorderPanel } from './section-reorder-panel'
 
 type Viewport = 'desktop' | 'mobile'
 
@@ -195,6 +198,8 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
   const [viewport, setViewport] = useState<Viewport>('desktop')
   const [openVariantEditor, setOpenVariantEditor] = useState<number | null>(null)
   const [drafts, setDrafts] = useState<Record<number, VariantDraft>>({})
+  // Which variant's reorder panel is open (accordion — only one at a time)
+  const [reorderOpenVariant, setReorderOpenVariant] = useState<number | null>(null)
   const [savedSignatures, setSavedSignatures] = useState<Record<number, string>>(() => {
     const out: Record<number, string> = {}
     for (const variant of initialVariants) {
@@ -564,23 +569,38 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
     })
   }
 
-  const moveSection = (
-    variantIndex: number,
-    sectionIndex: number,
-    direction: 'up' | 'down',
+  // ---------------------------------------------------------------------------
+  // handleReorder — called by SectionReorderPanel after a drag-end.
+  // Optimistically updates local draft, then persists via reorderVariantSections.
+  // ---------------------------------------------------------------------------
+
+  const handleReorder = (
+    vIdx:      number,
+    reordered: SectionConfig[],
   ) => {
-    setDraft(variantIndex, (current) => {
-      const list = [...current.sections_json]
-      const targetIndex = direction === 'up' ? sectionIndex - 1 : sectionIndex + 1
-      if (targetIndex < 0 || targetIndex >= list.length) return current
+    // 1. Optimistic local update
+    setDraft(vIdx, (current) => ({
+      ...current,
+      sections_json: normalizeSectionOrders(reordered),
+    }))
 
-      const temp = list[sectionIndex]
-      list[sectionIndex] = list[targetIndex]
-      list[targetIndex] = temp
+    // 2. Close the accordion so the user sees the new order immediately
+    setReorderOpenVariant(null)
 
-      return {
-        ...current,
-        sections_json: normalizeSectionOrders(list),
+    // 3. Persist — fire-and-forget with error toast
+    startTransition(async () => {
+      const orderedIds = reordered.map((s) => s.section as SectionId)
+      const result = await reorderVariantSections(tenantId, vIdx, orderedIds)
+      if (!result.success) {
+        setMessage(`Reorder failed: ${result.error}`)
+        // Roll back optimistic update by reloading variants
+        const fresh = await getSiteVariants(tenantId)
+        if (fresh.success && fresh.data) {
+          const freshVariant = fresh.data.find((v) => v.variant_index === vIdx)
+          if (freshVariant) {
+            setDraft(vIdx, () => toDraft(freshVariant))
+          }
+        }
       }
     })
   }
@@ -1220,7 +1240,42 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
                       </label>
 
                       <div className="space-y-2">
-                        <p className="text-[11px] uppercase tracking-wide text-white/60">Section Controls</p>
+                        {/* ---- Section reorder accordion ---- */}
+                        <div className="flex items-center justify-between">
+                          <p className="text-[11px] uppercase tracking-wide text-white/60">Section Controls</p>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setReorderOpenVariant(
+                                reorderOpenVariant === variant.variant_index
+                                  ? null
+                                  : variant.variant_index,
+                              )
+                            }
+                            className="flex items-center gap-1.5 rounded border border-white/15 px-2 py-1 text-[11px] text-white/60 hover:border-white/30 hover:text-white/80 transition-colors"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                              <circle cx="5"  cy="4"  r="1.4" />
+                              <circle cx="11" cy="4"  r="1.4" />
+                              <circle cx="5"  cy="8"  r="1.4" />
+                              <circle cx="11" cy="8"  r="1.4" />
+                              <circle cx="5"  cy="12" r="1.4" />
+                              <circle cx="11" cy="12" r="1.4" />
+                            </svg>
+                            {reorderOpenVariant === variant.variant_index ? 'Close reorder' : 'Reorder sections'}
+                          </button>
+                        </div>
+
+                        {/* Drag-and-drop reorder panel (collapsible) */}
+                        {reorderOpenVariant === variant.variant_index && (
+                          <SectionReorderPanel
+                            variantIndex={variant.variant_index}
+                            sections={draft.sections_json}
+                            disabled={isPending}
+                            onChange={(reordered) => handleReorder(variant.variant_index, reordered)}
+                          />
+                        )}
+
                         {draft.sections_json.map((section, sectionIndex) => {
                           const scalarFields = SECTION_FIELD_MAP[section.section] ?? []
                           const contentRecord = section.content && typeof section.content === 'object'
@@ -1238,6 +1293,10 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
                           return (
                             <div key={`${section.section}-${section.order}-${sectionIndex}`} className="rounded-lg border border-white/10 bg-slate-900/50 p-3">
                               <div className="flex flex-wrap items-center gap-3">
+                                {/* Order badge */}
+                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] font-bold text-white/50">
+                                  {section.order}
+                                </span>
                                 <p className="text-sm font-semibold text-white">{startCase(section.section)}</p>
                                 <label className="inline-flex items-center gap-1.5 text-xs text-white/70">
                                   <input
@@ -1252,38 +1311,6 @@ export function AIVariantsPanel({ tenantId, initialVariants }: { tenantId: strin
                                   />
                                   Enabled
                                 </label>
-                                <label className="inline-flex items-center gap-1.5 text-xs text-white/70">
-                                  Order
-                                  <input
-                                    type="number"
-                                    min={1}
-                                    value={section.order}
-                                    onChange={(event) => {
-                                      const nextOrder = Number(event.target.value)
-                                      updateSection(variant.variant_index, sectionIndex, (currentSection) => ({
-                                        ...currentSection,
-                                        order: Number.isFinite(nextOrder) && nextOrder > 0 ? nextOrder : currentSection.order,
-                                      }))
-                                    }}
-                                    className="w-16 rounded border border-white/15 bg-slate-800 px-2 py-1 text-xs text-white"
-                                  />
-                                </label>
-                                <button
-                                  type="button"
-                                  onClick={() => moveSection(variant.variant_index, sectionIndex, 'up')}
-                                  disabled={sectionIndex === 0}
-                                  className={`rounded border px-2 py-1 text-[11px] ${sectionIndex === 0 ? 'cursor-not-allowed border-white/10 text-white/30' : 'border-white/15 text-white/75 hover:bg-white/10'}`}
-                                >
-                                  Up
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => moveSection(variant.variant_index, sectionIndex, 'down')}
-                                  disabled={sectionIndex === draft.sections_json.length - 1}
-                                  className={`rounded border px-2 py-1 text-[11px] ${sectionIndex === draft.sections_json.length - 1 ? 'cursor-not-allowed border-white/10 text-white/30' : 'border-white/15 text-white/75 hover:bg-white/10'}`}
-                                >
-                                  Down
-                                </button>
                               </div>
 
                               {scalarFields.length > 0 && (
