@@ -17,7 +17,8 @@ export type EditableFieldKind =
   | 'text'        // single-line
   | 'long_text'   // multi-line / textarea
   | 'color'       // color picker
-  | 'image'       // image swap
+  | 'image'       // image swap (upload zone + URL fallback)
+  | 'toggle'      // section on/off switch (inline — no modal)
 
 export interface EditableField {
   /** Stable id for React keys */
@@ -84,6 +85,9 @@ const SECTION_LABELS: Record<string, string> = {
   faq:            'FAQ',
   'how-it-works': 'How It Works',
 }
+
+// Sections the client cannot toggle off (always required)
+const REQUIRED_SECTION_IDS = new Set<string>(['hero', 'booking'])
 
 function sectionLabel(id: string, order: number): string {
   const base = SECTION_LABELS[id] ?? id
@@ -327,15 +331,36 @@ export interface BuildEditableFieldsInput {
 export function buildEditableFields(input: BuildEditableFieldsInput): EditableField[] {
   const out: EditableField[] = []
 
-  // Brand-wide fields first (top of the navigator)
+  // ---- Section visibility toggles (first group — always at the top) ----
+  const allSections = [...input.sections].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+  for (const section of allSections) {
+    if (!section) continue
+    const sid    = section.section
+    const order  = section.order
+    const label  = SECTION_LABELS[sid] ?? sid
+    const isReq  = REQUIRED_SECTION_IDS.has(sid)
+
+    out.push({
+      id:           `sec-${order}-enabled`,
+      path:         `sections[${order}].enabled`,
+      label:        `${label}`,
+      value:        String(section.enabled !== false),
+      kind:         'toggle',
+      group:        'Sections on your site',
+      scope:        'section',
+      sectionId:    sid,
+      sectionOrder: order,
+      // Encode whether this section is required in maxLength (convention: -1 = required)
+      maxLength:    isReq ? -1 : undefined,
+    })
+  }
+
+  // ---- Brand-wide fields ----
   out.push(...fieldsForBrandConfig(input.brandConfig))
 
-  // Sections in order
-  const sectionsInOrder = [...input.sections]
-    .filter((s) => s && s.enabled !== false)
-    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-
-  for (const section of sectionsInOrder) {
+  // ---- Per-section editable fields (only for enabled sections) ----
+  const enabledSections = allSections.filter((s) => s && s.enabled !== false)
+  for (const section of enabledSections) {
     out.push(...fieldsForSection(section))
   }
 
@@ -366,4 +391,38 @@ export function groupEditableFields(fields: EditableField[]): FieldGroup[] {
   }
 
   return groups
+}
+
+// ---------------------------------------------------------------------------
+// assetSlotFromPath
+// Derives a safe storage-path slug from a field path.
+// Used by the upload zone to build the Supabase Storage key.
+//
+// Examples:
+//   "sections[0].content.image_url"            → "section-0-image"
+//   "sections[2].content.items[1].image_url"   → "section-2-items-1-image"
+//   "brand_config.logo_url"                    → "brand-logo"
+// ---------------------------------------------------------------------------
+
+export function assetSlotFromPath(path: string): string {
+  if (path === 'brand_config.logo_url') return 'brand-logo'
+
+  // sections[N].content.image_url
+  const simple = path.match(/^sections\[(\d+)\]\.content\.([a-z_]+)$/)
+  if (simple) {
+    const [, idx, key] = simple
+    const baseKey = key.replace(/_url$/, '').replace(/_/g, '-')
+    return `section-${idx}-${baseKey}`
+  }
+
+  // sections[N].content.items[M].image_url
+  const nested = path.match(/^sections\[(\d+)\]\.content\.([a-z_]+)\[(\d+)\]\.([a-z_]+)$/)
+  if (nested) {
+    const [, secIdx, arrKey, itemIdx, key] = nested
+    const baseKey = key.replace(/_url$/, '').replace(/_/g, '-')
+    return `section-${secIdx}-${arrKey}-${itemIdx}-${baseKey}`
+  }
+
+  // Fallback: sanitise the whole path
+  return path.replace(/[^a-z0-9]/gi, '-').replace(/-+/g, '-').toLowerCase().slice(0, 60)
 }

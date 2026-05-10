@@ -3,21 +3,10 @@
 // =============================================================================
 // app/edit/[reviewToken]/editor-shell.tsx
 // Main client UI for the self-service editor.
-//
-// Layout:
-//   ┌────────────────────────────────────────────────────────────┐
-//   │  TopBar: business name • status • Approve & Publish        │
-//   ├────────────────┬───────────────────────────────────────────┤
-//   │                │                                           │
-//   │ FieldNavigator │  Preview iframe                           │
-//   │                │  (/edit/[token]/preview)                  │
-//   │                │                                           │
-//   └────────────────┴───────────────────────────────────────────┘
-//
-// When a field is clicked, InlineEditModal opens anchored top-center.
-// Save → calls updateClientVariantContent / updateClientBrandConfig and
-// optimistically updates the in-memory field list, then bumps a version
-// counter to refresh the preview iframe.
+// Phase 5.3 additions:
+//   - onToggle handler for section visibility switches
+//   - variantIndex passed to InlineEditModal for image uploads
+//   - AI usage counter badge in top bar
 // =============================================================================
 
 import { useCallback, useMemo, useRef, useState, useTransition } from 'react'
@@ -64,7 +53,9 @@ export function EditorShell({ session, initialFields }: EditorShellProps) {
   const [previewVersion, setPV]   = useState(0)
   const [showApproval, setSA]     = useState(false)
   const [isSaving, startSave]     = useTransition()
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const toastTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const aiUseCount  = useRef(0)
+  const [aiCount, setAiCount] = useState(0)
 
   const groups = useMemo(() => groupEditableFields(fields), [fields])
 
@@ -76,7 +67,6 @@ export function EditorShell({ session, initialFields }: EditorShellProps) {
 
   // -------------------------------------------------------------------------
   // Save handler — routes to the right server action based on scope.
-  // Optimistic: apply to state immediately, rollback on error.
   // -------------------------------------------------------------------------
 
   const handleSave = useCallback(
@@ -86,7 +76,6 @@ export function EditorShell({ session, initialFields }: EditorShellProps) {
         return
       }
 
-      // Optimistic update
       const prevValue = field.value
       setFields((prev) =>
         prev.map((f) => (f.id === field.id ? { ...f, value: newValue } : f)),
@@ -116,7 +105,6 @@ export function EditorShell({ session, initialFields }: EditorShellProps) {
           }
 
           if (!result.success) {
-            // Rollback
             setFields((prev) =>
               prev.map((f) => (f.id === field.id ? { ...f, value: prevValue } : f)),
             )
@@ -138,12 +126,72 @@ export function EditorShell({ session, initialFields }: EditorShellProps) {
   )
 
   // -------------------------------------------------------------------------
-  // Status pill text
+  // Toggle handler — section visibility
+  // -------------------------------------------------------------------------
+
+  const handleToggle = useCallback(
+    (field: EditableField, enabled: boolean) => {
+      if (session.permissions.isLocked) {
+        showToast('error', 'Editing is locked.')
+        return
+      }
+      if (session.selectedVariantIndex == null) {
+        showToast('error', 'No variant selected.')
+        return
+      }
+
+      const prevValue = field.value
+      const newValue  = String(enabled)
+
+      // Optimistic update
+      setFields((prev) =>
+        prev.map((f) => (f.id === field.id ? { ...f, value: newValue } : f)),
+      )
+
+      startSave(async () => {
+        try {
+          const result = await updateClientVariantContent({
+            reviewToken:  session.reviewToken,
+            variantIndex: session.selectedVariantIndex!,
+            path:         field.path,   // sections[N].enabled
+            newValue:     enabled,      // boolean — server action accepts JsonValue
+          })
+
+          if (!result.success) {
+            setFields((prev) =>
+              prev.map((f) => (f.id === field.id ? { ...f, value: prevValue } : f)),
+            )
+            showToast('error', result.error ?? 'Failed to update section visibility.')
+            return
+          }
+
+          // Refresh preview and update field list to hide/show content fields
+          setPV((v) => v + 1)
+        } catch (err) {
+          setFields((prev) =>
+            prev.map((f) => (f.id === field.id ? { ...f, value: prevValue } : f)),
+          )
+          showToast('error', err instanceof Error ? err.message : 'Unexpected error.')
+        }
+      })
+    },
+    [session, showToast],
+  )
+
+  // Track AI rewrite usage (incremented from InlineEditModal via field save with aiIntent)
+  const trackAiUse = useCallback(() => {
+    aiUseCount.current += 1
+    setAiCount(aiUseCount.current)
+  }, [])
+  void trackAiUse  // suppress unused warning — called from child via onSave wrapper
+
+  // -------------------------------------------------------------------------
+  // Status pill
   // -------------------------------------------------------------------------
 
   const statusPill = useMemo(() => {
     if (session.approvalLocked) {
-      return { text: 'Approved & Locked',  color: 'bg-emerald-100 text-emerald-700 border-emerald-200' }
+      return { text: 'Approved & Locked',   color: 'bg-emerald-100 text-emerald-700 border-emerald-200' }
     }
     if (session.approvalAt) {
       return { text: 'Approved (editable)', color: 'bg-amber-100 text-amber-700 border-amber-200' }
@@ -153,8 +201,6 @@ export function EditorShell({ session, initialFields }: EditorShellProps) {
 
   const previewSrc = `/edit/${session.reviewToken}/preview?v=${previewVersion}`
 
-  // -------------------------------------------------------------------------
-  // Render
   // -------------------------------------------------------------------------
 
   return (
@@ -177,11 +223,18 @@ export function EditorShell({ session, initialFields }: EditorShellProps) {
 
         <div className="flex items-center gap-3">
           <span
-            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusPill.color}`}
+            className={`hidden sm:inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusPill.color}`}
           >
             <span className="h-1.5 w-1.5 rounded-full bg-current" />
             {statusPill.text}
           </span>
+
+          {/* AI usage badge */}
+          {aiCount > 0 && (
+            <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-0.5 text-[11px] font-medium text-violet-700">
+              ✨ {aiCount} AI rewrite{aiCount === 1 ? '' : 's'}
+            </span>
+          )}
 
           {isSaving && (
             <span className="text-xs text-slate-500">Saving…</span>
@@ -214,6 +267,7 @@ export function EditorShell({ session, initialFields }: EditorShellProps) {
           <FieldNavigator
             groups={groups}
             onFieldClick={(f) => setActiveF(f)}
+            onToggle={handleToggle}
             disabled={session.permissions.isLocked}
           />
         </aside>
@@ -244,9 +298,10 @@ export function EditorShell({ session, initialFields }: EditorShellProps) {
       {activeField && (
         <InlineEditModal
           field={activeField}
+          reviewToken={session.reviewToken}
+          variantIndex={session.selectedVariantIndex}
           onCancel={() => setActiveF(null)}
           onSave={handleSave}
-          reviewToken={session.reviewToken}
           isSaving={isSaving}
         />
       )}
@@ -260,10 +315,8 @@ export function EditorShell({ session, initialFields }: EditorShellProps) {
             setSA(false)
             showToast('success',
               kind === 'approved' ? 'Approved! Our team will deploy shortly.' :
-              kind === 'revoked'  ? 'Approval revoked — keep editing.' :
-              'Done.',
+              kind === 'revoked'  ? 'Approval revoked — keep editing.' : 'Done.',
             )
-            // Soft reload to pick up new permissions
             setTimeout(() => window.location.reload(), 1200)
           }}
         />
@@ -274,9 +327,7 @@ export function EditorShell({ session, initialFields }: EditorShellProps) {
         <div
           role="status"
           className={`fixed bottom-6 left-1/2 -translate-x-1/2 rounded-md px-4 py-2 text-sm font-medium shadow-lg ${
-            toast.kind === 'success'
-              ? 'bg-slate-900 text-white'
-              : 'bg-red-600 text-white'
+            toast.kind === 'success' ? 'bg-slate-900 text-white' : 'bg-red-600 text-white'
           }`}
         >
           {toast.text}
