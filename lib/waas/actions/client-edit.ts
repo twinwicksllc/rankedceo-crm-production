@@ -610,14 +610,15 @@ export async function revokeClientApproval(
 // =============================================================================
 
 export interface EditHistoryEvent {
-  id:          string
-  fieldPath:   string
-  oldValue:    string | null
-  newValue:    string | null
-  editType:    EditType
-  source:      string
-  aiIntent:    string | null
-  createdAt:   string
+  id:           string
+  fieldPath:    string
+  oldValue:     string | null
+  newValue:     string | null
+  editType:     EditType
+  source:       string
+  aiIntent:     string | null
+  createdAt:    string
+  variantIndex: number
 }
 
 export async function getClientEditHistory(
@@ -636,17 +637,18 @@ export async function getClientEditHistory(
   try {
     const supabase = getAdminClient()
 
-    const query = supabase
+    let query = supabase
       .from('client_variant_edit_events')
-      .select('id, field_path, old_value, new_value, edit_type, source, ai_intent, created_at, variant_id')
+      .select('id, field_path, old_value, new_value, edit_type, source, ai_intent, created_at, variant_index')
       .eq('tenant_id', tenantId)
       .eq('review_token_hash', tokenHash)
       .order('created_at', { ascending: false })
       .limit(limit)
 
-    // NOTE: variantIndex filtering deferred to a future migration that denormalises
-    // variant_index onto the events table. For now all events for the token are returned.
-    void variantIndex
+    // Filter by variant_index when supplied — column exists in migration 016
+    if (Number.isInteger(variantIndex) && variantIndex! >= 1 && variantIndex! <= 3) {
+      query = query.eq('variant_index', variantIndex!)
+    }
 
     const { data: rows, error: fetchErr } = await query
 
@@ -656,24 +658,26 @@ export async function getClientEditHistory(
 
     const events: EditHistoryEvent[] = (rows ?? []).map((row) => {
       const r = row as {
-        id:         string
-        field_path: string
-        old_value:  string | null
-        new_value:  string | null
-        edit_type:  EditType
-        source:     string
-        ai_intent:  string | null
-        created_at: string
+        id:            string
+        field_path:    string
+        old_value:     string | null
+        new_value:     string | null
+        edit_type:     EditType
+        source:        string
+        ai_intent:     string | null
+        created_at:    string
+        variant_index: number
       }
       return {
-        id:        r.id,
-        fieldPath: r.field_path,
-        oldValue:  r.old_value,
-        newValue:  r.new_value,
-        editType:  r.edit_type,
-        source:    r.source,
-        aiIntent:  r.ai_intent,
-        createdAt: r.created_at,
+        id:           r.id,
+        fieldPath:    r.field_path,
+        oldValue:     r.old_value,
+        newValue:     r.new_value,
+        editType:     r.edit_type,
+        source:       r.source,
+        aiIntent:     r.ai_intent,
+        createdAt:    r.created_at,
+        variantIndex: r.variant_index,
       }
     })
 
@@ -968,4 +972,97 @@ async function fallbackThreeCalls(
   }
 
   return results.length === 3 ? results : null
+}
+
+// =============================================================================
+// 10. undoClientEdit
+//     Reverts a single edit event by re-applying the event's old_value to the
+//     field path.  Uses the same updateClientVariantContent path so all
+//     validation, allowlist checks, and audit-trail writes are consistent.
+//     A new audit event is written with source='client_editor' and a note in
+//     ai_intent: 'undo:<eventId>' so the history panel can show it correctly.
+// =============================================================================
+
+export interface UndoClientEditArgs {
+  reviewToken: string
+  eventId:     string   // UUID of the client_variant_edit_events row to undo
+}
+
+export async function undoClientEdit(
+  args: UndoClientEditArgs,
+): Promise<ActionResult<void>> {
+  const { reviewToken, eventId } = args
+
+  const sessionResult = await resolveClientEditSession(reviewToken)
+  if (!sessionResult.ok) {
+    return { success: false, error: sessionResult.message }
+  }
+  if (sessionResult.session.permissions.isLocked) {
+    return { success: false, error: 'Editing is locked — your design has been approved.' }
+  }
+
+  const { tenantId }  = sessionResult.session
+  const tokenHash     = hashReviewToken(reviewToken)
+
+  try {
+    const supabase = getAdminClient()
+
+    // Fetch the event — verify it belongs to this tenant + token
+    const { data: eventRow, error: fetchErr } = await supabase
+      .from('client_variant_edit_events')
+      .select('id, field_path, old_value, new_value, edit_type, variant_index, tenant_id, review_token_hash')
+      .eq('id', eventId)
+      .single()
+
+    if (fetchErr || !eventRow) {
+      return { success: false, error: 'Edit event not found.' }
+    }
+
+    const ev = eventRow as {
+      id:                string
+      field_path:        string
+      old_value:         string | null
+      new_value:         string | null
+      edit_type:         string
+      variant_index:     number
+      tenant_id:         string
+      review_token_hash: string
+    }
+
+    // Security: must belong to this tenant and this review token
+    if (ev.tenant_id !== tenantId || ev.review_token_hash !== tokenHash) {
+      return { success: false, error: 'Edit event not found.' }
+    }
+
+    // Cannot undo if there is no previous value to restore
+    if (ev.old_value === null && ev.edit_type !== 'section_toggle') {
+      return { success: false, error: 'This edit has no previous value to restore.' }
+    }
+
+    // Reconstruct the old value in the right type
+    let restoreValue: string | boolean | null
+    if (ev.edit_type === 'section_toggle') {
+      // old_value is stored as 'true' / 'false' string
+      restoreValue = ev.old_value === 'true'
+    } else {
+      restoreValue = ev.old_value
+    }
+
+    // Re-apply via updateClientVariantContent — this writes its own audit event
+    const result = await updateClientVariantContent({
+      reviewToken,
+      path:         ev.field_path,
+      newValue:     restoreValue as string,
+      variantIndex: ev.variant_index,
+      aiIntent:     `undo:${ev.id}`,
+    })
+
+    if (!result.success) return { success: false, error: result.error }
+    return { success: true }
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Undo failed',
+    }
+  }
 }
