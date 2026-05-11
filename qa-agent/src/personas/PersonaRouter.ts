@@ -104,10 +104,11 @@ export class PersonaRouter {
 
     // Navigate to admin login and authenticate
     // The login page is at /login (not /admin/login — /admin/* redirects to /login?next=/admin/dashboard)
-    await page.goto('/login?next=/admin/dashboard&adminOnly=1', { waitUntil: 'domcontentloaded' })
+    // Use 'load' wait so Next.js client hydration completes before we try to fill the form
+    await page.goto('/login?next=/admin/dashboard&adminOnly=1', { waitUntil: 'load' })
 
     // Wait for the password-mode login form to appear (default mode is 'password')
-    await page.waitForSelector('[data-testid="admin-email"]', { timeout: 30_000 })
+    await page.waitForSelector('[data-testid="admin-email"]', { state: 'visible', timeout: 30_000 })
     await page.fill('[data-testid="admin-email"]', credentials.email)
     await page.fill('[data-testid="admin-password"]', credentials.password)
     await page.click('[data-testid="admin-login-submit"]')
