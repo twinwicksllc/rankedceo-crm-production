@@ -102,29 +102,32 @@ export class PersonaRouter {
     })
     const page = await context.newPage()
 
-    // Navigate to admin login and authenticate
-    // The login page is at /login (not /admin/login — /admin/* redirects to /login?next=/admin/dashboard)
-    // Use 'networkidle' so the Next.js client bundle fully executes + React hydrates before we interact
-    await page.goto('/login?next=/admin/dashboard&adminOnly=1', { waitUntil: 'networkidle', timeout: 30_000 })
+    // Capture page-level console errors for debugging
+    const pageErrors: string[] = []
+    page.on('pageerror', (err) => pageErrors.push(err.message))
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') pageErrors.push(`[console.error] ${msg.text()}`)
+    })
 
-    // Wait for skeleton to disappear (Supabase client hydration) then wait for the form
-    // The login page is 'use client' — it renders a skeleton until Supabase initialises.
-    // Give up to 30s for the skeleton to resolve to the real form.
+    // Navigate to admin login
+    // The page is 'use client' wrapped in <Suspense fallback={<Skeleton/>}>.
+    // It shows animate-pulse until React hydrates + Supabase initialises.
+    // waitUntil:'load' is enough — we then explicitly poll for the form.
+    await page.goto('/login?next=/admin/dashboard&adminOnly=1', { waitUntil: 'load', timeout: 30_000 })
+
+    // Wait up to 45s for [data-testid="admin-email"] — gives Supabase client time to init
     try {
-      await page.waitForFunction(
-        () => !document.querySelector('.animate-pulse'),
-        { timeout: 30_000 },
-      )
-      await page.waitForSelector('[data-testid="admin-email"]', { state: 'visible', timeout: 15_000 })
+      await page.waitForSelector('[data-testid="admin-email"]', { state: 'visible', timeout: 45_000 })
     } catch (err) {
-      // Capture diagnostic info: screenshot + DOM for debugging
+      // Full diagnostics on timeout
       const ts = new Date().toISOString().replace(/[:.]/g, '-')
       const screenshotPath = `evidence/login-failure-${ts}.png`
       try { await page.screenshot({ path: screenshotPath, fullPage: true }) } catch { /* ignore */ }
-      const bodyHtml = await page.evaluate(() => document.body?.innerHTML?.slice(0, 3000) ?? '(empty)')
-      console.error(`\n📸 Login page screenshot saved: ${screenshotPath}`)
-      console.error(`🔍 Current URL: ${page.url()}`)
-      console.error(`📄 Body HTML (first 3000 chars):\n${bodyHtml}\n`)
+      const bodyHtml = await page.evaluate(() => document.body?.innerHTML?.slice(0, 3000) ?? '(empty)').catch(() => '(eval failed)')
+      console.error(`\n📸 Login page screenshot: ${screenshotPath}`)
+      console.error(`🔍 URL: ${page.url()}`)
+      console.error(`🐛 Page errors:\n${pageErrors.join('\n') || '(none)'}`)
+      console.error(`📄 Body HTML (3000 chars):\n${bodyHtml}\n`)
       throw err
     }
     await page.fill('[data-testid="admin-email"]', credentials.email)
