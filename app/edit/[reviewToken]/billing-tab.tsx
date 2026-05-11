@@ -364,6 +364,7 @@ function UpgradeOptions({
           return (
             <div
               key={tier}
+              data-testid={`upgrade-plan-card-${tier}`}
               className={`relative rounded-xl border p-5 transition-all ${
                 plan.highlighted ? 'border-blue-400 bg-blue-50/30 shadow-sm' : 'border-slate-200 bg-white'
               }`}
@@ -389,6 +390,7 @@ function UpgradeOptions({
                 <button
                   onClick={() => handleUpgrade(tier)}
                   disabled={isLoading || loadingTier !== null}
+                  data-testid={`upgrade-btn-${tier}`}
                   className={`text-xs font-semibold px-4 py-2 rounded-lg transition-all disabled:opacity-50 ${
                     plan.highlighted
                       ? 'bg-blue-600 hover:bg-blue-700 text-white'

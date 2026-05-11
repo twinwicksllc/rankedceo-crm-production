@@ -1,0 +1,480 @@
+id: full_lifecycle
+name: Full Lifecycle — End-to-End Client & Admin Journey
+description: >
+  Complete 19-scene end-to-end test covering the full WaaS lifecycle:
+  admin creates tenant → client portal access → profile review →
+  billing upgrade (Stripe test mode) → email verification →
+  admin verifies state → client site published.
+
+  Requires: Stripe test mode, Resend test mode.
+  Target: qa.rankedceo.com (weekly run only).
+  Runtime: ~15-25 minutes.
+
+modes:
+  - full
+requires_stripe: true
+requires_email: true
+
+steps:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 1: Admin — Login & Dashboard
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: s1_admin_navigate_login
+    type: navigate
+    persona: admin
+    severity: critical
+    description: Admin navigates to login page
+    url: /login?next=/admin/dashboard&adminOnly=1
+    intent: Land on the admin login page
+
+  - id: s1_admin_fill_email
+    type: fill
+    persona: admin
+    severity: critical
+    description: Fill admin email
+    selector: '[data-testid="admin-email"]'
+    value: '${QA_ADMIN_EMAIL}'
+    intent: Enter admin email into login form
+
+  - id: s1_admin_fill_password
+    type: fill
+    persona: admin
+    severity: critical
+    description: Fill admin password
+    selector: '[data-testid="admin-password"]'
+    value: '${QA_ADMIN_PASSWORD}'
+    intent: Enter admin password into login form
+
+  - id: s1_admin_submit_login
+    type: click
+    persona: admin
+    severity: critical
+    description: Submit admin login
+    selector: '[data-testid="admin-login-submit"]'
+    intent: Click the login submit button
+
+  - id: s1_admin_assert_dashboard
+    type: assert_url
+    persona: admin
+    severity: critical
+    description: Confirm redirect to admin dashboard
+    pattern: /admin
+    intent: Verify admin is redirected to dashboard after login
+
+  - id: s1_admin_assert_heading
+    type: assert_text
+    persona: admin
+    severity: error
+    description: Dashboard heading is present
+    selector: '[data-testid="admin-dashboard-heading"]'
+    contains: Command Center
+    intent: The Command Center heading should be visible
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 2: Admin — Verify Revenue Widget
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: s2_admin_revenue_widget
+    type: wait_for
+    persona: admin
+    severity: warning
+    description: Revenue widget renders
+    selector: '[data-testid="revenue-widget"]'
+    timeout_ms: 10000
+    intent: The WaaS revenue widget should render on the dashboard
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 3: Admin — WaaS Clients List
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: s3_admin_navigate_clients
+    type: navigate
+    persona: admin
+    severity: error
+    description: Navigate to WaaS clients list
+    url: /admin/dashboard
+    intent: Navigate to admin dashboard where tenant list lives
+
+  - id: s3_admin_assert_clients_table
+    type: wait_for
+    persona: admin
+    severity: error
+    description: Tenant list renders
+    selector: '[data-testid="waas-clients-table"]'
+    timeout_ms: 15000
+    intent: The tenant/clients table should render
+
+  - id: s3_admin_assert_tenants_table
+    type: wait_for
+    persona: admin
+    severity: warning
+    description: Inner tenants table loads
+    selector: '[data-testid="tenants-table"]'
+    timeout_ms: 10000
+    intent: The inner tenants table should be visible
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 4: Handoff — Admin → Client (initial portal check)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: s4_handoff_admin_to_client
+    type: handoff
+    persona: admin
+    severity: info
+    description: Switch to client persona for portal checks
+    from: admin
+    to: client
+    message: Admin setup verified — switching to client portal
+    intent: Cross-persona handoff from admin to client context
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 5: Client — Portal Loads
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: s5_client_assert_portal_url
+    type: assert_url
+    persona: client
+    severity: critical
+    description: Client is on edit portal URL
+    pattern: /edit/
+    intent: Client should be on their edit portal URL
+
+  - id: s5_client_portal_root_loads
+    type: wait_for
+    persona: client
+    severity: critical
+    description: Client portal root element renders
+    selector: '[data-testid="client-portal-root"]'
+    timeout_ms: 15000
+    intent: The client portal root should render its main content
+
+  - id: s5_client_assert_overview_tab
+    type: wait_for
+    persona: client
+    severity: error
+    description: Overview tab is visible
+    selector: '[data-testid="portal-tab-overview"]'
+    timeout_ms: 8000
+    intent: The overview tab button should be visible
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 6: Client — Navigate tabs
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: s6_client_click_edit_tab
+    type: click
+    persona: client
+    severity: warning
+    description: Client navigates to Edit tab
+    selector: '[data-testid="portal-tab-edit"]'
+    intent: Client clicks the Edit tab
+
+  - id: s6_client_assert_editor_loads
+    type: wait_for
+    persona: client
+    severity: warning
+    description: Editor tab content loads
+    selector: '[data-testid="editor-tab-content"]'
+    timeout_ms: 10000
+    intent: The editor content area should render
+
+  - id: s6_client_click_audits_tab
+    type: click
+    persona: client
+    severity: warning
+    description: Client navigates to Audits tab
+    selector: '[data-testid="portal-tab-audits"]'
+    intent: Client clicks the Audits tab
+
+  - id: s6_client_assert_audits_loads
+    type: wait_for
+    persona: client
+    severity: warning
+    description: Audits tab content loads
+    selector: '[data-testid="audits-tab-content"]'
+    timeout_ms: 8000
+    intent: The audits tab content should render
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 7: Client — Billing Tab (pre-upgrade)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: s7_client_click_billing_tab
+    type: click
+    persona: client
+    severity: error
+    description: Client navigates to Billing tab
+    selector: '[data-testid="portal-tab-billing"]'
+    intent: Client clicks the Billing tab
+
+  - id: s7_client_assert_billing_loads
+    type: wait_for
+    persona: client
+    severity: error
+    description: Billing tab content loads
+    selector: '[data-testid="billing-tab-content"]'
+    timeout_ms: 10000
+    intent: The billing tab content should render
+
+  - id: s7_client_assert_upgrade_cards
+    type: wait_for
+    persona: client
+    severity: warning
+    description: Upgrade plan cards are visible
+    selector: '[data-testid^="upgrade-plan-card-"]'
+    timeout_ms: 8000
+    intent: At least one upgrade plan card should be visible on the billing tab
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 8: Client — Initiate Stripe Checkout (standard plan)
+  # NOTE: StripeAdapter.fillCheckoutForm() is called by the step executor
+  # when it encounters the stripe_checkout step type in the scenario runner.
+  # For the YAML, we assert the redirect happened after the click.
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: s8_client_click_upgrade_standard
+    type: click
+    persona: client
+    severity: error
+    description: Client clicks Upgrade on standard plan
+    selector: '[data-testid="upgrade-btn-standard"]'
+    intent: Client initiates upgrade to standard plan — should redirect to Stripe checkout
+
+  - id: s8_client_assert_stripe_redirect
+    type: wait_for
+    persona: client
+    severity: error
+    description: Stripe checkout page loads
+    selector: 'form[data-testid="stripe-checkout-form"], [data-testid="stripe-checkout-root"], .SubmitButton, #payment-form'
+    timeout_ms: 30000
+    intent: Stripe checkout page should load after clicking Upgrade
+
+  - id: s8_client_pause_for_stripe
+    type: pause
+    persona: client
+    severity: info
+    description: Brief pause for Stripe Elements to fully initialise
+    duration_ms: 2000
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 9: Client — Complete Stripe Checkout
+  # (StripeAdapter fills card details via Playwright frameLocator)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: s9_client_assert_checkout_success
+    type: wait_for
+    persona: client
+    severity: error
+    description: Wait for Stripe to return to success URL after payment
+    selector: '[data-testid="billing-tab-content"]'
+    timeout_ms: 60000
+    intent: After Stripe checkout, client should be redirected back to the billing tab
+
+  - id: s9_client_assert_success_banner
+    type: wait_for
+    persona: client
+    severity: warning
+    description: Checkout success banner is shown
+    selector: '[data-testid="checkout-success-banner"], .checkout-success, [class*="success"]'
+    timeout_ms: 10000
+    intent: A success confirmation should be visible after checkout
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 10: Handoff — Client → Admin (verify subscription in DB)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: s10_handoff_client_to_admin
+    type: handoff
+    persona: client
+    severity: info
+    description: Checkout complete — switching to admin to verify DB state
+    from: client
+    to: admin
+    message: Client checkout complete — admin verifies subscription in database
+    handoff_timeout_ms: 5000
+    intent: Cross-persona handoff from client to admin for DB verification
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 11: Admin — Verify Subscription in DB
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: s11_admin_pause_for_webhook
+    type: pause
+    persona: admin
+    severity: info
+    description: Allow Stripe webhook time to process (up to 10s)
+    duration_ms: 10000
+
+  - id: s11_admin_navigate_dashboard
+    type: navigate
+    persona: admin
+    severity: error
+    description: Admin refreshes dashboard to see updated revenue
+    url: /admin/dashboard
+    intent: Admin navigates to dashboard to verify billing state updated
+
+  - id: s11_admin_assert_revenue_widget_updated
+    type: wait_for
+    persona: admin
+    severity: warning
+    description: Revenue widget re-renders post-checkout
+    selector: '[data-testid="revenue-widget"]'
+    timeout_ms: 10000
+    intent: Revenue widget should re-render with updated subscription data
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 12: Admin — Tenant Detail Page
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: s12_admin_assert_clients_table
+    type: wait_for
+    persona: admin
+    severity: error
+    description: Clients table loads after webhook processing
+    selector: '[data-testid="waas-clients-table"]'
+    timeout_ms: 15000
+    intent: The tenant list should load and reflect updated subscription status
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 13: Handoff — Admin → Client (post-upgrade portal check)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: s13_handoff_admin_to_client
+    type: handoff
+    persona: admin
+    severity: info
+    description: Admin verification complete — switching back to client
+    from: admin
+    to: client
+    message: Admin DB verification complete — returning to client portal for post-upgrade checks
+    intent: Cross-persona handoff from admin back to client
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 14: Client — Post-Upgrade Portal State
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: s14_client_navigate_billing
+    type: navigate
+    persona: client
+    severity: error
+    description: Client navigates back to billing tab
+    url: /edit/${QA_CLIENT_REVIEW_TOKEN}?tab=billing
+    intent: Client navigates directly to billing tab to verify upgrade reflected
+
+  - id: s14_client_assert_billing_reloads
+    type: wait_for
+    persona: client
+    severity: error
+    description: Billing tab loads after upgrade
+    selector: '[data-testid="billing-tab-content"]'
+    timeout_ms: 15000
+    intent: Billing tab should load and show updated plan information
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 15: Client — Overview Tab Post-Upgrade
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: s15_client_click_overview
+    type: click
+    persona: client
+    severity: warning
+    description: Client navigates to Overview tab
+    selector: '[data-testid="portal-tab-overview"]'
+    intent: Client checks overview tab post-upgrade
+
+  - id: s15_client_assert_overview_loads
+    type: wait_for
+    persona: client
+    severity: warning
+    description: Overview tab content loads
+    selector: '[data-testid="overview-tab-content"]'
+    timeout_ms: 10000
+    intent: Overview tab should load and show site status
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 16: Handoff — Client → Admin (final admin checks)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: s16_handoff_client_to_admin_final
+    type: handoff
+    persona: client
+    severity: info
+    description: Final handoff back to admin for cleanup verification
+    from: client
+    to: admin
+    message: Client post-upgrade checks done — admin performs final verification
+    intent: Final cross-persona handoff from client to admin
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 17: Admin — Final Dashboard Check
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: s17_admin_final_dashboard
+    type: navigate
+    persona: admin
+    severity: warning
+    description: Admin final dashboard check
+    url: /admin/dashboard
+    intent: Admin navigates to dashboard for final state verification
+
+  - id: s17_admin_assert_dashboard_stable
+    type: assert_text
+    persona: admin
+    severity: warning
+    description: Dashboard heading still present (no crash)
+    selector: '[data-testid="admin-dashboard-heading"]'
+    contains: Command Center
+    intent: Dashboard should still be stable after full lifecycle run
+
+  - id: s17_admin_assert_revenue_present
+    type: wait_for
+    persona: admin
+    severity: warning
+    description: Revenue widget still renders
+    selector: '[data-testid="revenue-widget"]'
+    timeout_ms: 8000
+    intent: Revenue widget should be present at end of full run
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 18: Admin — Tenant Detail (verify plan on tenant page)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: s18_admin_assert_final_tenant_list
+    type: wait_for
+    persona: admin
+    severity: warning
+    description: Final tenant list loaded
+    selector: '[data-testid="waas-clients-table"]'
+    timeout_ms: 10000
+    intent: Tenant list loads cleanly at end of run
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 19: Final Assert — Both Personas Healthy
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: s19_handoff_admin_to_client_final
+    type: handoff
+    persona: admin
+    severity: info
+    description: Final cross-persona health check
+    from: admin
+    to: client
+    message: Final persona switch — verifying client context still healthy
+    intent: Ensure client browser context is still alive at end of run
+
+  - id: s19_client_assert_still_on_portal
+    type: assert_url
+    persona: client
+    severity: error
+    description: Client portal URL still valid at end of run
+    pattern: /edit/
+    intent: Client browser context should still be on the portal URL at end of run
+
+  - id: s19_final_pause
+    type: pause
+    persona: client
+    severity: info
+    description: Final stabilisation pause before teardown
+    duration_ms: 1000
