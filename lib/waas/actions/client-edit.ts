@@ -505,6 +505,25 @@ export async function submitClientApproval(
     revalidatePath(`/waas/clients/${session.tenantId}`)
     revalidatePath('/waas/deploy-queue')
 
+    // Phase 6.4: notify admin that client approved (fire-and-forget)
+    void import('@/lib/waas/services/notifications').then(({ sendTenantNotification }) => {
+      const adminEmail = process.env.WAAS_ADMIN_EMAIL ?? process.env.WAAS_ADMIN_EMAILS?.split(',')[0]?.trim()
+      if (adminEmail) {
+        void sendTenantNotification({
+          type:            'approval_received',
+          tenantId:        session.tenantId,
+          recipientEmail:  adminEmail,
+          data: {
+            businessName: session.businessName,
+            tenantSlug:   session.slug,
+            variantIndex: session.selectedVariantIndex ?? undefined,
+            variantLabel: session.selectedTemplateSlug ?? undefined,
+          },
+          dedupKey:        `approval_received_${session.tenantId}_${now.slice(0, 10)}`,
+        })
+      }
+    }).catch(() => { /* never block approval on notification failure */ })
+
     return {
       success: true,
       data: {
