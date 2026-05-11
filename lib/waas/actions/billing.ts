@@ -34,7 +34,9 @@ function getStripe(): Stripe {
 // WaaS Stripe Price IDs  (set in Vercel env vars)
 // ---------------------------------------------------------------------------
 
-export const WAAS_PLAN_PRICES: Record<WaasPackageTier, { monthly: string; yearly: string } | { yearly: string } | null> = {
+// NOTE: Not exported — "use server" files may only export async functions.
+// This constant is used only internally within this module.
+const WAAS_PLAN_PRICES: Record<WaasPackageTier, { monthly: string; yearly: string } | { yearly: string } | null> = {
   hosting_only: {
     // Annual only — no monthly price
     yearly: process.env.WAAS_STRIPE_PRICE_HOSTING_ONLY ?? '',
