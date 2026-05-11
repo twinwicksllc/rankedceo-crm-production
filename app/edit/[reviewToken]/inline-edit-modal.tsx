@@ -3,11 +3,13 @@
 // =============================================================================
 // app/edit/[reviewToken]/inline-edit-modal.tsx
 // Modal that opens when a navigator field is clicked.
-// Supports text, long_text, color, and image field kinds.
+// Supports text, long_text, color, image, and font field kinds.
 // Phase 5.3 additions:
 //   - image kind → ImageUploadZone (drag-drop) + URL fallback
 //   - ✨ Rewrite with AI button → AiRewritePanel side panel
 //   - AI-assisted badge appears after picking a variant
+// Phase 7.1 additions:
+//   - font kind → FontPicker component (Google Fonts picker with live preview)
 // =============================================================================
 
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -15,6 +17,7 @@ import type { EditableField }     from '@/lib/waas/client-edit/editable-fields'
 import { assetSlotFromPath }      from '@/lib/waas/client-edit/editable-fields'
 import { ImageUploadZone }        from './image-upload-zone'
 import { AiRewritePanel }         from './ai-rewrite-panel'
+import { FontPicker }             from './font-picker'
 
 interface InlineEditModalProps {
   field:       EditableField
@@ -76,7 +79,7 @@ export function InlineEditModal({
   }, [])
 
   const isDirty   = value !== field.value
-  const maxLength = field.kind !== 'color' && field.kind !== 'image' ? field.maxLength : undefined
+  const maxLength = field.kind !== 'color' && field.kind !== 'image' && field.kind !== 'font' ? field.maxLength : undefined
   const canUseAi  = field.kind === 'text' || field.kind === 'long_text'
   const assetSlot = assetSlotFromPath(field.path)
 
@@ -176,6 +179,15 @@ export function InlineEditModal({
             className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           />
         )
+
+      case 'font':
+        return (
+          <FontPicker
+            value={value}
+            label={field.label}
+            onSelect={(slug) => setValue(slug)}
+          />
+        )
     }
   }
 
@@ -269,8 +281,7 @@ export function InlineEditModal({
                 className="rounded-md bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isSaving ? 'Saving…' : field.kind === 'image' ? 'Auto-saved' : 'Save change'}
-              </button>
-            </div>
+              </button>            </div>
           </div>
         </div>
       </div>

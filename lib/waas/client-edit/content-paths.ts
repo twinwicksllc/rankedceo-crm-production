@@ -161,6 +161,8 @@ const ALLOWED_BRAND_KEYS = new Set([
   'brand_config.colors.accent',
   'brand_config.colors.background',
   'brand_config.colors.text',
+  'brand_config.fonts.heading',  // Phase 7.1
+  'brand_config.fonts.body',     // Phase 7.1
   'brand_config.contact.phone',
   'brand_config.contact.email',
   'brand_config.contact.address',
