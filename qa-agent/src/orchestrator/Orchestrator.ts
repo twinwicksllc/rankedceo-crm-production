@@ -20,6 +20,7 @@ import { EscalationEngine, CriticalHaltError } from './EscalationEngine.js'
 import { StepExecutor } from '../steps/StepExecutor.js'
 import { loadScenario } from './ScenarioLoader.js'
 import { SupabaseAdapter } from '../adaptors/supabase/SupabaseAdapter.js'
+import { ReportDispatcher } from '../reporting/ReportDispatcher.js'
 import type { RunConfig, RunReport, RunStatus } from '../types.js'
 
 export class Orchestrator {
@@ -133,9 +134,9 @@ export class Orchestrator {
     console.log(`Evidence: ${this.evidenceDir}/`)
     console.log(`${'─'.repeat(60)}\n`)
 
-    // ── 6. Dispatch report (Sprint 3 stub) ────────────────────────────────
-    // TODO Sprint 3: pass report to ReportDispatcher
-    // await reportDispatcher.dispatch(report)
+    // ── 6. Dispatch report ────────────────────────────────────────────────
+    const dispatcher = new ReportDispatcher()
+    await dispatcher.dispatch(report, this.evidenceDir)
 
     return report
   }

@@ -83,9 +83,16 @@ export function AdvantagePointHeader({
             </button>
           )}
 
-          {/* Admin badge */}
+          {/* Admin badge + nav */}
           {variant === 'admin' && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <Link
+                href="/admin/qa-reports"
+                className="text-xs text-white/40 hover:text-white/70 transition-colors hidden sm:block"
+                title="QA Agent — Run History"
+              >
+                🤖 QA
+              </Link>
               <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-white/60 text-xs font-medium">Admin Mode</span>
             </div>
