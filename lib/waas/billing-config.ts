@@ -35,7 +35,7 @@ export const WAAS_PLAN_DISPLAY: Record<WaasPackageTier, WaasPlanDisplay> = {
   hosting_only: {
     label:        'Hosting Only',
     monthlyPrice: 0,
-    yearlyPrice:  499,
+    yearlyPrice:  199,   // $199/yr — annual billing only
     features: [
       'Annual billing only',
       'Managed website hosting',
@@ -59,8 +59,8 @@ export const WAAS_PLAN_DISPLAY: Record<WaasPackageTier, WaasPlanDisplay> = {
   },
   standard: {
     label:        'Standard',
-    monthlyPrice: 149,
-    yearlyPrice:  1490,
+    monthlyPrice: 39,    // $39/mo
+    yearlyPrice:  399,   // $399/yr
     features: [
       'Everything in Hosting',
       'Custom domain support',
@@ -72,8 +72,8 @@ export const WAAS_PLAN_DISPLAY: Record<WaasPackageTier, WaasPlanDisplay> = {
   },
   premium: {
     label:        'Premium',
-    monthlyPrice: 299,
-    yearlyPrice:  2990,
+    monthlyPrice: 49,    // $49/mo
+    yearlyPrice:  499,   // $499/yr
     features: [
       'Everything in Standard',
       'Unlimited audits',

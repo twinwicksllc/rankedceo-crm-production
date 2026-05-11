@@ -198,7 +198,7 @@ export function PlanCard({ tenantId, reviewToken, billingStatus }: PlanCardProps
                 }`}
               >
                 Annual
-                <span className="ml-1 text-[10px] text-emerald-500 font-semibold">Save 17%</span>
+                <span className="ml-1 text-[10px] text-emerald-500 font-semibold">Save 15%</span>
               </button>
             </div>
 

@@ -324,7 +324,7 @@ export function BuyNowCta({
               color:      '#ffffff',
               lineHeight: 1,
             }}>
-              $497<span style={{ fontSize: '0.9rem', fontWeight: 400, color: 'rgba(255,255,255,0.4)' }}>/mo</span>
+              $39<span style={{ fontSize: '0.9rem', fontWeight: 400, color: 'rgba(255,255,255,0.4)' }}>/mo</span>
             </div>
           </div>
           <div style={{
