@@ -107,18 +107,24 @@ export class PersonaRouter {
     // Use 'networkidle' so the Next.js client bundle fully executes + React hydrates before we interact
     await page.goto('/login?next=/admin/dashboard&adminOnly=1', { waitUntil: 'networkidle', timeout: 30_000 })
 
-    // Explicitly wait for the email input to be visible after hydration
+    // Wait for skeleton to disappear (Supabase client hydration) then wait for the form
+    // The login page is 'use client' — it renders a skeleton until Supabase initialises.
+    // Give up to 30s for the skeleton to resolve to the real form.
     try {
+      await page.waitForFunction(
+        () => !document.querySelector('.animate-pulse'),
+        { timeout: 30_000 },
+      )
       await page.waitForSelector('[data-testid="admin-email"]', { state: 'visible', timeout: 15_000 })
     } catch (err) {
-      // Capture diagnostic info: screenshot + DOM + console log
+      // Capture diagnostic info: screenshot + DOM for debugging
       const ts = new Date().toISOString().replace(/[:.]/g, '-')
       const screenshotPath = `evidence/login-failure-${ts}.png`
-      await page.screenshot({ path: screenshotPath, fullPage: true })
-      const bodyHtml = await page.evaluate(() => document.body?.innerHTML?.slice(0, 2000) ?? '(empty)')
+      try { await page.screenshot({ path: screenshotPath, fullPage: true }) } catch { /* ignore */ }
+      const bodyHtml = await page.evaluate(() => document.body?.innerHTML?.slice(0, 3000) ?? '(empty)')
       console.error(`\n📸 Login page screenshot saved: ${screenshotPath}`)
       console.error(`🔍 Current URL: ${page.url()}`)
-      console.error(`📄 Body HTML (first 2000 chars):\n${bodyHtml}\n`)
+      console.error(`📄 Body HTML (first 3000 chars):\n${bodyHtml}\n`)
       throw err
     }
     await page.fill('[data-testid="admin-email"]', credentials.email)
