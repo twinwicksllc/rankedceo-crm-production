@@ -115,9 +115,10 @@ export class PersonaRouter {
     // waitUntil:'load' is enough — we then explicitly poll for the form.
     await page.goto('/login?next=/admin/dashboard&adminOnly=1', { waitUntil: 'load', timeout: 30_000 })
 
-    // Wait up to 45s for [data-testid="admin-email"] — gives Supabase client time to init
+    // Wait up to 60s for [data-testid="admin-email"] — Supabase cold start can be slow
+    // (measured: ~45-50s on GitHub Actions runners hitting a cold Supabase instance)
     try {
-      await page.waitForSelector('[data-testid="admin-email"]', { state: 'visible', timeout: 45_000 })
+      await page.waitForSelector('[data-testid="admin-email"]', { state: 'visible', timeout: 60_000 })
     } catch (err) {
       // Full diagnostics on timeout
       const ts = new Date().toISOString().replace(/[:.]/g, '-')
