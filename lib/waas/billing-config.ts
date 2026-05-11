@@ -14,8 +14,9 @@ import type { WaasPackageTier } from '@/lib/waas/types'
 // ---------------------------------------------------------------------------
 
 export const WAAS_PLAN_PRICES_ENV_KEYS = {
-  standard: { monthly: 'WAAS_STRIPE_PRICE_STANDARD_MONTHLY', yearly: 'WAAS_STRIPE_PRICE_STANDARD_YEARLY' },
-  premium:  { monthly: 'WAAS_STRIPE_PRICE_PREMIUM_MONTHLY',  yearly: 'WAAS_STRIPE_PRICE_PREMIUM_YEARLY' },
+  hosting_only: { yearly: 'WAAS_STRIPE_PRICE_HOSTING_ONLY' },
+  standard:     { monthly: 'WAAS_STRIPE_PRICE_STANDARD_MONTHLY', yearly: 'WAAS_STRIPE_PRICE_STANDARD_YEARLY' },
+  premium:      { monthly: 'WAAS_STRIPE_PRICE_PREMIUM_MONTHLY',  yearly: 'WAAS_STRIPE_PRICE_PREMIUM_YEARLY' },
 } as const
 
 // ---------------------------------------------------------------------------
@@ -31,6 +32,19 @@ export interface WaasPlanDisplay {
 }
 
 export const WAAS_PLAN_DISPLAY: Record<WaasPackageTier, WaasPlanDisplay> = {
+  hosting_only: {
+    label:        'Hosting Only',
+    monthlyPrice: 0,
+    yearlyPrice:  499,
+    features: [
+      'Annual billing only',
+      'Managed website hosting',
+      'SSL certificate',
+      'Subdomain on rankedceo.com',
+      'Basic site editor',
+    ],
+    highlighted: false,
+  },
   hosting: {
     label:        'Hosting',
     monthlyPrice: 0,

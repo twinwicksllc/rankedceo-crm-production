@@ -9,7 +9,7 @@ import type { SectionConfig } from '@/lib/waas/templates/types'
 // ENUMS
 // ---------------------------------------------------------------------------
 
-export type WaasPackageTier = 'hosting' | 'standard' | 'premium'
+export type WaasPackageTier = 'hosting_only' | 'hosting' | 'standard' | 'premium'
 
 export type WaasTenantStatus = 'onboarding' | 'pending_review' | 'active' | 'suspended' | 'cancelled'
 
@@ -468,6 +468,15 @@ export const PACKAGE_TIER_FEATURES: Record<WaasPackageTier, {
   customDomain:   boolean
   maxAuditsPerMonth: number
 }> = {
+  hosting_only: {
+    label:              'Hosting Only',
+    auditTool:          false,
+    competitorAudit:    false,
+    aiInsights:         false,
+    whiteLabel:         false,
+    customDomain:       false,
+    maxAuditsPerMonth:  0,
+  },
   hosting: {
     label:              'Hosting',
     auditTool:          false,
