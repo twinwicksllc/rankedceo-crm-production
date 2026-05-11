@@ -1,6 +1,7 @@
 // =============================================================================
 // AdvantagePoint — Admin Dashboard (Server Component)
 // Shows all pending + active tenants with stats
+// Phase 6.2: Added TenantList with search/filter/bulk actions
 // =============================================================================
 
 import React from 'react'
@@ -15,6 +16,7 @@ import {
 } from '@/lib/waas/actions/admin'
 import type { WaasTenant } from '@/lib/waas/types'
 import type { AdminTenantListItem, ArchivedTenantListItem } from '@/lib/waas/actions/admin'
+import { TenantList } from './tenant-list'
 
 // ---------------------------------------------------------------------------
 // Status badge
@@ -132,6 +134,19 @@ export default async function AdminDashboardPage({
           Tenant queue data could not be fully loaded: {tenantsLoadError}
         </div>
       )}
+
+      {/* Phase 6.2 — Enhanced searchable tenant list */}
+      <div className="mb-10 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl p-5">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h2 className="text-white font-semibold text-sm">All Tenants</h2>
+            <p className="text-white/40 text-xs mt-0.5">
+              Search, filter, and bulk-manage tenants
+            </p>
+          </div>
+        </div>
+        <TenantList initialTenants={tenants} />
+      </div>
 
       {archivedTenants.length > 0 && (
         <div className="mb-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
