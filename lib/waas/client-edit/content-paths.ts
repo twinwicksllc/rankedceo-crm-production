@@ -156,6 +156,7 @@ const ALLOWED_BRAND_KEYS = new Set([
   'brand_config.business_name',
   'brand_config.tagline',
   'brand_config.logo_url',
+  'brand_config.hero_image_url',   // Phase 7.2
   'brand_config.colors.primary',
   'brand_config.colors.secondary',
   'brand_config.colors.accent',

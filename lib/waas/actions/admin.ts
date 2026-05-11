@@ -3231,3 +3231,53 @@ export async function updateDomainRequestStatus(
     return { success: false, error: err instanceof Error ? err.message : 'Update failed' }
   }
 }
+
+// =============================================================================
+// Phase 7.2: updateTenantHeroImage
+//   Admin action — sets brand_config.hero_image_url on a tenant.
+//   Called from the site-settings-form hero image uploader.
+// =============================================================================
+
+export async function updateTenantHeroImage(
+  tenantId: string,
+  heroImageUrl: string | null,
+): Promise<ActionResult<void>> {
+  'use server'
+  try {
+    const supabase = getAdminClient()
+
+    // Read current brand_config
+    const { data: tenantRow, error: fetchErr } = await supabase
+      .from('tenants')
+      .select('brand_config')
+      .eq('id', tenantId)
+      .single()
+
+    if (fetchErr || !tenantRow) {
+      return { success: false, error: 'Tenant not found' }
+    }
+
+    const currentBrandConfig = (tenantRow as { brand_config: Record<string, unknown> }).brand_config ?? {}
+    const updatedBrandConfig  = {
+      ...currentBrandConfig,
+      hero_image_url: heroImageUrl ?? null,
+    }
+
+    const { error: updateErr } = await supabase
+      .from('tenants')
+      .update({ brand_config: updatedBrandConfig })
+      .eq('id', tenantId)
+
+    if (updateErr) {
+      return { success: false, error: updateErr.message }
+    }
+
+    revalidatePath(`/admin/dashboard/${tenantId}`)
+    revalidatePath('/_sites', 'layout')
+    revalidatePath(`/_preview/${tenantId}`)
+
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to update hero image' }
+  }
+}

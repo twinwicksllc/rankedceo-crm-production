@@ -55,6 +55,7 @@ export interface WaasBrandConfig {
   tagline?:      string | null
   logo_url?:     string | null
   favicon_url?:  string | null
+  hero_image_url?: string | null  // Phase 7.2 — full-bleed hero background photo
   colors?:       Partial<WaasBrandColors>
   fonts?:        Partial<WaasBrandFonts>
   contact?:      WaasBrandContact
