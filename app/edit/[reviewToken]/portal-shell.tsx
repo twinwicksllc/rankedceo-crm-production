@@ -20,9 +20,11 @@ import type { ClientEditPermissions } from '@/lib/waas/client-edit/edit-session'
 import type { TenantPortalData }      from '@/lib/waas/actions/client-edit'
 import type { EditableField }         from '@/lib/waas/client-edit/editable-fields'
 import type { TenantBillingStatus }   from '@/lib/waas/actions/billing'
+import type { TenantAuditHistoryItem } from '@/lib/waas/actions/client-edit'
 import { PortalHome }     from './portal-home'
 import { EditorShell }    from './editor-shell'
 import { BillingTab }     from './billing-tab'
+import { AuditHistoryTab } from './audit-history-tab'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -43,9 +45,10 @@ export interface PortalSession {
 interface PortalShellProps {
   session:       PortalSession
   portalData:    TenantPortalData | null
-  activeTab:     'overview' | 'edit' | 'history' | 'billing'
+  activeTab:     'overview' | 'edit' | 'history' | 'billing' | 'audits'
   billingStatus?: TenantBillingStatus | null
   checkoutSuccess?: boolean
+  auditHistory?:  TenantAuditHistoryItem[]
   editorProps?: {
     initialFields: EditableField[]
   }
@@ -59,6 +62,7 @@ const TABS = [
   { id: 'overview', label: '🏠 Overview' },
   { id: 'edit',     label: '✏️ Edit'     },
   { id: 'history',  label: '🕐 History'  },
+  { id: 'audits',   label: '📊 Audits'   },
   { id: 'billing',  label: '💳 Billing'  },
 ] as const
 
@@ -74,6 +78,7 @@ export function PortalShell({
   activeTab,
   billingStatus,
   checkoutSuccess,
+  auditHistory,
   editorProps,
 }: PortalShellProps) {
   const router = useRouter()
@@ -192,6 +197,11 @@ export function PortalShell({
             billingStatus={billingStatus ?? null}
             checkoutSuccess={checkoutSuccess}
           />
+        )}
+
+        {/* Audits tab */}
+        {activeTab === 'audits' && (
+          <AuditHistoryTab items={auditHistory ?? []} />
         )}
       </div>
     </div>

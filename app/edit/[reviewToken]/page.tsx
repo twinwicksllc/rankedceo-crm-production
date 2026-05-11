@@ -18,7 +18,7 @@ import { notFound }                  from 'next/navigation'
 import { createClient }              from '@supabase/supabase-js'
 import { resolveClientEditSession }  from '@/lib/waas/client-edit/edit-session'
 import { buildEditableFields }       from '@/lib/waas/client-edit/editable-fields'
-import { getTenantPortalData }       from '@/lib/waas/actions/client-edit'
+import { getTenantPortalData, getTenantAuditHistory } from '@/lib/waas/actions/client-edit'
 import { getTenantBillingStatus }    from '@/lib/waas/actions/billing'
 import { PortalShell }               from './portal-shell'
 import type { SectionConfig }        from '@/lib/waas/templates/types'
@@ -30,7 +30,6 @@ interface PageProps {
   params:       { reviewToken: string }
   searchParams: { tab?: string; checkout?: string }
 }
-
 // ---------------------------------------------------------------------------
 // Server-only helper: load sections_json for the currently-selected variant
 // ---------------------------------------------------------------------------
@@ -110,6 +109,22 @@ export default async function ClientEditorPage({ params, searchParams }: PagePro
         activeTab="billing"
         billingStatus={billingResult.success ? (billingResult.data ?? null) : null}
         checkoutSuccess={checkoutSuccess}
+      />
+    )
+  }
+
+  // ------------------------------------------------------------------
+  // Tab: audits — load audit history
+  // ------------------------------------------------------------------
+  if (tab === 'audits') {
+    const auditsResult = await getTenantAuditHistory(reviewToken)
+
+    return (
+      <PortalShell
+        session={sessionShape}
+        portalData={null}
+        activeTab="audits"
+        auditHistory={auditsResult.success ? (auditsResult.data ?? []) : []}
       />
     )
   }
