@@ -86,9 +86,18 @@ export default async function AdminDashboardPage({
   return (
     <div>
       {/* Page header */}
-      <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-white">Command Center</h1>
-        <p className="text-white/40 mt-1 text-sm">Manage all AdvantagePoint tenants and deployments.</p>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white">Command Center</h1>
+          <p className="text-white/40 mt-1 text-sm">Manage all AdvantagePoint tenants and deployments.</p>
+        </div>
+        {/* Phase 6.3: quick link to domain requests */}
+        <Link
+          href="/admin/dashboard/domain-requests"
+          className="shrink-0 flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/60 hover:bg-white/10 transition-colors"
+        >
+          🌐 Domain Requests
+        </Link>
       </div>
 
       {/* Stat cards */}
