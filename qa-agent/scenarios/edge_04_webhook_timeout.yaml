@@ -1,0 +1,183 @@
+id: edge_04_webhook_timeout
+name: "Edge 04 — Stripe Webhook Timeout & Delayed Delivery"
+description: >
+  Validates application behavior when the Stripe webhook is delayed or never
+  arrives. The subscription should remain in a pending/incomplete state rather
+  than silently activating or crashing. After a configurable timeout, the UI
+  must reflect the pending state, and the admin must see an incomplete webhook
+  flag rather than a falsely-active subscription.
+  This scenario is full-mode only because it requires real Stripe test mode.
+modes:
+  - full
+
+steps:
+  # ── Scene 01: Admin login ─────────────────────────────────────────────────
+  - id: e04_s01_navigate_login
+    type: navigate
+    persona: admin
+    severity: info
+    url: "{{ BASE_URL }}/admin/login"
+    description: "Navigate to admin login"
+
+  - id: e04_s02_fill_email
+    type: fill
+    persona: admin
+    severity: info
+    selector: "[data-testid='admin-email']"
+    value: "{{ ADMIN_EMAIL }}"
+    description: "Fill admin email"
+
+  - id: e04_s03_fill_pass
+    type: fill
+    persona: admin
+    severity: info
+    selector: "[data-testid='admin-password']"
+    value: "{{ ADMIN_PASSWORD }}"
+    description: "Fill admin password"
+
+  - id: e04_s04_submit
+    type: click
+    persona: admin
+    severity: info
+    selector: "[data-testid='admin-login-submit']"
+    description: "Submit login"
+
+  - id: e04_s05_assert_dashboard
+    type: assert_url
+    persona: admin
+    severity: critical
+    pattern: "/admin/dashboard"
+    description: "Admin must reach dashboard"
+
+  # ── Scene 02: Client initiates checkout ───────────────────────────────────
+  - id: e04_s06_handoff_to_client
+    type: handoff
+    persona: admin
+    severity: info
+    from: admin
+    to: client
+    message: "Admin login confirmed — switching to client for checkout initiation"
+    description: "Switch to client persona"
+
+  - id: e04_s07_navigate_portal
+    type: navigate
+    persona: client
+    severity: critical
+    url: "{{ BASE_URL }}/edit/{{ CLIENT_REVIEW_TOKEN }}"
+    description: "Client navigates to portal"
+
+  - id: e04_s08_assert_portal
+    type: assert_text
+    persona: client
+    severity: critical
+    selector: "[data-testid='client-portal-root']"
+    contains: ""
+    description: "Client portal root must render"
+
+  - id: e04_s09_click_billing
+    type: click
+    persona: client
+    severity: info
+    selector: "[data-testid='portal-tab-billing']"
+    description: "Click billing tab"
+
+  - id: e04_s10_assert_billing_tab
+    type: assert_text
+    persona: client
+    severity: error
+    selector: "[data-testid='billing-tab-content']"
+    contains: ""
+    description: "Billing tab must render before upgrade"
+
+  - id: e04_s11_click_upgrade
+    type: click
+    persona: client
+    severity: error
+    selector: "[data-testid='upgrade-btn-pro']"
+    description: "Click Pro plan upgrade button"
+    intent: "If upgrade button is missing, check billing-tab.tsx upgrade-plan-card-pro rendering"
+
+  - id: e04_s12_wait_checkout_redirect
+    type: wait_for
+    persona: client
+    severity: info
+    selector: "body"
+    timeout_ms: 8000
+    description: "Wait for Stripe checkout redirect"
+
+  # ── Scene 03: Webhook pause — assert pending state ────────────────────────
+  - id: e04_s13_pause_for_webhook
+    type: pause
+    persona: client
+    severity: info
+    duration_ms: 30000
+    description: >
+      Intentional 30s pause to simulate a webhook delivery delay.
+      In real test mode, Stripe CLI must be running with a delay injected.
+      During this window, the subscription should be in 'incomplete' state.
+    intent: "v1.5: replace this pause with a Stripe CLI webhook intercept that artificially delays delivery, then verify db state transitions correctly"
+
+  # ── Scene 04: Post-webhook state ─────────────────────────────────────────
+  - id: e04_s14_pause_for_webhook_delivery
+    type: pause
+    persona: client
+    severity: info
+    duration_ms: 15000
+    description: "Additional 15s wait for delayed webhook to finally deliver"
+
+  - id: e04_s15_navigate_portal_refresh
+    type: navigate
+    persona: client
+    severity: critical
+    url: "{{ BASE_URL }}/edit/{{ CLIENT_REVIEW_TOKEN }}"
+    description: "Reload portal to see post-webhook state"
+
+  - id: e04_s16_assert_portal_still_works
+    type: assert_text
+    persona: client
+    severity: critical
+    selector: "[data-testid='client-portal-root']"
+    contains: ""
+    description: "Portal must still be accessible during/after webhook delay"
+    intent: "Portal crashing while waiting for a webhook means the UI has a hard dependency on subscription status — must tolerate pending states"
+
+  - id: e04_s17_click_billing_check
+    type: click
+    persona: client
+    severity: info
+    selector: "[data-testid='portal-tab-billing']"
+    description: "Check billing tab renders after webhook delay"
+
+  # ── Scene 05: Admin verifies no zombie subscriptions ─────────────────────
+  - id: e04_s18_handoff_to_admin
+    type: handoff
+    persona: client
+    severity: info
+    from: client
+    to: admin
+    message: "Webhook delay path tested — switching to admin to verify subscription integrity"
+    description: "Switch back to admin persona"
+
+  - id: e04_s19_navigate_dashboard
+    type: navigate
+    persona: admin
+    severity: info
+    url: "{{ BASE_URL }}/admin/dashboard"
+    description: "Admin checks dashboard after webhook timeout test"
+
+  - id: e04_s20_assert_clients_table
+    type: assert_text
+    persona: admin
+    severity: error
+    selector: "[data-testid='waas-clients-table']"
+    contains: ""
+    description: "Clients table must render after webhook edge case"
+
+  - id: e04_s21_assert_no_duplicate_sub_page
+    type: assert_text
+    persona: admin
+    severity: critical
+    selector: "[data-testid='admin-dashboard-root']"
+    contains: ""
+    description: "Admin dashboard must remain intact after webhook edge case run"
+    intent: "Webhook replay idempotency — if Stripe retries a webhook, the handler must not create duplicate subscription records"

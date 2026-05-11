@@ -4,6 +4,15 @@
  *
  * Every failure is caught here and returned as a Finding with the step's declared severity.
  * The EscalationEngine decides what to do with it.
+ *
+ * Retry behaviour:
+ *   If step.retries > 0, the step is retried up to that many times on failure.
+ *   Each retry is preceded by a backoff that doubles per attempt (1s, 2s, 4s…).
+ *   Only the final failure generates a Finding and captures evidence.
+ *
+ * Timeout behaviour:
+ *   step.timeout_ms overrides the executor's DEFAULT_STEP_TIMEOUT for that step.
+ *   Propagated to all selector-waiting calls (waitForSelector, etc.).
  */
 
 import * as path from 'node:path'
@@ -16,6 +25,12 @@ import type {
 import type { PersonaRouter } from '../personas/PersonaRouter.js'
 import type { SupabaseAdapter } from '../adaptors/supabase/SupabaseAdapter.js'
 
+/** Default per-step timeout when no override is provided */
+const DEFAULT_STEP_TIMEOUT_MS = 10_000
+
+/** Base backoff in ms for retry attempts (doubles each attempt) */
+const RETRY_BASE_BACKOFF_MS = 1_000
+
 export class StepExecutor {
   constructor(
     private readonly router: PersonaRouter,
@@ -25,41 +40,63 @@ export class StepExecutor {
   ) {}
 
   async execute(step: ScenarioStep): Promise<Finding | null> {
-    try {
-      await this.runStep(step)
-      // Step passed — no finding
-      return null
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      const stack = err instanceof Error ? err.stack : undefined
+    const maxAttempts = 1 + (step.retries ?? 0)
+    let lastErr: unknown
 
-      const screenshotPath = await this.captureEvidence(step.persona, step.id)
-
-      return {
-        stepId: step.id,
-        persona: step.persona,
-        severity: step.severity,
-        message,
-        screenshotPath,
-        timestamp: new Date().toISOString(),
-        stack,
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await this.runStep(step)
+        // Step passed — no finding
+        if (attempt > 1) {
+          console.log(`  ♻️  Step ${step.id} passed on retry ${attempt - 1}`)
+        }
+        return null
+      } catch (err) {
+        lastErr = err
+        if (attempt < maxAttempts) {
+          const backoffMs = RETRY_BASE_BACKOFF_MS * Math.pow(2, attempt - 1)
+          console.warn(
+            `  ⚠️  Step ${step.id} failed (attempt ${attempt}/${maxAttempts}), retrying in ${backoffMs}ms — ${err instanceof Error ? err.message : String(err)}`
+          )
+          await new Promise(res => setTimeout(res, backoffMs))
+        }
       }
+    }
+
+    // All attempts exhausted — capture evidence and return finding
+    const message = lastErr instanceof Error ? lastErr.message : String(lastErr)
+    const stack = lastErr instanceof Error ? lastErr.stack : undefined
+    const screenshotPath = await this.captureEvidence(step.persona, step.id)
+
+    return {
+      stepId: step.id,
+      persona: step.persona,
+      severity: step.severity,
+      message: maxAttempts > 1
+        ? `[after ${maxAttempts} attempts] ${message}`
+        : message,
+      screenshotPath,
+      timestamp: new Date().toISOString(),
+      stack,
     }
   }
 
-  // ─── Private ──────────────────────────────────────────────────────────────
+  // --- Private ---------------------------------------------------------------
 
   private async runStep(step: ScenarioStep): Promise<void> {
+    // Per-step timeout: use step.timeout_ms if set, else DEFAULT
+    const timeoutMs = step.timeout_ms ?? DEFAULT_STEP_TIMEOUT_MS
+
     switch (step.type) {
-      case 'navigate':       return this.stepNavigate(step.persona, step.url)
-      case 'click':          return this.stepClick(step.persona, step.selector)
-      case 'fill':           return this.stepFill(step.persona, step.selector, step.value)
-      case 'wait_for':       return this.stepWaitFor(step.persona, step.selector, step.timeout_ms)
-      case 'assert_text':    return this.stepAssertText(step.persona, step.selector, step.contains)
-      case 'assert_url':     return this.stepAssertUrl(step.persona, step.pattern)
-      case 'assert_db':      return this.stepAssertDb(step.table, step.where, step.expected_count)
-      case 'handoff':        return this.stepHandoff(step.from, step.to, step.message, step.handoff_timeout_ms)
-      case 'pause':          return this.stepPause(step.duration_ms)
+      case 'navigate':    return this.stepNavigate(step.persona, step.url)
+      case 'click':       return this.stepClick(step.persona, step.selector)
+      case 'fill':        return this.stepFill(step.persona, step.selector, step.value)
+      case 'wait_for':    return this.stepWaitFor(step.persona, step.selector, timeoutMs)
+      case 'assert_text': return this.stepAssertText(step.persona, step.selector, step.contains, timeoutMs)
+      case 'assert_url':  return this.stepAssertUrl(step.persona, step.pattern)
+      case 'assert_db':   return this.stepAssertDb(step.table, step.where, step.expected_count)
+      case 'handoff':     return this.stepHandoff(step.from, step.to, step.message, step.handoff_timeout_ms)
+      case 'pause':       return this.stepPause(step.duration_ms)
       default: {
         // TypeScript exhaustive check
         const _exhaustive: never = step
@@ -83,16 +120,21 @@ export class StepExecutor {
     await page.fill(selector, value)
   }
 
-  private async stepWaitFor(persona: Persona, selector: string, timeoutMs = 10_000): Promise<void> {
+  private async stepWaitFor(persona: Persona, selector: string, timeoutMs: number): Promise<void> {
     const page = await this.router.getPage(persona)
     await page.waitForSelector(selector, { timeout: timeoutMs })
   }
 
-  private async stepAssertText(persona: Persona, selector: string, contains: string): Promise<void> {
+  private async stepAssertText(
+    persona: Persona,
+    selector: string,
+    contains: string,
+    timeoutMs: number,
+  ): Promise<void> {
     const page = await this.router.getPage(persona)
-    await page.waitForSelector(selector, { timeout: 10_000 })
+    await page.waitForSelector(selector, { timeout: timeoutMs })
     const text = await page.textContent(selector)
-    if (!text?.includes(contains)) {
+    if (contains !== '' && !text?.includes(contains)) {
       throw new Error(
         `assert_text failed on "${selector}": expected to contain "${contains}", got "${text ?? '(null)'}"`
       )
@@ -127,7 +169,7 @@ export class StepExecutor {
     message: string,
     timeoutMs = 30_000,
   ): Promise<void> {
-    // Handoff: log the transition, switch active persona context
+    // Handoff: log the transition, switch active persona context.
     // In v1 this is synchronous — we just switch the active page.
     // In v1.5 this could involve async signals between parallel runners.
     console.log(`  🔄 Handoff: ${from} → ${to} — ${message}`)

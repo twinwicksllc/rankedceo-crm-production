@@ -75,6 +75,16 @@ interface BaseStep {
    * Populated now, wired to LLM later.
    */
   intent?: string
+  /**
+   * Number of times to retry this step on failure before recording a finding.
+   * Defaults to 0 (no retry). Use sparingly — prefer fixing flaky selectors.
+   */
+  retries?: number
+  /**
+   * Per-step timeout override in milliseconds.
+   * Overrides the executor's default timeout for this specific step.
+   */
+  timeout_ms?: number
 }
 
 export interface NavigateStep extends BaseStep {
