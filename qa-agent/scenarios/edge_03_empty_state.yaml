@@ -185,7 +185,7 @@ steps:
     type: click
     persona: client
     severity: info
-    selector: "[data-testid='portal-tab-reviews']"
+    selector: "[data-testid='portal-tab-history']"
     description: "Click the reviews tab"
     intent: "Clicks the Reviews tab to test zero-reviews list rendering — the reviews list must render an empty state UI when reviews is [] rather than crashing with Cannot read properties of null (reading map)"
 
