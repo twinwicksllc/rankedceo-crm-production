@@ -111,14 +111,16 @@ export class PersonaRouter {
 
     // Navigate to admin login
     // The page is 'use client' wrapped in <Suspense fallback={<Skeleton/>}>.
-    // It shows animate-pulse until React hydrates + Supabase initialises.
-    // waitUntil:'load' is enough — we then explicitly poll for the form.
+    // waitUntil:'load' fires quickly; we then wait for networkidle to let
+    // Supabase auth.getSession() complete before asserting the form exists.
     await page.goto('/login?next=/admin/dashboard&adminOnly=1', { waitUntil: 'load', timeout: 30_000 })
+    // Wait for all in-flight XHR/fetch (incl. Supabase session check) to settle
+    await page.waitForLoadState('networkidle', { timeout: 60_000 })
 
-    // Wait up to 60s for [data-testid="admin-email"] — Supabase cold start can be slow
-    // (measured: ~45-50s on GitHub Actions runners hitting a cold Supabase instance)
+    // Wait up to 90s total for [data-testid="admin-email"] to appear
+    // (Supabase cold-start on GitHub Actions runners can take 50-70s)
     try {
-      await page.waitForSelector('[data-testid="admin-email"]', { state: 'visible', timeout: 60_000 })
+      await page.waitForSelector('[data-testid="admin-email"]', { state: 'visible', timeout: 90_000 })
     } catch (err) {
       // Full diagnostics on timeout
       const ts = new Date().toISOString().replace(/[:.]/g, '-')
