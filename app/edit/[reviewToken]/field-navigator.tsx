@@ -28,6 +28,7 @@ function kindBadge(kind: EditableField['kind']): string {
     case 'long_text': return 'Paragraph'
     case 'color':     return 'Color'
     case 'image':     return 'Image'
+    case 'font':      return 'Font'
     case 'toggle':    return ''
   }
 }
@@ -157,6 +158,13 @@ function EditableRow({
                   style={{ backgroundColor: field.value || '#ffffff' }}
                 />
                 <span>{field.value || '—'}</span>
+              </span>
+            : field.kind === 'font'
+            ? <span
+                className="inline-block truncate"
+                style={{ fontFamily: `'${field.value}', sans-serif` }}
+              >
+                {field.value || 'Inter'}
               </span>
             : truncate(field.value || '—')}
         </div>

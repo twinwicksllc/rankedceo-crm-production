@@ -780,7 +780,7 @@ export async function updateClientBrandConfig(
         field_path:        fullPath,
         old_value:         serializeForHistory(oldValue as JsonValue),
         new_value:         serializeForHistory(newValue as JsonValue),
-        edit_type:         fullPath.includes('color') ? 'color_change' : 'text_edit',
+        edit_type:         fullPath.includes('color') ? 'color_change' : fullPath.includes('fonts') ? 'font_change' : 'text_edit',
         source:            'client',
         review_token_hash: tokenHash,
         ai_intent:         null,

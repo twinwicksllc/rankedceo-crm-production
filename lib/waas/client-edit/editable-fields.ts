@@ -19,6 +19,7 @@ export type EditableFieldKind =
   | 'color'       // color picker
   | 'image'       // image swap (upload zone + URL fallback)
   | 'toggle'      // section on/off switch (inline — no modal)
+  | 'font'        // font family picker (Phase 7.1)
 
 export interface EditableField {
   /** Stable id for React keys */
@@ -44,10 +45,14 @@ export interface EditableField {
 }
 
 export interface BrandConfigLike {
-  business_name?:  string
-  tagline?:        string | null
-  logo_url?:       string | null
+  business_name?: string
+  tagline?:       string | null
+  logo_url?:      string | null
   hero_image_url?: string | null  // Phase 7.2
+  fonts?: {
+    heading?: string | null
+    body?:    string | null
+  }
   colors?: {
     primary?:    string
     secondary?:  string
@@ -312,6 +317,30 @@ function fieldsForBrandConfig(brand: BrandConfigLike): EditableField[] {
     { id: 'brand-color-primary',    path: 'brand_config.colors.primary',    label: 'Primary Color',    value: c.primary    ?? '#2563EB', kind: 'color', group: g, scope: 'brand' },
     { id: 'brand-color-secondary',  path: 'brand_config.colors.secondary',  label: 'Secondary Color',  value: c.secondary  ?? '#1E40AF', kind: 'color', group: g, scope: 'brand' },
     { id: 'brand-color-accent',     path: 'brand_config.colors.accent',     label: 'Accent Color',     value: c.accent     ?? '#F59E0B', kind: 'color', group: g, scope: 'brand' },
+  )
+
+  // Phase 7.1: Font family pickers
+  const fg = 'Fonts'
+  const f  = brand.fonts ?? {}
+  out.push(
+    {
+      id:    'brand-font-heading',
+      path:  'brand_config.fonts.heading',
+      label: 'Heading Font',
+      value: f.heading ?? 'Inter',
+      kind:  'font',
+      group: fg,
+      scope: 'brand',
+    },
+    {
+      id:    'brand-font-body',
+      path:  'brand_config.fonts.body',
+      label: 'Body Font',
+      value: f.body ?? 'Inter',
+      kind:  'font',
+      group: fg,
+      scope: 'brand',
+    },
   )
 
   const cg = 'Contact'

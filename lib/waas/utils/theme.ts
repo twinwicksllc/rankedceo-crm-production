@@ -48,14 +48,21 @@ export function buildCSSVariables(brandConfig: BrandConfig): CSSVariables {
     ...DEFAULT_COLORS,
     ...(brandConfig.colors ?? {}),
   }
+
+  // Phase 7.1: Use brand_config.fonts slugs directly as font-family values.
+  // The slug is the exact Google Fonts family name (e.g. 'Inter', 'Poppins').
+  // We append ', sans-serif' / ', serif' as a system fallback.
+  const headingSlug = brandConfig.fonts?.heading ?? DEFAULT_FONTS.heading
+  const bodySlug    = brandConfig.fonts?.body    ?? DEFAULT_FONTS.body
+
+  // Determine whether to add serif or sans-serif as fallback
+  const SERIF_FONTS = new Set(['Playfair Display', 'Merriweather'])
+  const headingFallback = SERIF_FONTS.has(headingSlug) ? 'serif' : 'sans-serif'
+  const bodyFallback    = SERIF_FONTS.has(bodySlug)    ? 'serif' : 'sans-serif'
+
   const fonts = {
-    ...DEFAULT_FONTS,
-    ...(brandConfig.fonts
-      ? {
-          heading: `${brandConfig.fonts.heading}, sans-serif`,
-          body:    `${brandConfig.fonts.body}, sans-serif`,
-        }
-      : {}),
+    heading: `'${headingSlug}', ${headingFallback}`,
+    body:    `'${bodySlug}', ${bodyFallback}`,
   }
 
   return {
