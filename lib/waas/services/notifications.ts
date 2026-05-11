@@ -120,7 +120,7 @@ async function sendViaSendGrid(opts: {
   const apiKey = process.env.SENDGRID_API_KEY
   if (!apiKey) return { messageId: null, error: 'SENDGRID_API_KEY not set' }
 
-  const fromEmail = process.env.NOTIFICATION_FROM_EMAIL ?? 'noreply@rankedceo.com'
+  const fromEmail = process.env.SENDGRID_FROM_EMAIL ?? 'noreply@rankedceo.com'
 
   try {
     const resp = await fetch('https://api.sendgrid.com/v3/mail/send', {
