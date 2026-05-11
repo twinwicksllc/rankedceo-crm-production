@@ -3281,3 +3281,114 @@ export async function updateTenantHeroImage(
     return { success: false, error: err instanceof Error ? err.message : 'Failed to update hero image' }
   }
 }
+
+// =============================================================================
+// Phase 8.6 — getWaasRevenueStats
+//
+// Returns aggregated WaaS subscription revenue metrics for the admin dashboard:
+//   - mrr:             Monthly Recurring Revenue (sum of all active monthly subs)
+//   - arr:             Annual Recurring Revenue (MRR × 12 + annual sub value)
+//   - activePaidCount: Tenants with an active paid subscription
+//   - planBreakdown:   Count per WaasPackageTier
+//   - recentSubscriptions: last 10 tenants that subscribed (with date)
+// =============================================================================
+
+export interface WaasRevenueStats {
+  mrr:                number
+  arr:                number
+  activePaidCount:    number
+  planBreakdown:      Record<string, number>
+  recentSubscriptions: Array<{
+    tenantId:     string
+    businessName: string
+    packageTier:  string
+    planInterval: string | null
+    createdAt:    string
+  }>
+}
+
+export async function getWaasRevenueStats(): Promise<ActionResult<WaasRevenueStats>> {
+  try {
+    const supabase = getAdminClient()
+
+    // Fetch all active tenants that have a Stripe subscription
+    const { data, error } = await supabase
+      .from('tenants')
+      .select('id, brand_config, package_tier, plan_interval, stripe_subscription_id, created_at')
+      .not('stripe_subscription_id', 'is', null)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+
+    if (error) throw new Error(error.message)
+
+    const rows = (data ?? []) as Array<{
+      id:                     string
+      brand_config:           Record<string, unknown> | null
+      package_tier:           string | null
+      plan_interval:          string | null
+      stripe_subscription_id: string
+      created_at:             string
+    }>
+
+    // Plan → monthly equivalent price (matches WAAS_PLAN_DISPLAY)
+    const MONTHLY_VALUE: Record<string, number> = {
+      hosting_only: Math.round(199 / 12),   // ~$16.58/mo equivalent
+      standard:     39,
+      premium:      49,
+    }
+    const YEARLY_VALUE: Record<string, number> = {
+      hosting_only: 199,
+      standard:     399,
+      premium:      499,
+    }
+
+    let mrr = 0
+    let arr = 0
+    const planBreakdown: Record<string, number> = {}
+
+    for (const row of rows) {
+      const tier     = row.package_tier ?? 'hosting'
+      const interval = row.plan_interval
+
+      // Plan breakdown
+      planBreakdown[tier] = (planBreakdown[tier] ?? 0) + 1
+
+      // Revenue contribution
+      if (interval === 'month') {
+        const monthly = MONTHLY_VALUE[tier] ?? 0
+        mrr += monthly
+        arr += monthly * 12
+      } else if (interval === 'year') {
+        const yearly  = YEARLY_VALUE[tier] ?? 0
+        const monthly = Math.round(yearly / 12)
+        mrr += monthly
+        arr += yearly
+      }
+    }
+
+    // Recent subscriptions (last 10)
+    const recentSubscriptions = rows.slice(0, 10).map((row) => {
+      const bc = row.brand_config as { business_name?: string } | null
+      return {
+        tenantId:     row.id,
+        businessName: bc?.business_name ?? row.id.slice(0, 8),
+        packageTier:  row.package_tier ?? 'hosting',
+        planInterval: row.plan_interval,
+        createdAt:    row.created_at,
+      }
+    })
+
+    return {
+      success: true,
+      data: {
+        mrr,
+        arr,
+        activePaidCount: rows.length,
+        planBreakdown,
+        recentSubscriptions,
+      },
+    }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to load revenue stats' }
+  }
+}
