@@ -4,15 +4,14 @@
 // app/edit/[reviewToken]/portal-shell.tsx
 //
 // Outer wrapper for the client portal — renders the top tab nav
-// (Overview / Edit / History) and switches between PortalHome and
-// EditorShell based on the active tab.
+// (Overview / Edit / History / Billing) and switches between tab views.
 //
-// Tab state is URL-driven (?tab=overview | edit | history).
+// Tab state is URL-driven (?tab=overview | edit | history | billing).
 // Navigating tabs does a shallow router.push so Next.js re-fetches
-// the correct server content (overview loads portal data, edit/history
-// loads editable fields).
+// the correct server content.
 //
-// Phase 6.1
+// Phase 6.1 — initial
+// Phase 8.2 — added Billing tab
 // =============================================================================
 
 import { useCallback, useEffect, useState } from 'react'
@@ -20,8 +19,10 @@ import { useRouter }      from 'next/navigation'
 import type { ClientEditPermissions } from '@/lib/waas/client-edit/edit-session'
 import type { TenantPortalData }      from '@/lib/waas/actions/client-edit'
 import type { EditableField }         from '@/lib/waas/client-edit/editable-fields'
+import type { TenantBillingStatus }   from '@/lib/waas/actions/billing'
 import { PortalHome }     from './portal-home'
 import { EditorShell }    from './editor-shell'
+import { BillingTab }     from './billing-tab'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -40,9 +41,11 @@ export interface PortalSession {
 }
 
 interface PortalShellProps {
-  session:    PortalSession
-  portalData: TenantPortalData | null
-  activeTab:  'overview' | 'edit' | 'history'
+  session:       PortalSession
+  portalData:    TenantPortalData | null
+  activeTab:     'overview' | 'edit' | 'history' | 'billing'
+  billingStatus?: TenantBillingStatus | null
+  checkoutSuccess?: boolean
   editorProps?: {
     initialFields: EditableField[]
   }
@@ -56,6 +59,7 @@ const TABS = [
   { id: 'overview', label: '🏠 Overview' },
   { id: 'edit',     label: '✏️ Edit'     },
   { id: 'history',  label: '🕐 History'  },
+  { id: 'billing',  label: '💳 Billing'  },
 ] as const
 
 type TabId = typeof TABS[number]['id']
@@ -68,6 +72,8 @@ export function PortalShell({
   session,
   portalData,
   activeTab,
+  billingStatus,
+  checkoutSuccess,
   editorProps,
 }: PortalShellProps) {
   const router = useRouter()
@@ -176,6 +182,16 @@ export function PortalShell({
           <div className="flex flex-1 items-center justify-center text-slate-400 text-sm">
             Loading editor…
           </div>
+        )}
+
+        {/* Billing tab */}
+        {activeTab === 'billing' && (
+          <BillingTab
+            tenantId={session.tenantId}
+            reviewToken={session.reviewToken}
+            billingStatus={billingStatus ?? null}
+            checkoutSuccess={checkoutSuccess}
+          />
         )}
       </div>
     </div>
