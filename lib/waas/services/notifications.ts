@@ -34,6 +34,10 @@ export type NotificationType =
   | 'site_live'                // Tenant: 🎉 your site is live
   | 'approval_received'        // Admin:  client approved variant N
   | 'client_first_edit'        // Admin (digest stub): client edited their site
+  // Phase 8.3 — billing lifecycle
+  | 'subscription_activated'   // Tenant: payment confirmed, plan is active
+  | 'payment_failed'           // Tenant: payment failed, action required
+  | 'plan_changed'             // Tenant: plan upgraded or downgraded
 
 export interface SendNotificationArgs {
   type:          NotificationType
