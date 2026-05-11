@@ -14,7 +14,8 @@ import { PreviewTab }          from './preview-tab'
 import { SiteSettingsForm }    from './site-settings-form'
 import { VersionRollbackButton } from './version-rollback-button'
 import { AIVariantsPanel } from './ai-variants-panel'
-import type { WaasDomainRequest } from '@/lib/waas/types'
+import { ChangePlanForm }  from './change-plan-form'
+import type { WaasDomainRequest, WaasPackageTier } from '@/lib/waas/types'
 
 interface PageProps {
   params:      { tenantId: string }
@@ -392,6 +393,23 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
                   initialMetaDescription={siteConfig?.meta_description ?? ''}
                   initialOgImageUrl={siteConfig?.og_image_url ?? ''}
                   initialCustomCss={siteConfig?.custom_css ?? ''}
+                />
+              </div>
+            </div>
+
+            {/* Billing & Plan — Phase 7.4 */}
+            <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
+                <h2 className="text-white font-semibold text-sm">Billing &amp; Plan</h2>
+                <span className="rounded-full bg-blue-500/15 border border-blue-500/20 px-2 py-0.5 text-[10px] font-semibold text-blue-300 uppercase tracking-wide">
+                  {tenant.package_tier}
+                </span>
+              </div>
+              <div className="p-5">
+                <ChangePlanForm
+                  tenantId={tenant.id}
+                  currentTier={(tenant.package_tier ?? 'hosting') as WaasPackageTier}
+                  currentInterval={(tenant.plan_interval as 'month' | 'year' | null) ?? null}
                 />
               </div>
             </div>

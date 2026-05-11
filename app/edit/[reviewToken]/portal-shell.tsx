@@ -140,6 +140,8 @@ export function PortalShell({
         {activeTab === 'overview' && portalData && (
           <PortalHome
             businessName={session.businessName}
+            tenantId={session.tenantId}
+            reviewToken={session.reviewToken}
             data={portalData}
             onGoToEdit={() => navigateTab('edit')}
             onGoToHistory={() => navigateTab('history')}
