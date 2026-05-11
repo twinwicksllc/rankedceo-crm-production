@@ -18,6 +18,7 @@ const modernSections: SectionConfig[] = [
   { section: 'faq',       enabled: false, order: 5, config: {} },
   { section: 'how-it-works', enabled: false, order: 6, config: {} },
   { section: 'financing', enabled: false, order: 7, config: {} },
+  { section: 'gallery',   enabled: false, order: 9, config: { columns: 3 } },  // Phase 7.3
   { section: 'reviews',   enabled: true,  order: 8, config: { showNFC: true } },
 ]
 
@@ -33,6 +34,7 @@ const boldSections: SectionConfig[] = [
   { section: 'financing', enabled: true,  order: 5, config: {} },
   { section: 'booking',   enabled: true,  order: 6, config: { variant: 'modal-trigger' } },
   { section: 'faq',       enabled: false, order: 7, config: {} },
+  { section: 'gallery',   enabled: false, order: 9, config: { columns: 3 } },  // Phase 7.3
   { section: 'reviews',   enabled: true,  order: 8, config: { showNFC: true } },
 ]
 
@@ -49,6 +51,7 @@ const trustFirstSections: SectionConfig[] = [
   { section: 'booking',   enabled: true,  order: 6, config: { variant: 'inline' } },
   { section: 'faq',       enabled: true,  order: 7, config: {} },
   { section: 'financing', enabled: false, order: 8, config: {} },
+  { section: 'gallery',   enabled: false, order: 9, config: { columns: 3 } },  // Phase 7.3
 ]
 
 // ---------------------------------------------------------------------------

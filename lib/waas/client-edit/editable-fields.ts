@@ -89,6 +89,7 @@ const SECTION_LABELS: Record<string, string> = {
   about:          'About',
   faq:            'FAQ',
   'how-it-works': 'How It Works',
+  gallery:        'Photo Gallery',   // Phase 7.3
 }
 
 // Sections the client cannot toggle off (always required)
@@ -155,6 +156,10 @@ const SECTION_LEAF_FIELDS: Partial<Record<SectionId, LeafDef[]>> = {
     { key: 'headline',    label: 'Headline',    kind: 'text',      maxLength: 120 },
     { key: 'subheadline', label: 'Subheadline', kind: 'long_text', maxLength: 240 },
   ],
+  gallery: [
+    { key: 'eyebrow',  label: 'Eyebrow',  kind: 'text', maxLength: 60  },
+    { key: 'headline', label: 'Headline', kind: 'text', maxLength: 120 },
+  ],
 }
 
 // Array-of-objects fields per section (items / steps / badges / faq items)
@@ -193,6 +198,15 @@ const SECTION_ARRAY_FIELDS: Partial<Record<SectionId, {
     leafs: [
       { key: 'title',       label: 'Title',       kind: 'text',      maxLength: 80  },
       { key: 'description', label: 'Description', kind: 'long_text', maxLength: 240 },
+    ],
+  },
+  // Phase 7.3: Gallery photo slots
+  gallery: {
+    arrayKey:  'items',
+    itemLabel: (i) => `Photo ${i + 1}`,
+    leafs: [
+      { key: 'image_url', label: 'Photo',   kind: 'image' },
+      { key: 'caption',   label: 'Caption', kind: 'text',  maxLength: 120 },
     ],
   },
 }

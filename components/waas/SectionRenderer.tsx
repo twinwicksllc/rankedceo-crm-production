@@ -7,6 +7,7 @@ import type {
   AboutSectionContent,
   BookingSectionContent,
   FAQSectionContent,
+  GallerySectionContent,
   HeroSectionContent,
   HowItWorksSectionContent,
   ResolvedTenant,
@@ -25,6 +26,7 @@ import { ReviewNFCSection }  from '@/components/waas/sections/ReviewNFCSection'
 import { AboutSection }      from '@/components/waas/sections/AboutSection'
 import { FAQSection }        from '@/components/waas/sections/FAQSection'
 import { HowItWorksSection } from '@/components/waas/sections/HowItWorksSection'
+import { GallerySection }    from '@/components/waas/sections/GallerySection'
 
 interface SectionRendererProps {
   tenant:     ResolvedTenant
@@ -61,6 +63,8 @@ function renderSection(
       return <FAQSection key={`faq-${section.order}`} tenant={tenant} content={section.content as FAQSectionContent | undefined} />
     case 'how-it-works':
       return <HowItWorksSection key={`how-it-works-${section.order}`} tenant={tenant} content={section.content as HowItWorksSectionContent | undefined} />
+    case 'gallery':
+      return <GallerySection key={`gallery-${section.order}`} tenant={tenant} config={section.config} content={section.content as GallerySectionContent | undefined} />
     default:
       return null
   }
