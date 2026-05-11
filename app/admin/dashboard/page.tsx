@@ -88,11 +88,11 @@ export default async function AdminDashboardPage({
   const active  = filteredTenants.filter(t => t.status === 'active')
 
   return (
-    <div>
+    <div data-testid="admin-dashboard-root">
       {/* Page header */}
       <div className="mb-8 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white">Command Center</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white" data-testid="admin-dashboard-heading">Command Center</h1>
           <p className="text-white/40 mt-1 text-sm">Manage all AdvantagePoint tenants and deployments.</p>
         </div>
         {/* Phase 6.3: quick link to domain requests */}
@@ -149,12 +149,12 @@ export default async function AdminDashboardPage({
       )}
 
       {/* Phase 8.6 — WaaS Revenue Dashboard */}
-      <div className="mb-10">
+      <div className="mb-10" data-testid="revenue-widget">
         <RevenueWidget stats={revenueStats} />
       </div>
 
       {/* Phase 6.2 — Enhanced searchable tenant list */}
-      <div className="mb-10 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl p-5">
+      <div className="mb-10 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl p-5" data-testid="waas-clients-table">
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="text-white font-semibold text-sm">All Tenants</h2>

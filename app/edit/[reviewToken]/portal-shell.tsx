@@ -96,7 +96,7 @@ export function PortalShell({
   }, [router, session.reviewToken])
 
   return (
-    <div className="flex h-dvh flex-col bg-white">
+    <div className="flex h-dvh flex-col bg-white" data-testid="client-portal-root">
 
       {/* ------------------------------------------------------------------ */}
       {/* Top bar: business name + tab nav                                     */}
@@ -129,6 +129,7 @@ export function PortalShell({
               type="button"
               onClick={() => navigateTab(tab.id)}
               aria-current={activeTab === tab.id ? 'page' : undefined}
+              data-testid={`portal-tab-${tab.id}`}
               className={`
                 mr-1 flex items-center gap-1.5 border-b-2 px-3 pb-2 pt-1.5 text-xs font-medium transition-colors
                 ${activeTab === tab.id
@@ -143,12 +144,12 @@ export function PortalShell({
       </header>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Tab content                                                          */}
-      {/* ------------------------------------------------------------------ */}
+      {/* Tab content */}
       <div className="flex min-h-0 flex-1">
 
         {/* Overview tab */}
         {activeTab === 'overview' && portalData && (
+          <div data-testid="overview-tab-content" className="flex flex-1 min-h-0">
           <PortalHome
             businessName={session.businessName}
             tenantId={session.tenantId}
@@ -157,6 +158,7 @@ export function PortalShell({
             onGoToEdit={() => navigateTab('edit')}
             onGoToHistory={() => navigateTab('history')}
           />
+          </div>
         )}
 
         {/* Overview tab — no portal data (edge case) */}
@@ -175,14 +177,16 @@ export function PortalShell({
 
         {/* Edit or History tab — EditorShell */}
         {(activeTab === 'edit' || activeTab === 'history') && editorProps && (
+          <div data-testid="editor-tab-content" className="flex flex-1 min-h-0">
           <EditorShell
             session={session}
             initialFields={editorProps.initialFields}
             initialHistoryOpen={historyOpenOnMount}
           />
+          </div>
         )}
 
-        {/* Edge case: edit tab but no editorProps (should not happen) */}
+        {/* Edge case: edit tab but no editorProps */}
         {(activeTab === 'edit' || activeTab === 'history') && !editorProps && (
           <div className="flex flex-1 items-center justify-center text-slate-400 text-sm">
             Loading editor…
@@ -191,17 +195,21 @@ export function PortalShell({
 
         {/* Billing tab */}
         {activeTab === 'billing' && (
+          <div data-testid="billing-tab-content" className="flex flex-1 min-h-0">
           <BillingTab
             tenantId={session.tenantId}
             reviewToken={session.reviewToken}
             billingStatus={billingStatus ?? null}
             checkoutSuccess={checkoutSuccess}
           />
+          </div>
         )}
 
         {/* Audits tab */}
         {activeTab === 'audits' && (
+          <div data-testid="audits-tab-content" className="flex flex-1 min-h-0">
           <AuditHistoryTab items={auditHistory ?? []} />
+          </div>
         )}
       </div>
     </div>

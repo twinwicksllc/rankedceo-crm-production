@@ -278,7 +278,7 @@ function LoginForm() {
 
           {/* Email/Password Form */}
           {mode === 'password' && (
-            <form onSubmit={handleEmailLogin} className="space-y-4">
+            <form onSubmit={handleEmailLogin} className="space-y-4" data-testid="login-form-password">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -290,6 +290,7 @@ function LoginForm() {
                   required
                   disabled={loading}
                   autoComplete="email"
+                  data-testid="admin-email"
                 />
               </div>
               <div className="space-y-2">
@@ -310,9 +311,10 @@ function LoginForm() {
                   required
                   disabled={loading}
                   autoComplete="current-password"
+                  data-testid="admin-password"
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full" disabled={loading} data-testid="admin-login-submit">
                 {loading ? 'Signing in...' : 'Sign in'}
               </Button>
             </form>

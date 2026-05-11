@@ -292,8 +292,8 @@ export function TenantList({ initialTenants }: TenantListProps) {
 
       {/* Tenant table */}
       {!isSearching && (
-        <div className="overflow-x-auto rounded-xl border border-white/10">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-xl border border-white/10" data-testid="waas-clients-table-inner">
+          <table className="w-full text-sm" data-testid="tenants-table">
             <thead>
               <tr className="border-b border-white/10 text-white/40 text-xs">
                 <th className="px-4 py-3 text-left w-10">
