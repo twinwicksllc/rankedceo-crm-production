@@ -22,6 +22,7 @@ steps:
     severity: info
     url: "{{ BASE_URL }}"
     description: "Navigate to root — should redirect or render landing"
+    intent: "Navigates to the production root URL — confirms the CDN and static build are serving the homepage. A blank response here indicates a CDN outage or failed deployment"
 
   - id: canary_s02_assert_homepage_body
     type: assert_text
@@ -38,6 +39,7 @@ steps:
     severity: critical
     url: "{{ BASE_URL }}/admin/login"
     description: "Navigate to admin login"
+    intent: "Navigates to the admin login page in production — critical to verify the Next.js route is served correctly on the live domain"
 
   - id: canary_s04_assert_login_form
     type: assert_text
@@ -56,6 +58,7 @@ steps:
     selector: "[data-testid='admin-email']"
     value: "{{ ADMIN_EMAIL }}"
     description: "Fill admin email for canary login"
+    intent: "Fills admin email in production login form — uses the same QA_ADMIN_EMAIL credential that exists in the production Supabase auth table"
 
   - id: canary_s06_fill_pass
     type: fill
@@ -64,6 +67,7 @@ steps:
     selector: "[data-testid='admin-password']"
     value: "{{ ADMIN_PASSWORD }}"
     description: "Fill admin password for canary login"
+    intent: "Fills admin password — uses QA_ADMIN_PASSWORD. This credential must exist in production auth and must never be a billing-capable account to prevent accidental charges"
 
   - id: canary_s07_submit_login
     type: click
@@ -71,6 +75,7 @@ steps:
     severity: critical
     selector: "[data-testid='admin-login-submit']"
     description: "Login to access authenticated routes"
+    intent: "Submits login in production — if this fails, check that QA_ADMIN_EMAIL/QA_ADMIN_PASSWORD secrets in GitHub Actions match the production Supabase auth record"
 
   - id: canary_s08_assert_dashboard_url
     type: assert_url
@@ -87,6 +92,7 @@ steps:
     selector: "[data-testid='revenue-widget']"
     contains: ""
     description: "Revenue widget must be present on production dashboard"
+    intent: "Verifies the revenue widget renders in production — a missing widget here but not in staging indicates a data difference causing a null pointer in the production widget"
 
   - id: canary_s10_assert_clients_table
     type: assert_text
@@ -95,6 +101,7 @@ steps:
     selector: "[data-testid='waas-clients-table']"
     contains: ""
     description: "Clients table must render on production dashboard"
+    intent: "Verifies the clients table renders in production — should show real clients, not an empty state"
 
   # ── Scene 03: Admin secondary pages ───────────────────────────────────────
   - id: canary_s11_navigate_qa_reports
@@ -103,6 +110,7 @@ steps:
     severity: info
     url: "{{ BASE_URL }}/admin/qa-reports"
     description: "Navigate to QA reports page in production"
+    intent: "Navigates to QA reports in production — verifies the Sprint 3 pages were deployed and are accessible in the live environment"
 
   - id: canary_s12_assert_qa_reports
     type: assert_text
@@ -119,6 +127,7 @@ steps:
     severity: info
     url: "{{ BASE_URL }}/admin/qa-scenarios"
     description: "Navigate to QA scenarios management in production"
+    intent: "Navigates to QA scenarios management in production — verifies the scenarios UI page was deployed"
 
   - id: canary_s14_assert_scenario_list
     type: assert_text
@@ -127,6 +136,7 @@ steps:
     selector: "[data-testid='scenario-list']"
     contains: ""
     description: "Scenario list must render in production"
+    intent: "Verifies the scenario list renders in production — should show any custom scenarios created via the Admin UI"
 
   # ── Scene 04: Client portal read-only ─────────────────────────────────────
   - id: canary_s15_handoff_to_client
@@ -137,6 +147,7 @@ steps:
     to: client
     message: "Admin pages verified — switching to client portal for read-only check"
     description: "Switch to client persona for portal read-only check"
+    intent: "Cross-persona handoff from admin to client — the client context navigates to the production portal URL. The canary token must belong to a test account, not a real paying customer"
 
   - id: canary_s16_navigate_portal
     type: navigate
@@ -144,6 +155,7 @@ steps:
     severity: critical
     url: "{{ BASE_URL }}/edit/{{ CLIENT_REVIEW_TOKEN }}"
     description: "Navigate to client portal (read-only token)"
+    intent: "Navigates to client portal in production using a canary review token — this token should belong to a dedicated QA canary account that is not a paying customer"
 
   - id: canary_s17_assert_portal_root
     type: assert_text
@@ -160,6 +172,7 @@ steps:
     severity: info
     selector: "[data-testid='portal-tab-overview']"
     description: "Click overview tab (read-only check)"
+    intent: "Clicks the overview tab in production — read-only check that the tab navigation works on the live portal"
 
   - id: canary_s19_assert_overview
     type: assert_text
@@ -168,6 +181,7 @@ steps:
     selector: "[data-testid='overview-tab-content']"
     contains: ""
     description: "Overview tab must render in production"
+    intent: "Verifies the overview tab content renders in production — missing content indicates a data fetch error specific to the production environment"
 
   - id: canary_s20_click_reviews
     type: click
@@ -175,6 +189,7 @@ steps:
     severity: info
     selector: "[data-testid='portal-tab-reviews']"
     description: "Click reviews tab (read-only check)"
+    intent: "Clicks the reviews tab in production — read-only check"
 
   - id: canary_s21_assert_reviews
     type: assert_text
@@ -183,6 +198,7 @@ steps:
     selector: "[data-testid='reviews-tab-content']"
     contains: ""
     description: "Reviews tab must render in production"
+    intent: "Verifies the reviews tab content renders in production — missing content indicates a Supabase query or RLS issue in production"
 
   - id: canary_s22_handoff_back
     type: handoff
@@ -192,6 +208,7 @@ steps:
     to: admin
     message: "Client portal verified — returning to admin for final health check"
     description: "Return to admin to close canary run"
+    intent: "Cross-persona handoff back to admin to close the canary run — both browser contexts must still be alive"
 
   # ── Scene 05: Final health check ─────────────────────────────────────────
   - id: canary_s23_dashboard_final
@@ -201,6 +218,7 @@ steps:
     selector: "[data-testid='admin-dashboard-root']"
     contains: ""
     description: "Admin dashboard root still present at end of canary run"
+    intent: "Final production health check — admin dashboard root must still be present at end of canary run"
 
   - id: canary_s24_assert_no_error_boundary
     type: assert_text

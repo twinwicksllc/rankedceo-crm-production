@@ -19,6 +19,7 @@
  */
 
 import type { Finding, Severity, RunConfig } from '../types.js'
+import { relocate } from '../self-healing/llm-relocate.js'
 
 export class CriticalHaltError extends Error {
   constructor(
@@ -108,10 +109,36 @@ export class EscalationEngine {
 
   private async fireCriticalNotifications(finding: Finding): Promise<void> {
     console.error('🚨 CRITICAL HALT — firing notifications...')
-    await Promise.allSettled([
+    const [, issueResult] = await Promise.allSettled([
       this.sendCriticalEmail(finding),
       this.createGitHubIssue(finding),
     ])
+
+    // v1.5 self-healing hook — log prompt in v1, call LLM in v1.5
+    // The GitHub Issue body contains the selfHealPayload JSON block.
+    // In v1: relocate() logs the prompt and returns null.
+    // In v1.5: set SELF_HEAL_PROVIDER=openai|anthropic + API key to activate.
+    if (issueResult.status === 'fulfilled' && typeof issueResult.value === 'string') {
+      const issueBody = issueResult.value
+      try {
+        const provider = (process.env.SELF_HEAL_PROVIDER ?? 'stub') as 'stub' | 'openai' | 'anthropic'
+        const proposal = await relocate(issueBody, {
+          provider,
+          model: process.env.SELF_HEAL_MODEL,
+          apiKey: provider === 'openai' ? process.env.OPENAI_API_KEY : process.env.ANTHROPIC_API_KEY,
+          minConfidence: parseFloat(process.env.SELF_HEAL_MIN_CONFIDENCE ?? '0.7'),
+        })
+        if (proposal?.canFix) {
+          console.log(`[EscalationEngine] 🔧 Self-heal proposal (confidence: ${proposal.confidence}):`)
+          console.log(`  Proposed selector: ${proposal.proposedSelector ?? proposal.proposedPattern}`)
+          console.log(`  Reasoning: ${proposal.reasoning}`)
+        }
+      } catch (err) {
+        console.warn('[EscalationEngine] Self-healing hook error (non-fatal):', err)
+      }
+    } else {
+      console.log('[EscalationEngine] v1.5 self-healing hook ready — see qa-agent/src/self-healing/llm-relocate.ts')
+    }
   }
 
   private async sendCriticalEmail(finding: Finding): Promise<void> {
@@ -145,31 +172,32 @@ export class EscalationEngine {
     }
   }
 
-  private async createGitHubIssue(finding: Finding): Promise<void> {
+  private async createGitHubIssue(finding: Finding): Promise<string | null> {
     const token = process.env.GITHUB_TOKEN
     const repo = process.env.GITHUB_REPO ?? 'twinwicksllc/rankedceo-crm-production'
     if (!token) {
       console.warn('[EscalationEngine] GITHUB_TOKEN not set — skipping GitHub Issue creation')
-      return
+      return null
     }
 
     /**
-     * v1.5 self-healing hook:
-     * The structured JSON payload at the bottom of the issue body is what
-     * the LLM will read in v1.5 to understand the failure context and
-     * attempt a self-heal. The interface is designed now; the LLM is wired later.
+     * SelfHealPayload — structured JSON embedded in the issue body.
+     * In v1.5, llm-relocate.ts reads this block via the HTML comment markers
+     * and sends it to the LLM to attempt a selector fix.
      */
     const selfHealPayload = {
       runId: this.config.runId,
+      scenario: this.config.scenarioPath,
       stepId: finding.stepId,
       persona: finding.persona,
-      message: finding.message,
-      scenarioPath: this.config.scenarioPath,
-      evidenceDir: this.evidenceDir,
+      stepType: 'unknown', // populated from step metadata when StepExecutor passes it through in v1.5
+      failedSelector: undefined as string | undefined,  // populated in v1.5 when StepExecutor passes selector through
+      failedPattern: undefined as string | undefined,   // populated in v1.5 for assert_url failures
+      intent: '(intent not yet passed through to EscalationEngine — v1.5 wires this from the step)',
+      errorMessage: finding.message,
+      failedAt: finding.timestamp,
       screenshotPath: finding.screenshotPath ?? null,
-      stack: finding.stack ?? null,
-      // v1.5: LLM reads this and attempts to fix the selector / flow
-      selfHealHook: 'NOT_WIRED_YET',
+      domSnippet: null, // populated in v1.5 when StepExecutor captures DOM at failure point
     }
 
     const issueBody = `
@@ -198,11 +226,14 @@ ${finding.stack ? `### Stack Trace\n\`\`\`\n${finding.stack}\n\`\`\`\n` : ''}
 ---
 
 ### Self-Healing Payload (v1.5)
-> *This block is used by the LLM self-healing layer in v1.5. Do not edit manually.*
+> *This block is read by \`qa-agent/src/self-healing/llm-relocate.ts\` in v1.5.*
+> *To activate: set SELF_HEAL_PROVIDER=openai and OPENAI_API_KEY. See docs/qa-agent/self-healing.md*
 
+<!-- SELF_HEAL_PAYLOAD_START -->
 \`\`\`json
 ${JSON.stringify(selfHealPayload, null, 2)}
 \`\`\`
+<!-- SELF_HEAL_PAYLOAD_END -->
 `.trim()
 
     const res = await fetch(`https://api.github.com/repos/${repo}/issues`, {
@@ -221,9 +252,12 @@ ${JSON.stringify(selfHealPayload, null, 2)}
 
     if (!res.ok) {
       console.error(`[EscalationEngine] GitHub issue creation failed: ${res.status}`)
+      return null
     } else {
       const issue = (await res.json()) as { number: number; html_url: string }
       console.log(`[EscalationEngine] GitHub Issue #${issue.number} created: ${issue.html_url}`)
+      // Return the issue body so the self-healing hook can extract the payload
+      return issueBody
     }
   }
 

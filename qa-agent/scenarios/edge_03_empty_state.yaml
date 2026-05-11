@@ -18,6 +18,7 @@ steps:
     severity: info
     url: "{{ BASE_URL }}/admin/login"
     description: "Navigate to admin login"
+    intent: "Navigates to admin login page — required to access all authenticated admin pages in this zero-data scenario"
 
   - id: e03_s02_fill_email
     type: fill
@@ -26,6 +27,7 @@ steps:
     selector: "[data-testid='admin-email']"
     value: "{{ ADMIN_EMAIL }}"
     description: "Fill admin email"
+    intent: "Fills admin email for login — selector data-testid=admin-email in app/(auth)/login/page.tsx"
 
   - id: e03_s03_fill_pass
     type: fill
@@ -34,6 +36,7 @@ steps:
     selector: "[data-testid='admin-password']"
     value: "{{ ADMIN_PASSWORD }}"
     description: "Fill admin password"
+    intent: "Fills admin password — selector data-testid=admin-password in app/(auth)/login/page.tsx"
 
   - id: e03_s04_submit
     type: click
@@ -41,6 +44,7 @@ steps:
     severity: info
     selector: "[data-testid='admin-login-submit']"
     description: "Submit login"
+    intent: "Submits login form — triggers supabase.auth.signInWithPassword() and redirects to /admin/dashboard on success"
 
   - id: e03_s05_assert_dashboard
     type: assert_url
@@ -48,6 +52,7 @@ steps:
     severity: critical
     pattern: "/admin/dashboard"
     description: "Admin must reach dashboard"
+    intent: "Critical gate — all subsequent steps require admin authentication. If this fails, the zero-data checks cannot run"
 
   # ── Scene 02: Dashboard empty-table rendering ─────────────────────────────
   - id: e03_s06_assert_revenue_widget
@@ -84,6 +89,7 @@ steps:
     severity: info
     url: "{{ BASE_URL }}/admin/qa-reports"
     description: "Navigate to QA reports page"
+    intent: "Navigates to the QA reports admin page — this page calls listQaRuns() which returns an empty array when no runs exist. The page must handle the empty array gracefully"
 
   - id: e03_s10_assert_qa_heading
     type: assert_text
@@ -92,6 +98,7 @@ steps:
     selector: "[data-testid='qa-reports-heading']"
     contains: "QA"
     description: "QA reports heading must be present"
+    intent: "The data-testid=qa-reports-heading element is in app/admin/qa-reports/page.tsx — its presence confirms the page rendered without crashing on an empty qa_runs table"
 
   - id: e03_s11_assert_no_crash_on_empty_runs
     type: assert_text
@@ -109,6 +116,7 @@ steps:
     severity: info
     url: "{{ BASE_URL }}/admin/qa-scenarios"
     description: "Navigate to QA scenarios management page"
+    intent: "Navigates to QA scenarios management — this page calls listQaScenarios() which returns an empty array when no custom scenarios exist in qa.qa_scenarios"
 
   - id: e03_s13_assert_scenario_list
     type: assert_text
@@ -126,6 +134,7 @@ steps:
     selector: "[data-testid='new-scenario-id']"
     contains: ""
     description: "New scenario form input must always be present"
+    intent: "The new scenario form should always be visible regardless of how many scenarios exist — it is rendered unconditionally in app/admin/qa-scenarios/page.tsx alongside the scenario list"
 
   # ── Scene 05: Client portal — zero reviews ───────────────────────────────
   - id: e03_s15_handoff_admin_to_client
@@ -136,6 +145,7 @@ steps:
     to: client
     message: "Admin pages verified — switching to client portal for zero-data checks"
     description: "Switch to client persona"
+    intent: "Cross-persona handoff from admin to client — admin pages verified with zero data, now switching to client portal to test zero-reviews rendering"
 
   - id: e03_s16_navigate_portal
     type: navigate
@@ -143,6 +153,7 @@ steps:
     severity: critical
     url: "{{ BASE_URL }}/edit/{{ CLIENT_REVIEW_TOKEN }}"
     description: "Navigate to client portal"
+    intent: "Navigates to client portal using the test review token — the portal should load even if the tenant has zero reviews, zero audits, and an unconfigured billing state"
 
   - id: e03_s17_assert_portal_root
     type: assert_text
@@ -151,6 +162,7 @@ steps:
     selector: "[data-testid='client-portal-root']"
     contains: ""
     description: "Client portal root must be present"
+    intent: "The data-testid=client-portal-root div is the outermost wrapper of portal-shell.tsx — its absence indicates the portal component failed to mount, likely due to null data from the token lookup"
 
   - id: e03_s18_click_overview_tab
     type: click
@@ -158,6 +170,7 @@ steps:
     severity: info
     selector: "[data-testid='portal-tab-overview']"
     description: "Click the overview tab"
+    intent: "Clicks the Overview tab to test zero-reviews rendering — the overview tab typically contains charts and summary stats that crash when data is null instead of []"
 
   - id: e03_s19_assert_overview_content
     type: assert_text
@@ -174,6 +187,7 @@ steps:
     severity: info
     selector: "[data-testid='portal-tab-reviews']"
     description: "Click the reviews tab"
+    intent: "Clicks the Reviews tab to test zero-reviews list rendering — the reviews list must render an empty state UI when reviews is [] rather than crashing with Cannot read properties of null (reading map)"
 
   - id: e03_s21_assert_reviews_content
     type: assert_text
@@ -192,6 +206,7 @@ steps:
     to: admin
     message: "Client empty-state checks complete — returning to admin for final health check"
     description: "Return to admin persona to close out"
+    intent: "Cross-persona handoff back to admin to close out the empty-state run — confirms both contexts survived the zero-data scenario without crashes"
 
   - id: e03_s23_final_health_check
     type: assert_text
@@ -200,3 +215,4 @@ steps:
     selector: "[data-testid='admin-dashboard-root']"
     contains: ""
     description: "Admin dashboard still healthy after empty-state run"
+    intent: "Final health assertion — admin dashboard root must still be present at the end of the empty-state run, confirming no state corruption occurred across either persona context"

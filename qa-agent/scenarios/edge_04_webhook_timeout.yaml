@@ -18,6 +18,7 @@ steps:
     severity: info
     url: "{{ BASE_URL }}/admin/login"
     description: "Navigate to admin login"
+    intent: "Navigates to admin login page — required to set up the admin context before the client initiates checkout in this webhook delay scenario"
 
   - id: e04_s02_fill_email
     type: fill
@@ -26,6 +27,7 @@ steps:
     selector: "[data-testid='admin-email']"
     value: "{{ ADMIN_EMAIL }}"
     description: "Fill admin email"
+    intent: "Fills admin email for login — selector data-testid=admin-email in app/(auth)/login/page.tsx"
 
   - id: e04_s03_fill_pass
     type: fill
@@ -34,6 +36,7 @@ steps:
     selector: "[data-testid='admin-password']"
     value: "{{ ADMIN_PASSWORD }}"
     description: "Fill admin password"
+    intent: "Fills admin password — selector data-testid=admin-password in app/(auth)/login/page.tsx"
 
   - id: e04_s04_submit
     type: click
@@ -41,6 +44,7 @@ steps:
     severity: info
     selector: "[data-testid='admin-login-submit']"
     description: "Submit login"
+    intent: "Submits admin login — triggers the login server action, should redirect to /admin/dashboard on success"
 
   - id: e04_s05_assert_dashboard
     type: assert_url
@@ -48,6 +52,7 @@ steps:
     severity: critical
     pattern: "/admin/dashboard"
     description: "Admin must reach dashboard"
+    intent: "Critical gate — confirms admin is authenticated before the webhook delay test begins"
 
   # ── Scene 02: Client initiates checkout ───────────────────────────────────
   - id: e04_s06_handoff_to_client
@@ -58,6 +63,7 @@ steps:
     to: client
     message: "Admin login confirmed — switching to client for checkout initiation"
     description: "Switch to client persona"
+    intent: "Cross-persona handoff from admin to client — admin is set up, now switching to client portal to initiate the checkout that will trigger the delayed webhook"
 
   - id: e04_s07_navigate_portal
     type: navigate
@@ -65,6 +71,7 @@ steps:
     severity: critical
     url: "{{ BASE_URL }}/edit/{{ CLIENT_REVIEW_TOKEN }}"
     description: "Client navigates to portal"
+    intent: "Navigates to client portal — the portal must load before the client can access the billing tab and initiate an upgrade"
 
   - id: e04_s08_assert_portal
     type: assert_text
@@ -73,6 +80,7 @@ steps:
     selector: "[data-testid='client-portal-root']"
     contains: ""
     description: "Client portal root must render"
+    intent: "The data-testid=client-portal-root div must be present — confirms the portal rendered successfully before the client attempts to upgrade"
 
   - id: e04_s09_click_billing
     type: click
@@ -80,6 +88,7 @@ steps:
     severity: info
     selector: "[data-testid='portal-tab-billing']"
     description: "Click billing tab"
+    intent: "Clicks the billing tab — selector data-testid=portal-tab-billing in portal-shell.tsx"
 
   - id: e04_s10_assert_billing_tab
     type: assert_text
@@ -88,6 +97,7 @@ steps:
     selector: "[data-testid='billing-tab-content']"
     contains: ""
     description: "Billing tab must render before upgrade"
+    intent: "Confirms billing tab content rendered — plan cards and upgrade buttons must be present before the client clicks upgrade"
 
   - id: e04_s11_click_upgrade
     type: click
@@ -104,6 +114,7 @@ steps:
     selector: "body"
     timeout_ms: 8000
     description: "Wait for Stripe checkout redirect"
+    intent: "Waits up to 8s for the Stripe checkout page to load after the upgrade button click — the redirect creates a real Stripe Checkout Session in test mode"
 
   # ── Scene 03: Webhook pause — assert pending state ────────────────────────
   - id: e04_s13_pause_for_webhook
@@ -124,6 +135,7 @@ steps:
     severity: info
     duration_ms: 15000
     description: "Additional 15s wait for delayed webhook to finally deliver"
+    intent: "A second pause giving the delayed Stripe webhook an additional 15s to fire and be processed. After this pause, the subscription should be active. In v1.5, replace with a polled assert_db step that checks subscription.status='active' with retry logic"
 
   - id: e04_s15_navigate_portal_refresh
     type: navigate
@@ -131,6 +143,7 @@ steps:
     severity: critical
     url: "{{ BASE_URL }}/edit/{{ CLIENT_REVIEW_TOKEN }}"
     description: "Reload portal to see post-webhook state"
+    intent: "After the webhook delay period, reloads the portal to check its state — the portal must tolerate subscription status=incomplete and render without crashing"
 
   - id: e04_s16_assert_portal_still_works
     type: assert_text
@@ -147,6 +160,7 @@ steps:
     severity: info
     selector: "[data-testid='portal-tab-billing']"
     description: "Check billing tab renders after webhook delay"
+    intent: "Clicks the billing tab after the webhook delay to verify the billing UI handles pending subscription state gracefully"
 
   # ── Scene 05: Admin verifies no zombie subscriptions ─────────────────────
   - id: e04_s18_handoff_to_admin
@@ -157,6 +171,7 @@ steps:
     to: admin
     message: "Webhook delay path tested — switching to admin to verify subscription integrity"
     description: "Switch back to admin persona"
+    intent: "Cross-persona handoff back to admin — client webhook-delay path tested, switching to admin to verify no zombie subscriptions were created"
 
   - id: e04_s19_navigate_dashboard
     type: navigate
@@ -164,6 +179,7 @@ steps:
     severity: info
     url: "{{ BASE_URL }}/admin/dashboard"
     description: "Admin checks dashboard after webhook timeout test"
+    intent: "Admin navigates to dashboard after the webhook delay test to verify the revenue widget and clients table are unaffected"
 
   - id: e04_s20_assert_clients_table
     type: assert_text
@@ -172,6 +188,7 @@ steps:
     selector: "[data-testid='waas-clients-table']"
     contains: ""
     description: "Clients table must render after webhook edge case"
+    intent: "Confirms the clients table renders correctly after the webhook delay scenario — zombie subscriptions or duplicate records would cause rendering issues here"
 
   - id: e04_s21_assert_no_duplicate_sub_page
     type: assert_text
