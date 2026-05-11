@@ -18,10 +18,18 @@ export class SupabaseAdapter {
   private client: AnyClient
 
   constructor() {
-    const url = process.env.SUPABASE_URL
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+    // The project uses WaaS-prefixed variable names because this Vercel project
+    // serves both the WaaS product and the CRM product from the same deployment.
+    // Accept both the short form (SUPABASE_URL) and the WaaS-prefixed form so
+    // the GitHub Secret can be named either way.
+    const url = process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL ?? process.env.SUPABASE_URL
+    const key = process.env.WAAS_SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!url || !key) {
-      throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required')
+      throw new Error(
+        'Supabase credentials are required. Set either:\n' +
+        '  NEXT_PUBLIC_WAAS_SUPABASE_URL + WAAS_SUPABASE_SERVICE_ROLE_KEY  (preferred)\n' +
+        '  or SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY  (fallback)',
+      )
     }
     this.client = createClient(url, key, {
       db: { schema: 'qa' },

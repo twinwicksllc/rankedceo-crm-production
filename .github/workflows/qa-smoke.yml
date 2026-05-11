@@ -8,6 +8,11 @@ concurrency:
   group: qa-smoke-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 jobs:
   smoke:
     name: Smoke Suite (PR #${{ github.event.pull_request.number }})
@@ -41,8 +46,9 @@ jobs:
           QA_ADMIN_EMAIL: ${{ secrets.QA_ADMIN_EMAIL }}
           QA_ADMIN_PASSWORD: ${{ secrets.QA_ADMIN_PASSWORD }}
           QA_CLIENT_REVIEW_TOKEN: ${{ secrets.QA_CLIENT_REVIEW_TOKEN }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # WaaS-prefixed Supabase variable names (this Vercel project serves both WaaS + CRM)
+          NEXT_PUBLIC_WAAS_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          WAAS_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           QA_ADMIN_EMAIL_NOTIFY: ${{ secrets.QA_ADMIN_EMAIL_NOTIFY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -63,6 +69,7 @@ jobs:
         if: always()
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const status = '${{ job.status }}' === 'success' ? '✅ Smoke passed' : '❌ Smoke failed'
             await github.rest.issues.createComment({
