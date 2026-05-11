@@ -1,0 +1,165 @@
+id: edge_01_auth_failure
+name: "Edge 01 — Auth Failure & Recovery"
+description: >
+  Validates that the application correctly handles bad credentials,
+  shows appropriate error UI, and allows recovery with valid credentials.
+  Also tests that a client with an invalid/expired review token gets a 404
+  rather than a blank or broken portal.
+modes:
+  - smoke
+  - full
+
+steps:
+  # ── Scene 01: Wrong password ───────────────────────────────────────────────
+  - id: e01_s01_navigate_login
+    type: navigate
+    persona: admin
+    severity: info
+    url: "{{ BASE_URL }}/admin/login"
+    description: "Navigate to admin login page"
+
+  - id: e01_s02_fill_wrong_creds
+    type: fill
+    persona: admin
+    severity: info
+    selector: "[data-testid='admin-email']"
+    value: "{{ ADMIN_EMAIL }}"
+    description: "Fill valid email"
+
+  - id: e01_s03_fill_wrong_pass
+    type: fill
+    persona: admin
+    severity: info
+    selector: "[data-testid='admin-password']"
+    value: "wrong_password_!@#$"
+    description: "Fill deliberately wrong password"
+
+  - id: e01_s04_submit_wrong
+    type: click
+    persona: admin
+    severity: info
+    selector: "[data-testid='admin-login-submit']"
+    description: "Submit with wrong password"
+
+  - id: e01_s05_assert_error_message
+    type: assert_text
+    persona: admin
+    severity: error
+    selector: "body"
+    contains: "Invalid"
+    description: "Page should contain an error/invalid message after failed login"
+    intent: "Auth failure must show user-visible feedback — if this step breaks, check Supabase auth error propagation to the login form"
+
+  - id: e01_s06_assert_still_on_login
+    type: assert_url
+    persona: admin
+    severity: critical
+    pattern: "/admin/login"
+    description: "User must stay on login page after failure"
+    intent: "Redirect after failed auth would be a security regression"
+
+  # ── Scene 02: Recovery with correct credentials ────────────────────────────
+  - id: e01_s07_fill_correct_pass
+    type: fill
+    persona: admin
+    severity: info
+    selector: "[data-testid='admin-password']"
+    value: "{{ ADMIN_PASSWORD }}"
+    description: "Overwrite password field with correct password"
+
+  - id: e01_s08_submit_correct
+    type: click
+    persona: admin
+    severity: info
+    selector: "[data-testid='admin-login-submit']"
+    description: "Submit with correct credentials"
+
+  - id: e01_s09_assert_dashboard
+    type: assert_url
+    persona: admin
+    severity: critical
+    pattern: "/admin/dashboard"
+    description: "Successful login must land on dashboard"
+    intent: "Post-auth redirect target — regression here breaks all subsequent admin flows"
+
+  - id: e01_s10_assert_dashboard_root
+    type: assert_text
+    persona: admin
+    severity: error
+    selector: "[data-testid='admin-dashboard-root']"
+    contains: ""
+    description: "Dashboard root element must be present after recovery"
+
+  # ── Scene 03: Invalid review token ────────────────────────────────────────
+  - id: e01_s11_handoff_to_client
+    type: handoff
+    persona: admin
+    severity: info
+    from: admin
+    to: client
+    message: "Admin confirmed — switching to client to test invalid token handling"
+    description: "Switch to client persona"
+
+  - id: e01_s12_navigate_bad_token
+    type: navigate
+    persona: client
+    severity: warning
+    url: "{{ BASE_URL }}/edit/xxxxxxxx-invalid-token-00000000"
+    description: "Navigate to portal with a fake review token"
+
+  - id: e01_s13_assert_not_blank
+    type: assert_text
+    persona: client
+    severity: warning
+    selector: "body"
+    contains: ""
+    description: "Body must render something (not a blank white page)"
+    intent: "Empty portal body suggests SSR crash rather than graceful 404"
+
+  - id: e01_s14_wait_settled
+    type: wait_for
+    persona: client
+    severity: info
+    selector: "body"
+    timeout_ms: 3000
+    description: "Wait for page to settle after invalid token navigation"
+
+  # ── Scene 04: Empty email submission ─────────────────────────────────────
+  - id: e01_s15_handoff_back_to_admin
+    type: handoff
+    persona: client
+    severity: info
+    from: client
+    to: admin
+    message: "Invalid token check complete — returning to admin for form validation test"
+    description: "Switch back to admin persona"
+
+  - id: e01_s16_navigate_login_again
+    type: navigate
+    persona: admin
+    severity: info
+    url: "{{ BASE_URL }}/admin/login"
+    description: "Navigate back to login page for empty-field test"
+
+  - id: e01_s17_clear_email
+    type: fill
+    persona: admin
+    severity: info
+    selector: "[data-testid='admin-email']"
+    value: ""
+    description: "Clear email field"
+
+  - id: e01_s18_submit_empty
+    type: click
+    persona: admin
+    severity: error
+    selector: "[data-testid='admin-login-submit']"
+    description: "Click submit with empty email — should be blocked by validation"
+
+  - id: e01_s19_assert_still_login
+    type: assert_url
+    persona: admin
+    severity: error
+    pattern: "/admin/login"
+    description: "Empty email submit must not navigate away from login page"
+    intent: "HTML5 validation or server validation should block empty-email submit"

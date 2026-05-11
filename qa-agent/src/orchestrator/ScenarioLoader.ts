@@ -20,6 +20,10 @@ const BaseStepSchema = z.object({
   description: z.string().optional(),
   severity: SeveritySchema,
   intent: z.string().optional(),
+  /** Retry count — 0 means no retry */
+  retries: z.number().int().min(0).optional(),
+  /** Per-step timeout override in ms */
+  timeout_ms: z.number().int().positive().optional(),
 })
 
 const NavigateStepSchema = BaseStepSchema.extend({ type: z.literal('navigate'), url: z.string() })

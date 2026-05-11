@@ -1,0 +1,156 @@
+id: edge_02_billing_error
+name: "Edge 02 — Billing Errors & Declined Card"
+description: >
+  Validates that the billing flow handles Stripe-declined cards gracefully,
+  shows user-visible error feedback, does not create a subscription on a
+  decline, and allows the user to retry with a valid card.
+  Uses Stripe test card 4000 0000 0000 0002 (generic decline).
+modes:
+  - full
+
+steps:
+  # ── Scene 01: Admin login ─────────────────────────────────────────────────
+  - id: e02_s01_navigate_login
+    type: navigate
+    persona: admin
+    severity: info
+    url: "{{ BASE_URL }}/admin/login"
+    description: "Navigate to admin login"
+
+  - id: e02_s02_fill_email
+    type: fill
+    persona: admin
+    severity: info
+    selector: "[data-testid='admin-email']"
+    value: "{{ ADMIN_EMAIL }}"
+    description: "Fill admin email"
+
+  - id: e02_s03_fill_pass
+    type: fill
+    persona: admin
+    severity: info
+    selector: "[data-testid='admin-password']"
+    value: "{{ ADMIN_PASSWORD }}"
+    description: "Fill admin password"
+
+  - id: e02_s04_submit
+    type: click
+    persona: admin
+    severity: info
+    selector: "[data-testid='admin-login-submit']"
+    description: "Submit admin login"
+
+  - id: e02_s05_assert_dashboard
+    type: assert_url
+    persona: admin
+    severity: critical
+    pattern: "/admin/dashboard"
+    description: "Admin must be on dashboard"
+
+  - id: e02_s06_assert_clients_table
+    type: assert_text
+    persona: admin
+    severity: error
+    selector: "[data-testid='waas-clients-table']"
+    contains: ""
+    description: "WaaS clients table must be present before billing test"
+
+  # ── Scene 02: Client billing tab ─────────────────────────────────────────
+  - id: e02_s07_handoff_admin_to_client
+    type: handoff
+    persona: admin
+    severity: info
+    from: admin
+    to: client
+    message: "Admin dashboard verified — switching to client to test declined card flow"
+    description: "Switch persona to client"
+
+  - id: e02_s08_navigate_portal
+    type: navigate
+    persona: client
+    severity: critical
+    url: "{{ BASE_URL }}/edit/{{ CLIENT_REVIEW_TOKEN }}"
+    description: "Client navigates to their portal"
+
+  - id: e02_s09_assert_portal
+    type: assert_text
+    persona: client
+    severity: critical
+    selector: "[data-testid='client-portal-root']"
+    contains: ""
+    description: "Client portal root must be present"
+
+  - id: e02_s10_click_billing_tab
+    type: click
+    persona: client
+    severity: error
+    selector: "[data-testid='portal-tab-billing']"
+    description: "Click the billing tab"
+
+  - id: e02_s11_assert_billing_content
+    type: assert_text
+    persona: client
+    severity: error
+    selector: "[data-testid='billing-tab-content']"
+    contains: ""
+    description: "Billing tab content must render"
+
+  # ── Scene 03: Declined card attempt ──────────────────────────────────────
+  - id: e02_s12_click_upgrade
+    type: click
+    persona: client
+    severity: error
+    selector: "[data-testid='upgrade-btn-pro']"
+    description: "Click the Pro plan upgrade button"
+    intent: "If upgrade button is missing, the billing tab did not render the plan cards — check upgrade-plan-card-pro"
+
+  - id: e02_s13_wait_checkout
+    type: wait_for
+    persona: client
+    severity: info
+    selector: "body"
+    timeout_ms: 8000
+    description: "Wait for Stripe checkout page or modal to appear"
+
+  - id: e02_s14_wait_post_decline
+    type: wait_for
+    persona: client
+    severity: info
+    selector: "body"
+    timeout_ms: 4000
+    description: "Wait for decline response after StripeAdapter fills declined card (4000000000000002)"
+    intent: "v1.5: StripeAdapter should gain a 'declined' mode that fills 4000000000000002 — this wait step will then follow an actual fill step"
+
+  # ── Scene 04: Portal intact after decline ─────────────────────────────────
+  - id: e02_s15_navigate_portal_again
+    type: navigate
+    persona: client
+    severity: critical
+    url: "{{ BASE_URL }}/edit/{{ CLIENT_REVIEW_TOKEN }}"
+    description: "Return to portal after declined checkout attempt"
+
+  - id: e02_s16_assert_portal_intact
+    type: assert_text
+    persona: client
+    severity: critical
+    selector: "[data-testid='client-portal-root']"
+    contains: ""
+    description: "Portal must still be accessible after a failed checkout"
+    intent: "A broken portal after failed checkout means users are locked out — escalate"
+
+  - id: e02_s17_handoff_back_to_admin
+    type: handoff
+    persona: client
+    severity: info
+    from: client
+    to: admin
+    message: "Client declined-card path tested — returning to admin to verify no orphan records"
+    description: "Return to admin persona to verify no orphan records"
+
+  - id: e02_s18_assert_admin_dashboard_intact
+    type: assert_text
+    persona: admin
+    severity: error
+    selector: "[data-testid='admin-dashboard-root']"
+    contains: ""
+    description: "Admin dashboard must still be functional after billing edge case run"

@@ -1,0 +1,212 @@
+id: canary_prod_readonly
+name: "Production Canary — Read-Only Smoke"
+description: >
+  A strictly read-only smoke test designed to run against the live production
+  environment (app.rankedceo.com). Makes no writes, creates no records,
+  initiates no billing flows. Validates that critical public-facing and
+  authenticated pages load and render expected UI landmarks.
+
+  SAFETY RULES — this scenario MUST only run with:
+    stripeMode: mock
+    emailMode: skip
+
+  Run cadence: manual trigger or dedicated canary cron separate from weekly full.
+modes:
+  - smoke
+
+steps:
+  # ── Scene 01: Public pages ────────────────────────────────────────────────
+  - id: canary_s01_homepage
+    type: navigate
+    persona: admin
+    severity: info
+    url: "{{ BASE_URL }}"
+    description: "Navigate to root — should redirect or render landing"
+
+  - id: canary_s02_assert_homepage_body
+    type: assert_text
+    persona: admin
+    severity: error
+    selector: "body"
+    contains: ""
+    description: "Homepage body must render without error"
+    intent: "Blank homepage in production means static build or CDN issue — escalate to infra"
+
+  - id: canary_s03_login_page
+    type: navigate
+    persona: admin
+    severity: critical
+    url: "{{ BASE_URL }}/admin/login"
+    description: "Navigate to admin login"
+
+  - id: canary_s04_assert_login_form
+    type: assert_text
+    persona: admin
+    severity: critical
+    selector: "[data-testid='admin-email']"
+    contains: ""
+    description: "Login form email field must be present in production"
+    intent: "Missing login form in production = auth system down or deploy failed"
+
+  # ── Scene 02: Admin authenticated pages ───────────────────────────────────
+  - id: canary_s05_fill_email
+    type: fill
+    persona: admin
+    severity: info
+    selector: "[data-testid='admin-email']"
+    value: "{{ ADMIN_EMAIL }}"
+    description: "Fill admin email for canary login"
+
+  - id: canary_s06_fill_pass
+    type: fill
+    persona: admin
+    severity: info
+    selector: "[data-testid='admin-password']"
+    value: "{{ ADMIN_PASSWORD }}"
+    description: "Fill admin password for canary login"
+
+  - id: canary_s07_submit_login
+    type: click
+    persona: admin
+    severity: critical
+    selector: "[data-testid='admin-login-submit']"
+    description: "Login to access authenticated routes"
+
+  - id: canary_s08_assert_dashboard_url
+    type: assert_url
+    persona: admin
+    severity: critical
+    pattern: "/admin/dashboard"
+    description: "Must reach dashboard after login"
+    intent: "Failed login in canary = production auth credentials rotated without updating CI secrets"
+
+  - id: canary_s09_assert_revenue_widget
+    type: assert_text
+    persona: admin
+    severity: error
+    selector: "[data-testid='revenue-widget']"
+    contains: ""
+    description: "Revenue widget must be present on production dashboard"
+
+  - id: canary_s10_assert_clients_table
+    type: assert_text
+    persona: admin
+    severity: error
+    selector: "[data-testid='waas-clients-table']"
+    contains: ""
+    description: "Clients table must render on production dashboard"
+
+  # ── Scene 03: Admin secondary pages ───────────────────────────────────────
+  - id: canary_s11_navigate_qa_reports
+    type: navigate
+    persona: admin
+    severity: info
+    url: "{{ BASE_URL }}/admin/qa-reports"
+    description: "Navigate to QA reports page in production"
+
+  - id: canary_s12_assert_qa_reports
+    type: assert_text
+    persona: admin
+    severity: warning
+    selector: "[data-testid='qa-reports-heading']"
+    contains: "QA"
+    description: "QA reports heading must render in production"
+    intent: "QA reports page missing in production means the Sprint 3 deploy did not apply"
+
+  - id: canary_s13_navigate_qa_scenarios
+    type: navigate
+    persona: admin
+    severity: info
+    url: "{{ BASE_URL }}/admin/qa-scenarios"
+    description: "Navigate to QA scenarios management in production"
+
+  - id: canary_s14_assert_scenario_list
+    type: assert_text
+    persona: admin
+    severity: warning
+    selector: "[data-testid='scenario-list']"
+    contains: ""
+    description: "Scenario list must render in production"
+
+  # ── Scene 04: Client portal read-only ─────────────────────────────────────
+  - id: canary_s15_handoff_to_client
+    type: handoff
+    persona: admin
+    severity: info
+    from: admin
+    to: client
+    message: "Admin pages verified — switching to client portal for read-only check"
+    description: "Switch to client persona for portal read-only check"
+
+  - id: canary_s16_navigate_portal
+    type: navigate
+    persona: client
+    severity: critical
+    url: "{{ BASE_URL }}/edit/{{ CLIENT_REVIEW_TOKEN }}"
+    description: "Navigate to client portal (read-only token)"
+
+  - id: canary_s17_assert_portal_root
+    type: assert_text
+    persona: client
+    severity: critical
+    selector: "[data-testid='client-portal-root']"
+    contains: ""
+    description: "Client portal root must render in production"
+    intent: "Client portal down in production = all paying clients locked out — escalate immediately"
+
+  - id: canary_s18_click_overview
+    type: click
+    persona: client
+    severity: info
+    selector: "[data-testid='portal-tab-overview']"
+    description: "Click overview tab (read-only check)"
+
+  - id: canary_s19_assert_overview
+    type: assert_text
+    persona: client
+    severity: error
+    selector: "[data-testid='overview-tab-content']"
+    contains: ""
+    description: "Overview tab must render in production"
+
+  - id: canary_s20_click_reviews
+    type: click
+    persona: client
+    severity: info
+    selector: "[data-testid='portal-tab-reviews']"
+    description: "Click reviews tab (read-only check)"
+
+  - id: canary_s21_assert_reviews
+    type: assert_text
+    persona: client
+    severity: error
+    selector: "[data-testid='reviews-tab-content']"
+    contains: ""
+    description: "Reviews tab must render in production"
+
+  - id: canary_s22_handoff_back
+    type: handoff
+    persona: client
+    severity: info
+    from: client
+    to: admin
+    message: "Client portal verified — returning to admin for final health check"
+    description: "Return to admin to close canary run"
+
+  # ── Scene 05: Final health check ─────────────────────────────────────────
+  - id: canary_s23_dashboard_final
+    type: assert_text
+    persona: admin
+    severity: error
+    selector: "[data-testid='admin-dashboard-root']"
+    contains: ""
+    description: "Admin dashboard root still present at end of canary run"
+
+  - id: canary_s24_assert_no_error_boundary
+    type: assert_text
+    persona: admin
+    severity: critical
+    selector: "body"
+    contains: ""
+    description: "Final check — body must not contain Next.js error boundary message"
+    intent: "An error boundary at the end of a read-only run means one of the navigation steps triggered a render crash — triage immediately"

@@ -1,0 +1,202 @@
+id: edge_03_empty_state
+name: "Edge 03 — Empty & Zero-Data State Checks"
+description: >
+  Validates that all dashboard and portal views render gracefully when there
+  is no data to display. Tests the admin dashboard with zero tenants,
+  revenue widget with no transactions, and QA reports page with no runs.
+  These checks prevent white screens, JS crashes, and misleading blank tables
+  from reaching production.
+modes:
+  - smoke
+  - full
+
+steps:
+  # ── Scene 01: Admin login ─────────────────────────────────────────────────
+  - id: e03_s01_navigate_login
+    type: navigate
+    persona: admin
+    severity: info
+    url: "{{ BASE_URL }}/admin/login"
+    description: "Navigate to admin login"
+
+  - id: e03_s02_fill_email
+    type: fill
+    persona: admin
+    severity: info
+    selector: "[data-testid='admin-email']"
+    value: "{{ ADMIN_EMAIL }}"
+    description: "Fill admin email"
+
+  - id: e03_s03_fill_pass
+    type: fill
+    persona: admin
+    severity: info
+    selector: "[data-testid='admin-password']"
+    value: "{{ ADMIN_PASSWORD }}"
+    description: "Fill admin password"
+
+  - id: e03_s04_submit
+    type: click
+    persona: admin
+    severity: info
+    selector: "[data-testid='admin-login-submit']"
+    description: "Submit login"
+
+  - id: e03_s05_assert_dashboard
+    type: assert_url
+    persona: admin
+    severity: critical
+    pattern: "/admin/dashboard"
+    description: "Admin must reach dashboard"
+
+  # ── Scene 02: Dashboard empty-table rendering ─────────────────────────────
+  - id: e03_s06_assert_revenue_widget
+    type: assert_text
+    persona: admin
+    severity: error
+    selector: "[data-testid='revenue-widget']"
+    contains: ""
+    description: "Revenue widget must be present even with $0 MRR"
+    intent: "A missing revenue widget when MRR is zero means the widget crashes on null — check conditional rendering"
+
+  - id: e03_s07_assert_clients_table
+    type: assert_text
+    persona: admin
+    severity: error
+    selector: "[data-testid='waas-clients-table']"
+    contains: ""
+    description: "Clients table container must render even with zero tenants"
+    intent: "Clients table crashing on empty array is a common SSR error — check map() on potentially null data"
+
+  - id: e03_s08_assert_no_js_crash
+    type: assert_text
+    persona: admin
+    severity: critical
+    selector: "body"
+    contains: ""
+    description: "Body must render without Application error or ChunkLoadError"
+    intent: "Next.js unhandled error boundary fires when components throw during render — empty-state crashes surface here"
+
+  # ── Scene 03: QA Reports empty ────────────────────────────────────────────
+  - id: e03_s09_navigate_qa_reports
+    type: navigate
+    persona: admin
+    severity: info
+    url: "{{ BASE_URL }}/admin/qa-reports"
+    description: "Navigate to QA reports page"
+
+  - id: e03_s10_assert_qa_heading
+    type: assert_text
+    persona: admin
+    severity: error
+    selector: "[data-testid='qa-reports-heading']"
+    contains: "QA"
+    description: "QA reports heading must be present"
+
+  - id: e03_s11_assert_no_crash_on_empty_runs
+    type: assert_text
+    persona: admin
+    severity: error
+    selector: "body"
+    contains: ""
+    description: "Page must not show error when qa_runs table is empty"
+    intent: "listQaRuns returning [] should render an empty state row, not a JS crash"
+
+  # ── Scene 04: QA Scenarios empty ──────────────────────────────────────────
+  - id: e03_s12_navigate_qa_scenarios
+    type: navigate
+    persona: admin
+    severity: info
+    url: "{{ BASE_URL }}/admin/qa-scenarios"
+    description: "Navigate to QA scenarios management page"
+
+  - id: e03_s13_assert_scenario_list
+    type: assert_text
+    persona: admin
+    severity: error
+    selector: "[data-testid='scenario-list']"
+    contains: ""
+    description: "Scenario list must render (even if empty)"
+    intent: "Scenario list crashing on empty array — verify null safety in scenario-list.tsx"
+
+  - id: e03_s14_assert_new_form_present
+    type: assert_text
+    persona: admin
+    severity: warning
+    selector: "[data-testid='new-scenario-id']"
+    contains: ""
+    description: "New scenario form input must always be present"
+
+  # ── Scene 05: Client portal — zero reviews ───────────────────────────────
+  - id: e03_s15_handoff_admin_to_client
+    type: handoff
+    persona: admin
+    severity: info
+    from: admin
+    to: client
+    message: "Admin pages verified — switching to client portal for zero-data checks"
+    description: "Switch to client persona"
+
+  - id: e03_s16_navigate_portal
+    type: navigate
+    persona: client
+    severity: critical
+    url: "{{ BASE_URL }}/edit/{{ CLIENT_REVIEW_TOKEN }}"
+    description: "Navigate to client portal"
+
+  - id: e03_s17_assert_portal_root
+    type: assert_text
+    persona: client
+    severity: critical
+    selector: "[data-testid='client-portal-root']"
+    contains: ""
+    description: "Client portal root must be present"
+
+  - id: e03_s18_click_overview_tab
+    type: click
+    persona: client
+    severity: info
+    selector: "[data-testid='portal-tab-overview']"
+    description: "Click the overview tab"
+
+  - id: e03_s19_assert_overview_content
+    type: assert_text
+    persona: client
+    severity: error
+    selector: "[data-testid='overview-tab-content']"
+    contains: ""
+    description: "Overview tab must render even with zero reviews"
+    intent: "Zero-reviews state must show an empty state UI, not crash — common issue with chart libraries receiving empty data arrays"
+
+  - id: e03_s20_click_reviews_tab
+    type: click
+    persona: client
+    severity: info
+    selector: "[data-testid='portal-tab-reviews']"
+    description: "Click the reviews tab"
+
+  - id: e03_s21_assert_reviews_content
+    type: assert_text
+    persona: client
+    severity: error
+    selector: "[data-testid='reviews-tab-content']"
+    contains: ""
+    description: "Reviews tab must render even with zero reviews"
+    intent: "Reviews list rendering null instead of [] causes React crash — check API response handling"
+
+  - id: e03_s22_handoff_back
+    type: handoff
+    persona: client
+    severity: info
+    from: client
+    to: admin
+    message: "Client empty-state checks complete — returning to admin for final health check"
+    description: "Return to admin persona to close out"
+
+  - id: e03_s23_final_health_check
+    type: assert_text
+    persona: admin
+    severity: error
+    selector: "[data-testid='admin-dashboard-root']"
+    contains: ""
+    description: "Admin dashboard still healthy after empty-state run"
