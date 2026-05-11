@@ -1,22 +1,30 @@
 // =============================================================================
 // app/edit/[reviewToken]/page.tsx
 // Client self-service editor — server entry point.
+//
+// Phase 6.1: Added portal home (Overview tab).
+//   ?tab=overview  → PortalHome (default when tab is absent or 'overview')
+//   ?tab=edit      → EditorShell (full editor)
+//   ?tab=history   → EditorShell with history panel open (?tab=history&history=1)
+//
 // Resolves the review token, loads the selected variant, builds the editable
-// field list, and hands it off to the EditorShell client component.
+// field list, and hands the data to the appropriate shell component.
 // =============================================================================
 
-import { notFound }            from 'next/navigation'
-import { createClient }        from '@supabase/supabase-js'
+import { notFound }                from 'next/navigation'
+import { createClient }            from '@supabase/supabase-js'
 import { resolveClientEditSession } from '@/lib/waas/client-edit/edit-session'
-import { buildEditableFields } from '@/lib/waas/client-edit/editable-fields'
-import { EditorShell }         from './editor-shell'
-import type { SectionConfig }  from '@/lib/waas/templates/types'
+import { buildEditableFields }     from '@/lib/waas/client-edit/editable-fields'
+import { getTenantPortalData }     from '@/lib/waas/actions/client-edit'
+import { PortalShell }             from './portal-shell'
+import type { SectionConfig }      from '@/lib/waas/templates/types'
 
-export const dynamic = 'force-dynamic'
+export const dynamic   = 'force-dynamic'
 export const revalidate = 0
 
 interface PageProps {
-  params: { reviewToken: string }
+  params:      { reviewToken: string }
+  searchParams: { tab?: string }
 }
 
 // ---------------------------------------------------------------------------
@@ -24,8 +32,8 @@ interface PageProps {
 // ---------------------------------------------------------------------------
 
 async function loadSelectedVariantSections(
-  tenantId:       string,
-  variantIndex:   number | null,
+  tenantId:     string,
+  variantIndex: number | null,
 ): Promise<SectionConfig[]> {
   if (variantIndex == null) return []
 
@@ -54,17 +62,45 @@ async function loadSelectedVariantSections(
 // Page
 // ---------------------------------------------------------------------------
 
-export default async function ClientEditorPage({ params }: PageProps) {
+export default async function ClientEditorPage({ params, searchParams }: PageProps) {
   const reviewToken = params.reviewToken
+  const tab         = searchParams?.tab ?? 'overview'
 
   const result = await resolveClientEditSession(reviewToken)
   if (!result.ok) {
-    // not_found / invalid_token → 404; other errors surface as 404 too
-    // so we never leak internals on the client-facing URL.
     notFound()
   }
 
-  const session  = result.session
+  const session = result.session
+
+  // ------------------------------------------------------------------
+  // Tab: overview — load portal data (lightweight) and show portal home
+  // ------------------------------------------------------------------
+  if (tab === 'overview') {
+    const portalResult = await getTenantPortalData(reviewToken)
+
+    return (
+      <PortalShell
+        session={{
+          tenantId:             session.tenantId,
+          slug:                 session.slug,
+          businessName:         session.businessName,
+          reviewToken:          session.reviewToken,
+          selectedVariantIndex: session.selectedVariantIndex,
+          selectedTemplateSlug: session.selectedTemplateSlug,
+          permissions:          session.permissions,
+          approvalAt:           session.approvalAt,
+          approvalLocked:       session.approvalLocked,
+        }}
+        portalData={portalResult.success ? (portalResult.data ?? null) : null}
+        activeTab="overview"
+      />
+    )
+  }
+
+  // ------------------------------------------------------------------
+  // Tab: edit or history — load sections and show the editor shell
+  // ------------------------------------------------------------------
   const sections = await loadSelectedVariantSections(
     session.tenantId,
     session.selectedVariantIndex,
@@ -76,7 +112,7 @@ export default async function ClientEditorPage({ params }: PageProps) {
   })
 
   return (
-    <EditorShell
+    <PortalShell
       session={{
         tenantId:             session.tenantId,
         slug:                 session.slug,
@@ -88,7 +124,9 @@ export default async function ClientEditorPage({ params }: PageProps) {
         approvalAt:           session.approvalAt,
         approvalLocked:       session.approvalLocked,
       }}
-      initialFields={editableFields}
+      portalData={null}
+      activeTab={tab === 'history' ? 'history' : 'edit'}
+      editorProps={{ initialFields: editableFields }}
     />
   )
 }
