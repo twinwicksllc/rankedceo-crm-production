@@ -3,32 +3,36 @@
 // Client self-service editor — server entry point.
 //
 // Phase 6.1: Added portal home (Overview tab).
+// Phase 8.2: Added Billing tab (?tab=billing) + checkout success redirect.
+//
 //   ?tab=overview  → PortalHome (default when tab is absent or 'overview')
 //   ?tab=edit      → EditorShell (full editor)
-//   ?tab=history   → EditorShell with history panel open (?tab=history&history=1)
+//   ?tab=history   → EditorShell with history panel open
+//   ?tab=billing   → BillingTab (plan, invoices, upgrade)
 //
 // Resolves the review token, loads the selected variant, builds the editable
 // field list, and hands the data to the appropriate shell component.
 // =============================================================================
 
-import { notFound }                from 'next/navigation'
-import { createClient }            from '@supabase/supabase-js'
-import { resolveClientEditSession } from '@/lib/waas/client-edit/edit-session'
-import { buildEditableFields }     from '@/lib/waas/client-edit/editable-fields'
-import { getTenantPortalData }     from '@/lib/waas/actions/client-edit'
-import { PortalShell }             from './portal-shell'
-import type { SectionConfig }      from '@/lib/waas/templates/types'
+import { notFound }                  from 'next/navigation'
+import { createClient }              from '@supabase/supabase-js'
+import { resolveClientEditSession }  from '@/lib/waas/client-edit/edit-session'
+import { buildEditableFields }       from '@/lib/waas/client-edit/editable-fields'
+import { getTenantPortalData }       from '@/lib/waas/actions/client-edit'
+import { getTenantBillingStatus }    from '@/lib/waas/actions/billing'
+import { PortalShell }               from './portal-shell'
+import type { SectionConfig }        from '@/lib/waas/templates/types'
 
-export const dynamic   = 'force-dynamic'
+export const dynamic    = 'force-dynamic'
 export const revalidate = 0
 
 interface PageProps {
-  params:      { reviewToken: string }
-  searchParams: { tab?: string }
+  params:       { reviewToken: string }
+  searchParams: { tab?: string; checkout?: string }
 }
 
 // ---------------------------------------------------------------------------
-// Server-only helper: load the sections_json for the currently-selected variant
+// Server-only helper: load sections_json for the currently-selected variant
 // ---------------------------------------------------------------------------
 
 async function loadSelectedVariantSections(
@@ -59,19 +63,56 @@ async function loadSelectedVariantSections(
 }
 
 // ---------------------------------------------------------------------------
+// Shared session shape (used in all tab branches)
+// ---------------------------------------------------------------------------
+
+function buildSessionShape(session: Awaited<ReturnType<typeof resolveClientEditSession>> & { ok: true }['session']) {
+  return {
+    tenantId:             session.tenantId,
+    slug:                 session.slug,
+    businessName:         session.businessName,
+    reviewToken:          session.reviewToken,
+    selectedVariantIndex: session.selectedVariantIndex,
+    selectedTemplateSlug: session.selectedTemplateSlug,
+    permissions:          session.permissions,
+    approvalAt:           session.approvalAt,
+    approvalLocked:       session.approvalLocked,
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
 export default async function ClientEditorPage({ params, searchParams }: PageProps) {
-  const reviewToken = params.reviewToken
-  const tab         = searchParams?.tab ?? 'overview'
+  const reviewToken    = params.reviewToken
+  const tab            = searchParams?.tab ?? 'overview'
+  const checkoutSuccess = searchParams?.checkout === 'success'
 
   const result = await resolveClientEditSession(reviewToken)
   if (!result.ok) {
     notFound()
   }
 
-  const session = result.session
+  const session     = result.session
+  const sessionShape = buildSessionShape(session)
+
+  // ------------------------------------------------------------------
+  // Tab: billing — load billing status and render BillingTab
+  // ------------------------------------------------------------------
+  if (tab === 'billing') {
+    const billingResult = await getTenantBillingStatus(session.tenantId)
+
+    return (
+      <PortalShell
+        session={sessionShape}
+        portalData={null}
+        activeTab="billing"
+        billingStatus={billingResult.success ? (billingResult.data ?? null) : null}
+        checkoutSuccess={checkoutSuccess}
+      />
+    )
+  }
 
   // ------------------------------------------------------------------
   // Tab: overview — load portal data (lightweight) and show portal home
@@ -81,17 +122,7 @@ export default async function ClientEditorPage({ params, searchParams }: PagePro
 
     return (
       <PortalShell
-        session={{
-          tenantId:             session.tenantId,
-          slug:                 session.slug,
-          businessName:         session.businessName,
-          reviewToken:          session.reviewToken,
-          selectedVariantIndex: session.selectedVariantIndex,
-          selectedTemplateSlug: session.selectedTemplateSlug,
-          permissions:          session.permissions,
-          approvalAt:           session.approvalAt,
-          approvalLocked:       session.approvalLocked,
-        }}
+        session={sessionShape}
         portalData={portalResult.success ? (portalResult.data ?? null) : null}
         activeTab="overview"
       />
@@ -113,17 +144,7 @@ export default async function ClientEditorPage({ params, searchParams }: PagePro
 
   return (
     <PortalShell
-      session={{
-        tenantId:             session.tenantId,
-        slug:                 session.slug,
-        businessName:         session.businessName,
-        reviewToken:          session.reviewToken,
-        selectedVariantIndex: session.selectedVariantIndex,
-        selectedTemplateSlug: session.selectedTemplateSlug,
-        permissions:          session.permissions,
-        approvalAt:           session.approvalAt,
-        approvalLocked:       session.approvalLocked,
-      }}
+      session={sessionShape}
       portalData={null}
       activeTab={tab === 'history' ? 'history' : 'edit'}
       editorProps={{ initialFields: editableFields }}
