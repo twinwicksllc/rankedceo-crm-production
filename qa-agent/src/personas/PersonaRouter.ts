@@ -104,13 +104,16 @@ export class PersonaRouter {
 
     // Navigate to admin login and authenticate
     // The login page is at /login (not /admin/login — /admin/* redirects to /login?next=/admin/dashboard)
-    await page.goto('/login?next=/admin/dashboard&adminOnly=1')
+    await page.goto('/login?next=/admin/dashboard&adminOnly=1', { waitUntil: 'domcontentloaded' })
+
+    // Wait for the password-mode login form to appear (default mode is 'password')
+    await page.waitForSelector('[data-testid="admin-email"]', { timeout: 30_000 })
     await page.fill('[data-testid="admin-email"]', credentials.email)
     await page.fill('[data-testid="admin-password"]', credentials.password)
     await page.click('[data-testid="admin-login-submit"]')
 
     // Wait for redirect to admin dashboard after successful login
-    await page.waitForURL(/\/(admin|dashboard)/, { timeout: 15_000 })
+    await page.waitForURL(/\/(admin|dashboard)/, { timeout: 20_000 })
 
     this.contexts.set('admin', { persona: 'admin', context, page })
   }
