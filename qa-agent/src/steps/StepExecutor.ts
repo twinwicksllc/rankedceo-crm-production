@@ -107,7 +107,11 @@ export class StepExecutor {
 
   private async stepNavigate(persona: Persona, url: string): Promise<void> {
     const page = await this.router.getPage(persona)
-    await page.goto(url)
+    // waitUntil:'load' fires after all resources are loaded.
+    // Then wait for networkidle so Server Component streaming + Supabase
+    // queries complete before the next step asserts on DOM content.
+    await page.goto(url, { waitUntil: 'load', timeout: 30_000 })
+    await page.waitForLoadState('networkidle', { timeout: 30_000 })
   }
 
   private async stepClick(persona: Persona, selector: string): Promise<void> {

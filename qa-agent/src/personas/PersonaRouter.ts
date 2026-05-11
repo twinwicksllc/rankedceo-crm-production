@@ -143,8 +143,19 @@ export class PersonaRouter {
     await page.fill(passwordSelector, credentials.password)
     await page.click(submitSelector)
 
-    // Wait for redirect to admin dashboard after successful login
-    await page.waitForURL(/\/(admin|dashboard)/, { timeout: 20_000 })
+    // Wait for redirect to admin dashboard after successful login.
+    // IMPORTANT: Match the pathname only, not query params. The login URL
+    // itself contains "/admin/dashboard" in its `next=` query parameter, so
+    // we must match on a path-only pattern to avoid false positives.
+    // Use a regex that matches the URL path segment after the origin.
+    await page.waitForFunction(
+      () => /^\/(admin|dashboard)/.test(new URL(window.location.href).pathname),
+      { timeout: 20_000 },
+    )
+
+    // After URL changes, wait for the dashboard server component to finish
+    // rendering (DB calls, Supabase queries, etc.).
+    await page.waitForLoadState('networkidle', { timeout: 30_000 })
 
     this.contexts.set('admin', { persona: 'admin', context, page })
   }
