@@ -16,6 +16,7 @@ export type SectionId =
   | 'about'
   | 'faq'
   | 'how-it-works'
+  | 'gallery'        // Phase 7.3
 
 export interface HeroSectionContent {
   eyebrow?: string
@@ -96,6 +97,19 @@ export interface ReviewsSectionContent {
   subheadline?: string
 }
 
+// Phase 7.3: Gallery section
+export interface GalleryItemContent {
+  image_url: string
+  caption?:  string | null
+  alt?:      string | null
+}
+
+export interface GallerySectionContent {
+  eyebrow?:  string
+  headline?: string
+  items?:    GalleryItemContent[]
+}
+
 export type SectionContent =
   | HeroSectionContent
   | ServicesSectionContent
@@ -105,6 +119,7 @@ export type SectionContent =
   | HowItWorksSectionContent
   | BookingSectionContent
   | ReviewsSectionContent
+  | GallerySectionContent
 
 // ---------------------------------------------------------------------------
 // Section configuration (per-section render options)

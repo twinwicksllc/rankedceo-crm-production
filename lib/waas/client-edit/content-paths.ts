@@ -203,6 +203,9 @@ const ALLOWED_ARRAY_ITEM_KEYS = new Set([
   'icon',
   'question',
   'answer',
+  'image_url',   // Phase 7.3: gallery item image
+  'caption',     // Phase 7.3: gallery item caption
+  'alt',         // Phase 7.3: gallery item alt text
 ])
 
 export type PathValidationResult =
@@ -253,7 +256,7 @@ export function validateEditPath(path: string): PathValidationResult {
   if (arrayItemMatch) {
     const arrayField = arrayItemMatch[1]
     const leafKey    = arrayItemMatch[2]
-    const allowedArrayFields = new Set(['items', 'steps', 'badges', 'faq'])
+    const allowedArrayFields = new Set(['items', 'steps', 'badges', 'faq', 'gallery'])
     if (!allowedArrayFields.has(arrayField)) {
       return { valid: false, reason: `Array field '${arrayField}' is not editable by clients` }
     }
