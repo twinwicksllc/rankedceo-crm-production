@@ -1,8 +1,12 @@
 // =============================================================================
 // WaaS Phase 4: _sites/[site]/page.tsx
 // Multi-tenant renderer — fetches tenant config, resolves sections, renders site
+//
+// Phase 8.5: Added generateMetadata() for per-tenant SEO (title, description,
+//            OG tags, canonical URL, favicon, structured data)
 // =============================================================================
 
+import type { Metadata }   from 'next'
 import { notFound }         from 'next/navigation'
 import { createClient }     from '@supabase/supabase-js'
 import { SectionRenderer }  from '@/components/waas/SectionRenderer'
@@ -79,6 +83,123 @@ async function getTenantPage(slug: string): Promise<{
 }
 
 // ---------------------------------------------------------------------------
+// SEO helpers
+// ---------------------------------------------------------------------------
+
+function buildCanonicalUrl(tenant: ResolvedTenant): string {
+  if (tenant.domain) {
+    return `https://${tenant.domain}`
+  }
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://rankedceo.com'
+  return `${appUrl}/sites/${tenant.slug}`
+}
+
+function buildMetaDescription(tenant: ResolvedTenant): string {
+  const brand   = tenant.brand_config as BrandConfig & { tagline?: string }
+  const name    = brand.business_name ?? tenant.slug
+  const trade   = tenant.primary_trade ?? tenant.target_industry ?? 'local service'
+  const loc     = tenant.target_location ?? ''
+  const tagline = brand.tagline ?? tenant.usp ?? null
+
+  if (tagline) return `${name} — ${tagline}`
+
+  const tradeLabel = trade.charAt(0).toUpperCase() + trade.slice(1).toLowerCase()
+  const locSuffix  = loc ? ` in ${loc}` : ''
+  return `${name} — Professional ${tradeLabel} services${locSuffix}. Book online today.`
+}
+
+function buildStructuredData(tenant: ResolvedTenant, canonicalUrl: string): object {
+  const brand   = tenant.brand_config as BrandConfig & {
+    contact?: { phone?: string; email?: string; address?: string; city?: string; state?: string; zip?: string }
+    social?:  { google?: string }
+    logo_url?: string
+  }
+  const name    = brand.business_name ?? tenant.slug
+  const contact = brand.contact ?? {}
+
+  const schema: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type':    'LocalBusiness',
+    name,
+    url:        canonicalUrl,
+  }
+
+  if (brand.logo_url)    schema.logo        = brand.logo_url
+  if (contact.phone)     schema.telephone   = contact.phone
+  if (contact.email)     schema.email       = contact.email
+  if (contact.address)   schema.address     = {
+    '@type':          'PostalAddress',
+    streetAddress:    contact.address,
+    addressLocality:  contact.city    ?? undefined,
+    addressRegion:    contact.state   ?? undefined,
+    postalCode:       contact.zip     ?? undefined,
+    addressCountry:   'US',
+  }
+  if (brand.social?.google) schema.sameAs = [brand.social.google]
+
+  return schema
+}
+
+// ---------------------------------------------------------------------------
+// generateMetadata — per-tenant dynamic SEO (Phase 8.5)
+// ---------------------------------------------------------------------------
+
+export async function generateMetadata(
+  { params }: { params: { site: string } },
+): Promise<Metadata> {
+  const result = await getTenantPage(params.site)
+
+  if (!result) {
+    return {
+      title:       'Not Found',
+      description: 'This page could not be found.',
+    }
+  }
+
+  const { tenant } = result
+  const brand       = tenant.brand_config as BrandConfig & { tagline?: string; logo_url?: string; favicon_url?: string; hero_image_url?: string }
+  const name        = brand.business_name ?? tenant.slug
+  const description = buildMetaDescription(tenant)
+  const canonical   = buildCanonicalUrl(tenant)
+
+  // OG image — use hero image if available, fallback to logo, then default
+  const ogImage = brand.hero_image_url ?? brand.logo_url ?? null
+
+  return {
+    title:       name,
+    description,
+    metadataBase: new URL(canonical),
+    alternates: {
+      canonical: '/',
+    },
+    icons: brand.favicon_url
+      ? { icon: brand.favicon_url, shortcut: brand.favicon_url }
+      : undefined,
+    openGraph: {
+      type:        'website',
+      url:         canonical,
+      title:       name,
+      description,
+      siteName:    name,
+      ...(ogImage ? {
+        images: [{ url: ogImage, width: 1200, height: 630, alt: name }],
+      } : {}),
+    },
+    twitter: {
+      card:        'summary_large_image',
+      title:       name,
+      description,
+      ...(ogImage ? { images: [ogImage] } : {}),
+    },
+    robots: {
+      index:   true,
+      follow:  true,
+      googleBot: { index: true, follow: true },
+    },
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Page component
 // ---------------------------------------------------------------------------
 
@@ -87,13 +208,22 @@ export default async function SitePage({ params }: { params: { site: string } })
   if (!result) notFound()
 
   const { tenant, sections, siteConfig } = result
+  const canonical  = buildCanonicalUrl(tenant)
+  const structuredData = buildStructuredData(tenant, canonical)
 
   return (
-    <SectionRenderer
-      tenant={tenant}
-      sections={sections}
-      siteConfig={siteConfig}
-    />
+    <>
+      {/* JSON-LD structured data for local business */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <SectionRenderer
+        tenant={tenant}
+        sections={sections}
+        siteConfig={siteConfig}
+      />
+    </>
   )
 }
 
