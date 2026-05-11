@@ -13,8 +13,10 @@
   "dependencies": {
     "@playwright/test": "^1.44.0",
     "@supabase/supabase-js": "^2.43.4",
+    "@types/ws": "^8.18.1",
     "chalk": "^5.3.0",
     "js-yaml": "^4.1.0",
+    "ws": "^8.20.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {

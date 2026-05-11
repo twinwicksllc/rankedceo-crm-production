@@ -9,6 +9,8 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
+import WebSocket from 'ws'
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = ReturnType<typeof createClient<any, any>>
 
@@ -24,6 +26,9 @@ export class SupabaseAdapter {
     this.client = createClient(url, key, {
       db: { schema: 'qa' },
       auth: { persistSession: false },
+      // Node.js 20 doesn't have native WebSocket — provide ws package as transport
+      global: { fetch: fetch.bind(globalThis) },
+      realtime: { transport: WebSocket as unknown as typeof globalThis.WebSocket },
     })
   }
 
