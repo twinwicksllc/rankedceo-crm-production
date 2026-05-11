@@ -20,10 +20,6 @@ import Stripe from 'stripe'
 import type { WaasPackageTier } from '@/lib/waas/types'
 import { WAAS_PLAN_DISPLAY, type WaasPlanDisplay } from '@/lib/waas/billing-config'
 
-// Re-export for convenience (server components importing from billing.ts get display data too)
-export { WAAS_PLAN_DISPLAY } from '@/lib/waas/billing-config'
-export type { WaasPlanDisplay } from '@/lib/waas/billing-config'
-
 // ---------------------------------------------------------------------------
 // Stripe client (shared STRIPE_SECRET_KEY, same account as CRM billing)
 // ---------------------------------------------------------------------------
