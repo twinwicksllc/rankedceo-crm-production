@@ -54,7 +54,18 @@ export class Orchestrator {
     const router = new PersonaRouter()
     const db = new SupabaseAdapter()
 
-    await router.init(this.config)
+    try {
+      await router.init(this.config)
+    } catch (initErr) {
+      // Capture a screenshot of what the page looks like on init failure
+      try {
+        const screenshotPath = path.join(this.evidenceDir, 'init-failure-admin.png')
+        await router.screenshot('admin', screenshotPath)
+        console.error(`📸 Init failure screenshot saved: ${screenshotPath}`)
+      } catch { /* screenshot may fail if browser didn't launch */ }
+      await router.teardown()
+      throw initErr
+    }
     console.log('✅ Browser contexts initialised (client + admin)\n')
 
     const executor = new StepExecutor(router, db, this.evidenceDir, this.config.runId)

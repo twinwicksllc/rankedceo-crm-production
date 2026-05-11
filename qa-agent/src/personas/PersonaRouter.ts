@@ -103,13 +103,30 @@ export class PersonaRouter {
     const page = await context.newPage()
 
     // Navigate to admin login and authenticate
-    await page.goto('/admin/login')
+    // The login page is at /login (not /admin/login — /admin/* redirects to /login?next=/admin/dashboard)
+    // Use 'networkidle' so the Next.js client bundle fully executes + React hydrates before we interact
+    await page.goto('/login?next=/admin/dashboard&adminOnly=1', { waitUntil: 'networkidle', timeout: 30_000 })
+
+    // Explicitly wait for the email input to be visible after hydration
+    try {
+      await page.waitForSelector('[data-testid="admin-email"]', { state: 'visible', timeout: 15_000 })
+    } catch (err) {
+      // Capture diagnostic info: screenshot + DOM + console log
+      const ts = new Date().toISOString().replace(/[:.]/g, '-')
+      const screenshotPath = `evidence/login-failure-${ts}.png`
+      await page.screenshot({ path: screenshotPath, fullPage: true })
+      const bodyHtml = await page.evaluate(() => document.body?.innerHTML?.slice(0, 2000) ?? '(empty)')
+      console.error(`\n📸 Login page screenshot saved: ${screenshotPath}`)
+      console.error(`🔍 Current URL: ${page.url()}`)
+      console.error(`📄 Body HTML (first 2000 chars):\n${bodyHtml}\n`)
+      throw err
+    }
     await page.fill('[data-testid="admin-email"]', credentials.email)
     await page.fill('[data-testid="admin-password"]', credentials.password)
     await page.click('[data-testid="admin-login-submit"]')
 
-    // Wait for redirect to admin dashboard
-    await page.waitForURL(/\/admin(\/dashboard)?/, { timeout: 15_000 })
+    // Wait for redirect to admin dashboard after successful login
+    await page.waitForURL(/\/(admin|dashboard)/, { timeout: 20_000 })
 
     this.contexts.set('admin', { persona: 'admin', context, page })
   }

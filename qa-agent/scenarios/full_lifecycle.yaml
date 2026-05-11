@@ -257,6 +257,11 @@ steps:
     severity: info
     description: Brief pause for Stripe Elements to fully initialise
     duration_ms: 2000
+    intent: >
+      Stripe Elements loads its iframe asynchronously after the checkout page renders.
+      This 2s pause prevents race conditions where the StripeAdapter tries to fill
+      card fields before the iframe is ready. In v1.5, replace with a wait_for targeting
+      the Stripe iframe selector (e.g. iframe[name^='__privateStripeFrame']).
 
   # ═══════════════════════════════════════════════════════════════════════════
   # SCENE 9: Client — Complete Stripe Checkout
@@ -306,6 +311,12 @@ steps:
     severity: info
     description: Allow Stripe webhook time to process (up to 10s)
     duration_ms: 10000
+    intent: >
+      After Stripe checkout completes, the platform receives a checkout.session.completed
+      webhook that activates the subscription and updates the revenue widget.
+      This 10s pause gives the webhook handler time to process before the admin
+      navigates to the dashboard to verify. In v1.5, replace with an assert_db
+      polling step that retries until subscription.status = 'active'.
 
   - id: s11_admin_navigate_dashboard
     type: navigate
@@ -478,3 +489,8 @@ steps:
     severity: info
     description: Final stabilisation pause before teardown
     duration_ms: 1000
+    intent: >
+      Brief 1s pause to let any in-flight network requests settle before
+      PersonaRouter.teardown() closes both browser contexts. Prevents occasional
+      "Target closed" Playwright errors on the last navigation. Safe to remove
+      if teardown is made graceful in v1.5.

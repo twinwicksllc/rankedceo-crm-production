@@ -14,8 +14,9 @@ steps:
     type: navigate
     persona: admin
     severity: info
-    url: "{{ BASE_URL }}/admin/login"
+    url: "{{ BASE_URL }}/login?next=/admin/dashboard&adminOnly=1"
     description: "Navigate to admin login"
+    intent: "Opens admin login page — required before the admin can retrieve client portal links or verify subscription state after a billing error"
 
   - id: e02_s02_fill_email
     type: fill
@@ -24,6 +25,7 @@ steps:
     selector: "[data-testid='admin-email']"
     value: "{{ ADMIN_EMAIL }}"
     description: "Fill admin email"
+    intent: "Fills the admin email input — selector maps to [data-testid='admin-email'] in app/(auth)/login/page.tsx"
 
   - id: e02_s03_fill_pass
     type: fill
@@ -32,6 +34,7 @@ steps:
     selector: "[data-testid='admin-password']"
     value: "{{ ADMIN_PASSWORD }}"
     description: "Fill admin password"
+    intent: "Fills the admin password input — selector maps to [data-testid='admin-password'] in app/(auth)/login/page.tsx"
 
   - id: e02_s04_submit
     type: click
@@ -39,6 +42,7 @@ steps:
     severity: info
     selector: "[data-testid='admin-login-submit']"
     description: "Submit admin login"
+    intent: "Submits admin credentials — triggers the login server action which calls supabase.auth.signInWithPassword() and redirects to /admin/dashboard on success"
 
   - id: e02_s05_assert_dashboard
     type: assert_url
@@ -46,6 +50,7 @@ steps:
     severity: critical
     pattern: "/admin/dashboard"
     description: "Admin must be on dashboard"
+    intent: "Verifies admin login succeeded and the redirect to /admin/dashboard occurred — critical because all subsequent admin steps require authentication"
 
   - id: e02_s06_assert_clients_table
     type: assert_text
@@ -54,6 +59,7 @@ steps:
     selector: "[data-testid='waas-clients-table']"
     contains: ""
     description: "WaaS clients table must be present before billing test"
+    intent: "Confirms the dashboard is fully rendered before switching to client — if the clients table is missing, the dashboard has an error that may indicate a broader data layer problem affecting billing"
 
   # ── Scene 02: Client billing tab ─────────────────────────────────────────
   - id: e02_s07_handoff_admin_to_client
@@ -64,6 +70,7 @@ steps:
     to: client
     message: "Admin dashboard verified — switching to client to test declined card flow"
     description: "Switch persona to client"
+    intent: "Cross-persona handoff from admin to client — the client context navigates to the portal URL set in RunConfig.clientCredentials.reviewToken"
 
   - id: e02_s08_navigate_portal
     type: navigate
@@ -71,6 +78,7 @@ steps:
     severity: critical
     url: "{{ BASE_URL }}/edit/{{ CLIENT_REVIEW_TOKEN }}"
     description: "Client navigates to their portal"
+    intent: "Navigates to the client portal using the test review token — the portal page at app/edit/[reviewToken] looks up the token and renders the PortalShell component"
 
   - id: e02_s09_assert_portal
     type: assert_text
@@ -79,6 +87,7 @@ steps:
     selector: "[data-testid='client-portal-root']"
     contains: ""
     description: "Client portal root must be present"
+    intent: "The data-testid='client-portal-root' div is the outermost wrapper of portal-shell.tsx — its absence means either the token lookup failed or the React component threw during render"
 
   - id: e02_s10_click_billing_tab
     type: click
@@ -86,6 +95,7 @@ steps:
     severity: error
     selector: "[data-testid='portal-tab-billing']"
     description: "Click the billing tab"
+    intent: "Clicks the billing tab button in portal-shell.tsx — the selector data-testid='portal-tab-billing' is set on the tab button element. If missing, check that the billing tab is included in the tabs array and the data-testid pattern portal-tab-{tab.id} is applied"
 
   - id: e02_s11_assert_billing_content
     type: assert_text
@@ -94,6 +104,7 @@ steps:
     selector: "[data-testid='billing-tab-content']"
     contains: ""
     description: "Billing tab content must render"
+    intent: "The data-testid='billing-tab-content' wrapper is set in billing-tab.tsx — it must render the plan cards and upgrade buttons. If missing, check that the BillingTab component is not suspended or crashing on Stripe price data fetch"
 
   # ── Scene 03: Declined card attempt ──────────────────────────────────────
   - id: e02_s12_click_upgrade
@@ -111,6 +122,7 @@ steps:
     selector: "body"
     timeout_ms: 8000
     description: "Wait for Stripe checkout page or modal to appear"
+    intent: "After clicking the upgrade button, the app creates a Stripe Checkout Session and redirects to stripe.com/pay/... — this wait gives the redirect up to 8s to complete. If this step times out, check that the createCheckoutSession server action is returning the correct redirect URL"
 
   - id: e02_s14_wait_post_decline
     type: wait_for
@@ -128,6 +140,7 @@ steps:
     severity: critical
     url: "{{ BASE_URL }}/edit/{{ CLIENT_REVIEW_TOKEN }}"
     description: "Return to portal after declined checkout attempt"
+    intent: "After a failed or cancelled checkout, navigates back to the portal to verify it still loads correctly — the portal must not be in a broken state due to a partially-created subscription or session corruption from the Stripe redirect"
 
   - id: e02_s16_assert_portal_intact
     type: assert_text
@@ -146,6 +159,7 @@ steps:
     to: admin
     message: "Client declined-card path tested — returning to admin to verify no orphan records"
     description: "Return to admin persona to verify no orphan records"
+    intent: "Cross-persona handoff back to admin — we want to verify the admin dashboard is unaffected by the failed billing attempt and that no orphaned subscription records were created"
 
   - id: e02_s18_assert_admin_dashboard_intact
     type: assert_text
@@ -154,3 +168,4 @@ steps:
     selector: "[data-testid='admin-dashboard-root']"
     contains: ""
     description: "Admin dashboard must still be functional after billing edge case run"
+    intent: "Final health check — the admin dashboard root must still be present, confirming no state corruption occurred in the admin context during the client billing error path"
