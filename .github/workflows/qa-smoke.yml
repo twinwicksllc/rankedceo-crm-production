@@ -8,6 +8,7 @@ concurrency:
   group: qa-smoke-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
+# Required so the workflow can post comments back to the PR
 permissions:
   contents: read
   pull-requests: write
@@ -42,6 +43,8 @@ jobs:
         working-directory: qa-agent
         env:
           # Target: Vercel preview URL for this PR
+          # Set QA_PREVIEW_BASE_URL secret to your production/staging URL
+          # (e.g. https://ranked-ceo-crm.vercel.app) until per-PR preview URLs are wired up
           QA_BASE_URL: ${{ secrets.QA_PREVIEW_BASE_URL }}
           QA_ADMIN_EMAIL: ${{ secrets.QA_ADMIN_EMAIL }}
           QA_ADMIN_PASSWORD: ${{ secrets.QA_ADMIN_PASSWORD }}
