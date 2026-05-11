@@ -44,9 +44,10 @@ export interface EditableField {
 }
 
 export interface BrandConfigLike {
-  business_name?: string
-  tagline?:       string | null
-  logo_url?:      string | null
+  business_name?:  string
+  tagline?:        string | null
+  logo_url?:       string | null
+  hero_image_url?: string | null  // Phase 7.2
   colors?: {
     primary?:    string
     secondary?:  string
@@ -300,6 +301,11 @@ function fieldsForBrandConfig(brand: BrandConfigLike): EditableField[] {
     push('brand-logo', 'brand_config.logo_url', 'Logo URL', brand.logo_url, 'image')
   }
 
+  // Phase 7.2: Hero background image
+  if (brand.hero_image_url !== undefined) {
+    push('brand-hero-image', 'brand_config.hero_image_url', 'Hero Background Photo', brand.hero_image_url, 'image')
+  }
+
   const g = 'Brand Colors'
   const c = brand.colors ?? {}
   out.push(
@@ -405,7 +411,8 @@ export function groupEditableFields(fields: EditableField[]): FieldGroup[] {
 // ---------------------------------------------------------------------------
 
 export function assetSlotFromPath(path: string): string {
-  if (path === 'brand_config.logo_url') return 'brand-logo'
+  if (path === 'brand_config.logo_url')       return 'brand-logo'
+  if (path === 'brand_config.hero_image_url') return 'brand-hero'  // Phase 7.2
 
   // sections[N].content.image_url
   const simple = path.match(/^sections\[(\d+)\]\.content\.([a-z_]+)$/)

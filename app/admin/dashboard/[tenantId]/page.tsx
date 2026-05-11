@@ -392,6 +392,7 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
                   initialMetaDescription={siteConfig?.meta_description ?? ''}
                   initialOgImageUrl={siteConfig?.og_image_url ?? ''}
                   initialCustomCss={siteConfig?.custom_css ?? ''}
+                  initialHeroImageUrl={(brand?.hero_image_url as string | null | undefined) ?? ''}
                 />
               </div>
             </div>
