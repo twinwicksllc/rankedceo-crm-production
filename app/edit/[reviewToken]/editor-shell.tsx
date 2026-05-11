@@ -42,21 +42,22 @@ export interface EditorSessionProps {
 }
 
 interface EditorShellProps {
-  session:       EditorSessionProps
-  initialFields: EditableField[]
+  session:              EditorSessionProps
+  initialFields:        EditableField[]
+  initialHistoryOpen?:  boolean   // Phase 6.1: set true when navigating from History tab
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function EditorShell({ session, initialFields }: EditorShellProps) {
+export function EditorShell({ session, initialFields, initialHistoryOpen = false }: EditorShellProps) {
   const [fields, setFields]       = useState<EditableField[]>(initialFields)
   const [activeField, setActiveF] = useState<EditableField | null>(null)
   const [toast, setToast]         = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
   const [previewVersion, setPV]   = useState(0)
   const [showApproval, setSA]     = useState(false)
-  const [showHistory, setShowHistory] = useState(false)
+  const [showHistory, setShowHistory] = useState(initialHistoryOpen)
   const [isSaving, startSave]     = useTransition()
   const toastTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
   const aiUseCount  = useRef(0)
