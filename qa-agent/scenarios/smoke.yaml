@@ -18,16 +18,19 @@ steps:
     persona: admin
     severity: critical
     description: Admin navigates to login page
-    url: /admin/login
-    intent: Land on the admin login page
+    url: /login?next=/admin/dashboard&adminOnly=1
+    intent: >
+      The admin login page is at /login (not /admin/login). The middleware
+      redirects unauthenticated /admin/* requests to /login?next=/admin/dashboard&adminOnly=1.
+      Navigating directly to that URL skips the redirect hop.
 
   - id: admin_assert_login_page
     type: assert_url
     persona: admin
     severity: critical
     description: Confirm we are on the login page
-    pattern: /admin/login
-    intent: Verify the admin login URL is correct
+    pattern: /login
+    intent: Verify the browser is on the login page before filling credentials
 
   - id: admin_fill_email
     type: fill

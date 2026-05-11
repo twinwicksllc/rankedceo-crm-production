@@ -16,7 +16,7 @@ steps:
     type: navigate
     persona: admin
     severity: info
-    url: "{{ BASE_URL }}/admin/login"
+    url: "{{ BASE_URL }}/login?next=/admin/dashboard&adminOnly=1"
     description: "Navigate to admin login"
     intent: "Navigates to admin login page — required to access all authenticated admin pages in this zero-data scenario"
 

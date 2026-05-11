@@ -14,7 +14,7 @@ steps:
     type: navigate
     persona: admin
     severity: info
-    url: "{{ BASE_URL }}/admin/login"
+    url: "{{ BASE_URL }}/login?next=/admin/dashboard&adminOnly=1"
     description: "Navigate to admin login"
     intent: "Opens admin login page — required before the admin can retrieve client portal links or verify subscription state after a billing error"
 

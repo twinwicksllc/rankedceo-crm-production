@@ -37,7 +37,7 @@ steps:
     type: navigate
     persona: admin
     severity: critical
-    url: "{{ BASE_URL }}/admin/login"
+    url: "{{ BASE_URL }}/login?next=/admin/dashboard&adminOnly=1"
     description: "Navigate to admin login"
     intent: "Navigates to the admin login page in production — critical to verify the Next.js route is served correctly on the live domain"
 

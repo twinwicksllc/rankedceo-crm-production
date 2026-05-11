@@ -15,7 +15,7 @@ steps:
     type: navigate
     persona: admin
     severity: info
-    url: "{{ BASE_URL }}/admin/login"
+    url: "{{ BASE_URL }}/login?next=/admin/dashboard&adminOnly=1"
     description: "Navigate to admin login page"
     intent: "The admin login page is at /admin/login — if navigation fails, check that the login route exists and middleware is not redirecting authenticated users away from the login page before credentials are entered"
 
@@ -58,7 +58,7 @@ steps:
     type: assert_url
     persona: admin
     severity: critical
-    pattern: "/admin/login"
+    pattern: "/login"
     description: "User must stay on login page after failure"
     intent: "Redirect after failed auth would be a security regression"
 
@@ -149,7 +149,7 @@ steps:
     type: navigate
     persona: admin
     severity: info
-    url: "{{ BASE_URL }}/admin/login"
+    url: "{{ BASE_URL }}/login?next=/admin/dashboard&adminOnly=1"
     description: "Navigate back to login page for empty-field test"
     intent: "Navigating an authenticated admin to /admin/login tests whether middleware correctly shows the login form even when a session exists — some implementations redirect authenticated users away, which would prevent testing the empty-field validation"
 
@@ -174,6 +174,6 @@ steps:
     type: assert_url
     persona: admin
     severity: error
-    pattern: "/admin/login"
+    pattern: "/login"
     description: "Empty email submit must not navigate away from login page"
     intent: "HTML5 validation or server validation should block empty-email submit"
