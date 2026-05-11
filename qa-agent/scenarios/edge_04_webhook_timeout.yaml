@@ -24,7 +24,7 @@ steps:
     type: fill
     persona: admin
     severity: info
-    selector: "[data-testid='admin-email']"
+    selector: '[data-testid="admin-email"], input#email, input[type="email"]'
     value: "{{ ADMIN_EMAIL }}"
     description: "Fill admin email"
     intent: "Fills admin email for login — selector data-testid=admin-email in app/(auth)/login/page.tsx"

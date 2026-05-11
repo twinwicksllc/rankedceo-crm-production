@@ -37,7 +37,7 @@ steps:
     persona: admin
     severity: critical
     description: Fill admin email
-    selector: '[data-testid="admin-email"]'
+    selector: '[data-testid="admin-email"], input#email, input[type="email"]'
     value: '${QA_ADMIN_EMAIL}'
     intent: Enter the admin email address into the login form
 
@@ -46,7 +46,7 @@ steps:
     persona: admin
     severity: critical
     description: Fill admin password
-    selector: '[data-testid="admin-password"]'
+    selector: '[data-testid="admin-password"], input#password, input[type="password"]'
     value: '${QA_ADMIN_PASSWORD}'
     intent: Enter the admin password into the login form
 
@@ -55,7 +55,7 @@ steps:
     persona: admin
     severity: critical
     description: Submit admin login
-    selector: '[data-testid="admin-login-submit"]'
+    selector: '[data-testid="admin-login-submit"], button[type="submit"]'
     intent: Click the login submit button
 
   - id: admin_assert_dashboard

@@ -22,7 +22,7 @@ steps:
     type: fill
     persona: admin
     severity: info
-    selector: "[data-testid='admin-email']"
+    selector: '[data-testid="admin-email"], input#email, input[type="email"]'
     value: "{{ ADMIN_EMAIL }}"
     description: "Fill admin email"
     intent: "Fills the admin email input — selector maps to [data-testid='admin-email'] in app/(auth)/login/page.tsx"
@@ -31,7 +31,7 @@ steps:
     type: fill
     persona: admin
     severity: info
-    selector: "[data-testid='admin-password']"
+    selector: '[data-testid="admin-password"], input#password, input[type="password"]'
     value: "{{ ADMIN_PASSWORD }}"
     description: "Fill admin password"
     intent: "Fills the admin password input — selector maps to [data-testid='admin-password'] in app/(auth)/login/page.tsx"
@@ -40,7 +40,7 @@ steps:
     type: click
     persona: admin
     severity: info
-    selector: "[data-testid='admin-login-submit']"
+    selector: '[data-testid="admin-login-submit"], button[type="submit"]'
     description: "Submit admin login"
     intent: "Submits admin credentials — triggers the login server action which calls supabase.auth.signInWithPassword() and redirects to /admin/dashboard on success"
 

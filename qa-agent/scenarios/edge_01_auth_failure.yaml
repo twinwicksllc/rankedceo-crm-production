@@ -23,7 +23,7 @@ steps:
     type: fill
     persona: admin
     severity: info
-    selector: "[data-testid='admin-email']"
+    selector: '[data-testid="admin-email"], input#email, input[type="email"]'
     value: "{{ ADMIN_EMAIL }}"
     description: "Fill valid email"
     intent: "We use a valid email with a wrong password (not a fake email) so the auth system actually attempts the lookup — testing the password-mismatch error path rather than the user-not-found path"
@@ -32,7 +32,7 @@ steps:
     type: fill
     persona: admin
     severity: info
-    selector: "[data-testid='admin-password']"
+    selector: '[data-testid="admin-password"], input#password, input[type="password"]'
     value: "wrong_password_!@#$"
     description: "Fill deliberately wrong password"
     intent: "Fills a clearly invalid password with special characters to ensure the auth system is not silently accepting any non-empty string — the selector [data-testid='admin-password'] maps to the password input in app/(auth)/login/page.tsx"
@@ -41,7 +41,7 @@ steps:
     type: click
     persona: admin
     severity: info
-    selector: "[data-testid='admin-login-submit']"
+    selector: '[data-testid="admin-login-submit"], button[type="submit"]'
     description: "Submit with wrong password"
     intent: "Clicks the submit button to trigger the login server action — the action calls supabase.auth.signInWithPassword() and should receive an AuthApiError with message 'Invalid login credentials'"
 
@@ -67,7 +67,7 @@ steps:
     type: fill
     persona: admin
     severity: info
-    selector: "[data-testid='admin-password']"
+    selector: '[data-testid="admin-password"], input#password, input[type="password"]'
     value: "{{ ADMIN_PASSWORD }}"
     description: "Overwrite password field with correct password"
     intent: "After the error UI is confirmed, we overwrite the password field with the correct value — the email field should retain its value from the previous fill, so only the password needs to be updated"
@@ -76,7 +76,7 @@ steps:
     type: click
     persona: admin
     severity: info
-    selector: "[data-testid='admin-login-submit']"
+    selector: '[data-testid="admin-login-submit"], button[type="submit"]'
     description: "Submit with correct credentials"
     intent: "Re-submits the login form with correct credentials to verify the form is reusable after an error — the server action should now call supabase.auth.signInWithPassword() successfully and redirect to /admin/dashboard"
 
@@ -157,7 +157,7 @@ steps:
     type: fill
     persona: admin
     severity: info
-    selector: "[data-testid='admin-email']"
+    selector: '[data-testid="admin-email"], input#email, input[type="email"]'
     value: ""
     description: "Clear email field"
     intent: "Clears the email field to test HTML5 required attribute validation — page.fill() with '' programmatically empties the input, then the submit click should trigger the browser's built-in required-field validation popup"
@@ -166,7 +166,7 @@ steps:
     type: click
     persona: admin
     severity: error
-    selector: "[data-testid='admin-login-submit']"
+    selector: '[data-testid="admin-login-submit"], button[type="submit"]'
     description: "Click submit with empty email — should be blocked by validation"
     intent: "Clicking submit with an empty required email field should trigger HTML5 form validation (checkValidity() returns false) and prevent form submission — the page URL must not change. If the form submits anyway, it means the input is missing 'required' or type='email' attributes, or the server action is not validating input"
 
