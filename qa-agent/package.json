@@ -1,0 +1,26 @@
+{
+  "name": "@rankedceo/qa-agent",
+  "version": "0.1.0",
+  "description": "Autonomous QA agent for RankedCEO — dual-persona, severity-gated, weekly full lifecycle + PR smoke",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "qa-agent": "tsx src/cli.ts",
+    "smoke": "tsx src/cli.ts --scenario scenarios/smoke.yaml",
+    "full": "tsx src/cli.ts --scenario scenarios/full_lifecycle.yaml",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.44.0",
+    "@supabase/supabase-js": "^2.43.4",
+    "chalk": "^5.3.0",
+    "js-yaml": "^4.1.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.14.0",
+    "tsx": "^4.15.7",
+    "typescript": "^5.4.5"
+  }
+}

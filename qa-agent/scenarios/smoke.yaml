@@ -1,0 +1,224 @@
+id: smoke
+name: Smoke — Core Navigation & Admin Dashboard
+description: >
+  Fast smoke test covering essential routes for both personas.
+  No billing, no email. Runs on every PR against Vercel preview URL.
+  Max runtime: ~2 minutes.
+modes:
+  - smoke
+  - full
+requires_stripe: false
+requires_email: false
+
+steps:
+  # ── Admin: Login + Dashboard ─────────────────────────────────────────────
+
+  - id: admin_navigate_login
+    type: navigate
+    persona: admin
+    severity: critical
+    description: Admin navigates to login page
+    url: /admin/login
+    intent: Land on the admin login page
+
+  - id: admin_assert_login_page
+    type: assert_url
+    persona: admin
+    severity: critical
+    description: Confirm we are on the login page
+    pattern: /admin/login
+    intent: Verify the admin login URL is correct
+
+  - id: admin_fill_email
+    type: fill
+    persona: admin
+    severity: critical
+    description: Fill admin email
+    selector: '[data-testid="admin-email"]'
+    value: '${QA_ADMIN_EMAIL}'
+    intent: Enter the admin email address into the login form
+
+  - id: admin_fill_password
+    type: fill
+    persona: admin
+    severity: critical
+    description: Fill admin password
+    selector: '[data-testid="admin-password"]'
+    value: '${QA_ADMIN_PASSWORD}'
+    intent: Enter the admin password into the login form
+
+  - id: admin_submit_login
+    type: click
+    persona: admin
+    severity: critical
+    description: Submit admin login
+    selector: '[data-testid="admin-login-submit"]'
+    intent: Click the login submit button
+
+  - id: admin_assert_dashboard
+    type: assert_url
+    persona: admin
+    severity: critical
+    description: Confirm redirect to admin dashboard
+    pattern: /admin
+    intent: Verify the admin is redirected to the dashboard after login
+
+  - id: admin_assert_dashboard_heading
+    type: assert_text
+    persona: admin
+    severity: error
+    description: Dashboard has a recognisable heading
+    selector: '[data-testid="admin-dashboard-heading"]'
+    contains: Dashboard
+    intent: The admin dashboard should have a visible heading
+
+  # ── Admin: WaaS Clients List ──────────────────────────────────────────────
+
+  - id: admin_navigate_clients
+    type: navigate
+    persona: admin
+    severity: error
+    description: Navigate to WaaS clients list
+    url: /admin/waas/clients
+    intent: The admin views the list of all WaaS client tenants
+
+  - id: admin_assert_clients_page
+    type: assert_url
+    persona: admin
+    severity: error
+    description: Confirm clients list URL
+    pattern: /admin/waas/clients
+    intent: Verify the WaaS clients list URL
+
+  - id: admin_assert_clients_table
+    type: wait_for
+    persona: admin
+    severity: warning
+    description: Wait for clients table to load
+    selector: '[data-testid="waas-clients-table"]'
+    timeout_ms: 15000
+    intent: The WaaS clients table should render within 15 seconds
+
+  # ── Admin: Revenue Dashboard ──────────────────────────────────────────────
+
+  - id: admin_navigate_dashboard
+    type: navigate
+    persona: admin
+    severity: error
+    description: Navigate to admin main dashboard
+    url: /admin/dashboard
+    intent: The admin views the main revenue dashboard
+
+  - id: admin_assert_revenue_widget
+    type: wait_for
+    persona: admin
+    severity: warning
+    description: Revenue widget should be present
+    selector: '[data-testid="revenue-widget"]'
+    timeout_ms: 10000
+    intent: The WaaS revenue widget should render on the dashboard
+
+  # ── Handoff: Admin → Client ───────────────────────────────────────────────
+
+  - id: handoff_admin_to_client
+    type: handoff
+    persona: admin
+    severity: info
+    description: Switch to client persona
+    from: admin
+    to: client
+    message: Admin checks complete — switching to client portal
+    intent: Cross-persona handoff from admin to client context
+
+  # ── Client: Edit Portal ───────────────────────────────────────────────────
+
+  - id: client_assert_edit_portal
+    type: assert_url
+    persona: client
+    severity: critical
+    description: Client is on the edit portal
+    pattern: /edit/
+    intent: The client should be on their edit portal URL
+
+  - id: client_assert_portal_loads
+    type: wait_for
+    persona: client
+    severity: critical
+    description: Client portal content loads
+    selector: '[data-testid="client-portal-root"]'
+    timeout_ms: 15000
+    intent: The client edit portal should render its main content area
+
+  - id: client_assert_profile_tab
+    type: wait_for
+    persona: client
+    severity: error
+    description: Profile tab is visible
+    selector: '[data-testid="portal-tab-profile"]'
+    timeout_ms: 5000
+    intent: The profile tab should be visible in the client portal navigation
+
+  - id: client_click_reviews_tab
+    type: click
+    persona: client
+    severity: warning
+    description: Client navigates to reviews tab
+    selector: '[data-testid="portal-tab-reviews"]'
+    intent: The client clicks on the Reviews tab
+
+  - id: client_assert_reviews_tab_active
+    type: wait_for
+    persona: client
+    severity: warning
+    description: Reviews tab content loads
+    selector: '[data-testid="reviews-tab-content"]'
+    timeout_ms: 8000
+    intent: The reviews tab content should render
+
+  - id: client_click_billing_tab
+    type: click
+    persona: client
+    severity: warning
+    description: Client navigates to billing tab
+    selector: '[data-testid="portal-tab-billing"]'
+    intent: The client clicks on the Billing tab
+
+  - id: client_assert_billing_tab_active
+    type: wait_for
+    persona: client
+    severity: warning
+    description: Billing tab content loads
+    selector: '[data-testid="billing-tab-content"]'
+    timeout_ms: 8000
+    intent: The billing tab content should render
+
+  # ── Handoff: Client → Admin ───────────────────────────────────────────────
+
+  - id: handoff_client_to_admin
+    type: handoff
+    persona: client
+    severity: info
+    description: Switch back to admin persona
+    from: client
+    to: admin
+    message: Client portal checks complete — returning to admin context
+    intent: Cross-persona handoff from client back to admin
+
+  # ── Admin: Verify client exists in DB ────────────────────────────────────
+
+  - id: admin_navigate_back_to_clients
+    type: navigate
+    persona: admin
+    severity: warning
+    description: Admin returns to clients list to confirm state
+    url: /admin/waas/clients
+    intent: Admin navigates back to verify client state is intact
+
+  - id: admin_assert_clients_still_loaded
+    type: wait_for
+    persona: admin
+    severity: warning
+    description: Clients table still renders after context switch
+    selector: '[data-testid="waas-clients-table"]'
+    timeout_ms: 10000
+    intent: The clients table should still render after the persona round-trip
