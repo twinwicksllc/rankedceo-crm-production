@@ -76,3 +76,9 @@ summarized_conversations/
 # Documentation that may contain secrets
 PUSH_INSTRUCTIONS.md
 GET_SCHEMA_INSTRUCTIONS.md
+# QA Agent
+qa-agent/.env.qa
+qa-agent/evidence/
+qa-agent/reports/
+qa-agent/node_modules/
+qa-agent/dist/
