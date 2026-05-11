@@ -24,6 +24,9 @@ import type {
   TenantPortalSiteStatus,
 } from '@/lib/waas/actions/client-edit'
 import type { EditType } from '@/lib/waas/actions/client-edit'
+import type { WaasPackageTier } from '@/lib/waas/types'
+import { PlanCard } from './plan-card'
+import { WAAS_PLAN_DISPLAY } from '@/lib/waas/billing-config'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -35,6 +38,7 @@ const EDIT_TYPE_ICONS: Record<EditType, string> = {
   color_change:   '🎨',
   ai_rewrite:     '✨',
   section_toggle: '👁️',
+  font_change:    '🔤',
 }
 
 function formatPath(path: string): string {
@@ -153,20 +157,24 @@ function RecentEditRow({ edit }: { edit: TenantPortalRecentEdit }) {
 // ---------------------------------------------------------------------------
 
 interface PortalHomeProps {
-  businessName: string
-  data:         TenantPortalData
-  onGoToEdit:   () => void
+  businessName:  string
+  tenantId:      string
+  reviewToken:   string
+  data:          TenantPortalData
+  onGoToEdit:    () => void
   onGoToHistory: () => void
 }
 
 export function PortalHome({
   businessName,
+  tenantId,
+  reviewToken,
   data,
   onGoToEdit,
   onGoToHistory,
 }: PortalHomeProps) {
   const [copied, setCopied] = useState(false)
-  const { siteStatus, recentEdits, aiRewriteCount, editCount } = data
+  const { siteStatus, recentEdits, aiRewriteCount, editCount, billingStatus } = data
 
   const sc      = statusConfig(siteStatus)
   const liveUrl = buildLiveUrl(siteStatus)
@@ -358,6 +366,24 @@ export function PortalHome({
             )}
           </div>
         </div>
+
+        {/* Plan card — Phase 7.4 */}
+        {billingStatus && (
+          <div className="mb-5">
+            <PlanCard
+              tenantId={tenantId}
+              reviewToken={reviewToken}
+              billingStatus={{
+                packageTier:           billingStatus.packageTier as WaasPackageTier,
+                planInterval:          billingStatus.planInterval,
+                stripeCustomerId:      null,
+                stripeSubscriptionId:  null,
+                hasActiveSubscription: billingStatus.hasActiveSubscription,
+                planDisplay:           WAAS_PLAN_DISPLAY[billingStatus.packageTier as WaasPackageTier],
+              }}
+            />
+          </div>
+        )}
 
         {/* Footer note */}
         <p className="mt-6 text-center text-[11px] text-slate-400">

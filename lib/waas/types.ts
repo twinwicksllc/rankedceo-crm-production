@@ -95,6 +95,10 @@ export interface WaasTenant {
   onboarding_completed:     boolean
   onboarding_completed_at:  string | null
   submitted_by_email:       string | null
+  // Billing fields (migration 020)
+  stripe_customer_id?:      string | null  // Stripe customer ID (e.g. cus_...)
+  stripe_subscription_id?:  string | null  // Active subscription ID (e.g. sub_...)
+  plan_interval?:           'month' | 'year' | null  // billing cadence
   created_at:               string
   updated_at:               string
   deleted_at:               string | null

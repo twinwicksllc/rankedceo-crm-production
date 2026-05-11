@@ -48,6 +48,7 @@ export type EditType =
   | 'color_change'
   | 'ai_rewrite'
   | 'section_toggle'
+  | 'font_change'
 
 // ---------------------------------------------------------------------------
 // Internal: service-role admin client (same pattern as admin.ts)
@@ -1114,10 +1115,18 @@ export interface TenantPortalRecentEdit {
 }
 
 export interface TenantPortalData {
-  siteStatus:   TenantPortalSiteStatus
-  recentEdits:  TenantPortalRecentEdit[]   // last 5, most-recent first
-  aiRewriteCount: number                   // total AI rewrites this session
-  editCount:      number                   // total edits this session (all types)
+  siteStatus:     TenantPortalSiteStatus
+  recentEdits:    TenantPortalRecentEdit[]   // last 5, most-recent first
+  aiRewriteCount: number                     // total AI rewrites this session
+  editCount:      number                     // total edits this session (all types)
+  billingStatus:  TenantPortalBillingStatus | null  // Phase 7.4
+}
+
+// Lightweight billing snapshot embedded in portal data
+export interface TenantPortalBillingStatus {
+  packageTier:           string   // 'hosting' | 'standard' | 'premium'
+  planInterval:          'month' | 'year' | null
+  hasActiveSubscription: boolean
 }
 
 export async function getTenantPortalData(
@@ -1134,17 +1143,20 @@ export async function getTenantPortalData(
   try {
     const supabase = getAdminClient()
 
-    // 1. Tenant domain/status
+    // 1. Tenant domain/status + billing fields (Phase 7.4)
     const { data: tenantRow } = await supabase
       .from('tenants')
-      .select('status, subdomain, domain')
+      .select('status, subdomain, domain, package_tier, plan_interval, stripe_subscription_id')
       .eq('id', tenantId)
       .single()
 
     const tenant = tenantRow as {
-      status:    string
-      subdomain: string | null
-      domain:    string | null
+      status:                 string
+      subdomain:              string | null
+      domain:                 string | null
+      package_tier:           string | null
+      plan_interval:          string | null
+      stripe_subscription_id: string | null
     } | null
 
     // 2. Selected variant label
@@ -1215,6 +1227,15 @@ export async function getTenantPortalData(
       }
     }
 
+    // Billing status snapshot (Phase 7.4)
+    const tier       = (tenant?.package_tier ?? 'hosting') as string
+    const interval   = (tenant?.plan_interval ?? null) as 'month' | 'year' | null
+    const billingStatus: TenantPortalBillingStatus = {
+      packageTier:           tier,
+      planInterval:          interval,
+      hasActiveSubscription: !!tenant?.stripe_subscription_id && tier !== 'hosting',
+    }
+
     return {
       success: true,
       data: {
@@ -1231,6 +1252,7 @@ export async function getTenantPortalData(
         recentEdits,
         aiRewriteCount,
         editCount,
+        billingStatus,
       },
     }
   } catch (err) {

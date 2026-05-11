@@ -38,6 +38,7 @@ const EDIT_TYPE_LABELS: Record<EditType, string> = {
   color_change:   'Colour',
   ai_rewrite:     'AI rewrite',
   section_toggle: 'Section toggle',
+  font_change:    'Font',
 }
 
 const EDIT_TYPE_ICONS: Record<EditType, string> = {
@@ -46,6 +47,7 @@ const EDIT_TYPE_ICONS: Record<EditType, string> = {
   color_change:   '🎨',
   ai_rewrite:     '✨',
   section_toggle: '👁️',
+  font_change:    '🔤',
 }
 
 function formatPath(path: string): string {
