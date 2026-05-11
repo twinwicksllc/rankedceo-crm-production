@@ -8,7 +8,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { createClient as createServerClient } from '@/lib/supabase/server'
-import type { WaasTenant, WaasDomainRequest, SiteVariantRecord } from '@/lib/waas/types'
+import type { WaasTenant, WaasDomainRequest, SiteVariantRecord, WaasTenantStatus } from '@/lib/waas/types'
 import { ALL_TEMPLATES, getTemplate } from '@/lib/waas/templates/registry'
 import { recommendTemplates, type TemplateRecommendation } from '@/lib/waas/services/template-recommender'
 import type { TenantSiteConfig, SectionConfig, SectionId } from '@/lib/waas/templates/types'
@@ -2941,6 +2941,119 @@ export async function reorderVariantSections(
     return { success: false, error: msg }
   }
 }
+// =============================================================================
+// Phase 6.2 — searchTenants + bulkUpdateTenantStatus
+// =============================================================================
+
+export interface TenantSearchFilters {
+  query?:   string            // free-text search across business_name, email, slug, domain
+  status?:  WaasTenantStatus | 'all'
+  sortBy?:  'created_at' | 'business_name'
+  sortDir?: 'asc' | 'desc'
+}
+
+export type BulkTenantAction = 'activate' | 'suspend'
+
+export async function searchTenants(
+  filters: TenantSearchFilters = {},
+): Promise<ActionResult<AdminTenantListItem[]>> {
+  try {
+    const supabase = getAdminClient()
+    const { query = '', status = 'all', sortBy = 'created_at', sortDir = 'desc' } = filters
+
+    // Base query — same active statuses as getAdminTenants but optionally filtered
+    let q = supabase
+      .from('tenants')
+      .select('*')
+      .is('deleted_at', null)
+      .order(sortBy === 'business_name' ? 'slug' : 'created_at', { ascending: sortDir === 'asc' })
+
+    // Status filter
+    if (status !== 'all') {
+      q = q.eq('status', status)
+    } else {
+      // Default: show all non-cancelled tenants
+      q = q.in('status', ['pending_review', 'onboarding', 'active', 'suspended'])
+    }
+
+    const { data, error } = await q
+
+    if (error) return { success: false, error: error.message }
+
+    let tenants = (data ?? []) as WaasTenant[]
+
+    // Client-side text filter (Supabase free-text search requires pg extension;
+    // we do it in JS since the dataset is admin-facing and bounded in size)
+    if (query.trim()) {
+      const q_lower = query.toLowerCase()
+      tenants = tenants.filter((t) => {
+        const bc = t.brand_config as { business_name?: string } | null
+        const name   = (bc?.business_name ?? '').toLowerCase()
+        const slug   = (t.slug ?? '').toLowerCase()
+        const domain = (t.domain ?? t.subdomain ?? '').toLowerCase()
+        return name.includes(q_lower) || slug.includes(q_lower) || domain.includes(q_lower)
+      })
+    }
+
+    if (tenants.length === 0) return { success: true, data: [] }
+
+    // Enrich with site config (review token, template selection)
+    const tenantIds = tenants.map((t) => t.id)
+    const { data: siteConfigRows } = await supabase
+      .from('tenant_site_config')
+      .select('tenant_id, client_review_token, client_selected_template_slug, client_selected_at')
+      .in('tenant_id', tenantIds)
+
+    const siteConfigMap = new Map<string, {
+      client_review_token?: string | null
+      client_selected_template_slug?: string | null
+      client_selected_at?: string | null
+    }>()
+
+    for (const row of (siteConfigRows ?? []) as Array<Record<string, unknown>>) {
+      const tid = row.tenant_id as string | undefined
+      if (!tid) continue
+      siteConfigMap.set(tid, {
+        client_review_token:            (row.client_review_token            as string | null | undefined) ?? null,
+        client_selected_template_slug:  (row.client_selected_template_slug  as string | null | undefined) ?? null,
+        client_selected_at:             (row.client_selected_at             as string | null | undefined) ?? null,
+      })
+    }
+
+    return {
+      success: true,
+      data: tenants.map((t) => ({ ...t, ...siteConfigMap.get(t.id) })),
+    }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Search failed' }
+  }
+}
+
+export async function bulkUpdateTenantStatus(
+  tenantIds: string[],
+  action:    BulkTenantAction,
+): Promise<ActionResult<{ updatedCount: number }>> {
+  if (!tenantIds.length) return { success: false, error: 'No tenants selected.' }
+
+  const newStatus: WaasTenantStatus = action === 'activate' ? 'active' : 'suspended'
+
+  try {
+    const supabase = getAdminClient()
+
+    const { error } = await supabase
+      .from('tenants')
+      .update({ status: newStatus })
+      .in('id', tenantIds)
+      .is('deleted_at', null)
+
+    if (error) return { success: false, error: error.message }
+
+    return { success: true, data: { updatedCount: tenantIds.length } }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Bulk update failed' }
+  }
+}
+
 // =============================================================================
 // Phase 6.3 — Domain Request Workflow (admin side)
 // =============================================================================

@@ -1068,6 +1068,161 @@ export async function undoClientEdit(
 }
 
 // =============================================================================
+// 11. getTenantPortalData
+//     Returns the aggregated data needed for the tenant portal home (Phase 6.1).
+//     Includes: site status, domain info, recent edits, AI rewrite usage count,
+//     and deployment info.
+//     Called server-side from the /edit/[reviewToken] page.tsx.
+// =============================================================================
+
+export interface TenantPortalSiteStatus {
+  tenantStatus:     string           // 'onboarding' | 'pending_review' | 'active' etc.
+  variantLabel:     string | null    // e.g. "Design A"
+  templateSlug:     string | null
+  liveSubdomain:    string | null    // e.g. "myclient" -> myclient.rankedceo.com
+  liveDomain:       string | null    // custom domain if set
+  approvalAt:       string | null    // ISO timestamp
+  approvalLocked:   boolean
+  lastClientEdit:   string | null    // ISO timestamp of last client-initiated edit
+}
+
+export interface TenantPortalRecentEdit {
+  id:         string
+  fieldPath:  string
+  editType:   EditType
+  newValue:   string | null
+  createdAt:  string
+}
+
+export interface TenantPortalData {
+  siteStatus:   TenantPortalSiteStatus
+  recentEdits:  TenantPortalRecentEdit[]   // last 5, most-recent first
+  aiRewriteCount: number                   // total AI rewrites this session
+  editCount:      number                   // total edits this session (all types)
+}
+
+export async function getTenantPortalData(
+  reviewToken: string,
+): Promise<ActionResult<TenantPortalData>> {
+  const sessionResult = await resolveClientEditSession(reviewToken)
+  if (!sessionResult.ok) {
+    return { success: false, error: sessionResult.message }
+  }
+
+  const { tenantId, selectedVariantIndex, selectedTemplateSlug, approvalAt, approvalLocked } =
+    sessionResult.session
+
+  try {
+    const supabase = getAdminClient()
+
+    // 1. Tenant domain/status
+    const { data: tenantRow } = await supabase
+      .from('tenants')
+      .select('status, subdomain, domain')
+      .eq('id', tenantId)
+      .single()
+
+    const tenant = tenantRow as {
+      status:    string
+      subdomain: string | null
+      domain:    string | null
+    } | null
+
+    // 2. Selected variant label
+    let variantLabel: string | null = null
+    let lastClientEdit: string | null = null
+    if (selectedVariantIndex != null) {
+      const { data: variantRow } = await supabase
+        .from('tenant_site_variants')
+        .select('variant_label, client_last_edited_at')
+        .eq('tenant_id', tenantId)
+        .eq('variant_index', selectedVariantIndex)
+        .single()
+
+      if (variantRow) {
+        const vr = variantRow as { variant_label: string; client_last_edited_at: string | null }
+        variantLabel    = vr.variant_label
+        lastClientEdit  = vr.client_last_edited_at
+      }
+    }
+
+    // 3. Recent edits (last 5 for this tenant's selected variant)
+    let recentEdits: TenantPortalRecentEdit[] = []
+    if (selectedVariantIndex != null) {
+      const { data: editsRows } = await supabase
+        .from('client_variant_edit_events')
+        .select('id, field_path, edit_type, new_value, created_at, ai_intent')
+        .eq('tenant_id', tenantId)
+        .eq('variant_index', selectedVariantIndex)
+        .order('created_at', { ascending: false })
+        .limit(5)
+
+      if (editsRows) {
+        recentEdits = (editsRows as Array<{
+          id:         string
+          field_path: string
+          edit_type:  string
+          new_value:  string | null
+          created_at: string
+          ai_intent:  string | null
+        }>)
+          .filter(e => !e.ai_intent?.startsWith('undo:'))
+          .slice(0, 5)
+          .map(e => ({
+            id:        e.id,
+            fieldPath: e.field_path,
+            editType:  e.edit_type as EditType,
+            newValue:  e.new_value,
+            createdAt: e.created_at,
+          }))
+      }
+    }
+
+    // 4. AI rewrite + total edit counts (this variant)
+    let aiRewriteCount = 0
+    let editCount      = 0
+    if (selectedVariantIndex != null) {
+      const { data: countRows } = await supabase
+        .from('client_variant_edit_events')
+        .select('edit_type, ai_intent')
+        .eq('tenant_id', tenantId)
+        .eq('variant_index', selectedVariantIndex)
+
+      if (countRows) {
+        const rows = countRows as Array<{ edit_type: string; ai_intent: string | null }>
+        const real  = rows.filter(r => !r.ai_intent?.startsWith('undo:'))
+        editCount      = real.length
+        aiRewriteCount = real.filter(r => r.edit_type === 'ai_rewrite').length
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        siteStatus: {
+          tenantStatus:   tenant?.status ?? 'onboarding',
+          variantLabel,
+          templateSlug:   selectedTemplateSlug,
+          liveSubdomain:  tenant?.subdomain ?? null,
+          liveDomain:     tenant?.domain    ?? null,
+          approvalAt,
+          approvalLocked,
+          lastClientEdit,
+        },
+        recentEdits,
+        aiRewriteCount,
+        editCount,
+      },
+    }
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to load portal data',
+    }
+  }
+}
+
+// =============================================================================
 // 12. submitDomainChangeRequest
 //     Phase 6.3: Allows a client to submit a post-onboarding domain change
 //     request from /edit/[reviewToken].
