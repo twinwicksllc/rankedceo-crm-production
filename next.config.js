@@ -3,6 +3,11 @@ const path = require('path')
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Keep data-testid attributes in production so QA smoke tests can target them.
+  // Next.js SWC strips these by default in production builds.
+  compiler: {
+    reactRemoveProperties: false,
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },

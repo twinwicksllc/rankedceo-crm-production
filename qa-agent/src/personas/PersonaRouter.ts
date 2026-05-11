@@ -117,10 +117,16 @@ export class PersonaRouter {
     // Wait for all in-flight XHR/fetch (incl. Supabase session check) to settle
     await page.waitForLoadState('networkidle', { timeout: 60_000 })
 
-    // Wait up to 90s total for [data-testid="admin-email"] to appear
-    // (Supabase cold-start on GitHub Actions runners can take 50-70s)
+    // Wait up to 90s total for the email input to appear.
+    // Use [data-testid="admin-email"] first; fall back to input#email / input[type="email"]
+    // in case data-testid was stripped by the SWC compiler in a production build.
+    // (Next.js SWC strips data-testid by default — fixed in next.config.js but
+    //  fallback ensures old deployments still work.)
+    const emailSelector = '[data-testid="admin-email"], input#email, input[type="email"][autocomplete="email"]'
+    const passwordSelector = '[data-testid="admin-password"], input#password, input[type="password"]'
+    const submitSelector = '[data-testid="admin-login-submit"], button[type="submit"]'
     try {
-      await page.waitForSelector('[data-testid="admin-email"]', { state: 'visible', timeout: 90_000 })
+      await page.waitForSelector(emailSelector, { state: 'visible', timeout: 90_000 })
     } catch (err) {
       // Full diagnostics on timeout
       const ts = new Date().toISOString().replace(/[:.]/g, '-')
@@ -133,9 +139,9 @@ export class PersonaRouter {
       console.error(`📄 Body HTML (3000 chars):\n${bodyHtml}\n`)
       throw err
     }
-    await page.fill('[data-testid="admin-email"]', credentials.email)
-    await page.fill('[data-testid="admin-password"]', credentials.password)
-    await page.click('[data-testid="admin-login-submit"]')
+    await page.fill(emailSelector, credentials.email)
+    await page.fill(passwordSelector, credentials.password)
+    await page.click(submitSelector)
 
     // Wait for redirect to admin dashboard after successful login
     await page.waitForURL(/\/(admin|dashboard)/, { timeout: 20_000 })
