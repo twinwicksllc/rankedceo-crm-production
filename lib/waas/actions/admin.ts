@@ -1586,6 +1586,19 @@ export async function markVariantsSentToReview(tenantId: string): Promise<Action
 
     revalidatePath(`/admin/dashboard/${tenantId}`)
     revalidatePath(`/review/${reviewToken}`)
+
+    // Phase 6.4: notify tenant that designs are ready for review (fire-and-forget)
+    void import('@/lib/waas/services/notifications').then(({ sendTenantNotification }) => {
+      void sendTenantNotification({
+        type:     'site_ready_for_review',
+        tenantId,
+        data: {
+          reviewUrl: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://app.rankedceo.com'}/edit/${reviewToken}`,
+        },
+        dedupKey: `site_ready_${tenantId}_${new Date().toISOString().slice(0, 10)}`,
+      })
+    }).catch(() => { /* never block on notification failure */ })
+
     return { success: true, data: reviewToken }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error'
