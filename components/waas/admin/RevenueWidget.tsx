@@ -15,7 +15,7 @@ import type { WaasPackageTier }  from '@/lib/waas/types'
 // ---------------------------------------------------------------------------
 
 interface RevenueWidgetProps {
-  stats: WaasRevenueStats
+  stats: WaasRevenueStats | null
 }
 
 // ---------------------------------------------------------------------------
@@ -125,6 +125,17 @@ function PlanBreakdownBar({ breakdown, total }: { breakdown: Record<string, numb
 // ---------------------------------------------------------------------------
 
 export function RevenueWidget({ stats }: RevenueWidgetProps) {
+  if (!stats) {
+    return (
+      <section className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl p-6">
+        <h2 className="text-sm font-semibold text-white/80 uppercase tracking-widest mb-4">
+          WaaS Revenue
+        </h2>
+        <p className="text-white/30 text-sm">Revenue data unavailable.</p>
+      </section>
+    )
+  }
+
   const { mrr, arr, activePaidCount, planBreakdown, recentSubscriptions } = stats
 
   return (

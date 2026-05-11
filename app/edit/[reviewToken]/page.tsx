@@ -17,6 +17,7 @@
 import { notFound }                  from 'next/navigation'
 import { createClient }              from '@supabase/supabase-js'
 import { resolveClientEditSession }  from '@/lib/waas/client-edit/edit-session'
+import type { ClientEditSession }     from '@/lib/waas/client-edit/edit-session'
 import { buildEditableFields }       from '@/lib/waas/client-edit/editable-fields'
 import { getTenantPortalData, getTenantAuditHistory } from '@/lib/waas/actions/client-edit'
 import { getTenantBillingStatus }    from '@/lib/waas/actions/billing'
@@ -65,7 +66,7 @@ async function loadSelectedVariantSections(
 // Shared session shape (used in all tab branches)
 // ---------------------------------------------------------------------------
 
-function buildSessionShape(session: Awaited<ReturnType<typeof resolveClientEditSession>> & { ok: true }['session']) {
+function buildSessionShape(session: ClientEditSession) {
   return {
     tenantId:             session.tenantId,
     slug:                 session.slug,

@@ -298,12 +298,13 @@ function UpgradeOptions({
   const [, startTransition]           = useTransition()
 
   const upgradeTiers = TIER_ORDER.filter(
-    (t) => tierRank(t) > tierRank(currentTier) && t !== 'hosting',
+    (t): t is 'hosting_only' | 'standard' | 'premium' =>
+      tierRank(t) > tierRank(currentTier) && t !== 'hosting',
   )
 
   if (upgradeTiers.length === 0) return null
 
-  function handleUpgrade(tier: WaasPackageTier) {
+  function handleUpgrade(tier: 'hosting_only' | 'standard' | 'premium') {
     const chosenInterval = tier === 'hosting_only' ? 'year' : interval
     setError(null)
     setLoadingTier(tier)
