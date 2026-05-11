@@ -36,7 +36,9 @@ export function ChangePlanForm({ tenantId, currentTier, currentInterval }: Chang
       const result = await adminUpdateTenantPlan({
         tenantId,
         packageTier: tier,
-        interval:    tier === 'hosting' ? null : interval,
+        interval:    tier === 'hosting' ? null
+                   : tier === 'hosting_only' ? 'year'  // annual-only tier
+                   : interval,
       })
       if (result.success) {
         setSuccess(true)
@@ -54,8 +56,8 @@ export function ChangePlanForm({ tenantId, currentTier, currentInterval }: Chang
       {/* Tier selector */}
       <div>
         <p className="text-white/35 text-[10px] uppercase tracking-wide mb-2">Package Tier</p>
-        <div className="grid grid-cols-3 gap-2">
-          {(['hosting', 'standard', 'premium'] as WaasPackageTier[]).map((t) => (
+        <div className="grid grid-cols-4 gap-2">
+          {(['hosting', 'hosting_only', 'standard', 'premium'] as WaasPackageTier[]).map((t) => (
             <button
               key={t}
               type="button"
@@ -70,10 +72,16 @@ export function ChangePlanForm({ tenantId, currentTier, currentInterval }: Chang
             </button>
           ))}
         </div>
+        {tier === 'hosting_only' && (
+          <p className="mt-1.5 text-teal-400 text-[10px]">
+            ℹ️ Hosting Only is billed annually — interval will be set to &quot;year&quot; automatically.
+          </p>
+        )}
       </div>
 
       {/* Interval selector (only for paid tiers) */}
-      {tier !== 'hosting' && (
+      {/* Interval selector — only for standard/premium (hosting_only is annual-only) */}
+      {tier !== 'hosting' && tier !== 'hosting_only' && (
         <div>
           <p className="text-white/35 text-[10px] uppercase tracking-wide mb-2">Billing Interval</p>
           <div className="grid grid-cols-2 gap-2">

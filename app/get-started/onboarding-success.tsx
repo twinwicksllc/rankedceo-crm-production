@@ -15,9 +15,10 @@ interface Props {
 }
 
 const TIER_LABELS: Record<WaasPackageTier, string> = {
-  hosting:  'Hosting',
-  standard: 'Standard',
-  premium:  'Premium',
+  hosting_only: 'Hosting Only',
+  hosting:      'Hosting',
+  standard:     'Standard',
+  premium:      'Premium',
 }
 
 export function OnboardingSuccess({ businessName, tier }: Props) {

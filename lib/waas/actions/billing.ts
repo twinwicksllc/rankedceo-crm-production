@@ -34,8 +34,12 @@ function getStripe(): Stripe {
 // WaaS Stripe Price IDs  (set in Vercel env vars)
 // ---------------------------------------------------------------------------
 
-export const WAAS_PLAN_PRICES: Record<WaasPackageTier, { monthly: string; yearly: string } | null> = {
-  hosting:  null,
+export const WAAS_PLAN_PRICES: Record<WaasPackageTier, { monthly: string; yearly: string } | { yearly: string } | null> = {
+  hosting_only: {
+    // Annual only — no monthly price
+    yearly: process.env.WAAS_STRIPE_PRICE_HOSTING_ONLY ?? '',
+  },
+  hosting:  null,  // free tier — no Stripe price
   standard: {
     monthly: process.env.WAAS_STRIPE_PRICE_STANDARD_MONTHLY ?? '',
     yearly:  process.env.WAAS_STRIPE_PRICE_STANDARD_YEARLY  ?? '',
@@ -189,7 +193,7 @@ export async function createBillingPortalSession(
 
 export interface CheckoutArgs {
   tenantId:       string
-  packageTier:    Exclude<WaasPackageTier, 'hosting'>
+  packageTier:    Exclude<WaasPackageTier, 'hosting'>  // 'hosting_only' | 'standard' | 'premium'
   interval:       'month' | 'year'
   successUrl:     string
   cancelUrl:      string
@@ -201,12 +205,19 @@ export async function createCheckoutSession(
 ): Promise<ActionResult<{ url: string }>> {
   const { tenantId, packageTier, interval, successUrl, cancelUrl, customerEmail } = args
 
+  // hosting_only is annual-only — reject monthly requests
+  if (packageTier === 'hosting_only' && interval === 'month') {
+    return { success: false, error: 'Hosting Only plan is available on annual billing only.' }
+  }
+
   // Validate price exists
   const prices = WAAS_PLAN_PRICES[packageTier]
   if (!prices) {
     return { success: false, error: `No price configured for tier: ${packageTier}` }
   }
-  const priceId = interval === 'month' ? prices.monthly : prices.yearly
+  const priceId = interval === 'month'
+    ? ('monthly' in prices ? prices.monthly : null)
+    : prices.yearly
   if (!priceId) {
     return { success: false, error: `No Stripe price ID set for ${packageTier}/${interval}` }
   }

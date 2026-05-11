@@ -37,7 +37,8 @@ interface PlanCardProps {
 // Tier ordering for "upgrade" logic
 // ---------------------------------------------------------------------------
 
-const TIER_ORDER: WaasPackageTier[] = ['hosting', 'standard', 'premium']
+// Tier ordering — hosting_only sits between free hosting and standard
+const TIER_ORDER: WaasPackageTier[] = ['hosting', 'hosting_only', 'standard', 'premium']
 
 function tierIndex(tier: WaasPackageTier): number {
   return TIER_ORDER.indexOf(tier)
@@ -95,11 +96,13 @@ export function PlanCard({ tenantId, reviewToken, billingStatus }: PlanCardProps
 
   function handleUpgrade(tier: Exclude<WaasPackageTier, 'hosting'>) {
     setError(null)
+    // hosting_only is annual-only — always use 'year' regardless of toggle
+    const effectiveInterval = tier === 'hosting_only' ? 'year' : upgradeInterval
     startTransition(async () => {
       const result = await createCheckoutSession({
         tenantId,
         packageTier: tier,
-        interval:    upgradeInterval,
+        interval:    effectiveInterval,
         successUrl:  `${window.location.origin}/edit/${reviewToken}?tab=overview&billing=success`,
         cancelUrl:   `${window.location.origin}/edit/${reviewToken}?tab=overview&billing=cancelled`,
       })
@@ -116,9 +119,10 @@ export function PlanCard({ tenantId, reviewToken, billingStatus }: PlanCardProps
   // ---------------------------------------------------------------------------
 
   const planColors: Record<WaasPackageTier, string> = {
-    hosting:  'bg-slate-100 text-slate-600',
-    standard: 'bg-blue-100 text-blue-700',
-    premium:  'bg-violet-100 text-violet-700',
+    hosting:      'bg-slate-100 text-slate-600',
+    hosting_only: 'bg-teal-100 text-teal-700',
+    standard:     'bg-blue-100 text-blue-700',
+    premium:      'bg-violet-100 text-violet-700',
   }
 
   return (
@@ -194,7 +198,7 @@ export function PlanCard({ tenantId, reviewToken, billingStatus }: PlanCardProps
                 }`}
               >
                 Annual
-                <span className="ml-1 text-[10px] text-emerald-500 font-semibold">Save 17%</span>
+                <span className="ml-1 text-[10px] text-emerald-500 font-semibold">Save 15%</span>
               </button>
             </div>
 
@@ -203,10 +207,14 @@ export function PlanCard({ tenantId, reviewToken, billingStatus }: PlanCardProps
               {(TIER_ORDER.filter(
                 (t) => tierIndex(t) > currentTierIdx && t !== 'hosting'
               ) as Exclude<WaasPackageTier, 'hosting'>[]).map((tier) => {
-                const display = WAAS_PLAN_DISPLAY[tier]
-                const price   = upgradeInterval === 'month'
-                  ? display.monthlyPrice
-                  : Math.round(display.yearlyPrice / 12)
+                const display      = WAAS_PLAN_DISPLAY[tier]
+                const isAnnualOnly = tier === 'hosting_only'
+                // For annual-only tiers show the flat yearly price, otherwise per-month breakdown
+                const priceLabel = isAnnualOnly
+                  ? `$${display.yearlyPrice}/yr`
+                  : upgradeInterval === 'month'
+                    ? `$${display.monthlyPrice}/mo`
+                    : `$${Math.round(display.yearlyPrice / 12)}/mo`
                 return (
                   <div
                     key={tier}
@@ -220,10 +228,12 @@ export function PlanCard({ tenantId, reviewToken, billingStatus }: PlanCardProps
                       <div>
                         <p className="text-sm font-semibold text-slate-800">{display.label}</p>
                         <p className="text-[11px] text-slate-500">
-                          ${price}/mo
-                          {upgradeInterval === 'year' && (
+                          {priceLabel}
+                          {isAnnualOnly ? (
+                            <span className="ml-1 text-teal-600 font-medium">· annual only</span>
+                          ) : upgradeInterval === 'year' ? (
                             <span className="ml-1 text-emerald-600">billed annually</span>
-                          )}
+                          ) : null}
                         </p>
                       </div>
                       <button
