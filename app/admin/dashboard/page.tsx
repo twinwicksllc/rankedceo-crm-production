@@ -12,11 +12,13 @@ import {
   getAdminTenants,
   getAdminStats,
   getRecentlyArchivedTenants,
+  getWaasRevenueStats,
   restoreArchivedTenant,
 } from '@/lib/waas/actions/admin'
 import type { WaasTenant } from '@/lib/waas/types'
 import type { AdminTenantListItem, ArchivedTenantListItem } from '@/lib/waas/actions/admin'
 import { TenantList } from './tenant-list'
+import { RevenueWidget } from '@/components/waas/admin/RevenueWidget'
 
 // ---------------------------------------------------------------------------
 // Status badge
@@ -53,14 +55,16 @@ export default async function AdminDashboardPage({
     await archiveDuplicatePendingAttempts()
   }
 
-  const [tenantsResult, statsResult, archivedResult] = await Promise.all([
+  const [tenantsResult, statsResult, archivedResult, revenueResult] = await Promise.all([
     getAdminTenants(),
     getAdminStats(),
     getRecentlyArchivedTenants(6),
+    getWaasRevenueStats(),
   ])
 
   const tenants = (tenantsResult.data ?? []) as AdminTenantListItem[]
   const stats   = statsResult.data ?? { pendingCount: 0, activeCount: 0, totalLeads: 0 }
+  const revenueStats = revenueResult.data ?? null
   const tenantsLoadError = tenantsResult.success ? null : (tenantsResult.error ?? 'Unable to load tenant queue data.')
   const archivedTenants = (archivedResult.data ?? []) as ArchivedTenantListItem[]
 
@@ -143,6 +147,11 @@ export default async function AdminDashboardPage({
           Tenant queue data could not be fully loaded: {tenantsLoadError}
         </div>
       )}
+
+      {/* Phase 8.6 — WaaS Revenue Dashboard */}
+      <div className="mb-10">
+        <RevenueWidget stats={revenueStats} />
+      </div>
 
       {/* Phase 6.2 — Enhanced searchable tenant list */}
       <div className="mb-10 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl p-5">
