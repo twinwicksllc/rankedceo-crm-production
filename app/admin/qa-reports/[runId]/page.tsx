@@ -10,11 +10,11 @@ import { getQaRunDetail } from '@/lib/waas/actions/qa'
 export const dynamic = 'force-dynamic'
 
 interface Props {
-  params: Promise<{ runId: string }>
+  params: { runId: string }
 }
 
 export default async function QaRunReportPage({ params }: Props) {
-  const { runId } = await params
+  const { runId } = params
   const { data: run, error } = await getQaRunDetail(runId)
 
   if (error || !run) notFound()
