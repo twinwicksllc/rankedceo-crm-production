@@ -15,7 +15,9 @@ import type {
   DomainWishlistItem,
 } from '@/lib/waas/types'
 
-import { generateAndStoreSiteVariants } from '@/lib/waas/actions/admin'
+import { generateAndStoreSiteVariants, ensureClientReviewToken } from '@/lib/waas/actions/admin'
+import type { AuditReportData } from '@/lib/waas/types'
+
 // ---------------------------------------------------------------------------
 // Raw client helper (bypasses ExactMatch type system)
 // ---------------------------------------------------------------------------
@@ -155,6 +157,81 @@ async function insertTenantWithFallback(
 }
 
 // ---------------------------------------------------------------------------
+// Audit Data Extraction Helper
+// Fetches audit and pre-fills brand_config with keywords, competitors, etc.
+// ---------------------------------------------------------------------------
+
+async function extractAuditDataForPreFill(
+  auditId: string | null | undefined,
+): Promise<{ audit_enhancements: Record<string, unknown> | null }> {
+  if (!auditId) return { audit_enhancements: null }
+
+  try {
+    const supabase = getRawClient()
+    const { data: audit } = await supabase
+      .from('audits')
+      .select('report_data')
+      .eq('id', auditId)
+      .single()
+
+    if (!audit) return { audit_enhancements: null }
+
+    const report = (audit as { report_data: unknown } | null)?.report_data as AuditReportData | null
+    if (!report) return { audit_enhancements: null }
+
+    const enhancements: Record<string, unknown> = {}
+
+    // Extract keywords from rankings
+    if (report.rankings && Array.isArray(report.rankings) && report.rankings.length > 0) {
+      const keywords = report.rankings.slice(0, 5).map((r) => r.keyword)
+      enhancements.keywords_from_audit = keywords
+    }
+
+    // Extract location and industry from provider_meta
+    if (report.provider_meta) {
+      if (report.provider_meta.keyword_detected_location) {
+        enhancements.detected_location = report.provider_meta.keyword_detected_location
+      }
+      if (report.provider_meta.keyword_detected_industry) {
+        enhancements.detected_industry = report.provider_meta.keyword_detected_industry
+      }
+    }
+
+    // Extract competitors for "interesting sites" reference
+    if (report.competitors && Array.isArray(report.competitors) && report.competitors.length > 0) {
+      const competitors_data = report.competitors.map((c) => ({
+        url: c.url,
+        domain_authority: c.domain_authority,
+        keywords_ranking: c.keywords_ranking,
+        top_keywords: c.top_keywords || [],
+      }))
+      enhancements.competitors_from_audit = competitors_data
+    }
+
+    // Store page speed metrics for builder recommendations
+    if (report.page_speed) {
+      enhancements.page_speed_from_audit = report.page_speed
+    }
+
+    // Store audit scores for reference
+    if (report.summary) {
+      enhancements.audit_scores = {
+        overall: report.summary.overall_score,
+        performance: report.summary.performance_score,
+        seo: report.summary.seo_score,
+        mobile: report.summary.mobile_score,
+        accessibility: report.summary.accessibility_score,
+      }
+    }
+
+    return { audit_enhancements: Object.keys(enhancements).length > 0 ? enhancements : null }
+  } catch (err) {
+    console.error('Error extracting audit data:', err)
+    return { audit_enhancements: null }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Step 1: Save Business Identity
 // ---------------------------------------------------------------------------
 
@@ -176,6 +253,41 @@ export async function saveOnboardingStep1(
 
     const locationLabel = `${data.city}, ${data.state}`
 
+    // Extract audit data to pre-fill builder fields
+    const { audit_enhancements } = await extractAuditDataForPreFill(auditId)
+
+    const baseBrandConfig = {
+      business_name: data.legal_name,
+      tagline: data.tagline || null,
+      colors: {
+        primary:    '#2563EB',
+        secondary:  '#1E40AF',
+        accent:     '#DBEAFE',
+        background: '#FFFFFF',
+        text:       '#111827',
+      },
+      contact: {
+        email: email ?? null,
+        phone: data.phone || null,
+        address: data.physical_address,
+        city: data.city,
+        state: data.state,
+        zip: data.zip,
+      },
+      intake_profile: {
+        business_type: data.business_type || null,
+        services_offered: data.services_offered || null,
+        business_hours: data.business_hours || null,
+        target_audience: data.target_audience || null,
+        primary_trade: data.primary_trade,
+      },
+    }
+
+    // Merge audit enhancements if available
+    const brand_config = audit_enhancements
+      ? { ...baseBrandConfig, ...audit_enhancements }
+      : baseBrandConfig
+
     const payload = {
       legal_name:       data.legal_name,
       physical_address: data.physical_address,
@@ -187,32 +299,7 @@ export async function saveOnboardingStep1(
       status:           'onboarding',
       onboarding_step:  2,
       updated_at:       new Date().toISOString(),
-      brand_config: {
-        business_name: data.legal_name,
-        tagline: data.tagline || null,
-        colors: {
-          primary:    '#2563EB',
-          secondary:  '#1E40AF',
-          accent:     '#DBEAFE',
-          background: '#FFFFFF',
-          text:       '#111827',
-        },
-        contact: {
-          email: email ?? null,
-          phone: data.phone || null,
-          address: data.physical_address,
-          city: data.city,
-          state: data.state,
-          zip: data.zip,
-        },
-        intake_profile: {
-          business_type: data.business_type || null,
-          services_offered: data.services_offered || null,
-          business_hours: data.business_hours || null,
-          target_audience: data.target_audience || null,
-          primary_trade: data.primary_trade,
-        },
-      },
+      brand_config,
     }
 
     if (tenantId) {
@@ -373,7 +460,7 @@ export async function saveOnboardingStep4(
   tenantId: string,
   data: OnboardingStep4Data,
   packageTier: WaasPackageTier = 'standard',
-): Promise<ActionResult> {
+): Promise<ActionResult<{ reviewToken: string }>> {
   try {
     const supabase = getRawClient()
 
@@ -433,11 +520,15 @@ export async function saveOnboardingStep4(
 
     if (error) return { success: false, error: error.message }
 
+    // Generate and ensure review token for immediate builder access
+    const tokenResult = await ensureClientReviewToken(tenantId)
+    const reviewToken = tokenResult.success && tokenResult.data ? tokenResult.data : tenantId
+
     // Fire-and-forget to avoid blocking onboarding completion on AI latency.
     void generateAndStoreSiteVariants(tenantId)
 
     revalidatePath('/admin/dashboard')
-    return { success: true }
+    return { success: true, data: { reviewToken } }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error'
     return { success: false, error: msg }

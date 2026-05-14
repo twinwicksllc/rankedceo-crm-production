@@ -2,16 +2,19 @@
 
 // =============================================================================
 // AdvantagePoint — Onboarding Success Screen
+// Auto-redirects to builder with review token
 // =============================================================================
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { AdvantagePointHeader } from '@/components/advantagepoint/header'
 import type { WaasPackageTier } from '@/lib/waas/types'
 
 interface Props {
   businessName: string
   tier:         WaasPackageTier
+  reviewToken:  string | null
 }
 
 const TIER_LABELS: Record<WaasPackageTier, string> = {
@@ -21,8 +24,22 @@ const TIER_LABELS: Record<WaasPackageTier, string> = {
   premium:      'Premium',
 }
 
-export function OnboardingSuccess({ businessName, tier }: Props) {
+export function OnboardingSuccess({ businessName, tier, reviewToken }: Props) {
+  const router = useRouter()
   const [showConfetti, setShowConfetti] = useState(false)
+  const [isRedirecting, setIsRedirecting] = useState(false)
+
+  // Auto-redirect to builder if token is available
+  useEffect(() => {
+    if (reviewToken) {
+      setIsRedirecting(true)
+      // Show success briefly before redirect
+      const redirectTimer = setTimeout(() => {
+        router.push(`/edit/${reviewToken}`)
+      }, 1500)
+      return () => clearTimeout(redirectTimer)
+    }
+  }, [reviewToken, router])
 
   useEffect(() => {
     setShowConfetti(true)
@@ -86,6 +103,18 @@ export function OnboardingSuccess({ businessName, tier }: Props) {
             <span className="text-white/50 text-sm">Pending Review</span>
           </div>
 
+          {/* Redirecting status */}
+          {isRedirecting && (
+            <div className="mb-8 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 backdrop-blur-xl">
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-4 h-4 rounded-full border-2 border-blue-500/30 border-t-blue-400 animate-spin" />
+                <p className="text-blue-300 text-sm font-medium">
+                  Launching your site builder...
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Timeline */}
           <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl p-6 mb-8 text-left">
             <h3 className="text-white font-semibold text-sm mb-5 uppercase tracking-wider">What happens next</h3>
@@ -105,24 +134,26 @@ export function OnboardingSuccess({ businessName, tier }: Props) {
           </div>
 
           {/* CTA */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Link
-              href="/"
-              className="flex-1 h-12 rounded-xl border border-white/15 text-white/60 hover:text-white hover:border-white/30 font-medium text-sm transition-all flex items-center justify-center"
-            >
-              Back to Home
-            </Link>
-            <a
-              href="mailto:support@advantagepoint.com"
-              className="flex-1 h-12 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-white font-semibold text-sm hover:from-blue-500 hover:to-violet-500 transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <rect x="1" y="3" width="14" height="10" rx="2" stroke="white" strokeWidth="1.5"/>
-                <path d="M1 5l7 5 7-5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-              Contact Support
-            </a>
-          </div>
+          {!isRedirecting && (
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Link
+                href="/"
+                className="flex-1 h-12 rounded-xl border border-white/15 text-white/60 hover:text-white hover:border-white/30 font-medium text-sm transition-all flex items-center justify-center"
+              >
+                Back to Home
+              </Link>
+              <a
+                href="mailto:support@advantagepoint.com"
+                className="flex-1 h-12 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-white font-semibold text-sm hover:from-blue-500 hover:to-violet-500 transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <rect x="1" y="3" width="14" height="10" rx="2" stroke="white" strokeWidth="1.5"/>
+                  <path d="M1 5l7 5 7-5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+                Contact Support
+              </a>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -100,6 +100,7 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
   const [isLoading,   setIsLoading]     = useState(false)
   const [error,       setError]         = useState<string | null>(null)
   const [completed,   setCompleted]     = useState(false)
+  const [reviewToken, setReviewToken]   = useState<string | null>(null)
 
   // Step 2 state (managed outside RHF — complex array)
   const [domains, setDomains] = useState<DomainWishlistItem[]>([])
@@ -301,6 +302,7 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
     const result = await saveOnboardingStep4(tenantId, data, initialTier)
     if (!result.success) { handleError(result.error ?? 'Failed to submit.'); return }
 
+    setReviewToken(result.data?.reviewToken ?? null)
     setIsLoading(false)
     trackEvent('audit_onboarding_step_completed', {
       ...trackingContext.current,
@@ -335,7 +337,7 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
   // ---------------------------------------------------------------------------
 
   if (completed) {
-    return <OnboardingSuccess businessName={businessName} tier={initialTier} />
+    return <OnboardingSuccess businessName={businessName} tier={initialTier} reviewToken={reviewToken} />
   }
 
   // ---------------------------------------------------------------------------
