@@ -11,7 +11,14 @@ declare module 'pdfkit' {
     // Core methods
     fontSize(size: number): PDFDocument
     font(name: string): PDFDocument
-    text(text: string, x?: number, y?: number, options?: TextOptions): PDFDocument
+    
+    // text() method overloads
+    text(text: string): PDFDocument
+    text(text: string, options: TextOptions): PDFDocument
+    text(text: string, x: number, y: number): PDFDocument
+    text(text: string, x: number, y: number, options: TextOptions): PDFDocument
+    text(text: string, x?: number | TextOptions, y?: number, options?: TextOptions): PDFDocument
+    
     fillColor(color: string | number): PDFDocument
     moveDown(lines?: number): PDFDocument
     addPage(): PDFDocument
