@@ -79,6 +79,10 @@ export default async function AuditReportPage({ params }: PageProps) {
   }
 
   return (
-    <AuditReportClient audit={audit} />
+    <AuditReportClient 
+      audit={audit} 
+      userEmail={user.email ?? undefined}
+      userName={user.user_metadata?.full_name ?? undefined}
+    />
   )
 }

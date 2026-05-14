@@ -155,9 +155,11 @@ const POLL_MAX_ATTEMPTS = 45  // ~3 minutes max
 
 interface AuditReportClientProps {
   audit: WaasAudit
+  userEmail?: string
+  userName?: string
 }
 
-function AuditReportClientContent({ audit: initialAudit }: AuditReportClientProps) {
+function AuditReportClientContent({ audit: initialAudit, userEmail, userName }: AuditReportClientProps) {
   const [audit,    setAudit]    = useState<WaasAudit>(initialAudit)
   const [attempts, setAttempts] = useState(0)
   const dataUnavailableTracked = useRef(false)
@@ -298,15 +300,15 @@ function AuditReportClientContent({ audit: initialAudit }: AuditReportClientProp
   // ── Full report ───────────────────────────────────────────────────────────
   return (
     <PageShell auditId={audit.id} expiresAt={audit.expires_at}>
-      <FullReport audit={audit} />
+      <FullReport audit={audit} userEmail={userEmail} userName={userName} />
     </PageShell>
   )
 }
 
-export function AuditReportClient({ audit }: AuditReportClientProps) {
+export function AuditReportClient({ audit, userEmail, userName }: AuditReportClientProps) {
   return (
     <OnboardingThemeProvider>
-      <AuditReportClientContent audit={audit} />
+      <AuditReportClientContent audit={audit} userEmail={userEmail} userName={userName} />
     </OnboardingThemeProvider>
   )
 }
@@ -315,7 +317,7 @@ export function AuditReportClient({ audit }: AuditReportClientProps) {
 // Full Report (completed audit)
 // ---------------------------------------------------------------------------
 
-function FullReport({ audit }: { audit: WaasAudit }) {
+function FullReport({ audit, userEmail, userName }: { audit: WaasAudit; userEmail?: string; userName?: string }) {
   const { theme } = useOnboardingTheme()
   const isLight = theme === 'light'
   const report       = audit.report_data as ExtendedReportData
@@ -476,6 +478,8 @@ function FullReport({ audit }: { audit: WaasAudit }) {
         <EmailCaptureForm
           auditId={audit.id}
           targetDomain={targetDomain}
+          userEmail={userEmail}
+          userName={userName}
         />
       </div>
 

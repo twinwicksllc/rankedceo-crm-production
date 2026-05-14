@@ -12,6 +12,8 @@ import { useOnboardingTheme } from '@/app/get-started/theme-context'
 interface EmailCaptureFormProps {
   auditId:      string
   targetDomain: string
+  userEmail?:   string
+  userName?:    string
   onCaptured?:  (email: string) => void  // callback after successful capture
 }
 
@@ -27,11 +29,18 @@ type SubmitStatus = 'idle' | 'submitting' | 'success' | 'error'
 export function EmailCaptureForm({
   auditId,
   targetDomain,
+  userEmail,
+  userName,
   onCaptured,
 }: EmailCaptureFormProps) {
   const { theme } = useOnboardingTheme()
   const isLight = theme === 'light'
-  const [form,   setForm]   = useState<FormState>({ name: '', email: '', phone: '', company: '' })
+  const [form,   setForm]   = useState<FormState>({
+    name: userName ?? '',
+    email: userEmail ?? '',
+    phone: '',
+    company: '',
+  })
   const [status, setStatus] = useState<SubmitStatus>('idle')
   const [error,  setError]  = useState<string | null>(null)
   const [open,   setOpen]   = useState(false)
@@ -244,35 +253,63 @@ export function EmailCaptureForm({
           gap:                 12,
           marginBottom:        12,
         }}>
+          {userEmail && (
+            <>
+              <FormField
+                label="Full Name"
+                type="text"
+                placeholder="John Smith"
+                value={form.name}
+                onChange={update('name')}
+                disabled={!!userName}
+                hint={userName ? '(from your account)' : undefined}
+              />
+              <FormField
+                label="Email Address"
+                type="email"
+                placeholder="john@acmeplumbing.com"
+                value={form.email}
+                onChange={update('email')}
+                disabled
+                hint="(from your account)"
+              />
+            </>
+          )}
+          {!userEmail && (
+            <>
+              <FormField
+                label="Full Name *"
+                type="text"
+                placeholder="John Smith"
+                value={form.name}
+                onChange={update('name')}
+                required
+              />
+              <FormField
+                label="Email Address *"
+                type="email"
+                placeholder="john@acmeplumbing.com"
+                value={form.email}
+                onChange={update('email')}
+                required
+              />
+            </>
+          )}
           <FormField
-            label="Full Name"
-            type="text"
-            placeholder="John Smith"
-            value={form.name}
-            onChange={update('name')}
-            required
-          />
-          <FormField
-            label="Email Address *"
-            type="email"
-            placeholder="john@acmeplumbing.com"
-            value={form.email}
-            onChange={update('email')}
-            required
-          />
-          <FormField
-            label="Phone (optional)"
+            label={userEmail ? 'Phone (optional)' : 'Phone *'}
             type="tel"
             placeholder="(555) 123-4567"
             value={form.phone}
             onChange={update('phone')}
+            required={!userEmail}
           />
           <FormField
-            label="Company (optional)"
+            label={userEmail ? 'Company (optional)' : 'Company *'}
             type="text"
             placeholder="Acme Plumbing Co."
             value={form.company}
             onChange={update('company')}
+            required={!userEmail}
           />
         </div>
 
@@ -333,7 +370,7 @@ export function EmailCaptureForm({
 // ---------------------------------------------------------------------------
 
 function FormField({
-  label, type, placeholder, value, onChange, required = false,
+  label, type, placeholder, value, onChange, required = false, disabled = false, hint,
 }: {
   label:       string
   type:        string
@@ -341,6 +378,8 @@ function FormField({
   value:       string
   onChange:    React.ChangeEventHandler<HTMLInputElement>
   required?:   boolean
+  disabled?:   boolean
+  hint?:       string
 }) {
   return (
     <div>
@@ -348,12 +387,17 @@ function FormField({
         display:      'block',
         fontSize:     '0.72rem',
         fontWeight:   600,
-        color:        'rgba(255,255,255,0.5)',
+        color:        disabled ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.5)',
         marginBottom: 5,
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
       }}>
         {label}
+        {hint && (
+          <span style={{ fontSize: '0.65rem', fontWeight: 400, marginLeft: 4, opacity: 0.7 }}>
+            {hint}
+          </span>
+        )}
       </label>
       <input
         type={type}
@@ -361,20 +405,22 @@ function FormField({
         value={value}
         onChange={onChange}
         required={required}
+        disabled={disabled}
         style={{
           width:        '100%',
           padding:      '9px 12px',
-          background:   'rgba(255,255,255,0.06)',
-          border:       '1px solid rgba(255,255,255,0.12)',
+          background:   disabled ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.06)',
+          border:       disabled ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.12)',
           borderRadius: 8,
-          color:        '#ffffff',
+          color:        disabled ? 'rgba(255,255,255,0.45)' : '#ffffff',
           fontSize:     '0.85rem',
           outline:      'none',
           boxSizing:    'border-box',
           transition:   'border-color 0.2s',
+          cursor:       disabled ? 'not-allowed' : 'text',
         }}
-        onFocus={e => { e.target.style.borderColor = 'rgba(96,165,250,0.6)' }}
-        onBlur={e  => { e.target.style.borderColor = 'rgba(255,255,255,0.12)' }}
+        onFocus={e => { if (!disabled) e.target.style.borderColor = 'rgba(96,165,250,0.6)' }}
+        onBlur={e  => { e.target.style.borderColor = disabled ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.12)' }}
       />
     </div>
   )
