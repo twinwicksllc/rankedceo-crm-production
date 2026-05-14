@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import PDFDocument from 'pdfkit'
 import { createWaasClient } from '@/lib/waas/supabase'
 import { createClient } from '@/lib/supabase/server'
-import type { AuditReportData } from '@/lib/waas/types'
+import type { AuditReportData, WaasAudit } from '@/lib/waas/types'
 
 interface RequestContext {
   params: { auditId: string }
@@ -61,7 +61,7 @@ export async function GET(_req: NextRequest, context: RequestContext) {
       .from('audits')
       .select('*')
       .eq('id', auditId)
-      .single()
+      .single() as { data: WaasAudit | null; error: any }
 
     if (error || !audit) {
       return NextResponse.json({ error: 'Audit not found' }, { status: 404 })

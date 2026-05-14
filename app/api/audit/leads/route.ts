@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { updateAuditRecord, captureAuditLead, createWaasClient } from '@/lib/waas/supabase'
+import type { WaasAudit, WaasTenant } from '@/lib/waas/types'
 
 export async function POST(req: NextRequest) {
   try {
@@ -77,7 +78,7 @@ export async function POST(req: NextRequest) {
         .from('audits')
         .select('tenant_id, id')
         .eq('id', String(audit_id))
-        .single()
+        .single() as { data: Pick<WaasAudit, 'tenant_id' | 'id'> | null; error: any }
 
       let tenantId = audit?.tenant_id
 
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest) {
           .from('tenants')
           .select('id')
           .eq('source_audit_id', String(audit_id))
-          .single()
+          .single() as { data: Pick<WaasTenant, 'id'> | null; error: any }
         tenantId = tenantByAudit?.id
       }
 
@@ -97,7 +98,7 @@ export async function POST(req: NextRequest) {
           .from('tenants')
           .select('brand_config')
           .eq('id', tenantId)
-          .single()
+          .single() as { data: Pick<WaasTenant, 'brand_config'> | null; error: any }
 
         const currentBrandConfig = (tenant as { brand_config: Record<string, unknown> } | null)?.brand_config ?? {}
         const currentContact = (currentBrandConfig.contact as Record<string, unknown> | null) ?? {}
@@ -115,8 +116,8 @@ export async function POST(req: NextRequest) {
           pdf_downloads: ((currentBrandConfig.pdf_downloads as number) ?? 0) + 1,
         }
 
-        await waasClient
-          .from('tenants')
+        await (waasClient
+          .from('tenants') as any)
           .update({
             brand_config: updatedBrandConfig,
             updated_at: new Date().toISOString(),
