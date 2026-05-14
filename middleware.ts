@@ -385,11 +385,22 @@ function handleAuditSubdomain(
 ): NextResponse {
   const { pathname } = request.nextUrl
 
-  // Allow auth, API, and onboarding routes to pass through
-  const isSharedRoute = ['/login', '/signup', '/forgot-password', '/reset-password', '/api/auth', '/api/', '/audit', '/onboarding', '/get-started', '/_next'].some(p =>
+  // API, Next.js internals, auth callbacks, and /audit/* routes pass through as-is
+  const isPassThrough = ['/signup', '/forgot-password', '/reset-password', '/api/auth', '/api/', '/audit', '/onboarding', '/get-started', '/_next'].some(p =>
     pathname.startsWith(p)
   )
-  if (isSharedRoute) return response
+  if (isPassThrough) return response
+
+  // Serve the audit-branded login page for /login (instead of the CRM login)
+  if (pathname === '/login') {
+    const loginUrl = request.nextUrl.clone()
+    loginUrl.pathname = '/audit/login'
+    const loginRewrite = NextResponse.rewrite(loginUrl)
+    response.cookies.getAll().forEach(cookie => {
+      loginRewrite.cookies.set(cookie.name, cookie.value)
+    })
+    return loginRewrite
+  }
 
   // Rewrite root / to /audit-landing
   const url = request.nextUrl.clone()

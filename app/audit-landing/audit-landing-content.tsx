@@ -14,20 +14,14 @@ export function AuditLandingContent() {
   const { theme } = useOnboardingTheme()
   const isLight = theme === 'light'
   const [getStartedUrl, setGetStartedUrl] = useState(AUDIT_START_URL)
-  const [loginUrl, setLoginUrl] = useState(
-    `${process.env.NEXT_PUBLIC_APP_URL || 'https://crm.rankedceo.com'}/login`
-  )
+  const [loginUrl, setLoginUrl] = useState('/login')
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search)
     const funnelProperties = getAuditFunnelProperties(searchParams)
-    const loginBase = process.env.NEXT_PUBLIC_APP_URL || 'https://crm.rankedceo.com'
-    const returnTo = `${window.location.origin}/audit/start`
-    const login = new URL('/login', loginBase)
-    login.searchParams.set('redirectTo', returnTo)
 
     setGetStartedUrl(buildGetStartedUrl(AUDIT_START_URL, searchParams))
-    setLoginUrl(login.toString())
+    setLoginUrl('/login')
 
     trackEvent('audit_landing_viewed', {
       host: window.location.hostname,
