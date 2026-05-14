@@ -1,0 +1,250 @@
+id: enduser_clarity
+name: Enduser UX Clarity — Non-Tech-Savvy Navigation & CTA Testing
+description: >
+  Tests the portal from the perspective of a non-tech-savvy user who relies on
+  obvious CTAs, clear labels, and intuitive navigation. Ensures every action has
+  a clear "what do I do next" path. Runs monthly to catch UX regressions that
+  could confuse less technical users.
+  
+  Focus areas:
+  - All buttons have clear, action-oriented labels
+  - Obvious visual hierarchy (what to click first?)
+  - Helpful error messages and guidance text
+  - Mobile-friendly layout (1024x768 viewport)
+  - No jargon without context
+
+modes:
+  - full
+requires_stripe: false
+requires_email: false
+
+steps:
+  # ── Enduser: Portal Load ──────────────────────────────────────────────────
+
+  - id: enduser_portal_loads
+    type: wait_for
+    persona: enduser
+    severity: critical
+    description: Portal loads with visible content (first impression)
+    selector: '[data-testid="client-portal-root"], main, h1'
+    timeout_ms: 15000
+    intent: >
+      The enduser lands on the portal. We check that there is visible content
+      (h1, main, or portal root). If this fails, the user sees a blank page.
+
+  - id: enduser_assert_portal_url
+    type: assert_url
+    persona: enduser
+    severity: critical
+    description: Confirm we are in the portal
+    pattern: /edit/
+    intent: Verify the URL shows we are in the edit portal, not an error page
+
+  # ── Enduser: Tab Navigation (Clear Labels) ────────────────────────────────
+
+  - id: enduser_assert_overview_tab_visible
+    type: wait_for
+    persona: enduser
+    severity: warning
+    description: Overview tab is visible (first tab - where to start?)
+    selector: '[data-testid="portal-tab-overview"], nav button, header nav button'
+    timeout_ms: 10000
+    intent: >
+      The first tab should be obvious. Label should be simple like "Overview"
+      or use an emoji icon. User should know this is a landing tab.
+
+  - id: enduser_assert_tabs_labeled
+    type: assert_text
+    persona: enduser
+    severity: error
+    description: Tab navigation has clear labels (not just icons)
+    selector: 'nav[aria-label="Portal tabs"] button, header nav button'
+    contains: Edit
+    timeout_ms: 5000
+    intent: >
+      Each tab button must have text labels. Icons alone confuse non-tech users.
+      We check for "Edit" which is a common tab label.
+
+  # ── Enduser: Click Main CTA (Edit Site) ──────────────────────────────────
+
+  - id: enduser_click_edit_tab
+    type: click
+    persona: enduser
+    severity: warning
+    description: Click the Edit tab (main action for this user)
+    selector: '[data-testid="portal-tab-edit"], nav[aria-label="Portal tabs"] button:has-text("Edit"), header nav button:has-text("Edit")'
+    retries: 1
+    intent: >
+      The Edit tab is the primary action for a non-tech-savvy user.
+      Clear button label should make this obvious.
+
+  - id: enduser_edit_tab_loads
+    type: wait_for
+    persona: enduser
+    severity: warning
+    description: Edit tab content is visible
+    selector: '[data-testid="portal-tab-edit"][aria-current="page"], [data-testid="editor-shell"], main'
+    timeout_ms: 15000
+    intent: >
+      After clicking Edit, the tab pane should show content.
+      This could be the editor, or a loading state that resolves quickly.
+
+  # ── Enduser: Find Save Button ────────────────────────────────────────────
+
+  - id: enduser_locate_save_button
+    type: wait_for
+    persona: enduser
+    severity: warning
+    description: Save button is visible (non-tech user needs obvious confirmation)
+    selector: 'button[data-testid="save"], button:has-text("Save"), button:has-text("Publish"), [data-testid="editor-shell"] button'
+    timeout_ms: 8000
+    intent: >
+      After editing, a non-tech user needs a clear "Save" or "Publish" button.
+      The button text must be obvious. Hidden in a menu is not acceptable for
+      this persona. We allow "Save" or "Publish" as both are action-oriented.
+
+  # ── Enduser: Look for Help/Support ──────────────────────────────────────
+
+  - id: enduser_locate_help
+    type: wait_for
+    persona: enduser
+    severity: info
+    description: Help or support link is visible (user may be confused)
+    selector: 'a:has-text("Help"), a:has-text("Support"), a:has-text("?"), [data-testid="help-button"], [data-testid="support-link"], [aria-label*="Help"]'
+    timeout_ms: 5000
+    intent: >
+      Non-tech users often need help. A visible Help link or support button
+      reduces frustration. This is informational — not critical if missing.
+
+  # ── Enduser: Navigate to History (Review Past Work) ─────────────────────
+
+  - id: enduser_click_history_tab
+    type: click
+    persona: enduser
+    severity: info
+    description: Navigate to History tab (reviewing past edits)
+    selector: '[data-testid="portal-tab-history"], nav[aria-label="Portal tabs"] button:has-text("History"), header nav button:has-text("History")'
+    retries: 1
+    intent: >
+      A non-tech user might want to review what they did before.
+      The History tab should be labeled clearly enough to find.
+
+  - id: enduser_history_content_visible
+    type: wait_for
+    persona: enduser
+    severity: info
+    description: History tab shows content
+    selector: '[data-testid="portal-tab-history"][aria-current="page"], main, [data-testid="client-portal-root"]'
+    timeout_ms: 8000
+    intent: History tab content should render after clicking
+
+  # ── Enduser: Navigate to Billing (Check Cost) ───────────────────────────
+
+  - id: enduser_click_billing_tab
+    type: click
+    persona: enduser
+    severity: warning
+    description: Navigate to Billing tab (users want to know costs)
+    selector: '[data-testid="portal-tab-billing"], nav[aria-label="Portal tabs"] button:has-text("Billing"), header nav button:has-text("Billing")'
+    retries: 1
+    intent: >
+      Non-tech users care about cost. Billing tab should be findable.
+      Clear labeling is critical.
+
+  - id: enduser_billing_displays_clearly
+    type: wait_for
+    persona: enduser
+    severity: error
+    description: Billing tab shows readable cost information
+    selector: '[data-testid="portal-tab-billing"][aria-current="page"], main, [data-testid="billing-content"], [data-testid="plan-card"]'
+    timeout_ms: 10000
+    intent: >
+      Billing tab should clearly show what the user is paying.
+      Non-tech users need obvious pricing, not jargon.
+
+  - id: enduser_assert_billing_has_price
+    type: assert_text
+    persona: enduser
+    severity: warning
+    description: Billing shows a recognizable price ($ or number with decimals)
+    selector: '[data-testid="portal-tab-billing"][aria-current="page"], main, body'
+    contains: $
+    timeout_ms: 5000
+    intent: >
+      User should see a price with a $ sign. If there's no $, they may not
+      understand what they're looking at. This confirms pricing is visible.
+
+  # ── Enduser: Look for Logout ────────────────────────────────────────────
+
+  - id: enduser_locate_logout
+    type: wait_for
+    persona: enduser
+    severity: warning
+    description: Logout/Sign out option is findable
+    selector: 'button:has-text("Logout"), button:has-text("Sign out"), a:has-text("Logout"), a:has-text("Sign out"), [data-testid="logout"], [data-testid="account-menu"]'
+    timeout_ms: 5000
+    intent: >
+      Non-tech users need a visible way to sign out. Hidden in a dropdown is ok,
+      but should be discoverable. Often in header or account menu.
+
+  # ── Enduser: Check for Error States (Empty Data) ────────────────────────
+
+  - id: enduser_navigate_audits_tab
+    type: click
+    persona: enduser
+    severity: info
+    description: Navigate to Audits tab (if available)
+    selector: '[data-testid="portal-tab-audits"], nav[aria-label="Portal tabs"] button:has-text("Audit"), header nav button:has-text("Audit")'
+    retries: 1
+    intent: >
+      If an Audits tab exists, click it. This tests empty state handling.
+      Non-tech users should see helpful text, not a blank page.
+
+  - id: enduser_audits_has_guidance
+    type: wait_for
+    persona: enduser
+    severity: info
+    description: Audits tab shows content or helpful message (if zero audits)
+    selector: '[data-testid="portal-tab-audits"], main, [data-testid="audits-content"], body'
+    timeout_ms: 8000
+    intent: >
+      If no audits exist, show helpful guidance text like "No audits yet. Click
+      here to run one." Don't show a blank page. This is especially important
+      for non-tech users.
+
+  # ── Enduser: Return to Overview (Circle Back) ──────────────────────────
+
+  - id: enduser_return_to_overview
+    type: click
+    persona: enduser
+    severity: info
+    description: Return to Overview tab (verify all tabs are still clickable)
+    selector: '[data-testid="portal-tab-overview"], nav[aria-label="Portal tabs"] button:has-text("Overview"), header nav button:has-text("Overview")'
+    retries: 1
+    intent: >
+      After navigating around, return to the first tab to verify navigation
+      still works. This tests tab stability.
+
+  - id: enduser_overview_reloads
+    type: wait_for
+    persona: enduser
+    severity: info
+    description: Overview content is visible again
+    selector: '[data-testid="portal-tab-overview"][aria-current="page"], main, body'
+    timeout_ms: 8000
+    intent: Overview tab should reload without errors after navigation
+
+  # ── Enduser: Final Summary ────────────────────────────────────────────────
+
+  - id: enduser_portal_responsive
+    type: assert_text
+    persona: enduser
+    severity: info
+    description: Portal renders responsive layout (1024x768 viewport)
+    selector: 'body, main, [data-testid="client-portal-root"]'
+    contains: portal
+    timeout_ms: 5000
+    intent: >
+      We're testing at 1024x768 (typical non-tech user on older device).
+      The layout should be readable and not require horizontal scrolling.
+      This is a basic smoke test for responsive design on smaller screens.

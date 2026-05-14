@@ -5,7 +5,15 @@
 
 // ─── Personas ────────────────────────────────────────────────────────────────
 
-export type Persona = 'client' | 'admin'
+export type Persona = 'client' | 'admin' | 'enduser'
+
+/**
+ * Persona descriptions:
+ * - 'admin': Full platform admin with all permissions (dashboard, QA, billing)
+ * - 'client': Tech-savvy client using the web builder portal (/edit/[token])
+ * - 'enduser': Non-tech-savvy client testing UX clarity, obvious CTAs, and
+ *   "what do I do next" guidance. Expects simple, obvious navigation.
+ */
 
 export interface PersonaConfig {
   persona: Persona

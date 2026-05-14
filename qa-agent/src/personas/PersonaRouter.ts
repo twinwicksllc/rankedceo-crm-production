@@ -25,10 +25,11 @@ export class PersonaRouter {
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
     })
 
-    // Create both contexts upfront — they run in parallel, we just switch
+    // Create all three contexts upfront — they run in parallel, we just switch
     // which one the orchestrator is "speaking through" at any given step.
     await this.createClientContext(config.clientCredentials, config.baseUrl)
     await this.createAdminContext(config.adminCredentials, config.baseUrl)
+    await this.createEnduserContext(config.clientCredentials, config.baseUrl)
   }
 
   /**
@@ -158,5 +159,26 @@ export class PersonaRouter {
     await page.waitForLoadState('networkidle', { timeout: 30_000 })
 
     this.contexts.set('admin', { persona: 'admin', context, page })
+  }
+
+  private async createEnduserContext(
+    credentials: ClientCredentials,
+    baseUrl: string,
+  ): Promise<void> {
+    if (!this.browser) throw new Error('Browser not initialised')
+    const context = await this.browser.newContext({
+      baseURL: baseUrl,
+      viewport: { width: 1024, height: 768 },  // Smaller viewport for typical non-tech-savvy user (older screen)
+      // Label context for Playwright trace / debugging
+      extraHTTPHeaders: { 'x-qa-persona': 'enduser' },
+    })
+    const page = await context.newPage()
+
+    // Navigate to the client edit portal using the reviewToken
+    // The enduser uses the same portal as the client, but we test for UX clarity
+    // and obvious CTAs rather than advanced features.
+    await page.goto(`/edit/${credentials.reviewToken}`)
+
+    this.contexts.set('enduser', { persona: 'enduser', context, page })
   }
 }
