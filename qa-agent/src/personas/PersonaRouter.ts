@@ -71,6 +71,44 @@ export class PersonaRouter {
 
   // ─── Private ──────────────────────────────────────────────────────────────
 
+  /**
+   * Retry a page navigation with exponential backoff for transient network errors.
+   * Handles DNS resolution failures, connection timeouts, etc.
+   */
+  private async gotoWithRetry(
+    page: any,
+    url: string,
+    options?: any,
+    maxAttempts: number = 3,
+  ): Promise<any> {
+    let lastError: Error | null = null
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        console.log(`[PersonaRouter] Navigating to ${url} (attempt ${attempt}/${maxAttempts})`)
+        return await page.goto(url, options)
+      } catch (err: any) {
+        lastError = err
+        const isNetworkError = 
+          err.message?.includes('ERR_NAME_NOT_RESOLVED') ||
+          err.message?.includes('ERR_CONNECTION_REFUSED') ||
+          err.message?.includes('ERR_NETWORK_CHANGED') ||
+          err.message?.includes('net::')
+        
+        if (isNetworkError && attempt < maxAttempts) {
+          const delayMs = Math.pow(2, attempt - 1) * 1000 // exponential backoff: 1s, 2s, 4s
+          console.warn(`[PersonaRouter] Network error on attempt ${attempt}: ${err.message}. Retrying in ${delayMs}ms...`)
+          await new Promise(resolve => setTimeout(resolve, delayMs))
+          continue
+        }
+        
+        throw err
+      }
+    }
+    
+    throw lastError || new Error('Navigation failed after max retries')
+  }
+
   private async createClientContext(
     credentials: ClientCredentials,
     baseUrl: string,
@@ -86,7 +124,8 @@ export class PersonaRouter {
 
     // Navigate to the client edit portal using the reviewToken
     // The app reads the token from the URL path: /edit/[reviewToken]
-    await page.goto(`/edit/${credentials.reviewToken}`)
+    // Use retry logic to handle transient network issues
+    await this.gotoWithRetry(page, `/edit/${credentials.reviewToken}`)
 
     this.contexts.set('client', { persona: 'client', context, page })
   }
@@ -114,7 +153,7 @@ export class PersonaRouter {
     // The page is 'use client' wrapped in <Suspense fallback={<Skeleton/>}>.
     // waitUntil:'load' fires quickly; we then wait for networkidle to let
     // Supabase auth.getSession() complete before asserting the form exists.
-    await page.goto('/login?next=/admin/dashboard&adminOnly=1', { waitUntil: 'load', timeout: 30_000 })
+    await this.gotoWithRetry(page, '/login?next=/admin/dashboard&adminOnly=1', { waitUntil: 'load', timeout: 30_000 })
     // Wait for all in-flight XHR/fetch (incl. Supabase session check) to settle
     await page.waitForLoadState('networkidle', { timeout: 60_000 })
 
@@ -177,7 +216,8 @@ export class PersonaRouter {
     // Navigate to the client edit portal using the reviewToken
     // The enduser uses the same portal as the client, but we test for UX clarity
     // and obvious CTAs rather than advanced features.
-    await page.goto(`/edit/${credentials.reviewToken}`)
+    // Use retry logic to handle transient network issues
+    await this.gotoWithRetry(page, `/edit/${credentials.reviewToken}`)
 
     this.contexts.set('enduser', { persona: 'enduser', context, page })
   }

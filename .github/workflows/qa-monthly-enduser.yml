@@ -62,15 +62,29 @@ jobs:
         with:
           script: |
             const fs = require('fs')
+            const path = require('path')
             
-            // Find most recent report.json - use require inline
-            const reports = require('glob').sync('qa-agent/evidence/*/report.json')
-            if (reports.length === 0) {
+            // Find most recent report.json without glob
+            const evidenceDir = 'qa-agent/evidence'
+            let latestReport = null
+            
+            if (fs.existsSync(evidenceDir)) {
+              const runs = fs.readdirSync(evidenceDir)
+              for (const run of runs) {
+                const reportPath = path.join(evidenceDir, run, 'report.json')
+                if (fs.existsSync(reportPath)) {
+                  latestReport = reportPath
+                  break
+                }
+              }
+            }
+            
+            if (!latestReport) {
               core.summary.addRaw('No report generated.').write()
               return
             }
             
-            const report = JSON.parse(fs.readFileSync(reports[reports.length - 1], 'utf-8'))
+            const report = JSON.parse(fs.readFileSync(latestReport, 'utf-8'))
             const statusEmoji = {
               pass: '✅',
               pass_with_findings: '⚠️',
