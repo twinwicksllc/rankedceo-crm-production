@@ -62,10 +62,9 @@ jobs:
         with:
           script: |
             const fs = require('fs')
-            const glob = require('glob')
             
-            // Find most recent report.json
-            const reports = glob.sync('qa-agent/evidence/*/report.json')
+            // Find most recent report.json - use require inline
+            const reports = require('glob').sync('qa-agent/evidence/*/report.json')
             if (reports.length === 0) {
               core.summary.addRaw('No report generated.').write()
               return

@@ -10,7 +10,7 @@ import type { Scenario } from '../types.js'
 
 // ─── Zod Schemas ─────────────────────────────────────────────────────────────
 
-const PersonaSchema = z.enum(['client', 'admin'])
+const PersonaSchema = z.enum(['client', 'admin', 'enduser'])
 const SeveritySchema = z.enum(['info', 'warning', 'error', 'critical'])
 const RunModeSchema = z.enum(['smoke', 'full'])
 
