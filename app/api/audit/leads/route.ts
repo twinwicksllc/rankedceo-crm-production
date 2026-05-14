@@ -2,10 +2,11 @@
 // POST /api/audit/leads
 // Captures lead email from the audit report page before PDF download.
 // Public endpoint — saves to leads table via capture_audit_lead() RPC.
+// ALSO: Updates tenant's brand_config with captured contact info.
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
-import { updateAuditRecord, captureAuditLead } from '@/lib/waas/supabase'
+import { updateAuditRecord, captureAuditLead, createWaasClient } from '@/lib/waas/supabase'
 
 export async function POST(req: NextRequest) {
   try {
@@ -63,6 +64,70 @@ export async function POST(req: NextRequest) {
     // Link lead_id back to audit
     if (leadId) {
       await updateAuditRecord(String(audit_id), { lead_id: leadId })
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // UPDATE TENANT'S BRAND_CONFIG WITH CAPTURED CONTACT INFO
+    // ──────────────────────────────────────────────────────────────────────
+    try {
+      const waasClient = createWaasClient()
+
+      // Find tenant by audit
+      const { data: audit } = await waasClient
+        .from('audits')
+        .select('tenant_id, id')
+        .eq('id', String(audit_id))
+        .single()
+
+      let tenantId = audit?.tenant_id
+
+      // If no tenant_id on audit, try to find by source_audit_id
+      if (!tenantId) {
+        const { data: tenantByAudit } = await waasClient
+          .from('tenants')
+          .select('id')
+          .eq('source_audit_id', String(audit_id))
+          .single()
+        tenantId = tenantByAudit?.id
+      }
+
+      // Update tenant's brand_config if found
+      if (tenantId) {
+        const { data: tenant } = await waasClient
+          .from('tenants')
+          .select('brand_config')
+          .eq('id', tenantId)
+          .single()
+
+        const currentBrandConfig = (tenant as { brand_config: Record<string, unknown> } | null)?.brand_config ?? {}
+        const currentContact = (currentBrandConfig.contact as Record<string, unknown> | null) ?? {}
+
+        const updatedBrandConfig = {
+          ...currentBrandConfig,
+          contact: {
+            ...currentContact,
+            name: name || currentContact.name,
+            email: email,
+            phone: phone || currentContact.phone,
+            company: company || currentContact.company,
+          },
+          pdf_download_at: new Date().toISOString(),
+          pdf_downloads: ((currentBrandConfig.pdf_downloads as number) ?? 0) + 1,
+        }
+
+        await waasClient
+          .from('tenants')
+          .update({
+            brand_config: updatedBrandConfig,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', tenantId)
+
+        console.log('[/api/audit/leads] Updated tenant', tenantId, 'with contact info from PDF download')
+      }
+    } catch (tenantErr) {
+      // Log but don't fail the response
+      console.error('[/api/audit/leads] Failed to update tenant brand_config:', tenantErr)
     }
 
     return NextResponse.json({
