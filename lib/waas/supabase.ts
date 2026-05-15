@@ -319,13 +319,35 @@ export async function resolveTenantByHostname(
   try {
     const url  = process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL
     const anon = process.env.NEXT_PUBLIC_WAAS_SUPABASE_ANON_KEY
-    if (!url || !anon) return null
+    
+    console.log('[WaaS] resolveTenantByHostname called:', {
+      hostname,
+      url_type: typeof url,
+      url_length: url?.length,
+      url: url,
+      anon_set: !!anon,
+    })
+    
+    if (!url || !anon) {
+      console.log('[WaaS] Missing URL or anon key, returning null')
+      return null
+    }
 
     // Use raw untyped client to bypass Supabase 2.x ExactMatch RPC arg resolution
-    const client = createClient(url, anon, {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: { fetch: (input, init) => fetch(input, { ...init, cache: 'no-store' }) },
-    })
+    let client: SupabaseClient
+    try {
+      client = createClient(url, anon, {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: { fetch: (input, init) => fetch(input, { ...init, cache: 'no-store' }) },
+      })
+      console.log('[WaaS] Supabase client created successfully')
+    } catch (clientErr) {
+      console.error('[WaaS] Failed to create Supabase client:', {
+        error: clientErr instanceof Error ? clientErr.message : String(clientErr),
+        url,
+      })
+      throw clientErr
+    }
 
     const { data, error } = await client
       .rpc('resolve_tenant_by_hostname', { p_hostname: hostname })
