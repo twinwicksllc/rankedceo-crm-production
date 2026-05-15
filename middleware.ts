@@ -44,6 +44,9 @@ const WAAS_ENABLED =
   !!process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL &&
   !!process.env.NEXT_PUBLIC_WAAS_SUPABASE_ANON_KEY
 
+const QA_WAAS_HOST = process.env.QA_WAAS_HOST ?? 'qa.rankedceo.com'
+const QA_WAAS_TENANT_SLUG = process.env.QA_WAAS_TENANT_SLUG ?? 'qa-test-tenant'
+
 if (process.env.NODE_ENV === 'production') {
   console.log('[Middleware Init] WAAS Config:', {
     URL_SET: !!process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL,
@@ -178,6 +181,14 @@ export async function middleware(request: NextRequest) {
         console.log('[Middleware] WaaS tenant resolved:', { slug: tenant.slug })
         return handleWaasTenant(request, tenant, pathname)
       }
+
+      // QA safety net: if tenant lookup is blocked by Supabase key/RLS drift,
+      // still route qa.rankedceo.com to the known QA tenant slug.
+      if (hostname === QA_WAAS_HOST) {
+        console.warn('[Middleware] Using QA fallback tenant slug rewrite:', QA_WAAS_TENANT_SLUG)
+        return rewriteToWaasTenantSlug(request, QA_WAAS_TENANT_SLUG, pathname)
+      }
+
       console.log('[Middleware] No tenant found for subdomain:', subdomain)
     } catch (err) {
       // Log WaaS lookup error but don't crash — fall through to CRM routing
@@ -205,6 +216,16 @@ export async function middleware(request: NextRequest) {
   }
 
   return response
+}
+
+function rewriteToWaasTenantSlug(
+  request: NextRequest,
+  tenantSlug: string,
+  pathname: string
+): NextResponse {
+  const url = request.nextUrl.clone()
+  url.pathname = `/_sites/${tenantSlug}${pathname === '/' ? '' : pathname}`
+  return NextResponse.rewrite(url)
 }
 
 // ---------------------------------------------------------------------------
