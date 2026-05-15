@@ -157,10 +157,18 @@ export async function middleware(request: NextRequest) {
   const isCrmDomain = isKnownCrmDomain(hostname)
 
   if (WAAS_ENABLED && !isCrmDomain && !isReservedSubdomain(subdomain)) {
-    const tenant = await resolveTenantByHostname(hostname)
+    try {
+      const tenant = await resolveTenantByHostname(hostname)
 
-    if (tenant) {
-      return handleWaasTenant(request, tenant, pathname)
+      if (tenant) {
+        return handleWaasTenant(request, tenant, pathname)
+      }
+    } catch (err) {
+      // Log WaaS lookup error but don't crash — fall through to CRM routing
+      console.error('[Middleware] WaaS tenant lookup failed:', {
+        hostname,
+        error: err instanceof Error ? err.message : String(err),
+      })
     }
   }
 
