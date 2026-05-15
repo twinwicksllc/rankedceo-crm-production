@@ -44,6 +44,15 @@ const WAAS_ENABLED =
   !!process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL &&
   !!process.env.NEXT_PUBLIC_WAAS_SUPABASE_ANON_KEY
 
+if (process.env.NODE_ENV === 'production') {
+  console.log('[Middleware Init] WAAS Config:', {
+    URL_SET: !!process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL,
+    KEY_SET: !!process.env.NEXT_PUBLIC_WAAS_SUPABASE_ANON_KEY,
+    URL_VALUE: process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL?.substring(0, 50),
+    WAAS_ENABLED,
+  })
+}
+
 // Internal subdomains that are NEVER treated as WaaS tenants
 const RESERVED_SUBDOMAINS = new Set([
   ...INDUSTRY_SUBDOMAINS,
@@ -158,16 +167,25 @@ export async function middleware(request: NextRequest) {
 
   if (WAAS_ENABLED && !isCrmDomain && !isReservedSubdomain(subdomain)) {
     try {
+      console.log('[Middleware] Attempting WaaS tenant lookup:', {
+        hostname,
+        subdomain,
+        WAAS_ENABLED,
+      })
       const tenant = await resolveTenantByHostname(hostname)
 
       if (tenant) {
+        console.log('[Middleware] WaaS tenant resolved:', { slug: tenant.slug })
         return handleWaasTenant(request, tenant, pathname)
       }
+      console.log('[Middleware] No tenant found for subdomain:', subdomain)
     } catch (err) {
       // Log WaaS lookup error but don't crash — fall through to CRM routing
       console.error('[Middleware] WaaS tenant lookup failed:', {
         hostname,
+        subdomain,
         error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
       })
     }
   }
