@@ -63,9 +63,19 @@ jobs:
         with:
           script: |
             const fs = require('fs')
-            const glob = require('glob')
+            const path = require('path')
             // Find most recent report.json
-            const reports = glob.sync('qa-agent/evidence/*/report.json')
+            const evidenceDir = 'qa-agent/evidence'
+            const reports = []
+            if (fs.existsSync(evidenceDir)) {
+              const subdirs = fs.readdirSync(evidenceDir)
+              for (const subdir of subdirs) {
+                const reportPath = path.join(evidenceDir, subdir, 'report.json')
+                if (fs.existsSync(reportPath)) {
+                  reports.push(reportPath)
+                }
+              }
+            }
             if (reports.length === 0) {
               core.summary.addRaw('No report generated.').write()
               return
