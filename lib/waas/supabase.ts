@@ -352,12 +352,23 @@ export async function resolveTenantByHostname(
     const { data, error } = await client
       .rpc('resolve_tenant_by_hostname', { p_hostname: hostname })
 
+    console.log('[WaaS] RPC response:', {
+      error: error ? { message: error.message, code: error.code } : null,
+      data_type: typeof data,
+      data_is_array: Array.isArray(data),
+      data_length: Array.isArray(data) ? data.length : undefined,
+      data_value: data,
+    })
+
     if (error) {
       console.error('[WaaS] Tenant resolution error:', error.message)
       return null
     }
 
-    if (!data || (data as unknown[]).length === 0) return null
+    if (!data || (data as unknown[]).length === 0) {
+      console.log('[WaaS] No tenant data returned from RPC')
+      return null
+    }
     return (data as unknown[])[0] as WaasTenantResolved
   } catch (err) {
     console.error('[WaaS] Tenant resolution exception:', err)
