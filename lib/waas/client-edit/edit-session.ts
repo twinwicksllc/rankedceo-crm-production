@@ -101,6 +101,14 @@ export async function resolveClientEditSession(
       .single()
 
     if (configErr || !configRow) {
+      console.error('[resolveClientEditSession] tenant_site_config query failed:', {
+        hasError: !!configErr,
+        errorCode: configErr?.code,
+        errorMessage: configErr?.message,
+        errorHint: configErr?.hint,
+        rowExists: !!configRow,
+        token: reviewToken?.slice(0, 8),
+      })
       return { ok: false, reason: 'not_found', message: 'Review session not found.' }
     }
 
