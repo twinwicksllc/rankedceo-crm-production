@@ -91,6 +91,13 @@ export default async function ClientEditorPage({ params, searchParams }: PagePro
 
   const result = await resolveClientEditSession(reviewToken)
   if (!result.ok) {
+    console.error('[ClientEditorPage] resolveClientEditSession failed:', {
+      reason: result.reason,
+      message: result.message,
+      tokenPrefix: reviewToken?.slice(0, 8),
+      waasUrl: process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL?.slice(0, 40),
+      hasServiceKey: !!process.env.WAAS_SUPABASE_SERVICE_ROLE_KEY,
+    })
     notFound()
   }
 
