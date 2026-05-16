@@ -1,5 +1,5 @@
 // =============================================================================
-// AdvantagePoint — Admin Dashboard (Server Component)
+// RankedCEO CRM — Admin Dashboard (Server Component)
 // Shows all pending + active tenants with stats
 // Phase 6.2: Added TenantList with search/filter/bulk actions
 // =============================================================================
@@ -93,7 +93,7 @@ export default async function AdminDashboardPage({
       <div className="mb-8 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-white" data-testid="admin-dashboard-heading">Command Center</h1>
-          <p className="text-white/40 mt-1 text-sm">Manage all AdvantagePoint tenants and deployments.</p>
+          <p className="text-white/40 mt-1 text-sm">Manage all RankedCEO tenants and deployments.</p>
         </div>
         {/* Phase 6.3: quick link to domain requests */}
         <Link

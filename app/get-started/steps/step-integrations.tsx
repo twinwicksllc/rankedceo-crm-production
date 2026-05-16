@@ -291,18 +291,18 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
         </div>
 
         {/* Summary box */}
-        <div className="rounded-xl bg-gradient-to-br from-blue-500/5 to-violet-500/5 border border-blue-500/15 p-5">
+        <div className="rounded-xl bg-blue-50 dark:bg-gradient-to-br dark:from-blue-500/5 dark:to-violet-500/5 border border-blue-200 dark:border-blue-500/15 p-5">
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center shrink-0 mt-0.5">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-500/15 flex items-center justify-center shrink-0 mt-0.5">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <circle cx="8" cy="8" r="7" stroke="#60A5FA" strokeWidth="1.5"/>
                 <path d="M8 5v4M8 10.5v.5" stroke="#60A5FA" strokeWidth="1.5" strokeLinecap="round"/>
               </svg>
             </div>
             <div>
-              <p className="text-blue-300 font-semibold text-sm mb-1">What happens next?</p>
-              <p className="text-blue-200/50 text-xs leading-relaxed">
-                After you submit, our team reviews your information and begins building your AdvantagePoint website. You'll receive a confirmation email and your site will be live within 48 hours.
+              <p className="text-blue-700 dark:text-blue-300 font-semibold text-sm mb-1">What happens next?</p>
+              <p className="text-blue-700/80 dark:text-blue-200/70 text-xs leading-relaxed">
+                After you submit, our team reviews your information and begins building your RankedCEO website. You'll receive a confirmation email and your site will be live within 48 hours.
               </p>
             </div>
           </div>

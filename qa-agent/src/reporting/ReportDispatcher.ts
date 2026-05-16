@@ -99,7 +99,7 @@ export class ReportDispatcher {
     <p style="color:#a855f7;font-size:12px;margin-top:8px">A GitHub Issue has been opened. The agent will not run again until it is closed.</p>
   </div>` : ''}
   <p style="margin-top:24px;color:#6b7280;font-size:13px">
-    View the full report at <strong>/admin/qa-reports</strong> in the AdvantagePoint dashboard.
+    View the full report at <strong>/admin/qa-reports</strong> in the RankedCEO CRM dashboard.
   </p>
 </body>
 </html>`.trim()

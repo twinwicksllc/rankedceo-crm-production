@@ -1,7 +1,7 @@
 'use client'
 
 // =============================================================================
-// AdvantagePoint — Multi-Step Onboarding Flow (Client Component)
+// RankedCEO Website Builder — Multi-Step Onboarding Flow (Client Component)
 // React Hook Form + Zod, 4 steps, state-managed, glassmorphism dark theme
 // =============================================================================
 

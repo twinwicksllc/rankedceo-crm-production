@@ -85,7 +85,7 @@ function wrapLayout(content: string, preview?: string): string {
               Questions? Reply to this email or contact
               <a href="mailto:${supportEmail}" style="color:#2563eb;">${supportEmail}</a>
               <br />
-              RankedCEO &middot; Powered by AdvantagePoint
+              RankedCEO &middot; Twin-Wicks Digital Solutions
             </td>
           </tr>
 

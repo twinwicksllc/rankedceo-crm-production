@@ -1,5 +1,5 @@
 // =============================================================================
-// AdvantagePoint - SVG Textmark Generator
+// RankedCEO - SVG Textmark Generator
 // Auto-generates a high-end SVG logo from business name + primary color
 // =============================================================================
 
@@ -74,7 +74,7 @@ export function generateTextmarkSvg(businessName: string, primaryColor: string):
     font-weight="500"
     fill="#6B7280"
     letter-spacing="0.5"
-  >POWERED BY ADVANTAGEPOINT</text>
+  >POWERED BY RANKEDCEO</text>
 </svg>`
 
   return svg

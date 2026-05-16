@@ -1,5 +1,5 @@
 // =============================================================================
-// AdvantagePoint — Onboarding Entry Page (Server Component)
+// RankedCEO Website Builder — Onboarding Entry Page (Server Component)
 // Reads auditId + tier from URL params, renders the client flow
 // =============================================================================
 

@@ -1,5 +1,5 @@
 // =============================================================================
-// AdvantagePoint — Onboarding Layout
+// RankedCEO Website Builder — Onboarding Layout
 // Glassmorphism dark theme, full-screen immersive experience
 // =============================================================================
 
