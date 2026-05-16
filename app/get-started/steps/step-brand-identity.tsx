@@ -200,17 +200,17 @@ export function StepBrandIdentity({
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 mb-4">
           <span className="text-blue-400 text-xs font-semibold uppercase tracking-wider">Step 3 of 4</span>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white leading-tight">
           Define your brand identity
         </h1>
-        <p className="text-white/50 mt-2 text-sm sm:text-base">
+        <p className="text-slate-500 dark:text-white/50 mt-2 text-sm sm:text-base">
           Upload your logo or we'll craft a professional text-mark automatically.
         </p>
       </div>
 
       {/* Logo Section */}
       <div className="mb-8">
-        <label className="block text-sm font-medium text-white/70 mb-3">Logo</label>
+        <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-3">Logo</label>
 
         <div className="grid sm:grid-cols-2 gap-4">
           {/* Upload option */}
@@ -218,7 +218,7 @@ export function StepBrandIdentity({
             className={`relative rounded-xl border-2 border-dashed p-6 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all ${
               !useAutoLogo
                 ? 'border-blue-500/60 bg-blue-500/5'
-                : 'border-white/10 hover:border-white/20 bg-white/3'
+                : 'border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 bg-slate-50 dark:bg-white/3'
             }`}
             onClick={() => !uploading && fileRef.current?.click()}
           >
@@ -249,14 +249,14 @@ export function StepBrandIdentity({
                     <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
                   </svg>
                 ) : (
-                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" className="text-white/30">
+                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" className="text-slate-400 dark:text-white/30">
                     <path d="M16 4v16M8 12l8-8 8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                     <path d="M4 24v2a2 2 0 0 0 2 2h20a2 2 0 0 0 2-2v-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                   </svg>
                 )}
                 <div className="text-center">
-                  <p className="text-white/60 text-sm font-medium">{uploading ? 'Uploading…' : 'Upload Logo'}</p>
-                  <p className="text-white/30 text-xs mt-0.5">JPG, PNG, SVG, WebP • Max 5MB</p>
+                  <p className="text-slate-600 dark:text-white/60 text-sm font-medium">{uploading ? 'Uploading…' : 'Upload Logo'}</p>
+                  <p className="text-slate-400 dark:text-white/30 text-xs mt-0.5">JPG, PNG, SVG, WebP • Max 5MB</p>
                 </div>
               </>
             )}
@@ -267,7 +267,7 @@ export function StepBrandIdentity({
             className={`relative rounded-xl border-2 p-4 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all ${
               useAutoLogo
                 ? 'border-violet-500/60 bg-violet-500/5'
-                : 'border-white/10 hover:border-white/20'
+                : 'border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20'
             }`}
             onClick={() => { setUseAutoLogo(true); setLogoUrl(null) }}
           >
@@ -286,8 +286,8 @@ export function StepBrandIdentity({
               className="max-h-10 max-w-full object-contain"
             />
             <div className="text-center">
-              <p className="text-white/60 text-sm font-medium">Auto-Generate</p>
-              <p className="text-white/30 text-xs mt-0.5">Professional text-mark</p>
+              <p className="text-slate-600 dark:text-slate-600 dark:text-white/60 text-sm font-medium">Auto-Generate</p>
+              <p className="text-slate-400 dark:text-slate-400 dark:text-white/30 text-xs mt-0.5">Professional text-mark</p>
             </div>
           </div>
         </div>
@@ -297,7 +297,7 @@ export function StepBrandIdentity({
 
       {/* Color Palette */}
       <div className="mb-8">
-        <label className="block text-sm font-medium text-white/70 mb-3">Color Palette</label>
+        <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-3">Color Palette</label>
 
         {/* Preset palettes */}
         <div className="grid grid-cols-4 gap-2 mb-5">
@@ -325,27 +325,27 @@ export function StepBrandIdentity({
         {/* Custom color pickers */}
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-medium text-white/50 mb-2">Primary Color</label>
-            <div className="flex items-center gap-3 h-12 px-3 rounded-xl bg-white/5 border border-white/10 focus-within:border-blue-500/60 transition-all">
+            <label className="block text-xs font-medium text-slate-500 dark:text-white/50 mb-2">Primary Color</label>
+            <div className="flex items-center gap-3 h-12 px-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus-within:border-blue-500/60 transition-all">
               <input
                 type="color"
                 value={primaryColor}
                 onChange={e => { setPrimaryColor(e.target.value); setLogoColorsSuggested(false) }}
                 className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0 outline-none p-0"
               />
-              <span className="text-white/60 text-sm font-mono uppercase">{primaryColor}</span>
+              <span className="text-slate-600 dark:text-white/60 text-sm font-mono uppercase">{primaryColor}</span>
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-white/50 mb-2">Secondary Color</label>
-            <div className="flex items-center gap-3 h-12 px-3 rounded-xl bg-white/5 border border-white/10 focus-within:border-blue-500/60 transition-all">
+            <label className="block text-xs font-medium text-slate-500 dark:text-white/50 mb-2">Secondary Color</label>
+            <div className="flex items-center gap-3 h-12 px-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus-within:border-blue-500/60 transition-all">
               <input
                 type="color"
                 value={secondaryColor}
                 onChange={e => { setSecondaryColor(e.target.value); setLogoColorsSuggested(false) }}
                 className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0 outline-none p-0"
               />
-              <span className="text-white/60 text-sm font-mono uppercase">{secondaryColor}</span>
+              <span className="text-slate-600 dark:text-white/60 text-sm font-mono uppercase">{secondaryColor}</span>
             </div>
           </div>
         </div>
@@ -355,8 +355,8 @@ export function StepBrandIdentity({
         )}
 
         {/* Live preview */}
-        <div className="mt-4 p-4 rounded-xl bg-white/5 border border-white/10">
-          <p className="text-white/30 text-xs mb-3 uppercase tracking-wider font-medium">Live Preview</p>
+        <div className="mt-4 p-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10">
+          <p className="text-slate-400 dark:text-white/30 text-xs mb-3 uppercase tracking-wider font-medium">Live Preview</p>
           <div className="flex items-center gap-3">
             <div
               className="h-10 flex-1 rounded-lg flex items-center justify-center text-white text-sm font-semibold shadow-lg"
@@ -381,7 +381,7 @@ export function StepBrandIdentity({
         <button
           type="button"
           onClick={onBack}
-          className="h-14 px-6 rounded-xl border border-white/15 text-white/60 hover:text-white hover:border-white/30 font-medium text-sm transition-all"
+          className="h-14 px-6 rounded-xl border border-slate-300 dark:border-white/15 text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white hover:border-slate-400 dark:hover:border-white/30 font-medium text-sm transition-all"
         >
           ← Back
         </button>

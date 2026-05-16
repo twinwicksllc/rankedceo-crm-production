@@ -374,7 +374,7 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
                       ? 'bg-blue-500 text-white'
                       : i + 1 === currentStep
                       ? 'bg-gradient-to-br from-blue-500 to-violet-600 text-white shadow-lg shadow-blue-500/30'
-                      : 'bg-white/10 text-white/30'
+                      : 'bg-slate-200 dark:bg-white/10 text-slate-400 dark:text-white/30'
                   }`}>
                     {i + 1 < currentStep ? (
                       <svg width="14" height="14" viewBox="0 0 14 14" fill="none">

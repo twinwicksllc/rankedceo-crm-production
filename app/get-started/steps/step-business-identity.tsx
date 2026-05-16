@@ -33,14 +33,14 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 mb-4">
           <span className="text-blue-400 text-xs font-semibold uppercase tracking-wider">Step 1 of 4</span>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white leading-tight">
           Tell us about your business
         </h1>
-        <p className="text-white/50 mt-2 text-sm sm:text-base">
+        <p className="text-slate-500 dark:text-white/50 mt-2 text-sm sm:text-base">
           This forms the foundation of your AdvantagePoint website.
         </p>
         {auditId && (
-          <div className="mt-3 flex items-center gap-2 text-emerald-400 text-xs">
+          <div className="mt-3 flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-xs">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <circle cx="7" cy="7" r="6" stroke="#34D399" strokeWidth="1.5"/>
               <path d="M4.5 7l2 2 3-3" stroke="#34D399" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -54,7 +54,7 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
       <div className="space-y-5">
         {/* Legal Name */}
         <div>
-          <label className="block text-sm font-medium text-white/70 mb-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
             Business Legal Name <span className="text-red-400">*</span>
           </label>
           <input
@@ -69,7 +69,7 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
 
         {/* Email */}
         <div>
-          <label className="block text-sm font-medium text-white/70 mb-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
             Your Email Address <span className="text-red-400">*</span>
           </label>
           <input
@@ -83,7 +83,7 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
 
         {/* Physical Address */}
         <div>
-          <label className="block text-sm font-medium text-white/70 mb-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
             Business Address <span className="text-red-400">*</span>
           </label>
           <input
@@ -98,7 +98,7 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
         {/* City / State / ZIP */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           <div className="col-span-2 sm:col-span-1">
-            <label className="block text-sm font-medium text-white/70 mb-2">
+            <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
               City <span className="text-red-400">*</span>
             </label>
             <input
@@ -110,7 +110,7 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
             {errors.city && <p className="mt-1.5 text-xs text-red-400">{errors.city.message}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">
+            <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
               State <span className="text-red-400">*</span>
             </label>
             <input
@@ -123,7 +123,7 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
             {errors.state && <p className="mt-1.5 text-xs text-red-400">{errors.state.message}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">
+            <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
               ZIP <span className="text-red-400">*</span>
             </label>
             <input
@@ -139,7 +139,7 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
 
         {/* Primary Trade */}
         <div>
-          <label className="block text-sm font-medium text-white/70 mb-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
             Primary Trade / Service <span className="text-red-400">*</span>
           </label>
           <select
@@ -156,7 +156,7 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
 
         {selectedTrade === 'Other' && (
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">
+            <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
               Industry Type <span className="text-red-400">*</span>
             </label>
             <input
@@ -172,8 +172,8 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
         {/* Optional builder intake fields */}
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">
-              Tagline <span className="text-white/30">(optional)</span>
+            <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+              Tagline <span className="text-slate-400 dark:text-white/30">(optional)</span>
             </label>
             <input
               {...register('tagline')}
@@ -183,8 +183,8 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">
-              Business Type <span className="text-white/30">(optional)</span>
+            <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+              Business Type <span className="text-slate-400 dark:text-white/30">(optional)</span>
             </label>
             <input
               {...register('business_type')}
@@ -194,8 +194,8 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">
-              Phone Number <span className="text-white/30">(optional)</span>
+            <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+              Phone Number <span className="text-slate-400 dark:text-white/30">(optional)</span>
             </label>
             <input
               {...register('phone')}
@@ -205,8 +205,8 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">
-              Business Hours <span className="text-white/30">(optional)</span>
+            <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+              Business Hours <span className="text-slate-400 dark:text-white/30">(optional)</span>
             </label>
             <input
               {...register('business_hours')}
@@ -218,8 +218,8 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-white/70 mb-2">
-            Services / Products <span className="text-white/30">(optional)</span>
+          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+            Services / Products <span className="text-slate-400 dark:text-white/30">(optional)</span>
           </label>
           <textarea
             {...register('services_offered')}
@@ -230,8 +230,8 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-white/70 mb-2">
-            Target Audience <span className="text-white/30">(optional)</span>
+          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+            Target Audience <span className="text-slate-400 dark:text-white/30">(optional)</span>
           </label>
           <input
             {...register('target_audience')}
@@ -272,9 +272,11 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
 }
 
 function inputClass(hasError: boolean) {
-  return `w-full h-12 sm:h-14 px-4 rounded-xl bg-white/5 border ${
-    hasError ? 'border-red-500/50 focus:border-red-500' : 'border-white/10 focus:border-blue-500/60'
-  } text-white placeholder:text-white/25 text-sm sm:text-base outline-none focus:ring-2 ${
+  return `w-full h-12 sm:h-14 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border ${
+    hasError
+      ? 'border-red-500/50 focus:border-red-500'
+      : 'border-slate-300 dark:border-white/10 focus:border-blue-500/60'
+  } text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/25 text-sm sm:text-base outline-none focus:ring-2 ${
     hasError ? 'focus:ring-red-500/20' : 'focus:ring-blue-500/20'
-  } transition-all duration-200 bg-clip-padding [&_option]:bg-[#0A0F1E] [&_option]:text-white`
+  } transition-all duration-200 bg-clip-padding [&_option]:bg-white dark:[&_option]:bg-[#0A0F1E] [&_option]:text-slate-900 dark:[&_option]:text-white`
 }
