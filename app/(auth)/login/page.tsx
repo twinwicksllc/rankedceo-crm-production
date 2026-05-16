@@ -354,6 +354,16 @@ function LoginForm() {
                 Sign up free
               </Link>
             </p>
+            <p className="text-xs text-center text-muted-foreground">
+              By signing in, you agree to our{' '}
+              <Link href="/terms" className="underline hover:text-primary">
+                Terms of Service
+              </Link>{' '}
+              and{' '}
+              <Link href="/privacy" className="underline hover:text-primary">
+                Privacy Policy
+              </Link>
+            </p>
           </CardFooter>
         )}
       </Card>
