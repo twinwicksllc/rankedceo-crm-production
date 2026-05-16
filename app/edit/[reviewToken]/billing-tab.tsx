@@ -453,7 +453,9 @@ export function BillingTab({
 
         {/* Post-checkout success banner */}
         {checkoutSuccess && billingStatus && (
-          <CheckoutSuccessBanner tier={billingStatus.packageTier} />
+          <div data-testid="checkout-success-banner">
+            <CheckoutSuccessBanner tier={billingStatus.packageTier} />
+          </div>
         )}
 
         {/* Payment failure banner */}

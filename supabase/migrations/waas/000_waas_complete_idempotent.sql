@@ -703,8 +703,215 @@ $$;
 GRANT EXECUTE ON FUNCTION capture_audit_lead(TEXT, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT) TO anon, authenticated;
 
 -- ---------------------------------------------------------------------------
--- SEED DATA (demo tenant - only inserts if not exists)
+-- SITE TEMPLATES TABLE (Phase 4 - Client Portal)
 -- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS site_templates (
+  id                  UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Template identity
+  slug                TEXT          NOT NULL UNIQUE,
+  name                TEXT          NOT NULL,
+  description         TEXT          NULL,
+  
+  -- Template content
+  sections            JSONB         NOT NULL DEFAULT '{}',
+  layout_config       JSONB         NOT NULL DEFAULT '{}',
+  preview_url         TEXT          NULL,
+  
+  -- Availability & versioning
+  status              TEXT          NOT NULL DEFAULT 'active' CHECK (status IN ('draft', 'active', 'archived')),
+  version             INT           NOT NULL DEFAULT 1,
+  
+  -- Audit trail
+  created_at          TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_site_templates_slug ON site_templates(slug);
+CREATE INDEX IF NOT EXISTS idx_site_templates_status ON site_templates(status);
+
+DROP TRIGGER IF EXISTS site_templates_updated_at ON site_templates;
+CREATE TRIGGER site_templates_updated_at
+  BEFORE UPDATE ON site_templates
+  FOR EACH ROW
+  EXECUTE FUNCTION waas_set_updated_at();
+
+-- ---------------------------------------------------------------------------
+-- TENANT SITE CONFIG TABLE (Phase 4 - Client Portal)
+-- Critical table that links tenants to their site configuration & client review tokens
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS tenant_site_config (
+  id                  UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Tenant linkage
+  tenant_id           UUID          NOT NULL UNIQUE REFERENCES tenants(id) ON DELETE CASCADE,
+  
+  -- Template selection
+  template_id         UUID          NULL,
+  client_selected_template_slug  TEXT  NULL REFERENCES site_templates(slug) ON DELETE SET NULL,
+  client_selected_at  TIMESTAMPTZ   NULL,
+  
+  -- Client review token (for self-service editor access)
+  client_review_token TEXT          NULL UNIQUE,
+  
+  -- Client editing state
+  client_edit_session_started_at  TIMESTAMPTZ  NULL,
+  client_has_completed_edit       BOOLEAN      NOT NULL DEFAULT FALSE,
+  client_completed_edit_at        TIMESTAMPTZ  NULL,
+  
+  -- Client approval & locking state
+  client_approved                 BOOLEAN      NOT NULL DEFAULT FALSE,
+  client_approval_at              TIMESTAMPTZ  NULL,
+  client_approval_locked          BOOLEAN      NOT NULL DEFAULT FALSE,
+  
+  -- Admin approval state
+  admin_approved                  BOOLEAN      NOT NULL DEFAULT FALSE,
+  admin_approval_at               TIMESTAMPTZ  NULL,
+  
+  -- Site config data
+  active_sections_json            JSONB        NOT NULL DEFAULT '{}',
+  custom_css                      TEXT         NULL,
+  meta_title                      TEXT         NULL,
+  meta_description                TEXT         NULL,
+  og_image_url                    TEXT         NULL,
+  site_config_data               JSONB        NOT NULL DEFAULT '{}',
+  published_config_data          JSONB        NULL,
+  
+  -- Publication state
+  is_published                   BOOLEAN      NOT NULL DEFAULT FALSE,
+  published_at                   TIMESTAMPTZ  NULL,
+  deployment_url                 TEXT         NULL,
+  deployed_at                    TIMESTAMPTZ  NULL,
+  last_preview_at                TIMESTAMPTZ  NULL,
+  
+  -- Client feedback & preferences
+  client_feedback_tone           TEXT         NULL,
+  client_feedback_cta_intensity  TEXT         NULL,
+  client_feedback_layout_preference TEXT      NULL,
+  client_feedback_notes          TEXT         NULL,
+  client_feedback_submitted_at   TIMESTAMPTZ  NULL,
+  
+  -- A/B testing / variant mixing
+  client_mix_source_templates    TEXT[]       NULL,
+  client_mix_submitted_at        TIMESTAMPTZ  NULL,
+  
+  -- Audit trail
+  created_at          TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
+
+-- Add missing columns if they don't exist (for idempotency)
+DO $$ BEGIN
+  ALTER TABLE tenant_site_config ADD COLUMN IF NOT EXISTS client_approval_locked BOOLEAN DEFAULT FALSE;
+  ALTER TABLE tenant_site_config ADD COLUMN IF NOT EXISTS template_id UUID;
+  ALTER TABLE tenant_site_config ADD COLUMN IF NOT EXISTS client_selected_at TIMESTAMPTZ;
+  ALTER TABLE tenant_site_config ADD COLUMN IF NOT EXISTS active_sections_json JSONB DEFAULT '{}';
+  ALTER TABLE tenant_site_config ADD COLUMN IF NOT EXISTS custom_css TEXT;
+  ALTER TABLE tenant_site_config ADD COLUMN IF NOT EXISTS meta_title TEXT;
+  ALTER TABLE tenant_site_config ADD COLUMN IF NOT EXISTS meta_description TEXT;
+  ALTER TABLE tenant_site_config ADD COLUMN IF NOT EXISTS og_image_url TEXT;
+  ALTER TABLE tenant_site_config ADD COLUMN IF NOT EXISTS deployment_url TEXT;
+  ALTER TABLE tenant_site_config ADD COLUMN IF NOT EXISTS deployed_at TIMESTAMPTZ;
+  ALTER TABLE tenant_site_config ADD COLUMN IF NOT EXISTS last_preview_at TIMESTAMPTZ;
+  ALTER TABLE tenant_site_config ADD COLUMN IF NOT EXISTS client_feedback_tone TEXT;
+  ALTER TABLE tenant_site_config ADD COLUMN IF NOT EXISTS client_feedback_cta_intensity TEXT;
+  ALTER TABLE tenant_site_config ADD COLUMN IF NOT EXISTS client_feedback_layout_preference TEXT;
+  ALTER TABLE tenant_site_config ADD COLUMN IF NOT EXISTS client_feedback_notes TEXT;
+  ALTER TABLE tenant_site_config ADD COLUMN IF NOT EXISTS client_feedback_submitted_at TIMESTAMPTZ;
+  ALTER TABLE tenant_site_config ADD COLUMN IF NOT EXISTS client_mix_source_templates TEXT[];
+  ALTER TABLE tenant_site_config ADD COLUMN IF NOT EXISTS client_mix_submitted_at TIMESTAMPTZ;
+EXCEPTION
+  WHEN others THEN null;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_tenant_site_config_token ON tenant_site_config(client_review_token) WHERE client_review_token IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_tenant_site_config_template ON tenant_site_config(client_selected_template_slug);
+CREATE INDEX IF NOT EXISTS idx_tenant_site_config_approved ON tenant_site_config(admin_approved, is_published);
+
+DROP TRIGGER IF EXISTS tenant_site_config_updated_at ON tenant_site_config;
+CREATE TRIGGER tenant_site_config_updated_at
+  BEFORE UPDATE ON tenant_site_config
+  FOR EACH ROW
+  EXECUTE FUNCTION waas_set_updated_at();
+
+-- Tenant site config RLS policies
+ALTER TABLE tenant_site_config ENABLE ROW LEVEL SECURITY;
+
+-- Allow service role (bypasses RLS anyway, but explicit)
+DROP POLICY IF EXISTS "tenant_site_config_service_all" ON tenant_site_config;
+CREATE POLICY "tenant_site_config_service_all"
+  ON tenant_site_config FOR ALL TO service_role
+  USING (true)
+  WITH CHECK (true);
+
+-- Allow reading published configs
+DROP POLICY IF EXISTS "tenant_site_config_public_read_published" ON tenant_site_config;
+CREATE POLICY "tenant_site_config_public_read_published"
+  ON tenant_site_config FOR SELECT TO anon, authenticated
+  USING (is_published = TRUE);
+
+-- Allow anon to read any config with a client review token set (for client editor)
+DROP POLICY IF EXISTS "tenant_site_config_anon_read_by_token" ON tenant_site_config;
+CREATE POLICY "tenant_site_config_anon_read_by_token"
+  ON tenant_site_config FOR SELECT TO anon
+  USING (client_review_token IS NOT NULL);
+
+DROP POLICY IF EXISTS "tenant_site_config_admin_all" ON tenant_site_config;
+CREATE POLICY "tenant_site_config_admin_all"
+  ON tenant_site_config FOR ALL TO authenticated
+  USING (
+    auth.jwt() ->> 'role' = 'waas_admin'
+    OR auth.jwt() -> 'app_metadata' ->> 'waas_admin' = 'true'
+  )
+  WITH CHECK (
+    auth.jwt() ->> 'role' = 'waas_admin'
+    OR auth.jwt() -> 'app_metadata' ->> 'waas_admin' = 'true'
+  );
+
+-- ---------------------------------------------------------------------------
+-- CLIENT VARIANT EDIT EVENTS TABLE (Phase 4 - Client Portal Analytics)
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS client_variant_edit_events (
+  id                  UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Config reference
+  tenant_site_config_id  UUID       NOT NULL REFERENCES tenant_site_config(id) ON DELETE CASCADE,
+  
+  -- Event details
+  event_type          TEXT          NOT NULL CHECK (event_type IN ('section_created', 'section_updated', 'section_deleted', 'publish_requested', 'edit_submitted')),
+  
+  -- Event data
+  section_id          TEXT          NULL,
+  section_data        JSONB         NULL,
+  edit_data           JSONB         NOT NULL DEFAULT '{}',
+  
+  -- Client context
+  client_session_id   TEXT          NULL,
+  
+  -- Audit trail
+  created_at          TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_client_variant_edit_events_config ON client_variant_edit_events(tenant_site_config_id);
+CREATE INDEX IF NOT EXISTS idx_client_variant_edit_events_type ON client_variant_edit_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_client_variant_edit_events_created ON client_variant_edit_events(created_at DESC);
+
+-- ---------------------------------------------------------------------------
+-- SEED DATA (demo tenant & QA test tenant - only inserts if not exists)
+-- ---------------------------------------------------------------------------
+
+-- Default site template
+INSERT INTO site_templates (slug, name, description, status)
+VALUES (
+  'default',
+  'Default Template',
+  'Standard site template for all tenants',
+  'active'
+)
+ON CONFLICT (slug) DO NOTHING;
 
 INSERT INTO tenants (slug, subdomain, domain, brand_config, package_tier, status, target_industry, target_location)
 VALUES (
@@ -735,6 +942,40 @@ VALUES (
   'Chicago, IL'
 )
 ON CONFLICT (slug) DO NOTHING;
+
+-- QA test tenant (for qa-weekly.yml workflow)
+INSERT INTO tenants (id, slug, subdomain, domain, brand_config, package_tier, status, target_industry, target_location)
+VALUES (
+  '6d3d4324-5ac7-4506-9bf9-f8ca4774b117'::UUID,
+  'qa-test-tenant',
+  'qa-test',
+  NULL,
+  '{
+    "business_name": "QA Test Tenant",
+    "tagline": "Testing Platform",
+    "colors": {
+      "primary": "#2563EB",
+      "secondary": "#1E40AF"
+    }
+  }',
+  'premium',
+  'active',
+  'consulting',
+  'Virtual'
+)
+ON CONFLICT (slug) DO NOTHING;
+
+-- QA test tenant site config (links review token to tenant)
+INSERT INTO tenant_site_config (tenant_id, client_review_token, client_selected_template_slug, client_edit_session_started_at)
+SELECT 
+  '6d3d4324-5ac7-4506-9bf9-f8ca4774b117'::UUID,
+  'qa00000000000000000000000000test',
+  'default',
+  NOW()
+WHERE NOT EXISTS (
+  SELECT 1 FROM tenant_site_config 
+  WHERE client_review_token = 'qa00000000000000000000000000test'
+);
 
 -- =============================================================================
 -- END OF COMPLETE IDEMPOTENT MIGRATION
