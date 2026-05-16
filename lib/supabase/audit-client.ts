@@ -8,14 +8,13 @@ import { type SupabaseClient } from '@supabase/supabase-js'
 //
 // Uses implicit flow (not PKCE) to avoid cross-subdomain PKCE mismatch.
 //
-// The problem: when OAuth starts on audit.rankedceo.com, Supabase stores
-// the PKCE code verifier in audit's localStorage. But the OAuth callback
-// lands on crm.rankedceo.com (the Supabase Site URL), which can't find
-// the verifier → "PKCE code verifier not found in storage" error.
+// IMPORTANT: We do NOT set a custom storageKey here — we use the default
+// key so that the session cookie written by this client is readable by
+// the server-side createClient() in lib/supabase/server.ts.
 //
-// Solution: use flowType: 'implicit' so no verifier is stored or needed.
-// The access token is returned directly in the URL fragment and handled
-// client-side after the cross-domain redirect.
+// The @supabase/ssr createBrowserClient stores sessions in cookies named:
+//   sb-<project-ref>-auth-token
+// The server client reads the same cookie name, so they must match.
 // ---------------------------------------------------------------------------
 
 let _auditClient: SupabaseClient | null = null
@@ -31,7 +30,7 @@ export function createAuditClient(): SupabaseClient {
           detectSessionInUrl: true,
           persistSession: true,
           autoRefreshToken: true,
-          storageKey: 'sb-audit-auth-token',
+          // No custom storageKey — must match what the server client reads
         },
       }
     )
