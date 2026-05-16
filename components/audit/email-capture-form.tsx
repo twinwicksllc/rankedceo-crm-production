@@ -4,6 +4,9 @@
 // Email Capture Form
 // Gates the PDF download — captures lead before allowing download
 // Calls /api/audit/leads, then triggers PDF generation/download
+//
+// Phone and company are ALWAYS required regardless of login state.
+// We need complete lead info every time someone downloads a PDF report.
 // =============================================================================
 
 import { useState } from 'react'
@@ -52,7 +55,7 @@ export function EmailCaptureForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.email) return
+    if (!form.email || !form.phone || !form.company) return
 
     setStatus('submitting')
     setError(null)
@@ -65,8 +68,8 @@ export function EmailCaptureForm({
           audit_id: auditId,
           name:     form.name,
           email:    form.email,
-          phone:    form.phone || undefined,
-          company:  form.company || undefined,
+          phone:    form.phone,
+          company:  form.company,
         }),
       })
 
@@ -89,7 +92,7 @@ export function EmailCaptureForm({
     }
   }
 
-  // ── Success state ─────────────────────────────────────────────────────────
+  // -- Success state ----------------------------------------------------------
   if (status === 'success') {
     return (
       <div style={{
@@ -101,14 +104,14 @@ export function EmailCaptureForm({
         padding:      '24px',
         textAlign:    'center',
       }}>
-        <div style={{ fontSize: '2rem', marginBottom: 12 }}>✅</div>
+        <div style={{ fontSize: '2rem', marginBottom: 12 }}>&#x2705;</div>
         <div style={{
           fontSize:   '1rem',
           fontWeight: 700,
           color:      '#22C55E',
           marginBottom: 6,
         }}>
-          Download Starting…
+          Download Starting&hellip;
         </div>
         <div style={{
           fontSize: '0.82rem',
@@ -133,13 +136,13 @@ export function EmailCaptureForm({
             fontWeight:     600,
           }}
         >
-          📄 Download PDF Report
+          &#x1F4C4; Download PDF Report
         </a>
       </div>
     )
   }
 
-  // ── Collapsed trigger (initial state) ────────────────────────────────────
+  // -- Collapsed trigger (initial state) -------------------------------------
   if (!open) {
     return (
       <button
@@ -160,7 +163,7 @@ export function EmailCaptureForm({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: '1.3rem' }}>📄</span>
+          <span style={{ fontSize: '1.3rem' }}>&#x1F4C4;</span>
           <div style={{ textAlign: 'left' }}>
             <div style={{
               fontSize:   '0.9rem',
@@ -174,7 +177,7 @@ export function EmailCaptureForm({
               fontSize: '0.75rem',
               color:    isLight ? 'rgba(15,23,42,0.68)' : 'rgba(255,255,255,0.45)',
             }}>
-              Board-ready audit for {targetDomain} — shareable with your team
+              Board-ready audit for {targetDomain} &mdash; shareable with your team
             </div>
           </div>
         </div>
@@ -188,13 +191,16 @@ export function EmailCaptureForm({
           whiteSpace:   'nowrap',
           flexShrink:   0,
         }}>
-          Get PDF →
+          Get PDF &rarr;
         </div>
       </button>
     )
   }
 
-  // ── Expanded form ──────────────────────────────────────────────────────────
+  // -- Expanded form ---------------------------------------------------------
+  // Submit is disabled unless all required fields are filled
+  const isDisabled = status === 'submitting' || !form.email || !form.phone || !form.company
+
   return (
     <div style={{
       background:   isLight
@@ -213,7 +219,7 @@ export function EmailCaptureForm({
         justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: '1.2rem' }}>📄</span>
+          <span style={{ fontSize: '1.2rem' }}>&#x1F4C4;</span>
           <div>
             <div style={{
               fontSize:   '0.9rem',
@@ -226,7 +232,7 @@ export function EmailCaptureForm({
               fontSize: '0.72rem',
               color:    isLight ? 'rgba(15,23,42,0.65)' : 'rgba(255,255,255,0.4)',
             }}>
-              Free — no credit card required
+              Free &mdash; no credit card required
             </div>
           </div>
         </div>
@@ -241,7 +247,7 @@ export function EmailCaptureForm({
             padding:    4,
           }}
         >
-          ✕
+          &#x2715;
         </button>
       </div>
 
@@ -253,63 +259,48 @@ export function EmailCaptureForm({
           gap:                 12,
           marginBottom:        12,
         }}>
-          {userEmail && (
-            <>
-              <FormField
-                label="Full Name"
-                type="text"
-                placeholder="John Smith"
-                value={form.name}
-                onChange={update('name')}
-                disabled={!!userName}
-                hint={userName ? '(from your account)' : undefined}
-              />
-              <FormField
-                label="Email Address"
-                type="email"
-                placeholder="john@acmeplumbing.com"
-                value={form.email}
-                onChange={update('email')}
-                disabled
-                hint="(from your account)"
-              />
-            </>
-          )}
-          {!userEmail && (
-            <>
-              <FormField
-                label="Full Name *"
-                type="text"
-                placeholder="John Smith"
-                value={form.name}
-                onChange={update('name')}
-                required
-              />
-              <FormField
-                label="Email Address *"
-                type="email"
-                placeholder="john@acmeplumbing.com"
-                value={form.email}
-                onChange={update('email')}
-                required
-              />
-            </>
-          )}
+          {/* Name — pre-filled and locked for logged-in users */}
           <FormField
-            label={userEmail ? 'Phone (optional)' : 'Phone *'}
+            label="Full Name *"
+            type="text"
+            placeholder="John Smith"
+            value={form.name}
+            onChange={update('name')}
+            required
+            disabled={!!userName}
+            hint={userName ? '(from your account)' : undefined}
+          />
+
+          {/* Email — pre-filled and locked for logged-in users */}
+          <FormField
+            label="Email Address *"
+            type="email"
+            placeholder="john@acmeplumbing.com"
+            value={form.email}
+            onChange={update('email')}
+            required
+            disabled={!!userEmail}
+            hint={userEmail ? '(from your account)' : undefined}
+          />
+
+          {/* Phone — always required */}
+          <FormField
+            label="Phone *"
             type="tel"
             placeholder="(555) 123-4567"
             value={form.phone}
             onChange={update('phone')}
-            required={!userEmail}
+            required
           />
+
+          {/* Company — always required */}
           <FormField
-            label={userEmail ? 'Company (optional)' : 'Company *'}
+            label="Company *"
             type="text"
             placeholder="Acme Plumbing Co."
             value={form.company}
             onChange={update('company')}
-            required={!userEmail}
+            required
           />
         </div>
 
@@ -324,14 +315,14 @@ export function EmailCaptureForm({
             color:        '#FCA5A5',
             marginBottom: 12,
           }}>
-            ⚠️ {error}
+            &#x26A0;&#xFE0F; {error}
           </div>
         )}
 
         {/* Submit */}
         <button
           type="submit"
-          disabled={status === 'submitting' || !form.email}
+          disabled={isDisabled}
           style={{
             width:        '100%',
             padding:      '13px 20px',
@@ -343,13 +334,13 @@ export function EmailCaptureForm({
             color:        '#ffffff',
             fontSize:     '0.92rem',
             fontWeight:   700,
-            cursor:       status === 'submitting' ? 'not-allowed' : 'pointer',
-            boxShadow:    status === 'submitting' ? 'none' : '0 4px 20px rgba(37,99,235,0.4)',
+            cursor:       isDisabled ? 'not-allowed' : 'pointer',
+            boxShadow:    isDisabled ? 'none' : '0 4px 20px rgba(37,99,235,0.4)',
             transition:   'opacity 0.2s',
-            opacity:      !form.email ? 0.6 : 1,
+            opacity:      isDisabled ? 0.6 : 1,
           }}
         >
-          {status === 'submitting' ? '⏳ Preparing report…' : '📥 Download My PDF Report →'}
+          {status === 'submitting' ? '&#x23F3; Preparing report\u2026' : '&#x1F4E5; Download My PDF Report \u2192'}
         </button>
 
         <p style={{
@@ -358,7 +349,7 @@ export function EmailCaptureForm({
           color:     'rgba(255,255,255,0.3)',
           textAlign: 'center',
         }}>
-          🔒 Your information is private. We never spam — ever.
+          &#x1F512; Your information is private. We never spam &mdash; ever.
         </p>
       </form>
     </div>

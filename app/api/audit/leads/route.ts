@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       referrer_url,
     } = body
 
-    // Validate
+    // Validate required fields
     if (!email?.trim()) {
       return NextResponse.json({ error: 'email is required' }, { status: 400 })
     }
@@ -39,6 +39,14 @@ export async function POST(req: NextRequest) {
 
     if (!audit_id) {
       return NextResponse.json({ error: 'audit_id is required' }, { status: 400 })
+    }
+
+    if (!phone?.trim()) {
+      return NextResponse.json({ error: 'phone is required' }, { status: 400 })
+    }
+
+    if (!company?.trim()) {
+      return NextResponse.json({ error: 'company is required' }, { status: 400 })
     }
 
     // Call the Supabase RPC via typed helper (avoids Supabase 2.x ExactMatch issues)
