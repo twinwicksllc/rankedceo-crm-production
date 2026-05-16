@@ -34,7 +34,7 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
       {/* Header */}
       <div className="mb-8">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 mb-4">
-          <span className="text-blue-400 text-xs font-semibold uppercase tracking-wider">Step 4 of 4</span>
+          <span className="text-blue-400 text-xs font-semibold uppercase tracking-wider">Step 5 of 5</span>
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white leading-tight">
           Integrations & your edge
