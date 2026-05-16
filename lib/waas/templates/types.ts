@@ -1,5 +1,7 @@
 // =============================================================================
-// WaaS Phase 4: Template Engine Types
+// WaaS Template Engine Types
+// PR #92 — Extended with template metadata for industry-aware selection,
+// SEO hints, and aesthetic categorisation for the self-service builder.
 // =============================================================================
 
 // ---------------------------------------------------------------------------
@@ -134,14 +136,100 @@ export interface SectionConfig {
 }
 
 // ---------------------------------------------------------------------------
+// Template aesthetic categories
+// Used for filtering in the template picker UI.
+// ---------------------------------------------------------------------------
+
+export type TemplateAesthetic =
+  | 'clean'       // minimal whitespace-forward
+  | 'bold'        // high-contrast, aggressive
+  | 'trust'       // credentials/reviews-heavy
+  | 'local'       // neighbourhood, friendly
+  | 'premium'     // editorial, refined
+  | 'urgent'      // emergency/fast-response
+  | 'visual'      // image/gallery-led
+  | 'process'     // education, how-it-works
+  | 'community'   // warm, story-driven
+  | 'conversion'  // booking/CTA-first
+
+// ---------------------------------------------------------------------------
+// SEO strategy hint — tells the AI generator how to weight keyword placement
+// ---------------------------------------------------------------------------
+
+export type SeoStrategy =
+  | 'local-service'    // "[City] [Trade]" keyword clusters, NAP prominence
+  | 'trust-authority'  // credentials, certifications, reviews for E-E-A-T
+  | 'visual-portfolio' // alt-text on gallery, project schema
+  | 'emergency'        // urgency keywords, 24/7 phrases, fast-response schema
+  | 'consultative'     // FAQ schema, how-to content, long-form
+  | 'conversion'       // booking schema, CTA density, offer keywords
+
+// ---------------------------------------------------------------------------
 // Site template (master template definition)
+// Extended in PR #92 with aesthetic metadata, industry fit, and SEO hints.
 // ---------------------------------------------------------------------------
 
 export interface SiteTemplate {
   id:                  string
   name:                string
-  slug:                'modern' | 'bold' | 'trust-first' | string
+  slug:                string
   description:         string | null
+
+  // --- PR #92 additions ---
+
+  /** Short marketing tagline shown on the template card */
+  tagline:             string
+
+  /** One-word aesthetic category for UI filtering */
+  aesthetic:           TemplateAesthetic
+
+  /** Mood/feel shown as a subtitle on the template card (2–4 words) */
+  mood:                string
+
+  /**
+   * Ordered list of primary_trade values this template is BEST suited for.
+   * Used to determine the "Recommended for you" 3-card shortlist.
+   * Empty array = universal (no specific industry bias).
+   */
+  industry_fit:        string[]
+
+  /**
+   * Secondary trades where this template also works well.
+   * Used to populate the "View all" expanded library with relevance sorting.
+   */
+  industry_also_good:  string[]
+
+  /**
+   * SEO strategy this template is optimised for.
+   * Passed to the AI generator to weight keyword placement, schema type,
+   * and meta description patterns accordingly.
+   */
+  seo_strategy:        SeoStrategy
+
+  /**
+   * Comma-separated list of schema.org types to emit for this template.
+   * e.g. "LocalBusiness,Plumber" or "HomeAndConstructionBusiness,RoofingContractor"
+   */
+  schema_types:        string[]
+
+  /**
+   * Key feature highlights shown on the template card (max 4 bullet points).
+   */
+  feature_highlights:  string[]
+
+  /**
+   * Hex colour suggestions for the preview swatch — NOT the user's brand colours,
+   * just a representative palette so the card looks good before the user picks theirs.
+   */
+  preview_palette: {
+    primary:    string
+    secondary:  string
+    accent:     string
+    background: string
+  }
+
+  // --- existing fields ---
+
   preview_image_url:   string | null
   default_layout_json: SectionConfig[]
   base_css:            string | null
@@ -264,7 +352,17 @@ export interface CSSVariables {
 }
 
 // ---------------------------------------------------------------------------
-// Theme names
+// Theme names — updated to include all 10 templates
 // ---------------------------------------------------------------------------
 
-export type ThemeName = 'modern' | 'bold' | 'trust-first'
+export type ThemeName =
+  | 'modern'
+  | 'bold'
+  | 'trust-first'
+  | 'local-pro'
+  | 'premium'
+  | 'emergency'
+  | 'showcase'
+  | 'consultative'
+  | 'community'
+  | 'conversion'
