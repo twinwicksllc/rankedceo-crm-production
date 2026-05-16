@@ -198,14 +198,6 @@ export class PersonaRouter {
     await page.waitForTimeout(2000)
     console.log(`[PersonaRouter] Current URL: ${page.url()}`)
     
-    // Debug: check for console errors
-    const pageErrors: string[] = []
-    page.on('console', (msg) => {
-      if (msg.type() === 'error') {
-        pageErrors.push(`[${msg.type()}] ${msg.text()}`)
-      }
-    })
-    
     // Debug: check form state
     const formState = await page.evaluate(() => {
       const form = document.querySelector('form')
