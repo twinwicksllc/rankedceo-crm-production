@@ -1,10 +1,32 @@
 import { Phone, Mail, MapPin, Users, Stethoscope, Shield, FileText } from "lucide-react"
 
-const footerLinks = {
-  Product: ["Features", "Pricing", "Membership", "Financing"],
-  Company: ["About Us", "Careers", "Press", "Partners", "Contact"],
-  Resources: ["Blog", "Guides", "Before & After Gallery", "FAQ", "Help Center"],
-  Legal: ["Privacy Policy", "Terms of Service", "HIPAA Compliance", "BAA"]
+const footerLinks: Record<string, { label: string; href: string }[]> = {
+  Product: [
+    { label: "Features", href: "#" },
+    { label: "Pricing", href: "#" },
+    { label: "Membership", href: "#" },
+    { label: "Financing", href: "#" },
+  ],
+  Company: [
+    { label: "About Us", href: "#" },
+    { label: "Careers", href: "#" },
+    { label: "Press", href: "#" },
+    { label: "Partners", href: "#" },
+    { label: "Contact", href: "#" },
+  ],
+  Resources: [
+    { label: "Blog", href: "#" },
+    { label: "Guides", href: "#" },
+    { label: "Before & After Gallery", href: "#" },
+    { label: "FAQ", href: "#" },
+    { label: "Help Center", href: "#" },
+  ],
+  Legal: [
+    { label: "Privacy Policy", href: "/privacy" },
+    { label: "Terms of Service", href: "/terms" },
+    { label: "HIPAA Compliance", href: "#" },
+    { label: "BAA", href: "#" },
+  ],
 }
 
 export function Footer() {
@@ -82,12 +104,12 @@ export function Footer() {
               <h4 className="font-semibold text-white mb-4">{category}</h4>
               <ul className="space-y-2">
                 {links.map((link) => (
-                  <li key={link}>
+                  <li key={link.label}>
                     <a
-                      href="#"
+                      href={link.href}
                       className="text-sm text-white/60 hover:text-white transition-colors"
                     >
-                      {link}
+                      {link.label}
                     </a>
                   </li>
                 ))}
@@ -124,11 +146,11 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-white/60">
-            © {new Date().getFullYear()} Smile MakeOver. All rights reserved.
+            © {new Date().getFullYear()} RankedCEO LLC. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
-            <span className="text-xs text-white/40">Flexible Financing</span>
-            <span className="text-xs text-white/40">No Insurance Required</span>
+            <a href="/privacy" className="text-xs text-white/50 hover:text-white transition-colors">Privacy Policy</a>
+            <a href="/terms" className="text-xs text-white/50 hover:text-white transition-colors">Terms of Service</a>
             <span className="text-xs text-white/40">Nationwide Network</span>
           </div>
         </div>
