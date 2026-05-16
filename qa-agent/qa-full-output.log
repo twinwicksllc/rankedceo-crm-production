@@ -1,0 +1,29 @@
+
+> @rankedceo/qa-agent@0.1.0 full
+> tsx src/cli.ts --scenario scenarios/full_lifecycle.yaml
+
+
+🤖 QA Agent — Run 2026-05-16T04-53-28_59d90c5e
+   Mode:     smoke
+   Scenario: scenarios/full_lifecycle.yaml
+   Base URL: https://qa.rankedceo.com
+   Started:  2026-05-16T04:53:28.160Z
+
+[EscalationEngine] GITHUB_TOKEN not set — skipping restart gate check
+📋 Scenario: "Full Lifecycle — End-to-End Client & Admin Journey" (44 steps)
+
+[PersonaRouter] Navigating to /edit/qa00000000000000000000000000test (attempt 1/3)
+[PersonaRouter] Navigating to /login?next=/admin/dashboard&adminOnly=1 (attempt 1/3)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.waitForFunction: Timeout 30000ms exceeded.
+    at PersonaRouter.createAdminContext (/workspaces/rankedceo-crm-production/qa-agent/src/personas/PersonaRouter.ts:191:16)
+    at async PersonaRouter.init (/workspaces/rankedceo-crm-production/qa-agent/src/personas/PersonaRouter.ts:31:5)
+    at async Orchestrator.run (/workspaces/rankedceo-crm-production/qa-agent/src/orchestrator/Orchestrator.ts:58:7)
+    at async <anonymous> (/workspaces/rankedceo-crm-production/qa-agent/src/cli.ts:105:16) {
+  name: 'TimeoutError'
+}
+
+Node.js v24.14.0

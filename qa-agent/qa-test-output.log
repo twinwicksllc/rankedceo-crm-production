@@ -1,0 +1,5 @@
+
+> @rankedceo/qa-agent@0.1.0 full
+> tsx src/cli.ts --scenario scenarios/full_lifecycle.yaml
+
+❌ QA_BASE_URL is not set

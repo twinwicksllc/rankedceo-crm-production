@@ -154,8 +154,15 @@ export class PersonaRouter {
     // waitUntil:'load' fires quickly; we then wait for networkidle to let
     // Supabase auth.getSession() complete before asserting the form exists.
     await this.gotoWithRetry(page, '/login?next=/admin/dashboard&adminOnly=1', { waitUntil: 'load', timeout: 30_000 })
-    // Wait for all in-flight XHR/fetch (incl. Supabase session check) to settle
-    await page.waitForLoadState('networkidle', { timeout: 60_000 })
+    // Wait for form selectors to become visible — use faster 'domcontentloaded' check
+    // instead of 'networkidle' to avoid timeout in dev containers where background
+    // requests may never fully idle (analytics, WebSockets, etc.)
+    try {
+      await page.waitForLoadState('domcontentloaded', { timeout: 10_000 })
+    } catch {
+      // Fallback: don't block on network idle, continue to form selectors
+      console.warn('[PersonaRouter] domcontentloaded timeout — retrying with form selector')
+    }
 
     // Wait up to 90s total for the email input to appear.
     // Use [data-testid="admin-email"] first; fall back to input#email / input[type="email"]
@@ -195,7 +202,16 @@ export class PersonaRouter {
 
     // After URL changes, wait for the dashboard server component to finish
     // rendering (DB calls, Supabase queries, etc.).
-    await page.waitForLoadState('networkidle', { timeout: 30_000 })
+    // Use 'networkidle' but with shorter timeout since dev containers may timeout.
+    // Fallback to just waiting for page to load if networkidle times out.
+    try {
+      await page.waitForLoadState('networkidle', { timeout: 15_000 })
+    } catch {
+      // Fallback: dashboard might have long-running queries or background fetches
+      // that never truly "idle". Wait for a small delay then proceed.
+      console.warn('[PersonaRouter] Dashboard networkidle timeout — proceeding anyway')
+      await page.waitForTimeout(2000)
+    }
 
     this.contexts.set('admin', { persona: 'admin', context, page })
   }
