@@ -1,7 +1,7 @@
 'use client'
 
 // =============================================================================
-// AdvantagePoint — Onboarding Success Screen
+// RankedCEO Website Builder — Onboarding Success Screen
 // Auto-redirects to builder with review token
 // =============================================================================
 
@@ -143,7 +143,7 @@ export function OnboardingSuccess({ businessName, tier, reviewToken }: Props) {
                 Back to Home
               </Link>
               <a
-                href="mailto:support@advantagepoint.com"
+                href="mailto:support@rankedceo.com"
                 className="flex-1 h-12 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-white font-semibold text-sm hover:from-blue-500 hover:to-violet-500 transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2"
               >
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">

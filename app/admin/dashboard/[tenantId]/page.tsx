@@ -1,6 +1,6 @@
 import { buildAuditReportPath } from '@/lib/waas/utils/audit-report-url'
 // =============================================================================
-// AdvantagePoint — Tenant Detail View (Server Component)
+// RankedCEO CRM — Tenant Detail View (Server Component)
 // Brand Sheet, Audit Results, Domain Requests, Deploy Site, Live Preview
 // =============================================================================
 

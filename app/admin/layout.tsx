@@ -1,5 +1,5 @@
 // =============================================================================
-// AdvantagePoint — Admin Layout
+// RankedCEO CRM — Admin Layout
 // Protected route — checks for admin session
 // =============================================================================
 
@@ -12,8 +12,8 @@ import { createClient } from '@/lib/supabase/server'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'Command Center | AdvantagePoint',
-  description: 'AdvantagePoint Admin Dashboard',
+  title: 'Command Center | RankedCEO',
+  description: 'RankedCEO Admin Dashboard',
   robots: 'noindex, nofollow',
 }
 

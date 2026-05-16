@@ -163,12 +163,12 @@ export function SiteFooter({ tenant }: SiteFooterProps) {
           <p className="font-brand-body text-xs text-white/30">
             Powered by{' '}
             <Link
-              href="https://advantagepoint.io"
+              href="https://rankedceo.com"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-white/50 transition-colors"
             >
-              AdvantagePoint
+              RankedCEO
             </Link>
           </p>
         </div>

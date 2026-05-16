@@ -37,7 +37,7 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
           Tell us about your business
         </h1>
         <p className="text-slate-500 dark:text-white/50 mt-2 text-sm sm:text-base">
-          This forms the foundation of your AdvantagePoint website.
+          This forms the foundation of your RankedCEO website.
         </p>
         {auditId && (
           <div className="mt-3 flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-xs">

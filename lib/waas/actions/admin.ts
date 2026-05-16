@@ -1,7 +1,7 @@
 'use server'
 
 // =============================================================================
-// AdvantagePoint - Admin Server Actions
+// RankedCEO CRM - Admin Server Actions
 // Protected actions for Tom & Darrick's Command Center
 // =============================================================================
 

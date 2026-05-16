@@ -1,7 +1,7 @@
 'use server'
 
 // =============================================================================
-// AdvantagePoint - Onboarding Server Actions
+// RankedCEO Website Builder - Onboarding Server Actions
 // Uses Next.js 14 Server Actions for form submission + Supabase uploads
 // =============================================================================
 
