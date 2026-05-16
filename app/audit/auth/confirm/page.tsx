@@ -1,70 +1,118 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { createAuditClient } from '@/lib/supabase/audit-client'
 
 /**
  * Audit Auth Confirm Page
  *
- * This page handles the implicit OAuth flow landing.
- * After Google OAuth with implicit flow, Supabase redirects here with the
- * access token in the URL hash fragment (#access_token=...&refresh_token=...).
+ * Handles the implicit OAuth landing. After Google OAuth, Supabase redirects
+ * here with tokens in the URL hash fragment:
+ *   audit.rankedceo.com/audit/auth/confirm#access_token=...&refresh_token=...
  *
- * The Supabase client (with detectSessionInUrl: true) automatically parses
- * the fragment, sets the session in storage, and we then redirect to /audit/start.
+ * Steps:
+ * 1. Parse the hash fragment manually
+ * 2. Call supabase.auth.setSession() explicitly to write session cookies
+ * 3. Hard navigate (window.location.href) to /audit/start so the server
+ *    component gets a fresh request and reads the newly-written cookies
  *
- * This intermediate page is necessary because:
- * 1. The hash fragment is only accessible client-side (not on the server)
- * 2. The server component at /audit/start checks for a session via cookies
- * 3. We need to give the client-side Supabase a moment to write the session
- *    to cookies before the server component runs
+ * We use window.location.href (not router.push) because router.push is
+ * a client-side navigation that reuses the same server render — the server
+ * component won't re-run its auth check. A full page load forces the server
+ * to re-read cookies.
  */
 export default function AuditAuthConfirmPage() {
-  const router = useRouter()
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [errorMsg, setErrorMsg] = useState('')
 
   useEffect(() => {
-    const supabase = createAuditClient()
+    async function handleAuthCallback() {
+      const supabase = createAuditClient()
 
-    // detectSessionInUrl: true in the audit client means Supabase will
-    // automatically parse the hash fragment and set the session.
-    // We just need to wait for the auth state change event.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-          setStatus('success')
-          // Small delay to ensure cookies are written before server component runs
-          setTimeout(() => {
-            router.replace('/audit/start')
-          }, 500)
-        } else if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) {
-          setStatus('error')
-          setErrorMsg('Authentication failed. Please try again.')
-          setTimeout(() => {
-            router.replace('/login')
-          }, 2000)
+      try {
+        // --- Step 1: Parse hash fragment ---
+        const hash = window.location.hash.substring(1) // remove leading #
+        const params = new URLSearchParams(hash)
+        const accessToken  = params.get('access_token')
+        const refreshToken = params.get('refresh_token')
+        const errorCode    = params.get('error')
+        const errorDesc    = params.get('error_description')
+
+        // Handle OAuth error in hash
+        if (errorCode) {
+          throw new Error(errorDesc || errorCode)
         }
-      }
-    )
 
-    // Also try getSession directly in case the event already fired
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
+        if (accessToken && refreshToken) {
+          // --- Step 2: Explicitly set the session ---
+          // This writes the session to cookies (domain=.rankedceo.com)
+          // so the server component can read it on the next request
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          })
+
+          if (error) throw error
+          if (!data.session) throw new Error('Session could not be established')
+
+          setStatus('success')
+
+          // --- Step 3: Hard navigate to /audit/start ---
+          // Full page load so server component re-runs auth check with new cookies
+          setTimeout(() => {
+            window.location.href = '/audit/start'
+          }, 600)
+
+        } else {
+          // No tokens in hash — maybe session already exists, try getSession
+          const { data: { session }, error } = await supabase.auth.getSession()
+
+          if (error) throw error
+
+          if (session) {
+            setStatus('success')
+            setTimeout(() => {
+              window.location.href = '/audit/start'
+            }, 600)
+          } else {
+            // Let detectSessionInUrl handle it via onAuthStateChange
+            const { data: { subscription } } = supabase.auth.onAuthStateChange(
+              async (event, session) => {
+                if (event === 'SIGNED_IN' && session) {
+                  setStatus('success')
+                  setTimeout(() => {
+                    window.location.href = '/audit/start'
+                  }, 600)
+                  subscription.unsubscribe()
+                } else if (event === 'SIGNED_OUT') {
+                  throw new Error('Sign in failed')
+                }
+              }
+            )
+
+            // Timeout fallback — if no event after 5s, redirect to login
+            setTimeout(() => {
+              subscription.unsubscribe()
+              if (status === 'loading') {
+                window.location.href = '/login?error=timeout'
+              }
+            }, 5000)
+          }
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Authentication failed'
+        console.error('[AuditAuthConfirm] Error:', msg)
         setStatus('error')
-        setErrorMsg(error.message)
-        setTimeout(() => router.replace('/login?error=' + encodeURIComponent(error.message)), 2000)
-        return
+        setErrorMsg(msg)
+        setTimeout(() => {
+          window.location.href = '/login?error=' + encodeURIComponent(msg)
+        }, 2500)
       }
-      if (session) {
-        setStatus('success')
-        setTimeout(() => router.replace('/audit/start'), 500)
-      }
-    })
+    }
 
-    return () => subscription.unsubscribe()
-  }, [router])
+    void handleAuthCallback()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#020b2c] flex items-center justify-center px-4">
@@ -88,8 +136,10 @@ export default function AuditAuthConfirmPage() {
 
         {status === 'success' && (
           <>
-            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15 text-3xl">
-              ✓
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15">
+              <svg className="h-8 w-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
             </div>
             <h2 className="text-xl font-bold text-white">Signed in!</h2>
             <p className="mt-2 text-sm text-slate-400">Redirecting to your audit dashboard...</p>
@@ -98,8 +148,10 @@ export default function AuditAuthConfirmPage() {
 
         {status === 'error' && (
           <>
-            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-rose-500/15 text-3xl">
-              ✗
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-rose-500/15">
+              <svg className="h-8 w-8 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </div>
             <h2 className="text-xl font-bold text-white">Authentication failed</h2>
             <p className="mt-2 text-sm text-rose-400">{errorMsg}</p>
