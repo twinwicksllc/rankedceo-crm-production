@@ -173,7 +173,7 @@ export class PersonaRouter {
     const passwordSelector = '[data-testid="admin-password"], input#password, input[type="password"]'
     const submitSelector = '[data-testid="admin-login-submit"], button[type="submit"]'
     try {
-      await page.waitForSelector(emailSelector, { state: 'visible', timeout: 90_000 })
+      await page.waitForSelector(emailSelector, { state: 'visible', timeout: 15_000 })
     } catch (err) {
       // Full diagnostics on timeout
       const ts = new Date().toISOString().replace(/[:.]/g, '-')
@@ -195,10 +195,21 @@ export class PersonaRouter {
     // itself contains "/admin/dashboard" in its `next=` query parameter, so
     // we must match on a path-only pattern to avoid false positives.
     // Use a regex that matches the URL path segment after the origin.
-    await page.waitForFunction(
-      () => /^\/(admin|dashboard)/.test(new URL(window.location.href).pathname),
-      { timeout: 20_000 },
-    )
+    try {
+      await page.waitForFunction(
+        () => /^\/(admin|dashboard)/.test(new URL(window.location.href).pathname),
+        { timeout: 15_000 },
+      )
+    } catch (redirectErr) {
+      const currentUrl = page.url()
+      console.error(`[PersonaRouter] ❌ Login redirect timeout — stuck at: ${currentUrl}`)
+      const ts = new Date().toISOString().replace(/[:.]/g, '-')
+      try { 
+        await page.screenshot({ path: `evidence/login-redirect-timeout-${ts}.png`, fullPage: true })
+        console.error(`📸 Screenshot: evidence/login-redirect-timeout-${ts}.png`)
+      } catch { /* ignore */ }
+      throw redirectErr
+    }
 
     // After URL changes, wait for the dashboard server component to finish
     // rendering (DB calls, Supabase queries, etc.).
