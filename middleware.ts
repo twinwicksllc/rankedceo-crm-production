@@ -47,13 +47,12 @@ const WAAS_ENABLED =
 const QA_WAAS_HOST = process.env.QA_WAAS_HOST ?? 'qa.rankedceo.com'
 const QA_WAAS_TENANT_SLUG = process.env.QA_WAAS_TENANT_SLUG ?? 'qa-test-tenant'
 
-function isQAWaasPath(pathname: string): boolean {
-  return (
-    pathname === '/edit' ||
-    pathname.startsWith('/edit/') ||
-    pathname === '/review' ||
-    pathname.startsWith('/review/')
-  )
+// On the QA host, only expose WaaS routing for the public tenant site root
+// and its non-CRM sub-paths. CRM-owned routes like /edit/[reviewToken],
+// /login, /admin, /api/* must fall through to normal CRM handling.
+// (The /edit/[reviewToken] portal is served by app/edit/ directly, not _sites.)
+function isQAWaasPath(_pathname: string): boolean {
+  return false  // QA host uses CRM routing for all paths
 }
 
 if (process.env.NODE_ENV === 'production') {
