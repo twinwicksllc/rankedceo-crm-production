@@ -2,12 +2,12 @@
 
 // =============================================================================
 // RankedCEO Website Builder — Onboarding Success Screen
-// Auto-redirects to builder with review token
+// Shows confirmation, timeline and portal link — NO auto-redirect.
+// The /edit portal requires a fully-built site (up to 48h after submission).
 // =============================================================================
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { AdvantagePointHeader } from '@/components/advantagepoint/header'
 import type { WaasPackageTier } from '@/lib/waas/types'
 
@@ -25,21 +25,7 @@ const TIER_LABELS: Record<WaasPackageTier, string> = {
 }
 
 export function OnboardingSuccess({ businessName, tier, reviewToken }: Props) {
-  const router = useRouter()
   const [showConfetti, setShowConfetti] = useState(false)
-  const [isRedirecting, setIsRedirecting] = useState(false)
-
-  // Auto-redirect to builder if token is available
-  useEffect(() => {
-    if (reviewToken) {
-      setIsRedirecting(true)
-      // Show success briefly before redirect
-      const redirectTimer = setTimeout(() => {
-        router.push(`/edit/${reviewToken}`)
-      }, 1500)
-      return () => clearTimeout(redirectTimer)
-    }
-  }, [reviewToken, router])
 
   useEffect(() => {
     setShowConfetti(true)
@@ -48,11 +34,14 @@ export function OnboardingSuccess({ businessName, tier, reviewToken }: Props) {
   }, [])
 
   const steps = [
-    { icon: '📧', label: 'Confirmation email sent',     time: 'Just now'    },
-    { icon: '🔍', label: 'Team review begins',          time: 'Within 1h'   },
-    { icon: '🏗️', label: 'Site build starts',           time: 'Within 24h'  },
-    { icon: '🚀', label: 'Your site goes live',         time: 'Within 48h'  },
+    { icon: '📧', label: 'Confirmation email sent',    time: 'Just now'   },
+    { icon: '🔍', label: 'Team review begins',         time: 'Within 1h'  },
+    { icon: '🏗️', label: 'Site build starts',          time: 'Within 24h' },
+    { icon: '🚀', label: 'Your site goes live',        time: 'Within 48h' },
   ]
+
+  // Build the portal link — only shown as a button, never auto-navigated
+  const portalHref = reviewToken ? `/edit/${reviewToken}` : null
 
   return (
     <div className="flex flex-col flex-1">
@@ -66,12 +55,12 @@ export function OnboardingSuccess({ businessName, tier, reviewToken }: Props) {
               key={i}
               className="absolute w-2 h-2 rounded-sm animate-bounce"
               style={{
-                left:            `${Math.random() * 100}%`,
-                top:             `${-10 + Math.random() * 20}%`,
-                backgroundColor: ['#3B82F6','#8B5CF6','#10B981','#F59E0B','#EF4444'][i % 5],
-                animationDelay:  `${Math.random() * 2}s`,
+                left:              `${Math.random() * 100}%`,
+                top:               `${-10 + Math.random() * 20}%`,
+                backgroundColor:   ['#3B82F6','#8B5CF6','#10B981','#F59E0B','#EF4444'][i % 5],
+                animationDelay:    `${Math.random() * 2}s`,
                 animationDuration: `${1.5 + Math.random() * 2}s`,
-                transform:       `rotate(${Math.random() * 360}deg)`,
+                transform:         `rotate(${Math.random() * 360}deg)`,
               }}
             />
           ))}
@@ -92,7 +81,7 @@ export function OnboardingSuccess({ businessName, tier, reviewToken }: Props) {
           </div>
 
           <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3">
-            You're in! 🎉
+            You&apos;re in! 🎉
           </h1>
           <p className="text-white/60 text-base sm:text-lg leading-relaxed mb-2">
             <strong className="text-white">{businessName || 'Your business'}</strong> has been submitted for review.
@@ -103,17 +92,18 @@ export function OnboardingSuccess({ businessName, tier, reviewToken }: Props) {
             <span className="text-white/50 text-sm">Pending Review</span>
           </div>
 
-          {/* Redirecting status */}
-          {isRedirecting && (
-            <div className="mb-8 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 backdrop-blur-xl">
-              <div className="flex items-center justify-center gap-2">
-                <div className="w-4 h-4 rounded-full border-2 border-blue-500/30 border-t-blue-400 animate-spin" />
-                <p className="text-blue-300 text-sm font-medium">
-                  Launching your site builder...
-                </p>
-              </div>
+          {/* Email notice */}
+          <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+            <div className="flex items-center justify-center gap-2">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 text-emerald-400">
+                <rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M1 5l7 5 7-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              <p className="text-emerald-300 text-sm font-medium">
+                Check your email — a confirmation has been sent to you.
+              </p>
             </div>
-          )}
+          </div>
 
           {/* Timeline */}
           <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl p-6 mb-8 text-left">
@@ -133,15 +123,43 @@ export function OnboardingSuccess({ businessName, tier, reviewToken }: Props) {
             </div>
           </div>
 
-          {/* CTA */}
-          {!isRedirecting && (
-            <div className="flex flex-col sm:flex-row gap-3">
+          {/* Portal access note — shown only when token is available */}
+          {portalHref && (
+            <div className="mb-6 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-left">
+              <p className="text-blue-300 text-xs font-medium mb-1 flex items-center gap-1.5">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="shrink-0">
+                  <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.5"/>
+                  <path d="M7 4.5v3.5M7 9.5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+                Your review portal link
+              </p>
+              <p className="text-blue-200/60 text-xs leading-relaxed">
+                Once your site is built (within 48 hours), you can review, edit, and approve it using the link below. Bookmark it — we&apos;ll also email it to you.
+              </p>
+            </div>
+          )}
+
+          {/* CTA buttons */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Link
+              href="/"
+              className="flex-1 h-12 rounded-xl border border-white/15 text-white/60 hover:text-white hover:border-white/30 font-medium text-sm transition-all flex items-center justify-center"
+            >
+              ← Back to Home
+            </Link>
+
+            {portalHref ? (
               <Link
-                href="/"
-                className="flex-1 h-12 rounded-xl border border-white/15 text-white/60 hover:text-white hover:border-white/30 font-medium text-sm transition-all flex items-center justify-center"
+                href={portalHref}
+                className="flex-1 h-12 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-white font-semibold text-sm hover:from-blue-500 hover:to-violet-500 transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2"
               >
-                Back to Home
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <rect x="1.5" y="1.5" width="13" height="13" rx="2.5" stroke="white" strokeWidth="1.5"/>
+                  <path d="M5 8h6M9 6l2 2-2 2" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Open My Portal
               </Link>
+            ) : (
               <a
                 href="mailto:support@rankedceo.com"
                 className="flex-1 h-12 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-white font-semibold text-sm hover:from-blue-500 hover:to-violet-500 transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2"
@@ -152,8 +170,8 @@ export function OnboardingSuccess({ businessName, tier, reviewToken }: Props) {
                 </svg>
                 Contact Support
               </a>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
