@@ -83,22 +83,22 @@ export function StepDomainWishlist({ domains, setDomains, onNext, onBack, isLoad
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 mb-4">
           <span className="text-blue-400 text-xs font-semibold uppercase tracking-wider">Step 2 of 4</span>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white leading-tight">
           Choose your dream domain
         </h1>
-        <p className="text-white/50 mt-2 text-sm sm:text-base">
+        <p className="text-slate-500 dark:text-white/50 mt-2 text-sm sm:text-base">
           Add up to 3 domain preferences. We'll check availability and secure the best option for you.
         </p>
       </div>
 
       {/* Domain input */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-white/70 mb-3">
+        <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-3">
           Enter a domain name
         </label>
         <div className="flex gap-3">
           {/* Domain input */}
-          <div className="flex-1 flex items-center h-14 rounded-xl bg-white/5 border border-white/10 focus-within:border-blue-500/60 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all overflow-hidden">
+          <div className="flex-1 flex items-center h-14 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus-within:border-blue-500/60 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all overflow-hidden">
             <input
               type="text"
               value={domainInput}
@@ -106,13 +106,13 @@ export function StepDomainWishlist({ domains, setDomains, onNext, onBack, isLoad
               onKeyDown={handleKeyDown}
               placeholder="acmeplumbing"
               maxLength={50}
-              className="flex-1 h-full px-4 bg-transparent text-white placeholder:text-white/25 text-sm sm:text-base outline-none"
+              className="flex-1 h-full px-4 bg-transparent text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/25 text-sm sm:text-base outline-none"
             />
             {/* Extension selector */}
             <select
               value={selectedExt}
               onChange={e => setSelectedExt(e.target.value as DomainWishlistItem['extension'])}
-              className="h-full px-3 bg-white/10 text-white text-sm font-medium border-l border-white/10 outline-none cursor-pointer [&_option]:bg-[#0A0F1E]"
+              className="h-full px-3 bg-slate-200 dark:bg-white/10 text-slate-900 dark:text-white text-sm font-medium border-l border-slate-300 dark:border-white/10 outline-none cursor-pointer [&_option]:bg-[#0A0F1E]"
             >
               {EXTENSIONS.map(ext => (
                 <option
@@ -139,7 +139,7 @@ export function StepDomainWishlist({ domains, setDomains, onNext, onBack, isLoad
         {inputError && (
           <p className="mt-2 text-xs text-red-400">{inputError}</p>
         )}
-        <p className="mt-2 text-xs text-white/30">
+        <p className="mt-2 text-xs text-slate-400 dark:text-white/30">
           {domains.length}/{MAX_DOMAINS} domains added • Letters, numbers, and hyphens only
         </p>
       </div>
@@ -150,7 +150,7 @@ export function StepDomainWishlist({ domains, setDomains, onNext, onBack, isLoad
           {domains.map((d, i) => (
             <div
               key={`${d.domain_name}${d.extension}`}
-              className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10"
+              className="flex items-center gap-4 p-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10"
             >
               {/* Priority badge */}
               <div className={`flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br ${priorityColors[i]} text-white text-xs font-bold shrink-0`}>
@@ -160,14 +160,14 @@ export function StepDomainWishlist({ domains, setDomains, onNext, onBack, isLoad
               {/* Domain */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1">
-                  <span className="text-white font-semibold text-sm sm:text-base truncate">
+                  <span className="text-slate-900 dark:text-white font-semibold text-sm sm:text-base truncate">
                     {d.domain_name}
                   </span>
                   <span className="text-blue-400 font-medium text-sm sm:text-base">
                     {d.extension}
                   </span>
                 </div>
-                <span className="text-white/30 text-xs">{priorityLabels[i]}</span>
+                <span className="text-slate-400 dark:text-white/30 text-xs">{priorityLabels[i]}</span>
               </div>
 
               {/* Status badge */}
@@ -180,7 +180,7 @@ export function StepDomainWishlist({ domains, setDomains, onNext, onBack, isLoad
               <button
                 type="button"
                 onClick={() => handleRemove(i)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 dark:text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                   <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
@@ -190,9 +190,9 @@ export function StepDomainWishlist({ domains, setDomains, onNext, onBack, isLoad
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center py-10 rounded-xl border border-dashed border-white/10 mb-8">
+        <div className="flex flex-col items-center justify-center py-10 rounded-xl border border-dashed border-slate-300 dark:border-white/10 mb-8">
           <div className="text-3xl mb-3">🌐</div>
-          <p className="text-white/30 text-sm text-center">No domains added yet.<br/>Add at least one to continue.</p>
+          <p className="text-slate-400 dark:text-white/30 text-sm text-center">No domains added yet.<br/>Add at least one to continue.</p>
         </div>
       )}
 
@@ -201,7 +201,7 @@ export function StepDomainWishlist({ domains, setDomains, onNext, onBack, isLoad
         <button
           type="button"
           onClick={onBack}
-          className="h-14 px-6 rounded-xl border border-white/15 text-white/60 hover:text-white hover:border-white/30 font-medium text-sm transition-all"
+          className="h-14 px-6 rounded-xl border border-slate-300 dark:border-white/15 text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white hover:border-slate-400 dark:hover:border-white/30 font-medium text-sm transition-all"
         >
           ← Back
         </button>
