@@ -2,31 +2,40 @@
 
 // =============================================================================
 // RankedCEO Website Builder — Multi-Step Onboarding Flow (Client Component)
-// React Hook Form + Zod, 4 steps, state-managed, glassmorphism dark theme
+// React Hook Form + Zod, 5 steps, state-managed, glassmorphism dark theme
+//
+// Step 1: Business Identity   (legal name, trade, address, email)
+// Step 2: Domain Wishlist     (domain preferences)
+// Step 3: Brand Identity      (logo, colors)
+// Step 4: Template Selection  (PR #94 — picks from 10 templates)
+// Step 5: Integrations        (Calendly, USP, financing, functionality flags)
 // =============================================================================
 
 import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { AdvantagePointHeader } from '@/components/advantagepoint/header'
-import { StepBusinessIdentity }  from './steps/step-business-identity'
-import { StepDomainWishlist }    from './steps/step-domain-wishlist'
-import { StepBrandIdentity }     from './steps/step-brand-identity'
-import { StepIntegrations }      from './steps/step-integrations'
-import { OnboardingSuccess }     from './onboarding-success'
+import { AdvantagePointHeader }      from '@/components/advantagepoint/header'
+import { StepBusinessIdentity }      from './steps/step-business-identity'
+import { StepDomainWishlist }        from './steps/step-domain-wishlist'
+import { StepBrandIdentity }         from './steps/step-brand-identity'
+import { StepTemplateSelection }     from './steps/step-template-selection'
+import { StepIntegrations }          from './steps/step-integrations'
+import { OnboardingSuccess }         from './onboarding-success'
 import {
   saveOnboardingStep1,
   saveOnboardingStep2,
   saveOnboardingStep3,
+  saveOnboardingStepTemplate,
   saveOnboardingStep4,
 } from '@/lib/waas/actions/onboarding'
 import type {
   DomainWishlistItem,
   WaasPackageTier,
 } from '@/lib/waas/types'
-import { getAuditFunnelProperties } from '@/lib/analytics/audit-funnel'
-import { trackEvent } from '@/lib/analytics/track-event'
+import { getRecommendedTemplateSlugs } from '@/lib/waas/templates/registry'
+import { getAuditFunnelProperties }    from '@/lib/analytics/audit-funnel'
+import { trackEvent }                  from '@/lib/analytics/track-event'
 
 // ---------------------------------------------------------------------------
 // Zod Schemas
@@ -57,7 +66,7 @@ export const step1Schema = z.object({
   }
 })
 
-export const step4Schema = z.object({
+export const step5Schema = z.object({
   calendly_url:      z.string().url('Please enter a valid URL').or(z.literal('')),
   financing_enabled: z.boolean(),
   usp:               z.string().min(10, 'Please describe what makes your business unique (min 10 characters)').max(500, 'Keep it under 500 characters'),
@@ -79,7 +88,8 @@ export const step4Schema = z.object({
 })
 
 export type Step1FormData = z.infer<typeof step1Schema>
-export type Step4FormData = z.infer<typeof step4Schema>
+// Step 5 schema mirrors what was previously called step4Schema for backwards compat
+export type Step4FormData = z.infer<typeof step5Schema>
 
 // ---------------------------------------------------------------------------
 // Props
@@ -110,10 +120,16 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
   const [secondaryColor, setSecondaryColor] = useState('#1E40AF')
   const [logoUrl,        setLogoUrl]        = useState<string | null>(null)
   const [businessName,   setBusinessName]   = useState('')
-  const trackedSteps = useRef<Set<number>>(new Set())
+
+  // Step 4 state (PR #94 — template selection)
+  const [selectedTemplateSlug, setSelectedTemplateSlug] = useState<string | null>(null)
+  // primaryTrade captured from Step 1 for use in Step 4 recommendations
+  const [primaryTrade, setPrimaryTrade] = useState<string | null>(null)
+
+  const trackedSteps    = useRef<Set<number>>(new Set())
   const trackingContext = useRef<Record<string, string | number | boolean | null | undefined>>({})
 
-  const TOTAL_STEPS = 4
+  const TOTAL_STEPS = 5
 
   useEffect(() => {
     trackingContext.current = getAuditFunnelProperties(
@@ -129,15 +145,12 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
   }, [auditId, initialTier])
 
   useEffect(() => {
-    if (trackedSteps.current.has(currentStep)) {
-      return
-    }
-
+    if (trackedSteps.current.has(currentStep)) return
     trackedSteps.current.add(currentStep)
     trackEvent('audit_onboarding_step_viewed', {
       ...trackingContext.current,
       step: currentStep,
-      stepName: ['business', 'domains', 'brand', 'integrations'][currentStep - 1],
+      stepName: ['business', 'domains', 'brand', 'template', 'integrations'][currentStep - 1],
       tier: initialTier,
       hasAuditId: Boolean(auditId),
     })
@@ -164,9 +177,9 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
     },
   })
 
-  // Step 4 form
+  // Step 5 form (previously step4Form — named step4Form for internal compat)
   const step4Form = useForm<Step4FormData>({
-    resolver: zodResolver(step4Schema),
+    resolver: zodResolver(step5Schema),
     defaultValues: {
       calendly_url:      '',
       financing_enabled: false,
@@ -207,9 +220,13 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
     setIsLoading(true)
     setError(null)
     setBusinessName(data.legal_name)
+
     const resolvedPrimaryTrade = data.primary_trade === 'Other'
       ? (data.primary_trade_other ?? '').trim()
       : data.primary_trade
+
+    // Capture trade for Step 4 template recommendations
+    setPrimaryTrade(resolvedPrimaryTrade || null)
 
     const result = await saveOnboardingStep1(
       tenantId,
@@ -294,7 +311,40 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
     setCurrentStep(4)
   }
 
-  const handleStep4Submit = async (data: Step4FormData) => {
+  // PR #94 — Step 4: Template selection
+  const handleStep4Next = async () => {
+    if (!tenantId) { handleError('Session expired. Please refresh.'); return }
+    setIsLoading(true)
+    setError(null)
+
+    // Auto-select the #1 recommended template if user never explicitly picked
+    const slugToSave = selectedTemplateSlug ?? getRecommendedTemplateSlugs(primaryTrade)[0]
+    if (!selectedTemplateSlug) {
+      setSelectedTemplateSlug(slugToSave)
+    }
+
+    const result = await saveOnboardingStepTemplate(tenantId, {
+      selected_template_slug: slugToSave,
+    })
+
+    // Non-blocking: if schema not yet migrated, still advance
+    if (!result.success) {
+      console.warn('[Onboarding] saveOnboardingStepTemplate error (non-blocking):', result.error)
+    }
+
+    setIsLoading(false)
+    trackEvent('audit_onboarding_step_completed', {
+      ...trackingContext.current,
+      step: 4,
+      stepName: 'template',
+      templateSlug: slugToSave,
+      wasAutoSelected: !selectedTemplateSlug,
+      tier: initialTier,
+    })
+    setCurrentStep(5)
+  }
+
+  const handleStep5Submit = async (data: Step4FormData) => {
     if (!tenantId) { handleError('Session expired. Please refresh.'); return }
     setIsLoading(true)
     setError(null)
@@ -306,10 +356,11 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
     setIsLoading(false)
     trackEvent('audit_onboarding_step_completed', {
       ...trackingContext.current,
-      step: 4,
+      step: 5,
       stepName: 'integrations',
       calendlyConnected: Boolean(data.calendly_url),
       financingEnabled: data.financing_enabled,
+      templateSlug: selectedTemplateSlug,
       tier: initialTier,
     })
     trackEvent('audit_onboarding_completed', {
@@ -317,6 +368,7 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
       tier: initialTier,
       hasAuditId: Boolean(auditId),
       tenantId,
+      templateSlug: selectedTemplateSlug,
     })
     setCompleted(true)
   }
@@ -341,10 +393,10 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
   }
 
   // ---------------------------------------------------------------------------
-  // Step labels for mobile progress
+  // Step labels for progress indicator
   // ---------------------------------------------------------------------------
 
-  const stepLabels = ['Business', 'Domains', 'Brand', 'Integrations']
+  const stepLabels = ['Business', 'Domains', 'Brand', 'Template', 'Integrations']
 
   return (
     <div className="flex flex-col flex-1">
@@ -444,9 +496,19 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
                 />
               )}
               {currentStep === 4 && (
+                <StepTemplateSelection
+                  primaryTrade={primaryTrade}
+                  selectedSlug={selectedTemplateSlug}
+                  setSelectedSlug={setSelectedTemplateSlug}
+                  onNext={handleStep4Next}
+                  onBack={goBack}
+                  isLoading={isLoading}
+                />
+              )}
+              {currentStep === 5 && (
                 <StepIntegrations
                   form={step4Form}
-                  onSubmit={handleStep4Submit}
+                  onSubmit={handleStep5Submit}
                   onBack={goBack}
                   isLoading={isLoading}
                 />
