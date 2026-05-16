@@ -142,6 +142,16 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      <footer style={{ background: '#1a1a2e', color: '#9ca3af', padding: '20px 24px', textAlign: 'center', fontSize: '13px' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <p style={{ margin: 0 }}>
+            © {new Date().getFullYear()} Smile MakeOver by RankedCEO LLC. All rights reserved.&nbsp;&nbsp;
+            <a href="/privacy" style={{ color: '#9ca3af', textDecoration: 'underline', marginRight: '16px' }}>Privacy Policy</a>
+            <a href="/terms" style={{ color: '#9ca3af', textDecoration: 'underline' }}>Terms of Service</a>
+          </p>
+        </div>
+      </footer>
     </>
   )
 }
