@@ -109,7 +109,7 @@ jobs:
                 ['Completed', report.completedAt],
               ])
               .addHeading('Focus Areas Tested', 3)
-              .addUnorderedList([
+              .addList([
                 'Button labels are clear and action-oriented',
                 'Visual hierarchy guides user to next action',
                 'Error messages are helpful and non-technical',
