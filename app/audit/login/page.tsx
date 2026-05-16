@@ -51,8 +51,25 @@ function AuditLoginForm() {
   }
 
   const buildAuthCallbackUrl = () => {
-    const callbackUrl = new URL('/api/auth/callback', window.location.origin)
-    callbackUrl.searchParams.set('next', resolveRedirectTarget(redirectTo))
+    // IMPORTANT: Supabase will only honour redirect URIs that are in its allowlist.
+    // The CRM Supabase project's Site URL is crm.rankedceo.com, so we must
+    // point the callback at crm.rankedceo.com/api/auth/callback and pass the
+    // final audit destination as the `next` param so it cross-redirects correctly.
+    const isProduction = typeof window !== 'undefined' &&
+      window.location.hostname.endsWith('.rankedceo.com')
+
+    const callbackBase = isProduction
+      ? 'https://crm.rankedceo.com/api/auth/callback'
+      : `${window.location.origin}/api/auth/callback`
+
+    const callbackUrl = new URL(callbackBase)
+
+    // The final destination after auth — always the audit start page
+    const nextDestination = isProduction
+      ? `https://audit.rankedceo.com/audit/start`
+      : `${window.location.origin}/audit/start`
+
+    callbackUrl.searchParams.set('next', nextDestination)
     return callbackUrl.toString()
   }
 
