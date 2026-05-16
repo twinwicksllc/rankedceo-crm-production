@@ -10,6 +10,7 @@ import { revalidatePath } from 'next/cache'
 import type {
   OnboardingStep1Data,
   OnboardingStep2Data,
+  OnboardingStepTemplateData,
   OnboardingStep4Data,
   WaasPackageTier,
   DomainWishlistItem,
@@ -445,6 +446,58 @@ export async function saveOnboardingStep3(
     })
 
     if (error) return { success: false, error: error.message }
+    return { success: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Step 4 (PR #94): Save Template Selection
+// Writes client_selected_template_slug to tenant_site_config.
+// Called after Step 3 (Brand Identity) before Step 5 (Integrations).
+// ---------------------------------------------------------------------------
+
+export async function saveOnboardingStepTemplate(
+  tenantId: string,
+  data:     OnboardingStepTemplateData,
+): Promise<ActionResult> {
+  try {
+    const supabase = getRawClient()
+
+    // Upsert into tenant_site_config
+    const { error: configError } = await supabase
+      .from('tenant_site_config')
+      .upsert(
+        {
+          tenant_id:                     tenantId,
+          client_selected_template_slug: data.selected_template_slug,
+          client_selected_at:            new Date().toISOString(),
+          updated_at:                    new Date().toISOString(),
+        },
+        { onConflict: 'tenant_id' },
+      )
+
+    if (configError) {
+      // Gracefully handle missing table / column — don't block onboarding
+      const msg = configError.message ?? ''
+      const isSchemaGap =
+        /could not find.*column.*client_selected_template_slug/i.test(msg) ||
+        /could not find.*table.*tenant_site_config/i.test(msg)
+
+      if (!isSchemaGap) {
+        return { success: false, error: msg }
+      }
+      // Schema gap: column doesn't exist yet (pre-PR #96 migration) — continue silently
+    }
+
+    // Also advance onboarding_step counter on tenants row
+    await updateTenantWithFallback(supabase, tenantId, {
+      onboarding_step: 5,
+      updated_at:      new Date().toISOString(),
+    })
+
     return { success: true }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error'

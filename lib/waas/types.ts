@@ -175,6 +175,17 @@ export interface OnboardingStep3Data {
   business_name:   string  // used for SVG auto-generation
 }
 
+// ---------------------------------------------------------------------------
+// PR #94 — Step 4: Template Selection
+// Inserted between Step 3 (Brand) and Step 5 (Integrations).
+// Stored in tenant_site_config.client_selected_template_slug.
+// ---------------------------------------------------------------------------
+
+export interface OnboardingStepTemplateData {
+  /** Slug of the template the user selected (e.g. 'modern', 'bold') */
+  selected_template_slug: string
+}
+
 export interface OnboardingStep4Data {
   calendly_url:        string
   financing_enabled:   boolean
