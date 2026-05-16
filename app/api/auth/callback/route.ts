@@ -18,21 +18,26 @@ function applyCookieScope(request: NextRequest, options: CookieOptions): CookieO
 function resolveSafeNext(next: string, origin: string): string {
   if (!next) return `${origin}/dashboard`
 
-  if (next.startsWith('/')) {
-    return `${origin}${next}`
+  // Absolute URL — allow any https rankedceo.com subdomain
+  if (next.startsWith('http://') || next.startsWith('https://')) {
+    try {
+      const parsed = new URL(next)
+      const isHttps = parsed.protocol === 'https:'
+      const isRankedCeoHost =
+        parsed.hostname === 'rankedceo.com' || parsed.hostname.endsWith('.rankedceo.com')
+
+      if (isHttps && isRankedCeoHost) {
+        return parsed.toString()
+      }
+    } catch {
+      // Invalid URL — fall through to default
+    }
+    return `${origin}/dashboard`
   }
 
-  try {
-    const parsed = new URL(next)
-    const isHttps = parsed.protocol === 'https:'
-    const isRankedCeoHost =
-      parsed.hostname === 'rankedceo.com' || parsed.hostname.endsWith('.rankedceo.com')
-
-    if (isHttps && isRankedCeoHost) {
-      return parsed.toString()
-    }
-  } catch {
-    // Invalid next URL falls through to default.
+  // Relative path — resolve against origin
+  if (next.startsWith('/')) {
+    return `${origin}${next}`
   }
 
   return `${origin}/dashboard`
@@ -53,7 +58,8 @@ export async function GET(request: NextRequest) {
   }
 
   if (code) {
-    const response = NextResponse.redirect(resolveSafeNext(next, origin))
+    const redirectTarget = resolveSafeNext(next, origin)
+    const response = NextResponse.redirect(redirectTarget)
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

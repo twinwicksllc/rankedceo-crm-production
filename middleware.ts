@@ -443,7 +443,7 @@ function handleAuditSubdomain(
   const { pathname } = request.nextUrl
 
   // API, Next.js internals, auth callbacks, and /audit/* routes pass through as-is
-  const isPassThrough = ['/signup', '/forgot-password', '/reset-password', '/api/auth', '/api/', '/audit', '/onboarding', '/get-started', '/_next'].some(p =>
+  const isPassThrough = ['/signup', '/forgot-password', '/reset-password', '/api/auth', '/api/', '/audit', '/onboarding', '/get-started', '/_next', '/privacy', '/terms'].some(p =>
     pathname.startsWith(p)
   )
   if (isPassThrough) return response
@@ -457,6 +457,13 @@ function handleAuditSubdomain(
       loginRewrite.cookies.set(cookie.name, cookie.value)
     })
     return loginRewrite
+  }
+
+  // Authenticated users hitting the root → send to audit start
+  if (pathname === '/' && user) {
+    const auditUrl = request.nextUrl.clone()
+    auditUrl.pathname = '/audit/start'
+    return NextResponse.redirect(auditUrl)
   }
 
   // Rewrite root / to /audit-landing
