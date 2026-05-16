@@ -188,7 +188,35 @@ export class PersonaRouter {
     }
     await page.fill(emailSelector, credentials.email)
     await page.fill(passwordSelector, credentials.password)
+    console.log(`[PersonaRouter] 📝 Form filled — email: ${credentials.email}`)
+    
+    // Click submit and wait for navigation
     await page.click(submitSelector)
+    console.log(`[PersonaRouter] 🖱️ Submit button clicked`)
+    
+    // Wait a moment for form submission to start before checking URL
+    await page.waitForTimeout(2000)
+    console.log(`[PersonaRouter] Current URL: ${page.url()}`)
+    
+    // Debug: check for console errors
+    const pageErrors: string[] = []
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') {
+        pageErrors.push(`[${msg.type()}] ${msg.text()}`)
+      }
+    })
+    
+    // Debug: check form state
+    const formState = await page.evaluate(() => {
+      const form = document.querySelector('form')
+      return {
+        formExists: !!form,
+        formAction: form?.action,
+        formMethod: form?.method,
+        submitValue: (form?.querySelector('[type="submit"]') as HTMLButtonElement)?.value,
+      }
+    })
+    console.log(`[PersonaRouter] Form state:`, formState)
 
     // Wait for redirect to admin dashboard after successful login.
     // IMPORTANT: Match the pathname only, not query params. The login URL
