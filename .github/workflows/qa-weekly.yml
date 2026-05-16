@@ -10,6 +10,9 @@ jobs:
     name: Full Lifecycle Run (qa.rankedceo.com)
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    permissions:
+      contents: read
+      issues: write
 
     steps:
       - name: Checkout
