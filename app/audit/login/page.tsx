@@ -57,23 +57,21 @@ function AuditLoginForm() {
     // cross-domain OAuth so the token is returned directly in the URL fragment
     // and no server-side code exchange is needed.
     //
-    // The callback URL must still be in the Supabase allowlist.
-    // We point it at crm.rankedceo.com/api/auth/callback with next=audit/start.
+    // We redirect to /audit/auth/confirm which is a client-side page that
+    // reads the hash fragment, establishes the session, then forwards to
+    // /audit/start. This is necessary because the server component at
+    // /audit/start checks auth via cookies, which aren't set until the
+    // client-side Supabase processes the hash fragment first.
     const isProduction = typeof window !== 'undefined' &&
       window.location.hostname.endsWith('.rankedceo.com')
 
-    const callbackBase = isProduction
-      ? 'https://crm.rankedceo.com/api/auth/callback'
-      : `${window.location.origin}/api/auth/callback`
+    // The landing page after OAuth — must be on audit.rankedceo.com so
+    // the Supabase client there can read the hash fragment
+    const confirmUrl = isProduction
+      ? 'https://audit.rankedceo.com/audit/auth/confirm'
+      : `${window.location.origin}/audit/auth/confirm`
 
-    const callbackUrl = new URL(callbackBase)
-
-    const nextDestination = isProduction
-      ? 'https://audit.rankedceo.com/audit/start'
-      : `${window.location.origin}/audit/start`
-
-    callbackUrl.searchParams.set('next', nextDestination)
-    return callbackUrl.toString()
+    return confirmUrl
   }
 
   const handleEmailLogin = async (e: React.FormEvent) => {
