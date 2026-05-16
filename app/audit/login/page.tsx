@@ -4,7 +4,7 @@ import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Search } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { createAuditClient } from '@/lib/supabase/audit-client'
 
 function GoogleIcon() {
   return (
@@ -30,7 +30,7 @@ function AuditLoginForm() {
   const [magicSent, setMagicSent] = useState(false)
   const [mode, setMode] = useState<'password' | 'magic'>('password')
 
-  const supabase = createClient()
+  const supabase = createAuditClient()
 
   const resolveRedirectTarget = (target: string) => {
     if (target.startsWith('/')) {
@@ -51,10 +51,14 @@ function AuditLoginForm() {
   }
 
   const buildAuthCallbackUrl = () => {
-    // IMPORTANT: Supabase will only honour redirect URIs that are in its allowlist.
-    // The CRM Supabase project's Site URL is crm.rankedceo.com, so we must
-    // point the callback at crm.rankedceo.com/api/auth/callback and pass the
-    // final audit destination as the `next` param so it cross-redirects correctly.
+    // IMPORTANT: The PKCE flow breaks across subdomains because the code
+    // verifier is stored in audit.rankedceo.com storage but the callback
+    // lands on crm.rankedceo.com. We use the implicit flow (no PKCE) for
+    // cross-domain OAuth so the token is returned directly in the URL fragment
+    // and no server-side code exchange is needed.
+    //
+    // The callback URL must still be in the Supabase allowlist.
+    // We point it at crm.rankedceo.com/api/auth/callback with next=audit/start.
     const isProduction = typeof window !== 'undefined' &&
       window.location.hostname.endsWith('.rankedceo.com')
 
@@ -64,9 +68,8 @@ function AuditLoginForm() {
 
     const callbackUrl = new URL(callbackBase)
 
-    // The final destination after auth — always the audit start page
     const nextDestination = isProduction
-      ? `https://audit.rankedceo.com/audit/start`
+      ? 'https://audit.rankedceo.com/audit/start'
       : `${window.location.origin}/audit/start`
 
     callbackUrl.searchParams.set('next', nextDestination)
@@ -111,11 +114,18 @@ function AuditLoginForm() {
     setError('')
     setGoogleLoading(true)
     try {
+      // Use implicit flow (not PKCE) to avoid cross-subdomain PKCE verifier
+      // mismatch — PKCE stores the verifier on audit.rankedceo.com but the
+      // callback runs on crm.rankedceo.com where it can't find the verifier.
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: buildAuthCallbackUrl(),
-          queryParams: { access_type: 'offline', prompt: 'consent' },
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          skipBrowserRedirect: false,
         },
       })
       if (oauthError) throw oauthError
