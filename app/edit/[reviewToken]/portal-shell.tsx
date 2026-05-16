@@ -119,6 +119,23 @@ export function PortalShell({
               Deploying
             </span>
           )}
+          {/* Build-in-progress badge — shown when tenant is onboarding and no approval yet */}
+          {!session.approvalLocked && !session.approvalAt && portalData?.siteStatus && !portalData.siteStatus.initialBuildCompletedAt && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 border border-sky-200 px-2 py-0.5 text-[10px] font-medium text-sky-700">
+              <svg className="h-2.5 w-2.5 text-sky-500 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+              </svg>
+              Building
+            </span>
+          )}
+          {/* AI Enhancing badge — Tier 1 done, Tier 2 in progress */}
+          {!session.approvalLocked && !session.approvalAt && portalData?.siteStatus?.initialBuildCompletedAt && portalData.siteStatus.aiEnhancementStatus === 'in_progress' && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 border border-violet-200 px-2 py-0.5 text-[10px] font-medium text-violet-600">
+              <span className="h-1.5 w-1.5 rounded-full bg-violet-400 animate-pulse" />
+              AI Enhancing
+            </span>
+          )}
         </div>
 
         {/* Tab nav row */}
