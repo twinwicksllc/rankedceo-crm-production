@@ -5,8 +5,9 @@
 // Gates the PDF download — captures lead before allowing download
 // Calls /api/audit/leads, then triggers PDF generation/download
 //
-// Phone and company are ALWAYS required regardless of login state.
-// We need complete lead info every time someone downloads a PDF report.
+// All four fields (name, email, phone, company) are ALWAYS required.
+// Phone is auto-formatted to (555) 123-4567 as the user types, and
+// validated to ensure it contains at least 10 digits before submission.
 // =============================================================================
 
 import { useState } from 'react'
@@ -17,7 +18,7 @@ interface EmailCaptureFormProps {
   targetDomain: string
   userEmail?:   string
   userName?:    string
-  onCaptured?:  (email: string) => void  // callback after successful capture
+  onCaptured?:  (email: string) => void
 }
 
 interface FormState {
@@ -29,6 +30,61 @@ interface FormState {
 
 type SubmitStatus = 'idle' | 'submitting' | 'success' | 'error'
 
+// ---------------------------------------------------------------------------
+// Phone helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Strips everything except digits (and a leading +).
+ * Used to count raw digits for validation.
+ */
+function digitsOnly(value: string): string {
+  return value.replace(/\D/g, '')
+}
+
+/**
+ * Auto-formats a phone string as the user types.
+ * Supports US numbers: (555) 123-4567
+ * International numbers starting with + are kept as-is (no reformatting).
+ *
+ * Examples:
+ *   '5551234567'   → '(555) 123-4567'
+ *   '555123'       → '(555) 123'
+ *   '55'           → '(55'
+ *   '+442071234567'→ '+442071234567'  (international — left alone)
+ */
+function formatPhoneDisplay(raw: string): string {
+  // International numbers — don't reformat
+  if (raw.startsWith('+')) return raw
+
+  const digits = digitsOnly(raw)
+
+  if (digits.length === 0) return ''
+  if (digits.length <= 3)  return `(${digits}`
+  if (digits.length <= 6)  return `(${digits.slice(0, 3)}) ${digits.slice(3)}`
+  if (digits.length <= 10) return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
+
+  // More than 10 digits — keep first 10 formatted, drop extras
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`
+}
+
+/**
+ * Returns true if the phone value has enough digits to be valid.
+ * Accepts US (10 digits) or international (7–15 digits with leading +).
+ */
+function isValidPhone(value: string): boolean {
+  if (!value.trim()) return false
+  if (value.startsWith('+')) {
+    const digits = digitsOnly(value)
+    return digits.length >= 7 && digits.length <= 15
+  }
+  return digitsOnly(value).length === 10
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export function EmailCaptureForm({
   auditId,
   targetDomain,
@@ -38,24 +94,59 @@ export function EmailCaptureForm({
 }: EmailCaptureFormProps) {
   const { theme } = useOnboardingTheme()
   const isLight = theme === 'light'
-  const [form,   setForm]   = useState<FormState>({
-    name: userName ?? '',
-    email: userEmail ?? '',
-    phone: '',
+
+  const [form, setForm] = useState<FormState>({
+    name:    userName  ?? '',
+    email:   userEmail ?? '',
+    phone:   '',
     company: '',
   })
-  const [status, setStatus] = useState<SubmitStatus>('idle')
-  const [error,  setError]  = useState<string | null>(null)
-  const [open,   setOpen]   = useState(false)
+  const [phoneError, setPhoneError] = useState<string | null>(null)
+  const [status,     setStatus]     = useState<SubmitStatus>('idle')
+  const [error,      setError]      = useState<string | null>(null)
+  const [open,       setOpen]       = useState(false)
 
+  // Generic field updater
   function update(field: keyof FormState) {
     return (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm(f => ({ ...f, [field]: e.target.value }))
   }
 
+  // Phone-specific updater — auto-formats as the user types
+  function handlePhoneChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const formatted = formatPhoneDisplay(e.target.value)
+    setForm(f => ({ ...f, phone: formatted }))
+    // Clear inline error while the user is still editing
+    if (phoneError) setPhoneError(null)
+  }
+
+  // Phone blur — show inline error if not yet valid
+  function handlePhoneBlur() {
+    if (form.phone && !isValidPhone(form.phone)) {
+      setPhoneError('Please enter a valid 10-digit phone number, e.g. (555) 123-4567')
+    } else {
+      setPhoneError(null)
+    }
+  }
+
+  const phoneIsValid  = isValidPhone(form.phone)
+  const isDisabled    = (
+    status === 'submitting' ||
+    !form.email             ||
+    !phoneIsValid           ||
+    !form.company
+  )
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.email || !form.phone || !form.company) return
+
+    // Final client-side guard
+    if (!form.email || !phoneIsValid || !form.company) {
+      if (!phoneIsValid) {
+        setPhoneError('Please enter a valid 10-digit phone number, e.g. (555) 123-4567')
+      }
+      return
+    }
 
     setStatus('submitting')
     setError(null)
@@ -68,7 +159,7 @@ export function EmailCaptureForm({
           audit_id: auditId,
           name:     form.name,
           email:    form.email,
-          phone:    form.phone,
+          phone:    form.phone,   // already formatted by formatPhoneDisplay
           company:  form.company,
         }),
       })
@@ -81,7 +172,6 @@ export function EmailCaptureForm({
       setStatus('success')
       onCaptured?.(form.email)
 
-      // Trigger PDF download after short delay
       setTimeout(() => {
         window.open(`/api/audit/${auditId}/pdf`, '_blank')
       }, 800)
@@ -92,7 +182,7 @@ export function EmailCaptureForm({
     }
   }
 
-  // -- Success state ----------------------------------------------------------
+  // ── Success state ──────────────────────────────────────────────────────────
   if (status === 'success') {
     return (
       <div style={{
@@ -104,14 +194,9 @@ export function EmailCaptureForm({
         padding:      '24px',
         textAlign:    'center',
       }}>
-        <div style={{ fontSize: '2rem', marginBottom: 12 }}>&#x2705;</div>
-        <div style={{
-          fontSize:   '1rem',
-          fontWeight: 700,
-          color:      '#22C55E',
-          marginBottom: 6,
-        }}>
-          Download Starting&hellip;
+        <div style={{ fontSize: '2rem', marginBottom: 12 }}>✅</div>
+        <div style={{ fontSize: '1rem', fontWeight: 700, color: '#22C55E', marginBottom: 6 }}>
+          Download Starting…
         </div>
         <div style={{
           fontSize: '0.82rem',
@@ -136,39 +221,39 @@ export function EmailCaptureForm({
             fontWeight:     600,
           }}
         >
-          &#x1F4C4; Download PDF Report
+          📄 Download PDF Report
         </a>
       </div>
     )
   }
 
-  // -- Collapsed trigger (initial state) -------------------------------------
+  // ── Collapsed trigger ──────────────────────────────────────────────────────
   if (!open) {
     return (
       <button
         onClick={() => setOpen(true)}
         style={{
-          width:        '100%',
-          padding:      '14px 20px',
-          background:   isLight
+          width:          '100%',
+          padding:        '14px 20px',
+          background:     isLight
             ? 'linear-gradient(135deg, rgba(37,99,235,0.24), rgba(15,23,42,0.08))'
             : 'linear-gradient(135deg, rgba(37,99,235,0.2), rgba(0,0,0,0.3))',
-          border:       isLight ? '1px solid rgba(37,99,235,0.5)' : '1px solid rgba(37,99,235,0.4)',
-          borderRadius: 12,
-          cursor:       'pointer',
-          display:      'flex',
-          alignItems:   'center',
+          border:         isLight ? '1px solid rgba(37,99,235,0.5)' : '1px solid rgba(37,99,235,0.4)',
+          borderRadius:   12,
+          cursor:         'pointer',
+          display:        'flex',
+          alignItems:     'center',
           justifyContent: 'space-between',
-          gap:          12,
+          gap:            12,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: '1.3rem' }}>&#x1F4C4;</span>
+          <span style={{ fontSize: '1.3rem' }}>📄</span>
           <div style={{ textAlign: 'left' }}>
             <div style={{
-              fontSize:   '0.9rem',
-              fontWeight: 700,
-              color:      isLight ? '#0f172a' : '#ffffff',
+              fontSize:     '0.9rem',
+              fontWeight:   700,
+              color:        isLight ? '#0f172a' : '#ffffff',
               marginBottom: 2,
             }}>
               Download Full PDF Report
@@ -177,7 +262,7 @@ export function EmailCaptureForm({
               fontSize: '0.75rem',
               color:    isLight ? 'rgba(15,23,42,0.68)' : 'rgba(255,255,255,0.45)',
             }}>
-              Board-ready audit for {targetDomain} &mdash; shareable with your team
+              Board-ready audit for {targetDomain} — shareable with your team
             </div>
           </div>
         </div>
@@ -191,16 +276,13 @@ export function EmailCaptureForm({
           whiteSpace:   'nowrap',
           flexShrink:   0,
         }}>
-          Get PDF &rarr;
+          Get PDF →
         </div>
       </button>
     )
   }
 
-  // -- Expanded form ---------------------------------------------------------
-  // Submit is disabled unless all required fields are filled
-  const isDisabled = status === 'submitting' || !form.email || !form.phone || !form.company
-
+  // ── Expanded form ──────────────────────────────────────────────────────────
   return (
     <div style={{
       background:   isLight
@@ -212,27 +294,20 @@ export function EmailCaptureForm({
     }}>
       {/* Header */}
       <div style={{
-        padding:    '16px 20px 14px',
-        borderBottom: isLight ? '1px solid rgba(15,23,42,0.12)' : '1px solid rgba(255,255,255,0.07)',
-        display:    'flex',
-        alignItems: 'center',
+        padding:        '16px 20px 14px',
+        borderBottom:   isLight ? '1px solid rgba(15,23,42,0.12)' : '1px solid rgba(255,255,255,0.07)',
+        display:        'flex',
+        alignItems:     'center',
         justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: '1.2rem' }}>&#x1F4C4;</span>
+          <span style={{ fontSize: '1.2rem' }}>📄</span>
           <div>
-            <div style={{
-              fontSize:   '0.9rem',
-              fontWeight: 700,
-              color:      isLight ? '#0f172a' : '#ffffff',
-            }}>
+            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: isLight ? '#0f172a' : '#ffffff' }}>
               Download Your PDF Report
             </div>
-            <div style={{
-              fontSize: '0.72rem',
-              color:    isLight ? 'rgba(15,23,42,0.65)' : 'rgba(255,255,255,0.4)',
-            }}>
-              Free &mdash; no credit card required
+            <div style={{ fontSize: '0.72rem', color: isLight ? 'rgba(15,23,42,0.65)' : 'rgba(255,255,255,0.4)' }}>
+              Free — no credit card required
             </div>
           </div>
         </div>
@@ -247,7 +322,7 @@ export function EmailCaptureForm({
             padding:    4,
           }}
         >
-          &#x2715;
+          ✕
         </button>
       </div>
 
@@ -259,7 +334,7 @@ export function EmailCaptureForm({
           gap:                 12,
           marginBottom:        12,
         }}>
-          {/* Name — pre-filled and locked for logged-in users */}
+          {/* Name — pre-filled & locked for logged-in users */}
           <FormField
             label="Full Name *"
             type="text"
@@ -271,7 +346,7 @@ export function EmailCaptureForm({
             hint={userName ? '(from your account)' : undefined}
           />
 
-          {/* Email — pre-filled and locked for logged-in users */}
+          {/* Email — pre-filled & locked for logged-in users */}
           <FormField
             label="Email Address *"
             type="email"
@@ -283,15 +358,63 @@ export function EmailCaptureForm({
             hint={userEmail ? '(from your account)' : undefined}
           />
 
-          {/* Phone — always required */}
-          <FormField
-            label="Phone *"
-            type="tel"
-            placeholder="(555) 123-4567"
-            value={form.phone}
-            onChange={update('phone')}
-            required
-          />
+          {/* Phone — always required, auto-formatted */}
+          <div>
+            <label style={{
+              display:       'block',
+              fontSize:      '0.72rem',
+              fontWeight:    600,
+              color:         phoneError ? '#FCA5A5' : 'rgba(255,255,255,0.5)',
+              marginBottom:  5,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+            }}>
+              Phone *
+            </label>
+            <input
+              type="tel"
+              inputMode="numeric"
+              placeholder="(555) 123-4567"
+              value={form.phone}
+              onChange={handlePhoneChange}
+              onBlur={handlePhoneBlur}
+              required
+              maxLength={16}
+              style={{
+                width:        '100%',
+                padding:      '9px 12px',
+                background:   'rgba(255,255,255,0.06)',
+                border:       phoneError
+                  ? '1px solid rgba(239,68,68,0.6)'
+                  : '1px solid rgba(255,255,255,0.12)',
+                borderRadius: 8,
+                color:        '#ffffff',
+                fontSize:     '0.85rem',
+                outline:      'none',
+                boxSizing:    'border-box',
+                transition:   'border-color 0.2s',
+              }}
+              onFocus={e => {
+                e.target.style.borderColor = phoneError
+                  ? 'rgba(239,68,68,0.8)'
+                  : 'rgba(96,165,250,0.6)'
+              }}
+              onBlurCapture={e => {
+                e.target.style.borderColor = phoneError
+                  ? 'rgba(239,68,68,0.6)'
+                  : 'rgba(255,255,255,0.12)'
+              }}
+            />
+            {phoneError && (
+              <p style={{
+                margin:   '4px 0 0',
+                fontSize: '0.68rem',
+                color:    '#FCA5A5',
+              }}>
+                {phoneError}
+              </p>
+            )}
+          </div>
 
           {/* Company — always required */}
           <FormField
@@ -304,7 +427,7 @@ export function EmailCaptureForm({
           />
         </div>
 
-        {/* Error */}
+        {/* Submission error */}
         {status === 'error' && error && (
           <div style={{
             padding:      '8px 12px',
@@ -315,7 +438,7 @@ export function EmailCaptureForm({
             color:        '#FCA5A5',
             marginBottom: 12,
           }}>
-            &#x26A0;&#xFE0F; {error}
+            ⚠️ {error}
           </div>
         )}
 
@@ -340,7 +463,7 @@ export function EmailCaptureForm({
             opacity:      isDisabled ? 0.6 : 1,
           }}
         >
-          {status === 'submitting' ? '&#x23F3; Preparing report\u2026' : '&#x1F4E5; Download My PDF Report \u2192'}
+          {status === 'submitting' ? '⏳ Preparing report…' : '📥 Download My PDF Report →'}
         </button>
 
         <p style={{
@@ -349,7 +472,7 @@ export function EmailCaptureForm({
           color:     'rgba(255,255,255,0.3)',
           textAlign: 'center',
         }}>
-          &#x1F512; Your information is private. We never spam &mdash; ever.
+          🔒 Your information is private. We never spam — ever.
         </p>
       </form>
     </div>
@@ -357,11 +480,12 @@ export function EmailCaptureForm({
 }
 
 // ---------------------------------------------------------------------------
-// Form field sub-component
+// Generic FormField sub-component
 // ---------------------------------------------------------------------------
 
 function FormField({
-  label, type, placeholder, value, onChange, required = false, disabled = false, hint,
+  label, type, placeholder, value, onChange,
+  required = false, disabled = false, hint,
 }: {
   label:       string
   type:        string
@@ -375,11 +499,11 @@ function FormField({
   return (
     <div>
       <label style={{
-        display:      'block',
-        fontSize:     '0.72rem',
-        fontWeight:   600,
-        color:        disabled ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.5)',
-        marginBottom: 5,
+        display:       'block',
+        fontSize:      '0.72rem',
+        fontWeight:    600,
+        color:         disabled ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.5)',
+        marginBottom:  5,
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
       }}>

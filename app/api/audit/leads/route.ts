@@ -9,6 +9,46 @@ import { NextRequest, NextResponse } from 'next/server'
 import { updateAuditRecord, captureAuditLead, createWaasClient } from '@/lib/waas/supabase'
 import type { WaasAudit, WaasTenant } from '@/lib/waas/types'
 
+// ---------------------------------------------------------------------------
+// Phone normalization helper
+// Strips formatting, validates digit count, returns a clean E.164-style string
+// or the standard US format (555) 123-4567 for storage.
+//
+// Accepts:
+//   '5551234567'       → '(555) 123-4567'
+//   '555-123-4567'     → '(555) 123-4567'
+//   '(555) 123-4567'   → '(555) 123-4567'
+//   '+15551234567'     → '+1 (555) 123-4567'
+//   '+442071234567'    → '+44 207 123 4567'  (kept as-is, just trimmed)
+// Returns null if the number has fewer than 10 digits.
+// ---------------------------------------------------------------------------
+function normalizePhone(raw: string): string | null {
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+
+  // International numbers (start with +): keep as-is after basic cleanup
+  if (trimmed.startsWith('+')) {
+    const digits = trimmed.replace(/\D/g, '')
+    if (digits.length < 7 || digits.length > 15) return null
+    return trimmed  // preserve original international format
+  }
+
+  // Strip all non-digit characters
+  const digits = trimmed.replace(/\D/g, '')
+
+  // US number with country code prefix (1XXXXXXXXXX)
+  const usDigits = digits.length === 11 && digits.startsWith('1')
+    ? digits.slice(1)
+    : digits
+
+  if (usDigits.length !== 10) return null
+
+  // Format as (555) 123-4567
+  return `(${usDigits.slice(0, 3)}) ${usDigits.slice(3, 6)}-${usDigits.slice(6)}`
+}
+
+
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -45,6 +85,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'phone is required' }, { status: 400 })
     }
 
+    // Normalize and validate phone number before storing
+    const normalizedPhone = normalizePhone(String(phone).trim())
+    if (!normalizedPhone) {
+      return NextResponse.json(
+        { error: 'Please enter a valid phone number (at least 10 digits)' },
+        { status: 400 }
+      )
+    }
+
     if (!company?.trim()) {
       return NextResponse.json({ error: 'company is required' }, { status: 400 })
     }
@@ -54,7 +103,7 @@ export async function POST(req: NextRequest) {
       email:        String(email).trim().toLowerCase(),
       audit_id:     String(audit_id),
       name:         name         != null ? String(name)         : null,
-      phone:        phone        != null ? String(phone)        : null,
+      phone:        normalizedPhone,
       company:      company      != null ? String(company)      : null,
       target_url:   target_url   != null ? String(target_url)   : null,
       industry:     industry     != null ? String(industry)     : null,
@@ -117,7 +166,7 @@ export async function POST(req: NextRequest) {
             ...currentContact,
             name: name || currentContact.name,
             email: email,
-            phone: phone || currentContact.phone,
+            phone: normalizedPhone || currentContact.phone,
             company: company || currentContact.company,
           },
           pdf_download_at: new Date().toISOString(),
