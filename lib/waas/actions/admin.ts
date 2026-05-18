@@ -13,6 +13,7 @@ import { ALL_TEMPLATES, getTemplate } from '@/lib/waas/templates/registry'
 import { recommendTemplates, type TemplateRecommendation } from '@/lib/waas/services/template-recommender'
 import type { TenantSiteConfig, SectionConfig, SectionId } from '@/lib/waas/templates/types'
 import { generateSiteVariants } from '@/lib/waas/services/generate-site-content'
+import { generateIndustryKeywordPlan } from '@/lib/waas/services/keyword-generator'
 
 // ---------------------------------------------------------------------------
 // Raw service-role client
@@ -2085,6 +2086,8 @@ export interface TenantSiteSettingsInput {
   metaDescription?: string | null
   ogImageUrl?: string | null
   customCss?: string | null
+  /** PR #103 — SEO keywords (max 20 phrases). Pass undefined to leave unchanged. */
+  seoKeywords?: string[] | null
 }
 
 export async function updateTenantSiteSettings(
@@ -2112,6 +2115,16 @@ export async function updateTenantSiteSettings(
       return { success: false, error: 'Custom CSS exceeds 12000 character budget.' }
     }
 
+    // Validate seoKeywords when provided
+    if (input.seoKeywords !== undefined && input.seoKeywords !== null) {
+      if (!Array.isArray(input.seoKeywords)) {
+        return { success: false, error: 'seoKeywords must be an array.' }
+      }
+      if (input.seoKeywords.length > 20) {
+        return { success: false, error: 'seoKeywords must contain 20 phrases or fewer.' }
+      }
+    }
+
     let activeSections: unknown[] = []
     const { data: existingConfig } = await supabase
       .from('tenant_site_config')
@@ -2123,20 +2136,24 @@ export async function updateTenantSiteSettings(
       activeSections = (existingConfig as { active_sections_json?: unknown[] }).active_sections_json ?? []
     }
 
+    // Build upsert payload — only include seo_keywords if caller provided them
+    const upsertPayload: Record<string, unknown> = {
+      tenant_id: tenantId,
+      active_sections_json: activeSections,
+      meta_title: metaTitle,
+      meta_description: metaDescription,
+      og_image_url: ogImageUrl,
+      custom_css: customCss,
+      updated_at: new Date().toISOString(),
+    }
+
+    if (input.seoKeywords !== undefined) {
+      upsertPayload.seo_keywords = input.seoKeywords
+    }
+
     const { error } = await supabase
       .from('tenant_site_config')
-      .upsert(
-        {
-          tenant_id: tenantId,
-          active_sections_json: activeSections,
-          meta_title: metaTitle,
-          meta_description: metaDescription,
-          og_image_url: ogImageUrl,
-          custom_css: customCss,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'tenant_id' },
-      )
+      .upsert(upsertPayload, { onConflict: 'tenant_id' })
 
     if (error) {
       return { success: false, error: error.message }
@@ -2149,6 +2166,110 @@ export async function updateTenantSiteSettings(
     await saveTenantSiteVersion(tenantId, 'admin_site_settings_updated', 'Updated meta and site settings from command center')
 
     return { success: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// generateSeoKeywords — PR #103
+// Runs the keyword-generator service for a tenant and persists the result
+// into tenant_site_config.seo_keywords. Called from the admin command center
+// "SEO" panel (one-click "Generate Keywords" button).
+// ---------------------------------------------------------------------------
+
+export interface GenerateSeoKeywordsResult {
+  keywords: string[]
+  provider: 'gemini' | 'perplexity' | 'fallback'
+  detectedIndustry: string | null
+  detectedLocation: string | null
+}
+
+export async function generateSeoKeywords(
+  tenantId: string,
+): Promise<ActionResult<GenerateSeoKeywordsResult>> {
+  'use server'
+  try {
+    const supabase = getAdminClient()
+
+    // Load tenant to get brand_config, primary_trade, target_location, domain/subdomain
+    const { data: tenantRow, error: tenantErr } = await supabase
+      .from('tenants')
+      .select('slug, domain, subdomain, brand_config, primary_trade, target_industry, target_location, usp')
+      .eq('id', tenantId)
+      .single()
+
+    if (tenantErr || !tenantRow) {
+      return { success: false, error: 'Tenant not found.' }
+    }
+
+    const row = tenantRow as {
+      slug:            string
+      domain:          string | null
+      subdomain:       string | null
+      brand_config:    Record<string, unknown>
+      primary_trade:   string | null
+      target_industry: string | null
+      target_location: string | null
+      usp:             string | null
+    }
+
+    // Build a best-effort target URL so the keyword generator can fetch signals
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://rankedceo.com'
+    const targetUrl = row.domain
+      ? `https://${row.domain}`
+      : row.subdomain
+        ? `https://${row.subdomain}.rankedceo.com`
+        : `${appUrl}/sites/${row.slug}`
+
+    const industry = row.primary_trade ?? row.target_industry ?? null
+    const location = row.target_location ?? null
+
+    // Run keyword generation (Gemini → Perplexity → fallback)
+    const result = await generateIndustryKeywordPlan(targetUrl, industry, location, 15)
+
+    if (!result.keywords.length) {
+      return { success: false, error: 'Keyword generation returned no results.' }
+    }
+
+    // Persist to tenant_site_config
+    const { error: upsertErr } = await supabase
+      .from('tenant_site_config')
+      .upsert(
+        {
+          tenant_id:              tenantId,
+          seo_keywords:           result.keywords,
+          seo_keywords_provider:  result.provider,
+          seo_last_generated_at:  new Date().toISOString(),
+          updated_at:             new Date().toISOString(),
+        },
+        { onConflict: 'tenant_id' },
+      )
+
+    if (upsertErr) {
+      return { success: false, error: upsertErr.message }
+    }
+
+    revalidatePath(`/admin/dashboard/${tenantId}`)
+    revalidatePath('/_sites', 'layout')
+    revalidatePath(`/_sites/${row.slug}`)
+
+    await saveTenantSiteVersion(
+      tenantId,
+      'seo_keywords_generated',
+      `SEO keywords generated via ${result.provider} (${result.keywords.length} phrases)`,
+    )
+
+    return {
+      success: true,
+      data: {
+        keywords:         result.keywords,
+        provider:         result.provider,
+        detectedIndustry: result.detectedIndustry,
+        detectedLocation: result.detectedLocation,
+      },
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error'
     return { success: false, error: msg }
@@ -2169,7 +2290,7 @@ async function saveTenantSiteVersion(
     const supabase = getAdminClient()
     const { data: siteConfig } = await supabase
       .from('tenant_site_config')
-      .select('template_id, active_sections_json, custom_css, meta_title, meta_description, og_image_url, client_selected_template_slug, client_selected_at, client_feedback_tone, client_feedback_cta_intensity, client_feedback_layout_preference, client_feedback_notes, client_feedback_submitted_at, client_mix_source_templates, client_mix_submitted_at, deployment_url, deployed_at, last_preview_at, site_templates(slug)')
+      .select('template_id, active_sections_json, custom_css, meta_title, meta_description, og_image_url, seo_keywords, seo_keywords_provider, seo_last_generated_at, client_selected_template_slug, client_selected_at, client_feedback_tone, client_feedback_cta_intensity, client_feedback_layout_preference, client_feedback_notes, client_feedback_submitted_at, client_mix_source_templates, client_mix_submitted_at, deployment_url, deployed_at, last_preview_at, site_templates(slug)')
       .eq('tenant_id', tenantId)
       .single()
 
@@ -2185,6 +2306,10 @@ async function saveTenantSiteVersion(
       meta_title: row.meta_title ?? null,
       meta_description: row.meta_description ?? null,
       og_image_url: row.og_image_url ?? null,
+      // PR #103 — SEO keywords snapshot
+      seo_keywords: row.seo_keywords ?? null,
+      seo_keywords_provider: row.seo_keywords_provider ?? null,
+      seo_last_generated_at: row.seo_last_generated_at ?? null,
       client_selected_template_slug: row.client_selected_template_slug ?? null,
       client_selected_at: row.client_selected_at ?? null,
       client_feedback_tone: row.client_feedback_tone ?? null,

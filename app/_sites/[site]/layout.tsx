@@ -2,6 +2,8 @@
 // WaaS Phase 4: _sites/[site]/layout.tsx
 // Master tenant site layout — injects theme, header, footer
 // One layout to rule them all (DRY — no duplication across templates)
+//
+// PR #103 — WaaS SEO: keywords meta tag, canonical URL, enhanced robots
 // =============================================================================
 
 import type { Metadata } from 'next'
@@ -42,7 +44,7 @@ async function getTenantBySlug(slug: string): Promise<{
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: siteConfigRow } = await (client as any)
     .from('tenant_site_config')
-    .select('*')
+    .select('*, seo_keywords, seo_keywords_provider, seo_last_generated_at')
     .eq('tenant_id', tenantRow.id)
     .single()
 
@@ -70,7 +72,18 @@ async function getTenantBySlug(slug: string): Promise<{
 }
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function buildLayoutCanonicalUrl(tenant: ResolvedTenant): string {
+  if (tenant.domain) return `https://${tenant.domain}`
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://rankedceo.com'
+  return `${appUrl}/sites/${tenant.slug}`
+}
+
+// ---------------------------------------------------------------------------
 // Generate metadata for SEO
+// PR #103: added keywords meta tag, canonical URL, robots directives
 // ---------------------------------------------------------------------------
 
 export async function generateMetadata({
@@ -88,20 +101,39 @@ export async function generateMetadata({
   const description  = siteConfig?.meta_description ?? tenant.usp ?? brandConfig.tagline
     ?? `${businessName} — Professional services in ${tenant.target_location ?? 'your area'}`
   const ogImage      = siteConfig?.og_image_url ?? brandConfig.logo_url
+  const canonical    = buildLayoutCanonicalUrl(tenant)
+
+  // PR #103: inject seo_keywords if available
+  const keywords: string[] | undefined =
+    Array.isArray(siteConfig?.seo_keywords) && (siteConfig?.seo_keywords ?? []).length > 0
+      ? (siteConfig?.seo_keywords as string[])
+      : undefined
 
   return {
     title,
     description,
+    ...(keywords ? { keywords } : {}),
+    metadataBase: new URL(canonical),
+    alternates: {
+      canonical: '/',
+    },
     openGraph: {
       title,
       description,
-      ...(ogImage ? { images: [{ url: ogImage }] } : {}),
+      url: canonical,
+      siteName: businessName,
+      ...(ogImage ? { images: [{ url: ogImage, width: 1200, height: 630, alt: title }] } : {}),
     },
     twitter: {
       card:        'summary_large_image',
       title,
       description,
       ...(ogImage ? { images: [ogImage] } : {}),
+    },
+    robots: {
+      index:   true,
+      follow:  true,
+      googleBot: { index: true, follow: true },
     },
   }
 }
