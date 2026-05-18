@@ -7,14 +7,17 @@
 //
 // Shows:
 //   - Site status card (variant, approval state, live URL)
+//   - AI enhancement status banner (in_progress / completed)
 //   - Quick action buttons (Edit / View Site / History)
 //   - Recent edits mini-feed (last 5, non-undo)
 //   - AI rewrite usage count + total edit count
+//   - Build-aware empty state when no edits exist
 //
 // Props are pre-loaded server-side in page.tsx to avoid an extra client fetch.
 // The component itself is 'use client' only for the copy-URL interaction.
 //
-// Phase 6.1
+// Phase 6.1 — initial
+// PR #96 (GitHub #97) — site-build lifecycle states + AI enhancement banner
 // =============================================================================
 
 import { useState } from 'react'
@@ -77,46 +80,80 @@ function buildLiveUrl(status: TenantPortalSiteStatus): string | null {
   return null
 }
 
+// ---------------------------------------------------------------------------
+// Status config — determines label, color, dot + description for the status card
+// Now also handles the site-build lifecycle from migration 022.
+// ---------------------------------------------------------------------------
+
 function statusConfig(status: TenantPortalSiteStatus): {
-  label: string; color: string; dot: string; description: string
+  label: string; color: string; dot: string; description: string; pulseDot: boolean
 } {
+  // Terminal states first
   if (status.approvalLocked && status.tenantStatus === 'active') {
     return {
-      label: 'Live',
-      color: 'text-emerald-400',
-      dot:   'bg-emerald-400',
-      description: 'Your site is live.',
+      label:       'Live',
+      color:       'text-emerald-400',
+      dot:         'bg-emerald-400',
+      description: 'Your site is live and visible to the world.',
+      pulseDot:    false,
     }
   }
   if (status.approvalAt && !status.approvalLocked) {
     return {
-      label: 'Approved — Deploying',
-      color: 'text-violet-400',
-      dot:   'bg-violet-400',
+      label:       'Approved — Deploying',
+      color:       'text-violet-400',
+      dot:         'bg-violet-400',
       description: 'Approved! Our team is deploying your site now.',
+      pulseDot:    true,
     }
   }
   if (status.tenantStatus === 'active') {
     return {
-      label: 'Active',
-      color: 'text-emerald-400',
-      dot:   'bg-emerald-400',
+      label:       'Active',
+      color:       'text-emerald-400',
+      dot:         'bg-emerald-400',
       description: 'Your site is active.',
+      pulseDot:    false,
     }
   }
   if (status.tenantStatus === 'pending_review') {
     return {
-      label: 'Pending Review',
-      color: 'text-amber-400',
-      dot:   'bg-amber-400',
+      label:       'Pending Review',
+      color:       'text-amber-400',
+      dot:         'bg-amber-400',
       description: 'Review your designs and click Approve & Publish when ready.',
+      pulseDot:    false,
     }
   }
+
+  // ── Site-build lifecycle ──────────────────────────────────────────────────
+  // Tier 1 completed + AI still enhancing in background
+  if (status.initialBuildCompletedAt && status.aiEnhancementStatus === 'in_progress') {
+    return {
+      label:       'Site Ready — AI Enhancing',
+      color:       'text-violet-500',
+      dot:         'bg-violet-400',
+      description: 'Your site is ready to edit. AI is polishing the copy in the background.',
+      pulseDot:    true,
+    }
+  }
+  // Tier 1 completed (AI done, failed, or not configured)
+  if (status.initialBuildCompletedAt) {
+    return {
+      label:       'Site Ready',
+      color:       'text-sky-500',
+      dot:         'bg-sky-400',
+      description: 'Your site has been built and is ready to review and edit.',
+      pulseDot:    false,
+    }
+  }
+  // Still building (Tier 1 not yet complete)
   return {
-    label: 'Getting Ready',
-    color: 'text-sky-400',
-    dot:   'bg-sky-400',
-    description: 'Your website designs are being prepared.',
+    label:       'Building Your Site',
+    color:       'text-sky-400',
+    dot:         'bg-sky-400',
+    description: 'We\'re putting together your personalised website. This usually takes less than a minute.',
+    pulseDot:    true,
   }
 }
 
@@ -126,9 +163,9 @@ function statusConfig(status: TenantPortalSiteStatus): {
 
 function StatChip({ label, value, color = 'text-white' }: { label: string; value: string | number; color?: string }) {
   return (
-    <div className="flex flex-col items-center gap-0.5 rounded-xl border border-white/10 bg-white/5 px-4 py-3 min-w-[80px]">
+    <div className="flex flex-col items-center gap-0.5 rounded-xl border border-slate-200 bg-white px-4 py-3 min-w-[80px] shadow-sm">
       <span className={`text-xl font-bold tabular-nums ${color}`}>{value}</span>
-      <span className="text-[10px] text-white/40 text-center leading-tight">{label}</span>
+      <span className="text-[10px] text-slate-400 text-center leading-tight">{label}</span>
     </div>
   )
 }
@@ -148,6 +185,134 @@ function RecentEditRow({ edit }: { edit: TenantPortalRecentEdit }) {
       <span className="shrink-0 text-[10px] text-white/30 tabular-nums mt-0.5">
         {timeAgo(edit.createdAt)}
       </span>
+    </div>
+  )
+}
+
+// AI Enhancement status banner — shown inside the status card when relevant
+function AIEnhancementBanner({
+  status,
+}: {
+  status: 'in_progress' | 'completed' | 'failed' | null
+}) {
+  if (!status || status === 'failed') return null
+
+  if (status === 'in_progress') {
+    return (
+      <div className="flex items-center gap-2 mt-3 rounded-lg bg-violet-50 border border-violet-200 px-3 py-2">
+        <svg
+          className="h-3.5 w-3.5 text-violet-500 shrink-0 animate-spin"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+        </svg>
+        <p className="text-[11px] text-violet-700 font-medium">
+          ✨ AI is refining your website copy — it will update automatically when done.
+        </p>
+      </div>
+    )
+  }
+
+  if (status === 'completed') {
+    return (
+      <div className="flex items-center gap-2 mt-3 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2">
+        <span className="text-[11px]">✨</span>
+        <p className="text-[11px] text-emerald-700 font-medium">
+          AI-enhanced copy is live on your site.
+        </p>
+      </div>
+    )
+  }
+
+  return null
+}
+
+// Build-in-progress skeleton card shown when Tier 1 hasn't finished yet
+function BuildingCard() {
+  return (
+    <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-6 text-center">
+      {/* Animated pulse rows */}
+      <div className="flex flex-col items-center gap-3">
+        <div className="flex items-center justify-center h-12 w-12 rounded-full bg-sky-100">
+          <svg
+            className="h-6 w-6 text-sky-500 animate-spin"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+          </svg>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-slate-700">Building your site…</p>
+          <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+            We're generating your personalised website content. This usually takes less than a minute.
+          </p>
+        </div>
+        <div className="w-full max-w-xs space-y-2 mt-1">
+          <div className="h-2 bg-slate-200 rounded animate-pulse w-full" />
+          <div className="h-2 bg-slate-200 rounded animate-pulse w-4/5 mx-auto" />
+          <div className="h-2 bg-slate-200 rounded animate-pulse w-3/5 mx-auto" />
+        </div>
+        <p className="text-[10px] text-slate-300 mt-1">
+          Refresh this page in a moment to see your site.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+// First-time CTA shown when the build is done but no edits have been made
+function SiteReadyCTA({
+  templateSlug,
+  aiStatus,
+  onGoToEdit,
+}: {
+  templateSlug:  string | null
+  aiStatus:      'in_progress' | 'completed' | 'failed' | null
+  onGoToEdit:    () => void
+}) {
+  const templateDisplay = templateSlug
+    ? templateSlug.charAt(0).toUpperCase() + templateSlug.slice(1).replace(/-/g, ' ')
+    : null
+
+  return (
+    <div className="flex flex-col items-center justify-center py-8 text-center">
+      <div className="flex items-center justify-center h-14 w-14 rounded-full bg-sky-50 border border-sky-200 mb-4">
+        <span className="text-2xl">🎉</span>
+      </div>
+      <p className="text-sm font-semibold text-slate-700">Your site is ready!</p>
+      {templateDisplay && (
+        <p className="text-xs text-slate-500 mt-1">
+          Built with the <span className="font-medium text-slate-600">{templateDisplay}</span> template.
+        </p>
+      )}
+      {aiStatus === 'in_progress' && (
+        <p className="text-[11px] text-violet-600 mt-1.5 flex items-center gap-1.5 justify-center">
+          <svg className="h-3 w-3 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+          </svg>
+          AI is polishing your copy in the background
+        </p>
+      )}
+      {aiStatus === 'completed' && (
+        <p className="text-[11px] text-emerald-600 mt-1.5">✨ AI-enhanced copy applied</p>
+      )}
+      <p className="text-xs text-slate-400 mt-3 mb-5 max-w-xs">
+        Start editing your content, or review your site as-is and approve when you're happy.
+      </p>
+      <button
+        type="button"
+        onClick={onGoToEdit}
+        className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 transition-colors shadow-sm"
+      >
+        ✏️ Start editing
+      </button>
     </div>
   )
 }
@@ -179,6 +344,11 @@ export function PortalHome({
   const sc      = statusConfig(siteStatus)
   const liveUrl = buildLiveUrl(siteStatus)
 
+  // Determine if the site build has completed (Tier 1 done)
+  const buildDone = Boolean(siteStatus.initialBuildCompletedAt)
+  // Still in initial build: Tier 1 not done yet
+  const buildInProgress = !buildDone && siteStatus.tenantStatus === 'onboarding'
+
   const handleCopyUrl = () => {
     if (!liveUrl) return
     void navigator.clipboard.writeText(liveUrl).then(() => {
@@ -201,96 +371,127 @@ export function PortalHome({
           </p>
         </div>
 
-        {/* Status card */}
-        <div className="mb-5 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className={`h-2 w-2 rounded-full ${sc.dot} animate-pulse`} />
-              <span className={`text-sm font-semibold ${sc.color}`}>{sc.label}</span>
-              {siteStatus.variantLabel && (
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
-                  {siteStatus.variantLabel}
-                </span>
+        {/* ── Building skeleton ── shown only while Tier 1 is still in progress */}
+        {buildInProgress && (
+          <div className="mb-5">
+            <BuildingCard />
+          </div>
+        )}
+
+        {/* ── Status card ── shown once build starts OR for non-onboarding states */}
+        {!buildInProgress && (
+          <div className="mb-5 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className={`h-2 w-2 rounded-full ${sc.dot} ${sc.pulseDot ? 'animate-pulse' : ''}`} />
+                <span className={`text-sm font-semibold ${sc.color}`}>{sc.label}</span>
+                {siteStatus.variantLabel && (
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+                    {siteStatus.variantLabel}
+                  </span>
+                )}
+                {/* AI Enhanced badge */}
+                {siteStatus.aiEnhancementStatus === 'completed' && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 border border-violet-200 px-2 py-0.5 text-[10px] font-medium text-violet-600">
+                    ✨ AI Enhanced
+                  </span>
+                )}
+              </div>
+              {liveUrl && (
+                <button
+                  type="button"
+                  onClick={handleCopyUrl}
+                  className="text-[11px] text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1"
+                >
+                  {copied ? '✓ Copied' : '📋 Copy URL'}
+                </button>
               )}
             </div>
-            {liveUrl && (
-              <button
-                type="button"
-                onClick={handleCopyUrl}
-                className="text-[11px] text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1"
-              >
-                {copied ? '✓ Copied' : '📋 Copy URL'}
-              </button>
-            )}
-          </div>
 
-          <div className="px-5 py-4">
-            <p className="text-sm text-slate-600 mb-3">{sc.description}</p>
+            <div className="px-5 py-4">
+              <p className="text-sm text-slate-600 mb-3">{sc.description}</p>
 
-            {/* Live URL */}
-            {liveUrl ? (
-              <a
-                href={liveUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 transition-colors"
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                {liveUrl.replace('https://', '')}
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="opacity-60">
-                  <path d="M2 8L8 2M8 2H4M8 2v4" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round"/>
-                </svg>
-              </a>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-400">
-                <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
-                URL will be confirmed after deployment
-              </span>
-            )}
+              {/* AI enhancement banner */}
+              <AIEnhancementBanner status={siteStatus.aiEnhancementStatus} />
 
-            {/* Approval timestamp */}
-            {siteStatus.approvalAt && (
-              <p className="text-[11px] text-slate-400 mt-2">
-                Approved {timeAgo(siteStatus.approvalAt)}
-              </p>
-            )}
-          </div>
-        </div>
+              {/* Live URL */}
+              {liveUrl ? (
+                <a
+                  href={liveUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 mt-3 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 transition-colors"
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  {liveUrl.replace('https://', '')}
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="opacity-60">
+                    <path d="M2 8L8 2M8 2H4M8 2v4" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round"/>
+                  </svg>
+                </a>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 mt-3 rounded-lg bg-slate-50 border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-400">
+                  <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
+                  URL will be confirmed after deployment
+                </span>
+              )}
 
-        {/* Stats row */}
-        <div className="mb-5 flex gap-3 overflow-x-auto pb-1">
-          <StatChip
-            label="Total Edits"
-            value={editCount}
-            color={editCount > 0 ? 'text-slate-800' : 'text-slate-400'}
-          />
-          <StatChip
-            label="AI Rewrites"
-            value={aiRewriteCount}
-            color={aiRewriteCount > 0 ? 'text-violet-600' : 'text-slate-400'}
-          />
-          {siteStatus.lastClientEdit && (
-            <StatChip
-              label="Last Edit"
-              value={timeAgo(siteStatus.lastClientEdit)}
-              color="text-slate-600"
-            />
-          )}
-        </div>
-
-        {/* Quick actions */}
-        <div className="mb-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <button
-            type="button"
-            onClick={onGoToEdit}
-            className="flex flex-col items-start gap-2 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm hover:border-slate-300 hover:shadow-md transition-all group"
-          >
-            <span className="text-2xl">✏️</span>
-            <div>
-              <p className="text-sm font-semibold text-slate-800 group-hover:text-slate-900">Edit Content</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Text, images, colours</p>
+              {/* Approval timestamp */}
+              {siteStatus.approvalAt && (
+                <p className="text-[11px] text-slate-400 mt-2">
+                  Approved {timeAgo(siteStatus.approvalAt)}
+                </p>
+              )}
             </div>
-          </button>
+          </div>
+        )}
+
+        {/* ── Stats row ── only meaningful once build is done */}
+        {buildDone && (
+          <div className="mb-5 flex gap-3 overflow-x-auto pb-1">
+            <StatChip
+              label="Total Edits"
+              value={editCount}
+              color={editCount > 0 ? 'text-slate-800' : 'text-slate-400'}
+            />
+            <StatChip
+              label="AI Rewrites"
+              value={aiRewriteCount}
+              color={aiRewriteCount > 0 ? 'text-violet-600' : 'text-slate-400'}
+            />
+            {siteStatus.lastClientEdit && (
+              <StatChip
+                label="Last Edit"
+                value={timeAgo(siteStatus.lastClientEdit)}
+                color="text-slate-600"
+              />
+            )}
+          </div>
+        )}
+
+        {/* ── Quick actions ── disabled / greyed when build is in progress */}
+        <div className="mb-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Edit Content — active as soon as buildDone; disabled while building */}
+          {buildDone ? (
+            <button
+              type="button"
+              onClick={onGoToEdit}
+              className="flex flex-col items-start gap-2 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm hover:border-slate-300 hover:shadow-md transition-all group"
+            >
+              <span className="text-2xl">✏️</span>
+              <div>
+                <p className="text-sm font-semibold text-slate-800 group-hover:text-slate-900">Edit Content</p>
+                <p className="text-[11px] text-slate-500 mt-0.5">Text, images, colours</p>
+              </div>
+            </button>
+          ) : (
+            <div className="flex flex-col items-start gap-2 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm opacity-50 cursor-not-allowed">
+              <span className="text-2xl">✏️</span>
+              <div>
+                <p className="text-sm font-semibold text-slate-400">Edit Content</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Available once site is built</p>
+              </div>
+            </div>
+          )}
 
           {liveUrl ? (
             <a
@@ -318,17 +519,23 @@ export function PortalHome({
           <button
             type="button"
             onClick={onGoToHistory}
-            className="flex flex-col items-start gap-2 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm hover:border-slate-300 hover:shadow-md transition-all group"
+            className={`flex flex-col items-start gap-2 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all group ${
+              buildDone
+                ? 'hover:border-slate-300 hover:shadow-md'
+                : 'opacity-50 cursor-not-allowed pointer-events-none'
+            }`}
           >
             <span className="text-2xl">🕐</span>
             <div>
-              <p className="text-sm font-semibold text-slate-800 group-hover:text-slate-900">Edit History</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">View & undo changes</p>
+              <p className={`text-sm font-semibold mt-0 ${buildDone ? 'text-slate-800 group-hover:text-slate-900' : 'text-slate-400'}`}>
+                Edit History
+              </p>
+              <p className="text-[11px] text-slate-500 mt-0.5">View &amp; undo changes</p>
             </div>
           </button>
         </div>
 
-        {/* Recent edits */}
+        {/* ── Recent edits / first-time state ── */}
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
             <h2 className="text-sm font-semibold text-slate-700">Recent Changes</h2>
@@ -344,22 +551,28 @@ export function PortalHome({
           </div>
 
           <div className="px-5 divide-y divide-slate-50">
-            {recentEdits.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-center">
-                <span className="text-3xl mb-2">📝</span>
-                <p className="text-sm text-slate-400">No edits yet.</p>
-                <p className="text-xs text-slate-300 mt-1">
-                  Changes you make will appear here.
+            {/* Still building — show building state */}
+            {buildInProgress && (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <span className="text-3xl mb-2">⏳</span>
+                <p className="text-sm text-slate-500 font-medium">Building your website…</p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Your recent changes will appear here once your site is ready.
                 </p>
-                <button
-                  type="button"
-                  onClick={onGoToEdit}
-                  className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-4 py-2 text-xs font-medium text-white hover:bg-slate-800 transition-colors"
-                >
-                  ✏️ Start editing
-                </button>
               </div>
-            ) : (
+            )}
+
+            {/* Build done, no edits yet — show welcome CTA */}
+            {buildDone && recentEdits.length === 0 && (
+              <SiteReadyCTA
+                templateSlug={siteStatus.templateSlugDisplay}
+                aiStatus={siteStatus.aiEnhancementStatus}
+                onGoToEdit={onGoToEdit}
+              />
+            )}
+
+            {/* Has edits */}
+            {buildDone && recentEdits.length > 0 && (
               recentEdits.map((edit) => (
                 <RecentEditRow key={edit.id} edit={edit} />
               ))
@@ -369,7 +582,7 @@ export function PortalHome({
 
         {/* Plan card — Phase 7.4 */}
         {billingStatus && (
-          <div className="mb-5">
+          <div className="mt-5 mb-5">
             <PlanCard
               tenantId={tenantId}
               reviewToken={reviewToken}
