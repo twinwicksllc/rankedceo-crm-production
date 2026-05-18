@@ -14,6 +14,25 @@
 //         – Hero eyebrow copy (pack strategy-keyed patterns)
 //         – Trust signals (pack-supplied, shown in trust bar section)
 //         – SEO keyword clusters (merged into keyPhrases)
+//     • Writes variant_index=0, status='selected' to tenant_site_variants
+//     • Records initial_build_completed_at in tenant_site_config
+//
+//   Tier 2 (asynchronous, fire-and-forget)
+//     • Calls Gemini to enhance/rewrite the Tier 1 variant copy
+//     • Uses template seo_strategy to weight keyword placement instructions
+//     • Uses template aesthetic/mood to tune tone directives
+//     • On success: overwrites the variant row with AI copy
+//     • Records ai_enhancement_completed_at + sets ai_enhancement_status
+//     • Schema-gap resilient — silently skips if Tier 2 columns are absent
+//
+// The Tier 1 path is synchronous so the editor is instantly available after
+// onboarding submit.  Tier 2 fires in the background and upgrades the copy
+// without any user-facing wait.
+// =============================================================================
+import { createClient } from '@supabase/supabase-js'
+import { getTemplate, ALL_TEMPLATES } from '@/lib/waas/templates/registry'
+import { recommendTemplates } from '@/lib/waas/services/template-recommender'
+import { getContentPack } from '@/lib/waas/content-packs'
 import type { WaasTenant, GeneratedSiteVariant } from '@/lib/waas/types'
 import type {
   SectionConfig,
