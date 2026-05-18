@@ -529,7 +529,7 @@ async function resolveTemplate(
 
   if (recommendations.length > 0) {
     try {
-      return getTemplate(recommendations[0].template.slug)
+      return getTemplate(recommendations[0].templateSlug)
     } catch {
       // Recommendation returned unknown slug
     }
