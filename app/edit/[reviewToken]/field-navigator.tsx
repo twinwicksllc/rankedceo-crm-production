@@ -5,16 +5,27 @@
 // Left-panel list of editable fields, grouped by section/brand.
 // - text / long_text / color / image → clicking opens the inline edit modal
 // - toggle → renders as an inline switch; no modal
+// - PR #102: section-group headers now expose a "✨ Regenerate with AI" button
+//   for sections that support bulk AI regeneration.
 // =============================================================================
 
 import { useMemo, useState } from 'react'
 import type { EditableField, FieldGroup } from '@/lib/waas/client-edit/editable-fields'
+import type { SectionId } from '@/lib/waas/templates/types'
+
+// Sections that support per-section AI regeneration (must match server-side allowlist)
+const REGENERATABLE_SECTIONS = new Set<string>([
+  'hero', 'services', 'trust', 'about', 'faq', 'how-it-works',
+  'booking', 'reviews', 'gallery', 'financing',
+])
 
 interface FieldNavigatorProps {
-  groups:       FieldGroup[]
-  onFieldClick: (f: EditableField) => void
-  onToggle:     (f: EditableField, enabled: boolean) => void
-  disabled?:    boolean
+  groups:             FieldGroup[]
+  onFieldClick:       (f: EditableField) => void
+  onToggle:           (f: EditableField, enabled: boolean) => void
+  /** PR #102: called when the user clicks "Regenerate with AI" for a section */
+  onRegenerateSection?: (sectionId: SectionId, sectionLabel: string) => void
+  disabled?:          boolean
 }
 
 function truncate(s: string, n = 50): string {
@@ -33,7 +44,13 @@ function kindBadge(kind: EditableField['kind']): string {
   }
 }
 
-export function FieldNavigator({ groups, onFieldClick, onToggle, disabled }: FieldNavigatorProps) {
+export function FieldNavigator({
+  groups,
+  onFieldClick,
+  onToggle,
+  onRegenerateSection,
+  disabled,
+}: FieldNavigatorProps) {
   const [query, setQuery] = useState('')
 
   const filtered = useMemo(() => {
@@ -89,20 +106,49 @@ export function FieldNavigator({ groups, onFieldClick, onToggle, disabled }: Fie
           </div>
         )}
 
-        {filtered.map((group) => (
-          <div key={group.group} className="border-b border-slate-100">
-            <div className="sticky top-0 bg-slate-50/95 backdrop-blur px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-              {group.group}
+        {filtered.map((group) => {
+          // Determine sectionId from the first section-scoped field in the group
+          const firstSectionField = group.fields.find((f) => f.scope === 'section' && f.sectionId)
+          const sectionId = firstSectionField?.sectionId
+          const canRegen  = !disabled &&
+                            !!sectionId &&
+                            REGENERATABLE_SECTIONS.has(sectionId) &&
+                            !!onRegenerateSection
+
+          return (
+            <div key={group.group} className="border-b border-slate-100">
+              {/* Group header — includes Regenerate button for section groups */}
+              <div className="sticky top-0 z-10 flex items-center justify-between bg-slate-50/95 backdrop-blur px-3 py-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  {group.group}
+                </span>
+
+                {canRegen && (
+                  <button
+                    type="button"
+                    title={`Regenerate all text in "${group.group}" with AI`}
+                    aria-label={`Regenerate ${group.group} section with AI`}
+                    onClick={() =>
+                      onRegenerateSection!(sectionId as SectionId, group.group)
+                    }
+                    className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-medium text-violet-700 hover:bg-violet-100 hover:border-violet-300 transition-colors focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-1"
+                  >
+                    <span aria-hidden="true">✨</span>
+                    Regenerate
+                  </button>
+                )}
+              </div>
+
+              <ul className="divide-y divide-slate-100">
+                {group.fields.map((f) =>
+                  f.kind === 'toggle'
+                    ? <ToggleRow key={f.id} field={f} onToggle={onToggle} disabled={disabled} />
+                    : <EditableRow key={f.id} field={f} onFieldClick={onFieldClick} disabled={disabled} />,
+                )}
+              </ul>
             </div>
-            <ul className="divide-y divide-slate-100">
-              {group.fields.map((f) =>
-                f.kind === 'toggle'
-                  ? <ToggleRow key={f.id} field={f} onToggle={onToggle} disabled={disabled} />
-                  : <EditableRow key={f.id} field={f} onFieldClick={onFieldClick} disabled={disabled} />,
-              )}
-            </ul>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Footer help */}

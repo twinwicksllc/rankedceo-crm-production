@@ -269,7 +269,48 @@ This is the first production release of RankedCEO CRM, a comprehensive customer 
 
 ---
 
-## 🔐 Security Updates
+## 🤖 WaaS — PR #102: Per-section "Regenerate with AI" button in client editor
+
+### Overview
+Adds a per-section **✨ Regenerate** button to every section-group header in the
+client self-service editor's left-panel navigator. Clicking it opens a new
+`RegenerateSectionPanel` slide-in that lets the client:
+
+1. Optionally type a short instruction hint (e.g. "Focus on 24/7 emergency response").
+2. Click **✨ Regenerate section** — a single `gpt-4o-mini` call regenerates all
+   text/long-text fields for that section simultaneously.
+3. Review a before/after diff card for every field.
+4. Accept with **Apply all N changes** — each field is persisted via the existing
+   `updateClientVariantContent` server action (full audit trail maintained).
+
+### Files changed
+- `lib/waas/actions/client-edit.ts` — new `regenerateSection` server action (#10).
+  Loads the live variant, builds a targeted prompt from tenant `brand_config`,
+  calls `gpt-4o-mini` with `response_format: json_object`, and returns
+  `RegeneratedField[]` with original + suggested values (no DB writes).
+- `app/edit/[reviewToken]/regenerate-section-panel.tsx` — new slide-in panel
+  component with hint textarea, generate button, loading skeleton, and diff cards.
+- `app/edit/[reviewToken]/field-navigator.tsx` — section-group headers now render
+  a violet "✨ Regenerate" pill button for eligible sections (10 supported);
+  new `onRegenerateSection` prop wires up to the shell.
+- `app/edit/[reviewToken]/editor-shell.tsx` — adds `regenPanel` state,
+  `handleApplyRegeneration` (bulk-save + optimistic update + AI counter bump),
+  and renders `<RegenerateSectionPanel>` when a section is selected.
+
+### Supported sections
+`hero`, `services`, `trust`, `about`, `faq`, `how-it-works`, `booking`,
+`reviews`, `gallery`, `financing`
+
+### Permission & safety
+- Respects existing `canEditText` + `isLocked` permission gates.
+- Server action does **not** write to DB; client decides to accept then persists
+  field-by-field (same audit log path as inline edits).
+- 8-second client-side rate-limit cooldown between generate calls.
+- Hard character cap at 2× `maxLen` per field to prevent abuse.
+
+---
+
+
 
 ### Authentication
 - Implemented Supabase Auth
