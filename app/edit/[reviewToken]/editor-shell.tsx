@@ -10,16 +10,23 @@
 // Phase 5.5 additions:
 //   - Edit history panel (clock icon in top bar)
 //   - Undo per-event via undoClientEdit server action
+// PR #102 additions:
+//   - Per-section "✨ Regenerate with AI" button in FieldNavigator headers
+//   - RegenerateSectionPanel slide-in, diff review, and bulk apply
+//   - Batch updateClientVariantContent calls when client applies AI results
 // =============================================================================
 
 import { useCallback, useMemo, useRef, useState, useTransition } from 'react'
 import type { ClientEditPermissions } from '@/lib/waas/client-edit/edit-session'
 import type { EditableField }         from '@/lib/waas/client-edit/editable-fields'
 import { groupEditableFields }        from '@/lib/waas/client-edit/editable-fields'
+import type { SectionId }             from '@/lib/waas/templates/types'
 import { FieldNavigator }             from './field-navigator'
 import { InlineEditModal }            from './inline-edit-modal'
 import { ApprovalPanel }              from './approval-panel'
 import { EditHistoryPanel }           from './edit-history-panel'
+import { RegenerateSectionPanel }     from './regenerate-section-panel'
+import type { RegeneratedField }      from '@/lib/waas/actions/client-edit'
 import {
   updateClientVariantContent,
   updateClientBrandConfig,
@@ -62,6 +69,12 @@ export function EditorShell({ session, initialFields, initialHistoryOpen = false
   const toastTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
   const aiUseCount  = useRef(0)
   const [aiCount, setAiCount] = useState(0)
+
+  // PR #102 — per-section regenerate state
+  const [regenPanel, setRegenPanel] = useState<{
+    sectionId:    SectionId
+    sectionLabel: string
+  } | null>(null)
 
   const groups = useMemo(() => groupEditableFields(fields), [fields])
 
@@ -184,6 +197,75 @@ export function EditorShell({ session, initialFields, initialHistoryOpen = false
     [session, showToast],
   )
 
+  // -------------------------------------------------------------------------
+  // PR #102 — handleApplyRegeneration
+  // Called when the client accepts all AI-suggested fields from the
+  // RegenerateSectionPanel.  Saves each field sequentially and updates local
+  // state optimistically.
+  // -------------------------------------------------------------------------
+
+  const handleApplyRegeneration = useCallback(
+    (regenFields: RegeneratedField[]) => {
+      if (session.permissions.isLocked) {
+        showToast('error', 'Editing is locked — approval submitted.')
+        return
+      }
+      if (session.selectedVariantIndex == null) {
+        showToast('error', 'No variant selected — cannot apply AI changes.')
+        return
+      }
+
+      // Optimistic update: apply all suggested values to local field state
+      setFields((prev) => {
+        const patchMap = new Map(regenFields.map((rf) => [rf.path, rf.suggested]))
+        return prev.map((f) =>
+          patchMap.has(f.path) ? { ...f, value: patchMap.get(f.path)! } : f,
+        )
+      })
+
+      // Increment AI usage counter
+      aiUseCount.current += regenFields.length
+      setAiCount(aiUseCount.current)
+
+      startSave(async () => {
+        const variantIndex = session.selectedVariantIndex!
+        const failures: string[] = []
+
+        for (const rf of regenFields) {
+          try {
+            const result = await updateClientVariantContent({
+              reviewToken:  session.reviewToken,
+              variantIndex,
+              path:         rf.path,
+              newValue:     rf.suggested,
+            })
+            if (!result.success) {
+              failures.push(rf.label)
+            }
+          } catch {
+            failures.push(rf.label)
+          }
+        }
+
+        if (failures.length > 0) {
+          showToast(
+            'error',
+            `Saved with errors: ${failures.join(', ')} failed to persist.`,
+          )
+        } else {
+          showToast(
+            'success',
+            `✨ ${regenFields.length} AI field${regenFields.length === 1 ? '' : 's'} applied.`,
+          )
+        }
+
+        // Always refresh the preview
+        setPV((v) => v + 1)
+      })
+    },
+    [session, showToast],
+  )
+
   // Track AI rewrite usage (incremented from InlineEditModal via field save with aiIntent)
   const trackAiUse = useCallback(() => {
     aiUseCount.current += 1
@@ -288,6 +370,7 @@ export function EditorShell({ session, initialFields, initialHistoryOpen = false
             groups={groups}
             onFieldClick={(f) => setActiveF(f)}
             onToggle={handleToggle}
+            onRegenerateSection={(sid, label) => setRegenPanel({ sectionId: sid, sectionLabel: label })}
             disabled={session.permissions.isLocked}
           />
         </aside>
@@ -353,6 +436,18 @@ export function EditorShell({ session, initialFields, initialHistoryOpen = false
             showToast('success', 'Change undone ✓')
           }}
           onClose={() => setShowHistory(false)}
+        />
+      )}
+
+      {/* PR #102 — Per-section AI regenerate panel */}
+      {regenPanel && session.selectedVariantIndex != null && (
+        <RegenerateSectionPanel
+          sectionId={regenPanel.sectionId}
+          sectionLabel={regenPanel.sectionLabel}
+          reviewToken={session.reviewToken}
+          variantIndex={session.selectedVariantIndex}
+          onApply={handleApplyRegeneration}
+          onClose={() => setRegenPanel(null)}
         />
       )}
 
