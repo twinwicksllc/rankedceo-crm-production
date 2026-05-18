@@ -14,9 +14,11 @@ import type {
   OnboardingStep4Data,
   WaasPackageTier,
   DomainWishlistItem,
+  WaasTenant,
 } from '@/lib/waas/types'
 
-import { generateAndStoreSiteVariants, ensureClientReviewToken } from '@/lib/waas/actions/admin'
+import { ensureClientReviewToken } from '@/lib/waas/actions/admin'
+import { generateInitialSiteFromTemplate } from '@/lib/waas/services/generate-initial-site'
 import type { AuditReportData } from '@/lib/waas/types'
 
 // ---------------------------------------------------------------------------
@@ -577,8 +579,18 @@ export async function saveOnboardingStep4(
     const tokenResult = await ensureClientReviewToken(tenantId)
     const reviewToken = tokenResult.success && tokenResult.data ? tokenResult.data : tenantId
 
-    // Fire-and-forget to avoid blocking onboarding completion on AI latency.
-    void generateAndStoreSiteVariants(tenantId)
+    // Tier 1: run synchronously (instant deterministic build).
+    // Tier 2 (Gemini AI enhancement) is dispatched fire-and-forget inside
+    // generateInitialSiteFromTemplate and does NOT block the response.
+    const { data: freshTenant } = await supabase
+      .from('tenants')
+      .select('*')
+      .eq('id', tenantId)
+      .single()
+
+    if (freshTenant) {
+      void generateInitialSiteFromTemplate(tenantId, freshTenant as WaasTenant)
+    }
 
     revalidatePath('/admin/dashboard')
     return { success: true, data: { reviewToken } }

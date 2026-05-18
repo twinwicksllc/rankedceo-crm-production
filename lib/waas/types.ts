@@ -246,6 +246,18 @@ export interface GeneratedSiteVariant {
   sections: SectionConfig[]
 }
 
+// Result returned by generateInitialSiteFromTemplate()
+export interface InitialSiteBuildResult {
+  /** true when Tier 1 deterministic build succeeded and was persisted */
+  tier1Success:    boolean
+  /** true when Gemini enhancement has been dispatched (will complete async) */
+  tier2Dispatched: boolean
+  /** The template slug that was used */
+  templateSlug:    string
+  /** Any non-fatal diagnostic message */
+  message?:        string
+}
+
 // For creating a new tenant
 export interface CreateWaasTenantInput {
   slug:            string
