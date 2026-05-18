@@ -252,6 +252,19 @@ export interface TenantSiteConfig {
   meta_title:           string | null
   meta_description:     string | null
   og_image_url:         string | null
+
+  // -------------------------------------------------------------------------
+  // PR #103 — WaaS SEO: keyword injection
+  // AI-generated keyword clusters stored per-tenant for <meta> injection and
+  // structured data enrichment.
+  // -------------------------------------------------------------------------
+  /** Ordered keyword phrases (max 20). Injected into <meta name="keywords">. */
+  seo_keywords:              string[] | null
+  /** Provider that produced seo_keywords: 'gemini' | 'perplexity' | 'fallback' */
+  seo_keywords_provider:     string | null
+  /** When seo_keywords were last generated. null = never generated. */
+  seo_last_generated_at:     string | null
+
   client_review_token:  string | null
   client_selected_template_slug: string | null
   client_selected_at:   string | null
