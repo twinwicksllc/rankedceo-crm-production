@@ -1104,6 +1104,10 @@ export interface TenantPortalSiteStatus {
   approvalAt:       string | null    // ISO timestamp
   approvalLocked:   boolean
   lastClientEdit:   string | null    // ISO timestamp of last client-initiated edit
+  // --- Site-build lifecycle fields (migration 022) ---
+  initialBuildCompletedAt:  string | null                                       // Tier 1 completed
+  aiEnhancementStatus:      'in_progress' | 'completed' | 'failed' | null      // Tier 2 state
+  templateSlugDisplay:      string | null                                       // slug for human display
 }
 
 export interface TenantPortalRecentEdit {
@@ -1158,6 +1162,36 @@ export async function getTenantPortalData(
       plan_interval:          string | null
       stripe_subscription_id: string | null
     } | null
+
+    // 1b. tenant_site_config build-lifecycle columns (migration 022; schema-gap resilient)
+    let initialBuildCompletedAt: string | null = null
+    let rawAiStatus:             string | null = null
+    let clientSelectedSlug:      string | null = null
+
+    const { data: configRow } = await supabase
+      .from('tenant_site_config')
+      .select('initial_build_completed_at, ai_enhancement_status, client_selected_template_slug')
+      .eq('tenant_id', tenantId)
+      .maybeSingle()   // returns null (not error) if row absent
+
+    if (configRow) {
+      const cfg = configRow as {
+        initial_build_completed_at:  string | null
+        ai_enhancement_status:       string | null
+        client_selected_template_slug: string | null
+      }
+      initialBuildCompletedAt = cfg.initial_build_completed_at
+      rawAiStatus             = cfg.ai_enhancement_status
+      clientSelectedSlug      = cfg.client_selected_template_slug
+    }
+
+    // Coerce ai_enhancement_status to the union type (unknown values → null)
+    const VALID_AI_STATUSES = ['in_progress', 'completed', 'failed'] as const
+    type AiStatus = typeof VALID_AI_STATUSES[number]
+    const aiEnhancementStatus: AiStatus | null =
+      VALID_AI_STATUSES.includes(rawAiStatus as AiStatus)
+        ? (rawAiStatus as AiStatus)
+        : null
 
     // 2. Selected variant label
     let variantLabel: string | null = null
@@ -1248,6 +1282,10 @@ export async function getTenantPortalData(
           approvalAt,
           approvalLocked,
           lastClientEdit,
+          // Site-build lifecycle (migration 022)
+          initialBuildCompletedAt,
+          aiEnhancementStatus,
+          templateSlugDisplay: clientSelectedSlug ?? selectedTemplateSlug,
         },
         recentEdits,
         aiRewriteCount,

@@ -1,5 +1,5 @@
 // =============================================================================
-// generateInitialSiteFromTemplate — PR #95 (GitHub #96)
+// generateInitialSiteFromTemplate — PR #96 (GitHub #98 base)
 //
 // Two-tier site generation seeded by the client's chosen template.
 //
@@ -8,25 +8,12 @@
 //     • Falls back to industry-recommended template if none is stored
 //     • Builds a fully-populated single GeneratedSiteVariant deterministically
 //       using template sections + business profile data
-//     • Writes variant_index=0, status='selected' to tenant_site_variants
-//     • Records initial_build_completed_at in tenant_site_config
-//
-//   Tier 2 (asynchronous, fire-and-forget)
-//     • Calls Gemini to enhance/rewrite the Tier 1 variant copy
-//     • Uses template seo_strategy to weight keyword placement instructions
-//     • Uses template aesthetic/mood to tune tone directives
-//     • On success: overwrites the variant row with AI copy
-//     • Records ai_enhancement_completed_at + sets ai_enhancement_status
-//     • Schema-gap resilient — silently skips if Tier 2 columns are absent
-//
-// The Tier 1 path is synchronous so the editor is instantly available after
-// onboarding submit.  Tier 2 fires in the background and upgrades the copy
-// without any user-facing wait.
-// =============================================================================
-
-import { createClient } from '@supabase/supabase-js'
-import { getTemplate, ALL_TEMPLATES } from '@/lib/waas/templates/registry'
-import { recommendTemplates } from '@/lib/waas/services/template-recommender'
+//     • Enriches content with trade-specific Industry Content Packs:
+//         – Services list (falls back to pack defaults when intake is sparse)
+//         – FAQ items (pack FAQs seeded first, strategy items appended)
+//         – Hero eyebrow copy (pack strategy-keyed patterns)
+//         – Trust signals (pack-supplied, shown in trust bar section)
+//         – SEO keyword clusters (merged into keyPhrases)
 import type { WaasTenant, GeneratedSiteVariant } from '@/lib/waas/types'
 import type {
   SectionConfig,
@@ -80,7 +67,21 @@ interface GenerationProfile {
   targetAudience:    string
   tone:              string
   serviceArea:       string
+  /**
+   * Services list — populated from intake data when available,
+   * otherwise falls back to the industry content pack defaults.
+   */
   services:          string[]
+  /**
+   * Resolved display name for this trade from the content pack
+   * (e.g. "Plumbing Services"). Used in section headlines.
+   */
+  tradeDisplayName:  string
+  /**
+   * Trust signals from the content pack — short strings shown in
+   * the trust / stats bar section.
+   */
+  trustSignals:      string[]
 }
 
 // ---------------------------------------------------------------------------
@@ -166,6 +167,29 @@ function buildProfile(tenant: WaasTenant): GenerationProfile {
 
   const trade = tenant.primary_trade ?? tenant.target_industry ?? 'Local service'
 
+  // ── Industry content pack ────────────────────────────────────────────────
+  // Provides trade-specific fallbacks for services, keywords, and trust
+  // signals when the tenant's own intake profile is sparse.
+  const pack = getContentPack(trade)
+
+  // Services: intake data wins; pack defaults fill the gap
+  const intakeServices = extractList(intake.services_offered)
+  const services =
+    intakeServices.length > 0
+      ? intakeServices
+      : pack.defaultServices.slice(0, 6).map((s) => s.title)
+
+  // SEO key phrases: merge tenant phrases with pack terms (deduplicated)
+  const intakeKeyPhrases = extractList(seo.key_phrases)
+  const packKeyPhrases   = [...pack.seoKeywords.headTerms, ...pack.seoKeywords.midTail.slice(0, 3)]
+  const keyPhrases =
+    intakeKeyPhrases.length > 0
+      ? [
+          ...intakeKeyPhrases,
+          ...packKeyPhrases.filter((kw) => !intakeKeyPhrases.includes(kw)),
+        ].slice(0, 12)
+      : packKeyPhrases.slice(0, 8)
+
   return {
     businessName,
     trade,
@@ -187,7 +211,7 @@ function buildProfile(tenant: WaasTenant): GenerationProfile {
       ? content.about_narrative.trim()
       : `${businessName} serves clients in ${tenant.target_location ?? 'the local area'} with reliable ${trade.toLowerCase()} services.`,
     valuePropositions: extractList(content.value_propositions),
-    keyPhrases:        extractList(seo.key_phrases),
+    keyPhrases,
     targetAudience:    typeof intake.target_audience === 'string'
       ? intake.target_audience
       : 'Homeowners and local businesses',
@@ -197,7 +221,9 @@ function buildProfile(tenant: WaasTenant): GenerationProfile {
     serviceArea:       typeof seo.service_area === 'string' && seo.service_area.trim()
       ? seo.service_area.trim()
       : (tenant.target_location ?? 'Local area'),
-    services:          extractList(intake.services_offered),
+    services,
+    tradeDisplayName:  pack.displayName,
+    trustSignals:      pack.trustSignals,
   }
 }
 
@@ -211,10 +237,19 @@ function buildFaqContent(
 ): FAQSectionContent {
   const propositions = profile.valuePropositions.slice(0, 3)
 
+  // Seed with pack FAQs (up to 3 most relevant ones) then add strategy items
+  const pack     = getContentPack(profile.trade)
+  const packFaqs = pack.defaultFaqs.slice(0, 3)
+
   const items: FAQSectionContent['items'] = [
+    // Always include pack FAQs first — they're trade-specific and high-quality
+    ...packFaqs.map((faq) => ({
+      question: faq.question,
+      answer:   faq.answer,
+    })),
     {
-      question: `Do you offer ${profile.trade.toLowerCase()} services across ${profile.serviceArea}?`,
-      answer:   `Yes. ${profile.businessName} provides coverage across ${profile.serviceArea} and nearby areas.`,
+      question: `Do you cover ${profile.serviceArea} and the surrounding area?`,
+      answer:   `Yes. ${profile.businessName} provides service across ${profile.serviceArea} and nearby areas.`,
     },
     {
       question: 'How soon can you get started?',
@@ -249,7 +284,7 @@ function buildFaqContent(
   return {
     eyebrow:  'FAQ',
     headline: 'Common Questions',
-    intro:    `Quick answers about our ${profile.trade.toLowerCase()} service.`,
+    intro:    `Quick answers about our ${profile.tradeDisplayName.toLowerCase()}.`,
     items,
   }
 }
@@ -373,12 +408,36 @@ function buildTier1Variant(
   const strategy   = template.seo_strategy
   const directives = getStrategyDirectives(strategy, profile)
 
+  // ── Service items ─────────────────────────────────────────────────────────
+  // Prefer rich pack descriptions when service titles match pack defaults;
+  // fall back to generic description for custom tenant-supplied services.
+  const pack = getContentPack(profile.trade)
+  const packServiceMap = new Map(
+    pack.defaultServices.map((s) => [s.title.toLowerCase(), s.description]),
+  )
+
   const services = profile.services.length > 0
-    ? profile.services.slice(0, 6).map((s) => ({
-        title:       s,
-        description: `${s} provided by ${profile.businessName} in ${profile.location}.`,
+    ? profile.services.slice(0, 6).map((title) => ({
+        title,
+        description:
+          packServiceMap.get(title.toLowerCase())
+          ?? `${title} provided by ${profile.businessName} in ${profile.location}.`,
       }))
     : undefined
+
+  // ── Hero copy enrichment ──────────────────────────────────────────────────
+  // Pack provides strategy-keyed hero copy patterns.  We use the pack's
+  // eyebrow as a richer location-aware eyebrow when the tenant has no tagline.
+  const packHero = pack.heroCopyPatterns[strategy as keyof typeof pack.heroCopyPatterns]
+    ?? pack.heroCopyPatterns['standard']
+
+  const heroEyebrow =
+    directives.heroEyebrow !== `${profile.trade} — ${profile.location}` &&
+    directives.heroEyebrow !== `${profile.trade} Experts`
+      ? directives.heroEyebrow       // strategy directive wins if it's specific
+      : packHero
+        ? `${packHero.eyebrow} — ${profile.location}`
+        : directives.heroEyebrow
 
   const aboutContent: AboutSectionContent = {
     eyebrow:    'About Us',
@@ -393,7 +452,7 @@ function buildTier1Variant(
   sections = upsertSection(sections, 'hero', {
     enabled: true,
     content: {
-      eyebrow:          directives.heroEyebrow,
+      eyebrow:          heroEyebrow,
       headline:         profile.usp,
       subheadline:      `${directives.heroPreamble}${
         profile.tagline
@@ -409,7 +468,7 @@ function buildTier1Variant(
     enabled: true,
     content: {
       eyebrow:     directives.servicesEyebrow,
-      headline:    `${profile.trade} Services`,
+      headline:    profile.tradeDisplayName,
       subheadline: `Built for ${profile.targetAudience} in ${profile.location}.`,
       items:       services,
     },
@@ -420,7 +479,8 @@ function buildTier1Variant(
     enabled: true,
     content: {
       headline:    directives.trustHeadline,
-      subheadline: profile.valuePropositions[0] ?? undefined,
+      subheadline: profile.valuePropositions[0] ?? profile.trustSignals[0] ?? undefined,
+      items:       profile.trustSignals.map((signal) => ({ label: signal })),
     },
   })
 
