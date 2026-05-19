@@ -20,7 +20,7 @@ export function isPendingReviewEnumError(msg: string): boolean {
   return msg.includes('invalid input value for enum') && msg.includes('pending_review')
 }
 
-export function isMissingSchemaTable(msg: string): boolean {
+export function isMissingSchemaTable(msg: string, _tableOrColumn?: string): boolean {
   return (
     msg.includes('relation') &&
     (msg.includes('does not exist') || msg.includes('undefined')) &&
