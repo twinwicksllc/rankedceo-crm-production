@@ -1,7 +1,7 @@
 // RankedCEO WaaS — Section validation & normalisation helpers (no 'use server')
 import type { SectionConfig, SectionId } from '@/lib/waas/templates/types'
 
-function toSectionConfigList(value: unknown): SectionConfig[] {
+export function toSectionConfigList(value: unknown): SectionConfig[] {
   if (!Array.isArray(value)) return []
   return value.filter((item): item is SectionConfig => {
     if (!item || typeof item !== 'object') return false
@@ -11,13 +11,13 @@ function toSectionConfigList(value: unknown): SectionConfig[] {
 }
 
 
-function getCoreSectionFailures(enabledSections: string[]): string[] {
+export function getCoreSectionFailures(enabledSections: string[]): string[] {
   const required = ['hero', 'services', 'booking']
   return required.filter((section) => !enabledSections.includes(section))
 }
 
 
-function normalizeVariantSections(sections: SectionConfig[]): SectionConfig[] {
+export function normalizeVariantSections(sections: SectionConfig[]): SectionConfig[] {
   return [...sections]
     .sort((a, b) => a.order - b.order)
     .map((section, index) => ({
@@ -43,30 +43,22 @@ function validateStringLength(value: string | null, max: number, label: string):
 }
 
 
-function validateVariantSections(sections: SectionConfig[]): string | null {
+export function validateVariantSections(sections: SectionConfig[]): string | null {
   for (const section of sections) {
     const headline = readContentString(section.content, 'headline')
     const subheadline = readContentString(section.content, 'subheadline')
     const eyebrow = readContentString(section.content, 'eyebrow')
-
     const headlineErr = validateStringLength(headline, 140, `${section.section} headline`)
     if (headlineErr) return headlineErr
-
     const subheadlineErr = validateStringLength(subheadline, 700, `${section.section} subheadline`)
     if (subheadlineErr) return subheadlineErr
-
     const eyebrowErr = validateStringLength(eyebrow, 60, `${section.section} eyebrow`)
     if (eyebrowErr) return eyebrowErr
-
     if (section.section === 'about') {
       const body = readContentString(section.content, 'body')
       const bodyErr = validateStringLength(body, 2500, 'About body')
       if (bodyErr) return bodyErr
-
-      const highlights = section.content && typeof section.content === 'object'
-        ? (section.content as Record<string, unknown>).highlights
-        : null
-
+      const highlights = section.content && typeof section.content === 'object' ? (section.content as Record<string, unknown>).highlights : null
       if (Array.isArray(highlights)) {
         if (highlights.length > 10) return 'About highlights are limited to 10 items.'
         for (const item of highlights) {
@@ -75,12 +67,8 @@ function validateVariantSections(sections: SectionConfig[]): string | null {
         }
       }
     }
-
     if (section.section === 'faq') {
-      const faqItems = section.content && typeof section.content === 'object'
-        ? (section.content as Record<string, unknown>).items
-        : null
-
+      const faqItems = section.content && typeof section.content === 'object' ? (section.content as Record<string, unknown>).items : null
       if (Array.isArray(faqItems)) {
         if (faqItems.length > 12) return 'FAQ supports up to 12 items.'
         for (const item of faqItems) {
@@ -95,12 +83,8 @@ function validateVariantSections(sections: SectionConfig[]): string | null {
         }
       }
     }
-
     if (section.section === 'how-it-works') {
-      const steps = section.content && typeof section.content === 'object'
-        ? (section.content as Record<string, unknown>).steps
-        : null
-
+      const steps = section.content && typeof section.content === 'object' ? (section.content as Record<string, unknown>).steps : null
       if (Array.isArray(steps)) {
         if (steps.length > 8) return 'How It Works supports up to 8 steps.'
         for (const item of steps) {
@@ -115,12 +99,8 @@ function validateVariantSections(sections: SectionConfig[]): string | null {
         }
       }
     }
-
     if (section.section === 'services') {
-      const items = section.content && typeof section.content === 'object'
-        ? (section.content as Record<string, unknown>).items
-        : null
-
+      const items = section.content && typeof section.content === 'object' ? (section.content as Record<string, unknown>).items : null
       if (Array.isArray(items)) {
         if (items.length > 12) return 'Services supports up to 12 items.'
         for (const item of items) {
@@ -136,32 +116,22 @@ function validateVariantSections(sections: SectionConfig[]): string | null {
       }
     }
   }
-
   return null
 }
 
 
-function getVariantCoreSectionFailures(sections: SectionConfig[]): string[] {
+export function getVariantCoreSectionFailures(sections: SectionConfig[]): string[] {
   const enabled = new Set(sections.filter((section) => section.enabled).map((section) => section.section))
   const required: Array<SectionId> = ['hero', 'services', 'booking']
   return required.filter((section) => !enabled.has(section))
 }
 
 
-function validateVariantReviewReadiness(
-  variantIndex: number,
-  sections: SectionConfig[],
-): string | null {
+export function validateVariantReviewReadiness(variantIndex: number, sections: SectionConfig[]): string | null {
   const contentValidation = validateVariantSections(sections)
-  if (contentValidation) {
-    return `Variant ${variantIndex}: ${contentValidation}`
-  }
-
+  if (contentValidation) return `Variant ${variantIndex}: ${contentValidation}`
   const coreSectionFailures = getVariantCoreSectionFailures(sections)
-  if (coreSectionFailures.length > 0) {
-    return `Variant ${variantIndex}: missing required enabled sections (${coreSectionFailures.join(', ')}).`
-  }
-
+  if (coreSectionFailures.length > 0) return `Variant ${variantIndex}: missing required enabled sections (${coreSectionFailures.join(', ')}).`
   return null
 }
 
