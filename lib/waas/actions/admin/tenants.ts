@@ -26,32 +26,30 @@ export interface ArchivedTenantListItem extends AdminTenantListItem {
 
 
 export interface TenantSiteVersion {
-  id:           string
-  tenantId:     string
-  changeSource: string
-  summary:      string | null
-  templateSlug: string | null
-  snapshotJson: Record<string, unknown> | null
-  createdAt:    string
+  id:            string
+  change_source: string
+  summary:       string | null
+  template_slug: string | null
+  created_at:    string
 }
 
 
 export interface TenantDeploymentRecord {
-  id:                   string
-  tenantId:             string
-  deployedBy:           string
-  sourceVersionId:      string | null
-  deploymentPayloadJson: Record<string, unknown> | null
-  createdAt:            string
+  id:                      string
+  deployed_by:             string
+  source_version_id:       string | null
+  deployment_payload_json: Record<string, unknown> | null
+  created_at:              string
 }
 
 
 export interface TenantDetailData {
-  tenant:          WaasTenant
-  siteConfig:      TenantSiteConfig | null
-  siteVersions:    TenantSiteVersion[]
-  deploymentHistory: TenantDeploymentRecord[]
-  variants:        import('./variants').AdminSiteVariant[]
+  tenant:         WaasTenant
+  domainRequests: WaasDomainRequest[]
+  audit:          Record<string, unknown> | null
+  siteConfig:     (TenantSiteConfig & { site_templates?: { slug: string } | null }) | null
+  versions:       TenantSiteVersion[]
+  deployments:    TenantDeploymentRecord[]
 }
 
 
@@ -294,43 +292,118 @@ export async function archiveDuplicatePendingAttempts(
 
 
 export async function getTenantDetail(tenantId: string): Promise<import('./_shared').ActionResult<TenantDetailData>> {
-  const supabase = getAdminClient()
-  const [tenantRes, siteConfigRes, versionsRes, deploymentRes] = await Promise.all([
-    supabase.from('tenants').select('*').eq('id', tenantId).single(),
-    supabase.from('tenant_site_config').select('*, site_templates(slug, default_layout_json)').eq('tenant_id', tenantId).maybeSingle(),
-    supabase.from('tenant_site_versions').select('id, tenant_id, change_source, summary, template_slug, snapshot_json, created_at').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(20),
-    supabase.from('tenant_site_deployments').select('id, tenant_id, deployed_by, source_version_id, deployment_payload_json, created_at').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(10),
-  ])
-  if (tenantRes.error || !tenantRes.data) return { success: false, error: tenantRes.error?.message ?? 'Tenant not found' }
-  const versions: TenantSiteVersion[] = ((versionsRes.data ?? []) as Array<Record<string, unknown>>).map((v) => ({
-    id:           v.id           as string,
-    tenantId:     v.tenant_id   as string,
-    changeSource: v.change_source as string,
-    summary:      (v.summary    as string | null) ?? null,
-    templateSlug: (v.template_slug as string | null) ?? null,
-    snapshotJson: (v.snapshot_json as Record<string, unknown> | null) ?? null,
-    createdAt:    v.created_at  as string,
-  }))
-  const deployments: TenantDeploymentRecord[] = ((deploymentRes.data ?? []) as Array<Record<string, unknown>>).map((d) => ({
-    id:                    d.id as string,
-    tenantId:              d.tenant_id as string,
-    deployedBy:            d.deployed_by as string,
-    sourceVersionId:       (d.source_version_id as string | null) ?? null,
-    deploymentPayloadJson: (d.deployment_payload_json as Record<string, unknown> | null) ?? null,
-    createdAt:             d.created_at as string,
-  }))
-  const { getSiteVariants } = await import('./variants')
-  const variantsResult = await getSiteVariants(tenantId)
-  const variants = variantsResult.success ? variantsResult.data! : []
-  return {
-    success: true,
-    data: {
-      tenant:            tenantRes.data as WaasTenant,
-      siteConfig:        siteConfigRes.data as TenantSiteConfig | null,
-      siteVersions:      versions,
-      deploymentHistory: deployments,
-      variants,
-    },
+  try {
+    const supabase = getAdminClient()
+
+    const { data: tenant, error: tErr } = await supabase
+      .from('tenants')
+      .select('*')
+      .eq('id', tenantId)
+      .single()
+    if (tErr) return { success: false, error: tErr.message }
+
+    const { data: domains } = await supabase
+      .from('domain_requests')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('priority', { ascending: true })
+
+    const tenantRow = tenant as WaasTenant
+    let audit: Record<string, unknown> | null = null
+    if (tenantRow.source_audit_id) {
+      const { data: auditData } = await supabase
+        .from('audits')
+        .select('id, status, report_data, target_url, competitor_urls, completed_at')
+        .eq('id', tenantRow.source_audit_id)
+        .single()
+      audit = auditData as Record<string, unknown> | null
+    } else if (tenantRow.submitted_by_email) {
+      const { data: fallbackAudit } = await supabase
+        .from('audits')
+        .select('id, status, report_data, target_url, competitor_urls, completed_at')
+        .eq('requestor_email', tenantRow.submitted_by_email)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      audit = (fallbackAudit as Record<string, unknown> | null) ?? null
+    }
+
+    let resolvedDomainRequests = (domains ?? []) as WaasDomainRequest[]
+    if (resolvedDomainRequests.length === 0) {
+      const brandConfigRecord = tenantRow.brand_config as unknown as Record<string, unknown> | undefined
+      const domainWishlist = brandConfigRecord?.domain_wishlist
+      if (Array.isArray(domainWishlist)) {
+        resolvedDomainRequests = domainWishlist.map((item, index) => {
+          const row = (item ?? {}) as Record<string, unknown>
+          const domainName = typeof row.domain_name === 'string' ? row.domain_name : ''
+          const extension = typeof row.extension === 'string' ? row.extension : '.com'
+          const normalizedStatus = typeof row.status === 'string' ? row.status : 'requested'
+          return {
+            id: `wishlist-${tenantId}-${index + 1}`,
+            tenant_id: tenantId,
+            domain_name: domainName,
+            extension,
+            full_domain: `${domainName}${extension}`,
+            status: (['requested', 'checking', 'available', 'taken', 'registered', 'connected'].includes(normalizedStatus)
+              ? normalizedStatus
+              : 'requested') as WaasDomainRequest['status'],
+            priority: Number(row.priority ?? index + 1),
+            notes: null,
+            actioned_at: null,
+            actioned_by: null,
+            created_at: tenantRow.created_at,
+            updated_at: tenantRow.updated_at,
+          }
+        }).filter((row) => row.domain_name)
+      }
+    }
+
+    const { data: siteConfig } = await supabase
+      .from('tenant_site_config')
+      .select('*, site_templates(slug)')
+      .eq('tenant_id', tenantId)
+      .single()
+
+    const { data: versionsRows } = await supabase
+      .from('tenant_site_versions')
+      .select('id, change_source, summary, template_slug, created_at')
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    let deploymentsRows: Array<Record<string, unknown>> = []
+    const { data: deploymentsData, error: deploymentsError } = await supabase
+      .from('tenant_site_deployments')
+      .select('id, deployed_by, source_version_id, deployment_payload_json, created_at')
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false })
+      .limit(10)
+    if (!deploymentsError) {
+      deploymentsRows = (deploymentsData ?? []) as Array<Record<string, unknown>>
+    }
+
+    return {
+      success: true,
+      data: {
+        tenant:         tenantRow,
+        domainRequests: resolvedDomainRequests,
+        audit,
+        siteConfig: (siteConfig as (TenantSiteConfig & { site_templates?: { slug: string } | null }) | null) ?? null,
+        versions: (versionsRows ?? []) as TenantSiteVersion[],
+        deployments: deploymentsRows.map((row) => ({
+          id:                      typeof row.id === 'string' ? row.id : '',
+          deployed_by:             typeof row.deployed_by === 'string' ? row.deployed_by : 'admin_console',
+          source_version_id:       typeof row.source_version_id === 'string' ? row.source_version_id : null,
+          deployment_payload_json: row.deployment_payload_json && typeof row.deployment_payload_json === 'object'
+            ? (row.deployment_payload_json as Record<string, unknown>)
+            : null,
+          created_at: typeof row.created_at === 'string' ? row.created_at : new Date().toISOString(),
+        })),
+      },
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
   }
 }
 
