@@ -1869,6 +1869,65 @@ export async function deploySite(tenantId: string, deployedBy = 'admin_console')
       // Backward-safe: if migration is not applied yet, deployment still succeeds.
     }
 
+    // ── Auto-generate SEO keywords on first deploy ──────────────────────────────
+    // Fires after a successful deploy. Wrapped in try/catch so any keyword-gen
+    // failure never blocks or reverts the deployment.
+    try {
+      const { data: siteConfigForSeo } = await supabase
+        .from('tenant_site_config')
+        .select('seo_keywords')
+        .eq('tenant_id', tenantId)
+        .single()
+
+      const existingKw = (siteConfigForSeo as { seo_keywords?: string[] | null } | null)?.seo_keywords
+      const hasKeywords = Array.isArray(existingKw) && existingKw.length > 0
+
+      if (!hasKeywords) {
+        const { data: tenantForSeo } = await supabase
+          .from('tenants')
+          .select('slug, domain, subdomain, primary_trade, target_industry, target_location')
+          .eq('id', tenantId)
+          .single()
+
+        if (tenantForSeo) {
+          const t = tenantForSeo as {
+            slug:            string
+            domain:          string | null
+            subdomain:       string | null
+            primary_trade:   string | null
+            target_industry: string | null
+            target_location: string | null
+          }
+
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://rankedceo.com'
+          const targetUrl = t.domain
+            ? `https://${t.domain}`
+            : t.subdomain
+              ? `https://${t.subdomain}.rankedceo.com`
+              : `${appUrl}/sites/${t.slug}`
+
+          const industry = t.primary_trade ?? t.target_industry ?? null
+          const location = t.target_location ?? null
+
+          const kwResult = await generateIndustryKeywordPlan(targetUrl, industry, location, 15)
+
+          if (kwResult.keywords.length > 0) {
+            await supabase
+              .from('tenant_site_config')
+              .update({
+                seo_keywords:          kwResult.keywords,
+                seo_keywords_provider: kwResult.provider,
+                seo_last_generated_at: new Date().toISOString(),
+                updated_at:            new Date().toISOString(),
+              })
+              .eq('tenant_id', tenantId)
+          }
+        }
+      }
+    } catch {
+      // Non-blocking: keyword generation errors are silently ignored.
+    }
+
     revalidatePath('/admin/dashboard')
     revalidatePath(`/admin/dashboard/${tenantId}`)
     return { success: true, data: { deploymentId } }
