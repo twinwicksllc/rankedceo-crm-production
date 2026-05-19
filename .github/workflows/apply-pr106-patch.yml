@@ -1,0 +1,36 @@
+name: Apply PR 106 admin.ts Patch
+on:
+  workflow_dispatch:
+
+jobs:
+  apply-patch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/waas-auto-seo-keywords-on-deploy
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download patched admin.ts
+        run: |
+          curl -fSL -o lib/waas/actions/admin.ts \
+            "https://galaxy-prod.tlcdn.com/gen/user_2qLzxfvCt3BNP5uCx22GD57MtzQ/6833598c-50f4-469a-9ff7-a90ccfb368b6.ts"
+          echo "Downloaded $(wc -c < lib/waas/actions/admin.ts) bytes"
+
+      - name: Commit patched admin.ts
+        run: |
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add lib/waas/actions/admin.ts
+          git diff --cached --stat
+          git commit -m "feat(waas): auto-generate SEO keywords on site deploy (#106)"
+          git push origin feature/waas-auto-seo-keywords-on-deploy
+
+      - name: Remove this one-time workflow
+        run: |
+          git rm .github/workflows/apply-pr106-patch.yml
+          git commit -m "chore: remove one-time PR 106 patch workflow"
+          git push origin feature/waas-auto-seo-keywords-on-deploy
