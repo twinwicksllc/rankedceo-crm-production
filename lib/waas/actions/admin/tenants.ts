@@ -1,47 +1,41 @@
 'use server'
 import { revalidatePath } from 'next/cache'
 import type { WaasTenant, WaasDomainRequest, WaasTenantStatus } from '@/lib/waas/types'
-import type { TenantSiteConfig, SectionConfig } from '@/lib/waas/templates/types'
-import { getAdminClient, parseMissingTenantColumn, isPendingReviewEnumError, isMissingSchemaTable } from './_shared'
+import type { TenantSiteConfig } from '@/lib/waas/templates/types'
+import { getAdminClient, parseMissingTenantColumn, isPendingReviewEnumError } from './_shared'
+import type { ActionResult } from './_shared'
 export type { ActionResult } from './_shared'
 
-export interface AdminTenantListItem {
-  id:           string
-  businessName: string
-  email:        string
-  phone:        string
-  industry:     string
-  location:     string
-  status:       WaasTenantStatus
-  createdAt:    string
+export interface AdminTenantListItem extends WaasTenant {
+  client_selected_template_slug?: string | null
+  client_selected_at?: string | null
+  client_review_token?: string | null
 }
 
-
-export interface ArchivedTenantListItem extends AdminTenantListItem {
-  archivedAt:   string | null
-  archivedBy:   string | null
-  archiveNote:  string | null
-  deletedAt:    string | null
+export interface ArchivedTenantListItem {
+  id: string
+  legal_name: string | null
+  brand_config: WaasTenant['brand_config']
+  submitted_by_email: string | null
+  deleted_at: string
+  created_at: string
 }
-
 
 export interface TenantSiteVersion {
-  id:            string
+  id: string
   change_source: string
-  summary:       string | null
+  summary: string | null
   template_slug: string | null
-  created_at:    string
+  created_at: string
 }
-
 
 export interface TenantDeploymentRecord {
-  id:                      string
-  deployed_by:             string
-  source_version_id:       string | null
+  id: string
+  deployed_by: string
+  source_version_id: string | null
   deployment_payload_json: Record<string, unknown> | null
-  created_at:              string
+  created_at: string
 }
-
 
 export interface TenantDetailData {
   tenant:         WaasTenant
@@ -52,246 +46,279 @@ export interface TenantDetailData {
   deployments:    TenantDeploymentRecord[]
 }
 
-
 export interface TenantSearchFilters {
-  query?:  string
-  status?: WaasTenantStatus | 'all'
-  limit?:  number
-  offset?: number
+  query?:   string
+  status?:  WaasTenantStatus | 'all'
+  sortBy?:  'created_at' | 'business_name'
+  sortDir?: 'asc' | 'desc'
 }
 
+export type BulkTenantAction = 'activate' | 'suspend'
 
-export type BulkTenantAction = 'activate' | 'archive' | 'reset_to_onboarding'
 
+export async function getAdminTenants(): Promise<ActionResult<AdminTenantListItem[]>> {
+  try {
+    const supabase = getAdminClient()
+    let statuses: string[] = ['pending_review', 'onboarding', 'active']
 
-export async function getAdminTenants(): Promise<AdminTenantListItem[]> {
-  const supabase = getAdminClient()
+    let { data, error } = await supabase
+      .from('tenants')
+      .select('*')
+      .in('status', statuses)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
 
-  let query = supabase
-    .from('tenants')
-    .select('id, brand_config, status, created_at, submitted_by_email')
-    .order('created_at', { ascending: false })
-    .is('deleted_at', null)
-
-  const { data, error } = await query
-
-  if (error) {
-    // Check for missing deleted_at column
-    if (parseMissingTenantColumn(error.message) === 'deleted_at') {
-      const fallbackQuery = supabase
+    if (error && isPendingReviewEnumError(error.message)) {
+      statuses = statuses.filter((status) => status !== 'pending_review')
+      const retry = await supabase
         .from('tenants')
-        .select('id, brand_config, status, created_at, submitted_by_email')
+        .select('*')
+        .in('status', statuses)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
-      const { data: fallbackData, error: fallbackError } = await fallbackQuery
-      if (fallbackError) throw new Error(fallbackError.message)
-      return mapTenantsToListItems(fallbackData ?? [])
+      data = retry.data
+      error = retry.error
     }
-    throw new Error(error.message)
-  }
 
-  return mapTenantsToListItems(data ?? [])
-}
+    if (error && parseMissingTenantColumn(error.message) === 'deleted_at') {
+      const retry = await supabase
+        .from('tenants')
+        .select('*')
+        .in('status', statuses)
+        .order('created_at', { ascending: false })
+      data = retry.data
+      error = retry.error
 
-function mapTenantsToListItems(rows: unknown[]): AdminTenantListItem[] {
-  return (rows as Array<Record<string, unknown>>).map((row) => {
-    const bc = (row.brand_config as Record<string, unknown> | null) ?? {}
-    const contact = (bc.contact as Record<string, unknown> | null) ?? {}
-    return {
-      id:           row.id           as string,
-      businessName: typeof bc.business_name === 'string' ? bc.business_name : '—',
-      email:        typeof contact.email     === 'string' ? contact.email    : typeof row.submitted_by_email === 'string' ? row.submitted_by_email : '—',
-      phone:        typeof contact.phone     === 'string' ? contact.phone    : '—',
-      industry:     typeof bc.industry       === 'string' ? bc.industry      : '—',
-      location:     typeof bc.location       === 'string' ? bc.location      : '—',
-      status:       (row.status as WaasTenantStatus) ?? 'onboarding',
-      createdAt:    row.created_at  as string,
-    }
-  })
-}
-
-
-export async function archiveTenant(
-  tenantId: string,
-  archivedBy: string,
-  note?: string,
-): Promise<import('./_shared').ActionResult<void>> {
-  const supabase = getAdminClient()
-  const now = new Date().toISOString()
-  const { error } = await supabase
-    .from('tenants')
-    .update({
-      status:       'archived',
-      archived_at:  now,
-      archived_by:  archivedBy,
-      archive_note: note ?? null,
-      updated_at:   now,
-    })
-    .eq('id', tenantId)
-  if (error) {
-    const col = parseMissingTenantColumn(error.message)
-    if (col) return { success: false, error: `Column \`${col}\` is missing from the tenants table. Please apply the latest migration.` }
-    return { success: false, error: error.message }
-  }
-  revalidatePath('/admin/dashboard')
-  return { success: true }
-}
-
-
-export async function getRecentlyArchivedTenants(): Promise<import('./_shared').ActionResult<ArchivedTenantListItem[]>> {
-  const supabase = getAdminClient()
-  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-  const { data, error } = await supabase
-    .from('tenants')
-    .select('id, brand_config, status, created_at, submitted_by_email, archived_at, archived_by, archive_note, deleted_at')
-    .eq('status', 'archived')
-    .gte('archived_at', cutoff)
-    .order('archived_at', { ascending: false })
-  if (error) {
-    const col = parseMissingTenantColumn(error.message)
-    if (col) return { success: false, error: `Column \`${col}\` is missing from the tenants table.` }
-    return { success: false, error: error.message }
-  }
-  const rows = (data ?? []) as Array<Record<string, unknown>>
-  return {
-    success: true,
-    data: rows.map((row) => {
-      const bc = (row.brand_config as Record<string, unknown> | null) ?? {}
-      const contact = (bc.contact as Record<string, unknown> | null) ?? {}
-      return {
-        id:           row.id as string,
-        businessName: typeof bc.business_name === 'string' ? bc.business_name : '—',
-        email:        typeof contact.email === 'string' ? contact.email : typeof row.submitted_by_email === 'string' ? row.submitted_by_email : '—',
-        phone:        typeof contact.phone === 'string' ? contact.phone : '—',
-        industry:     typeof bc.industry === 'string' ? bc.industry : '—',
-        location:     typeof bc.location === 'string' ? bc.location : '—',
-        status:       (row.status as WaasTenantStatus) ?? 'archived',
-        createdAt:    row.created_at as string,
-        archivedAt:   (row.archived_at as string | null) ?? null,
-        archivedBy:   (row.archived_by as string | null) ?? null,
-        archiveNote:  (row.archive_note as string | null) ?? null,
-        deletedAt:    (row.deleted_at as string | null) ?? null,
+      if (error && isPendingReviewEnumError(error.message)) {
+        const retryStatuses = statuses.filter((status) => status !== 'pending_review')
+        const retryWithoutDeletedAt = await supabase
+          .from('tenants')
+          .select('*')
+          .in('status', retryStatuses)
+          .order('created_at', { ascending: false })
+        data = retryWithoutDeletedAt.data
+        error = retryWithoutDeletedAt.error
       }
-    }),
-  }
-}
-
-
-export async function restoreArchivedTenant(
-  tenantId: string,
-): Promise<import('./_shared').ActionResult<void>> {
-  const supabase = getAdminClient()
-  const now = new Date().toISOString()
-  const { error } = await supabase
-    .from('tenants')
-    .update({
-      status:       'onboarding',
-      archived_at:  null,
-      archived_by:  null,
-      archive_note: null,
-      updated_at:   now,
-    })
-    .eq('id', tenantId)
-    .eq('status', 'archived')
-  if (error) {
-    const col = parseMissingTenantColumn(error.message)
-    if (col) return { success: false, error: `Column \`${col}\` is missing from the tenants table. Please apply the latest migration.` }
-    return { success: false, error: error.message }
-  }
-  revalidatePath('/admin/dashboard')
-  return { success: true }
-}
-
-
-export async function archiveDuplicatePendingAttempts(
-  tenantId: string,
-  keepTenantId: string,
-  archivedBy: string,
-): Promise<import('./_shared').ActionResult<{ archivedCount: number }>> {
-  const supabase = getAdminClient()
-  const now = new Date().toISOString()
-
-  const { data: sourceTenant, error: sourceErr } = await supabase
-    .from('tenants')
-    .select('submitted_by_email, brand_config')
-    .eq('id', tenantId)
-    .single()
-
-  if (sourceErr || !sourceTenant) return { success: false, error: sourceErr?.message ?? 'Source tenant not found' }
-
-  const row = sourceTenant as { submitted_by_email: string | null; brand_config: Record<string, unknown> | null }
-  const email = row.submitted_by_email?.toLowerCase().trim() ?? null
-  const bc = row.brand_config ?? {}
-  const contactEmail = typeof (bc.contact as Record<string, unknown> | null)?.email === 'string'
-    ? ((bc.contact as Record<string, unknown>).email as string).toLowerCase().trim()
-    : null
-
-  const matchEmail = email ?? contactEmail
-  if (!matchEmail) return { success: false, error: 'Source tenant has no email to match.' }
-
-  let duplicatesQuery = supabase
-    .from('tenants')
-    .select('id, status')
-    .neq('id', keepTenantId)
-    .in('status', ['onboarding', 'pending_review'])
-    .is('deleted_at', null)
-
-  const { data: candidates, error: candidatesErr } = await duplicatesQuery
-  if (candidatesErr) {
-    const col = parseMissingTenantColumn(candidatesErr.message)
-    if (col === 'deleted_at') {
-      duplicatesQuery = supabase.from('tenants').select('id, status').neq('id', keepTenantId).in('status', ['onboarding', 'pending_review'])
-      const { data: fallback, error: fbErr } = await duplicatesQuery
-      if (fbErr) return { success: false, error: fbErr.message }
-      const fallbackIds = (fallback ?? []).map((r: Record<string, unknown>) => r.id as string)
-      if (!fallbackIds.length) return { success: true, data: { archivedCount: 0 } }
-      const { data: emailMatches, error: emailErr } = await supabase.from('tenants').select('id, submitted_by_email, brand_config').in('id', fallbackIds)
-      if (emailErr) return { success: false, error: emailErr.message }
-      const matchIds = (emailMatches ?? []).filter((r: Record<string, unknown>) => {
-        const rEmail = (r.submitted_by_email as string | null)?.toLowerCase().trim()
-        const rBc = (r.brand_config as Record<string, unknown> | null) ?? {}
-        const rContactEmail = typeof (rBc.contact as Record<string, unknown> | null)?.email === 'string' ? ((rBc.contact as Record<string, unknown>).email as string).toLowerCase().trim() : null
-        return rEmail === matchEmail || rContactEmail === matchEmail
-      }).map((r: Record<string, unknown>) => r.id as string)
-      if (!matchIds.length) return { success: true, data: { archivedCount: 0 } }
-      const { error: archiveErr } = await supabase.from('tenants').update({ status: 'archived', archived_at: now, archived_by: archivedBy, archive_note: 'Auto-archived duplicate pending attempt', updated_at: now }).in('id', matchIds)
-      if (archiveErr) return { success: false, error: archiveErr.message }
-      revalidatePath('/admin/dashboard')
-      return { success: true, data: { archivedCount: matchIds.length } }
     }
-    if (isPendingReviewEnumError(candidatesErr.message)) {
-      duplicatesQuery = supabase.from('tenants').select('id, status').neq('id', keepTenantId).eq('status', 'onboarding').is('deleted_at', null)
-      const { data: fallback2, error: fbErr2 } = await duplicatesQuery
-      if (fbErr2) return { success: false, error: fbErr2.message }
-      candidates.push(...(fallback2 ?? []))
-    } else {
-      return { success: false, error: candidatesErr.message }
+
+    if (error) return { success: false, error: error.message }
+
+    const tenants = (data ?? []) as WaasTenant[]
+    if (tenants.length === 0) {
+      return { success: true, data: [] }
     }
+
+    const tenantIds = tenants.map(item => item.id)
+    const { data: siteConfigRows } = await supabase
+      .from('tenant_site_config')
+      .select('tenant_id, client_review_token, client_selected_template_slug, client_selected_at')
+      .in('tenant_id', tenantIds)
+
+    const siteConfigMap = new Map<string, {
+      client_review_token?: string | null
+      client_selected_template_slug?: string | null
+      client_selected_at?: string | null
+    }>()
+
+    for (const row of (siteConfigRows ?? []) as Array<Record<string, unknown>>) {
+      const tenantId = row.tenant_id as string | undefined
+      if (!tenantId) continue
+      siteConfigMap.set(tenantId, {
+        client_review_token: (row.client_review_token as string | null | undefined) ?? null,
+        client_selected_template_slug: (row.client_selected_template_slug as string | null | undefined) ?? null,
+        client_selected_at: (row.client_selected_at as string | null | undefined) ?? null,
+      })
+    }
+
+    const enriched = tenants.map((tenant) => ({
+      ...tenant,
+      ...siteConfigMap.get(tenant.id),
+    }))
+
+    return { success: true, data: enriched }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
   }
-
-  const candidateIds = (candidates ?? []).map((r: Record<string, unknown>) => r.id as string)
-  if (!candidateIds.length) return { success: true, data: { archivedCount: 0 } }
-
-  const { data: emailMatches2, error: emailErr2 } = await supabase.from('tenants').select('id, submitted_by_email, brand_config').in('id', candidateIds)
-  if (emailErr2) return { success: false, error: emailErr2.message }
-
-  const matchIds2 = (emailMatches2 ?? []).filter((r: Record<string, unknown>) => {
-    const rEmail = (r.submitted_by_email as string | null)?.toLowerCase().trim()
-    const rBc = (r.brand_config as Record<string, unknown> | null) ?? {}
-    const rContactEmail = typeof (rBc.contact as Record<string, unknown> | null)?.email === 'string' ? ((rBc.contact as Record<string, unknown>).email as string).toLowerCase().trim() : null
-    return rEmail === matchEmail || rContactEmail === matchEmail
-  }).map((r: Record<string, unknown>) => r.id as string)
-
-  if (!matchIds2.length) return { success: true, data: { archivedCount: 0 } }
-
-  const { error: archiveErr2 } = await supabase.from('tenants').update({ status: 'archived', archived_at: now, archived_by: archivedBy, archive_note: 'Auto-archived duplicate pending attempt', updated_at: now }).in('id', matchIds2)
-  if (archiveErr2) return { success: false, error: archiveErr2.message }
-
-  revalidatePath('/admin/dashboard')
-  return { success: true, data: { archivedCount: matchIds2.length } }
 }
 
+export async function archiveTenant(tenantId: string): Promise<ActionResult<void>> {
+  try {
+    const supabase = getAdminClient()
+    const now = new Date().toISOString()
 
-export async function getTenantDetail(tenantId: string): Promise<import('./_shared').ActionResult<TenantDetailData>> {
+    const { error } = await supabase
+      .from('tenants')
+      .update({
+        deleted_at: now,
+        updated_at: now,
+      })
+      .eq('id', tenantId)
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    revalidatePath('/admin/dashboard')
+    return { success: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
+export async function getRecentlyArchivedTenants(limit = 8): Promise<ActionResult<ArchivedTenantListItem[]>> {
+  try {
+    const supabase = getAdminClient()
+
+    const { data, error } = await supabase
+      .from('tenants')
+      .select('id, legal_name, brand_config, submitted_by_email, deleted_at, created_at')
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false })
+      .limit(limit)
+
+    if (error) {
+      if (parseMissingTenantColumn(error.message) === 'deleted_at') {
+        return { success: true, data: [] }
+      }
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, data: (data ?? []) as ArchivedTenantListItem[] }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
+export async function restoreArchivedTenant(tenantId: string): Promise<ActionResult<void>> {
+  try {
+    const supabase = getAdminClient()
+    const { error } = await supabase
+      .from('tenants')
+      .update({
+        deleted_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', tenantId)
+
+    if (error) {
+      if (parseMissingTenantColumn(error.message) === 'deleted_at') {
+        return { success: false, error: 'This environment does not support archived tenant restore.' }
+      }
+      return { success: false, error: error.message }
+    }
+
+    revalidatePath('/admin/dashboard')
+    return { success: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
+export async function archiveDuplicatePendingAttempts(): Promise<ActionResult<{ archivedCount: number }>> {
+  try {
+    const supabase = getAdminClient()
+    let statuses: string[] = ['pending_review', 'onboarding']
+
+    let query = supabase
+      .from('tenants')
+      .select('id, created_at, submitted_by_email, legal_name, brand_config, status')
+      .in('status', statuses)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+
+    let { data, error } = await query
+
+    if (error && isPendingReviewEnumError(error.message)) {
+      statuses = statuses.filter((status) => status !== 'pending_review')
+      const retry = await supabase
+        .from('tenants')
+        .select('id, created_at, submitted_by_email, legal_name, brand_config, status')
+        .in('status', statuses)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+      data = retry.data
+      error = retry.error
+    }
+
+    if (error && parseMissingTenantColumn(error.message) === 'deleted_at') {
+      const retry = await supabase
+        .from('tenants')
+        .select('id, created_at, submitted_by_email, legal_name, brand_config, status')
+        .in('status', statuses)
+        .order('created_at', { ascending: false })
+      data = retry.data
+      error = retry.error
+    }
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    const rows = (data ?? []) as Array<Record<string, unknown>>
+    if (rows.length < 2) {
+      return { success: true, data: { archivedCount: 0 } }
+    }
+
+    const groups = new Map<string, Array<Record<string, unknown>>>()
+    for (const row of rows) {
+      const brand = (row.brand_config as Record<string, unknown> | null | undefined) ?? {}
+      const businessName = (typeof brand.business_name === 'string' && brand.business_name.trim())
+        ? brand.business_name.trim().toLowerCase()
+        : (typeof row.legal_name === 'string' ? row.legal_name.trim().toLowerCase() : 'unknown')
+
+      const email = typeof row.submitted_by_email === 'string'
+        ? row.submitted_by_email.trim().toLowerCase()
+        : ''
+
+      const key = `${businessName}::${email}`
+      const existing = groups.get(key) ?? []
+      existing.push(row)
+      groups.set(key, existing)
+    }
+
+    const archiveIds: string[] = []
+    for (const [, groupRows] of groups) {
+      if (groupRows.length < 2) continue
+      const sorted = [...groupRows].sort((a, b) => {
+        const aTime = new Date(String(a.created_at ?? 0)).getTime()
+        const bTime = new Date(String(b.created_at ?? 0)).getTime()
+        return bTime - aTime
+      })
+
+      for (const row of sorted.slice(1)) {
+        if (typeof row.id === 'string' && row.id) {
+          archiveIds.push(row.id)
+        }
+      }
+    }
+
+    if (archiveIds.length === 0) {
+      return { success: true, data: { archivedCount: 0 } }
+    }
+
+    const now = new Date().toISOString()
+    const { error: archiveError } = await supabase
+      .from('tenants')
+      .update({ deleted_at: now, updated_at: now })
+      .in('id', archiveIds)
+
+    if (archiveError) {
+      return { success: false, error: archiveError.message }
+    }
+
+    revalidatePath('/admin/dashboard')
+    return { success: true, data: { archivedCount: archiveIds.length } }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
+export async function getTenantDetail(tenantId: string): Promise<ActionResult<TenantDetailData>> {
   try {
     const supabase = getAdminClient()
 
@@ -407,62 +434,96 @@ export async function getTenantDetail(tenantId: string): Promise<import('./_shar
   }
 }
 
-
 export async function searchTenants(
   filters: TenantSearchFilters = {},
-): Promise<import('./_shared').ActionResult<AdminTenantListItem[]>> {
-  const supabase = getAdminClient()
-  const { query = '', status = 'all', limit = 50, offset = 0 } = filters
-  let q = supabase
-    .from('tenants')
-    .select('id, brand_config, status, created_at, submitted_by_email')
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false })
-    .range(offset, offset + limit - 1)
-  if (status !== 'all') q = q.eq('status', status)
-  if (query) q = q.or(`submitted_by_email.ilike.%${query}%`)
-  const { data, error } = await q
-  if (error) {
-    const col = parseMissingTenantColumn(error.message)
-    if (col === 'deleted_at') {
-      let q2 = supabase.from('tenants').select('id, brand_config, status, created_at, submitted_by_email').order('created_at', { ascending: false }).range(offset, offset + limit - 1)
-      if (status !== 'all') q2 = q2.eq('status', status)
-      if (query) q2 = q2.or(`submitted_by_email.ilike.%${query}%`)
-      const { data: d2, error: e2 } = await q2
-      if (e2) return { success: false, error: e2.message }
-      return { success: true, data: mapTenantsToListItems(d2 ?? []) }
-    }
-    return { success: false, error: error.message }
-  }
-  return { success: true, data: mapTenantsToListItems(data ?? []) }
-}
+): Promise<ActionResult<AdminTenantListItem[]>> {
+  try {
+    const supabase = getAdminClient()
+    const { query = '', status = 'all', sortBy = 'created_at', sortDir = 'desc' } = filters
 
+    let q = supabase
+      .from('tenants')
+      .select('*')
+      .is('deleted_at', null)
+      .order(sortBy === 'business_name' ? 'slug' : 'created_at', { ascending: sortDir === 'asc' })
+
+    if (status !== 'all') {
+      q = q.eq('status', status)
+    } else {
+      q = q.in('status', ['pending_review', 'onboarding', 'active', 'suspended'])
+    }
+
+    const { data, error } = await q
+
+    if (error) return { success: false, error: error.message }
+
+    let tenants = (data ?? []) as WaasTenant[]
+
+    if (query.trim()) {
+      const q_lower = query.toLowerCase()
+      tenants = tenants.filter((t) => {
+        const bc = t.brand_config as { business_name?: string } | null
+        const name   = (bc?.business_name ?? '').toLowerCase()
+        const slug   = (t.slug ?? '').toLowerCase()
+        const domain = (t.domain ?? t.subdomain ?? '').toLowerCase()
+        return name.includes(q_lower) || slug.includes(q_lower) || domain.includes(q_lower)
+      })
+    }
+
+    if (tenants.length === 0) return { success: true, data: [] }
+
+    const tenantIds = tenants.map((t) => t.id)
+    const { data: siteConfigRows } = await supabase
+      .from('tenant_site_config')
+      .select('tenant_id, client_review_token, client_selected_template_slug, client_selected_at')
+      .in('tenant_id', tenantIds)
+
+    const siteConfigMap = new Map<string, {
+      client_review_token?: string | null
+      client_selected_template_slug?: string | null
+      client_selected_at?: string | null
+    }>()
+
+    for (const row of (siteConfigRows ?? []) as Array<Record<string, unknown>>) {
+      const tid = row.tenant_id as string | undefined
+      if (!tid) continue
+      siteConfigMap.set(tid, {
+        client_review_token:           (row.client_review_token           as string | null | undefined) ?? null,
+        client_selected_template_slug: (row.client_selected_template_slug as string | null | undefined) ?? null,
+        client_selected_at:            (row.client_selected_at            as string | null | undefined) ?? null,
+      })
+    }
+
+    return {
+      success: true,
+      data: tenants.map((t) => ({ ...t, ...siteConfigMap.get(t.id) })),
+    }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Search failed' }
+  }
+}
 
 export async function bulkUpdateTenantStatus(
   tenantIds: string[],
-  action: BulkTenantAction,
-  performedBy: string,
-): Promise<import('./_shared').ActionResult<{ updatedCount: number }>> {
-  const supabase = getAdminClient()
-  const now = new Date().toISOString()
-  const statusMap: Record<BulkTenantAction, WaasTenantStatus> = {
-    activate:              'active',
-    archive:               'archived',
-    reset_to_onboarding:   'onboarding',
+  action:    BulkTenantAction,
+): Promise<ActionResult<{ updatedCount: number }>> {
+  if (!tenantIds.length) return { success: false, error: 'No tenants selected.' }
+
+  const newStatus: WaasTenantStatus = action === 'activate' ? 'active' : 'suspended'
+
+  try {
+    const supabase = getAdminClient()
+
+    const { error } = await supabase
+      .from('tenants')
+      .update({ status: newStatus })
+      .in('id', tenantIds)
+      .is('deleted_at', null)
+
+    if (error) return { success: false, error: error.message }
+
+    return { success: true, data: { updatedCount: tenantIds.length } }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Bulk update failed' }
   }
-  const newStatus = statusMap[action]
-  const updatePayload: Record<string, unknown> = { status: newStatus, updated_at: now }
-  if (action === 'archive') {
-    updatePayload.archived_at  = now
-    updatePayload.archived_by  = performedBy
-    updatePayload.archive_note = 'Bulk archive'
-  }
-  const { error, count } = await supabase.from('tenants').update(updatePayload).in('id', tenantIds).select('id', { count: 'exact', head: true })
-  if (error) {
-    const col = parseMissingTenantColumn(error.message)
-    if (col) return { success: false, error: `Column \`${col}\` is missing from the tenants table.` }
-    return { success: false, error: error.message }
-  }
-  revalidatePath('/admin/dashboard')
-  return { success: true, data: { updatedCount: count ?? tenantIds.length } }
 }
