@@ -3,10 +3,21 @@
 // =============================================================================
 // app/admin/dashboard/[tenantId]/site-settings-form.tsx
 // Admin form for SEO/CSS site settings + hero image upload (Phase 7.2).
+//
+// PR #104 — WaaS Admin SEO Keywords Panel
+//   Added SEO Keywords section:
+//     - "✨ Generate Keywords" button → calls generateSeoKeywords server action
+//     - Keywords chip display (read-only chips from AI-generated keywords)
+//     - Manual keyword textarea for editing + saving via updateTenantSiteSettings
+//     - Provider badge (gemini / perplexity / fallback) + last-generated timestamp
 // =============================================================================
 
 import { useRef, useState, useTransition } from 'react'
-import { updateTenantSiteSettings, updateTenantHeroImage } from '@/lib/waas/actions/admin'
+import {
+  updateTenantSiteSettings,
+  updateTenantHeroImage,
+  generateSeoKeywords,
+} from '@/lib/waas/actions/admin'
 
 interface SiteSettingsFormProps {
   tenantId: string
@@ -14,7 +25,11 @@ interface SiteSettingsFormProps {
   initialMetaDescription: string
   initialOgImageUrl: string
   initialCustomCss: string
-  initialHeroImageUrl?: string   // Phase 7.2
+  initialHeroImageUrl?: string
+  // PR #104 — SEO Keywords
+  initialSeoKeywords?: string[]
+  seoKeywordsProvider?: string | null
+  seoLastGeneratedAt?: string | null
 }
 
 export function SiteSettingsForm({
@@ -24,6 +39,9 @@ export function SiteSettingsForm({
   initialOgImageUrl,
   initialCustomCss,
   initialHeroImageUrl = '',
+  initialSeoKeywords = [],
+  seoKeywordsProvider = null,
+  seoLastGeneratedAt = null,
 }: SiteSettingsFormProps) {
   const [metaTitle, setMetaTitle] = useState(initialMetaTitle)
   const [metaDescription, setMetaDescription] = useState(initialMetaDescription)
@@ -39,6 +57,18 @@ export function SiteSettingsForm({
   const [heroMessage, setHeroMessage]     = useState<string | null>(null)
   const [heroError, setHeroError]         = useState<string | null>(null)
   const heroFileRef = useRef<HTMLInputElement>(null)
+
+  // PR #104: SEO Keywords
+  const [seoKeywords, setSeoKeywords]         = useState<string[]>(initialSeoKeywords)
+  const [provider, setProvider]               = useState<string | null>(seoKeywordsProvider)
+  const [lastGeneratedAt, setLastGeneratedAt] = useState<string | null>(seoLastGeneratedAt)
+  const [keywordsEdit, setKeywordsEdit]       = useState(initialSeoKeywords.join(', '))
+  const [isGenerating, startGenerating]       = useTransition()
+  const [genMessage, setGenMessage]           = useState<string | null>(null)
+  const [genError, setGenError]               = useState<string | null>(null)
+  const [keywordsSaving, startKeywordsSave]   = useTransition()
+  const [kwSaveMsg, setKwSaveMsg]             = useState<string | null>(null)
+  const [kwSaveErr, setKwSaveErr]             = useState<string | null>(null)
 
   const onSave = () => {
     setMessage(null)
@@ -71,7 +101,6 @@ export function SiteSettingsForm({
     setHeroError(null)
 
     try {
-      // Upload via the signed upload API route (reuse existing pattern)
       const formData = new FormData()
       formData.append('file', file)
       formData.append('tenantId', tenantId)
@@ -91,7 +120,6 @@ export function SiteSettingsForm({
       const data = await resp.json() as { publicUrl: string }
       const publicUrl = data.publicUrl
 
-      // Persist to brand_config.hero_image_url
       const saveResult = await updateTenantHeroImage(tenantId, publicUrl)
       if (!saveResult.success) {
         setHeroError(saveResult.error ?? 'Failed to save hero image URL.')
@@ -118,6 +146,67 @@ export function SiteSettingsForm({
     }
     setHeroImageUrl('')
     setHeroMessage('Hero image removed.')
+  }
+
+  // PR #104: Generate SEO keywords via AI
+  const onGenerateKeywords = () => {
+    setGenMessage(null)
+    setGenError(null)
+
+    startGenerating(async () => {
+      const result = await generateSeoKeywords(tenantId)
+      if (!result.success) {
+        setGenError(result.error ?? 'Failed to generate keywords.')
+        return
+      }
+      const kws = result.data?.keywords ?? []
+      setSeoKeywords(kws)
+      setKeywordsEdit(kws.join(', '))
+      setProvider(result.data?.provider ?? null)
+      setLastGeneratedAt(new Date().toISOString())
+      setGenMessage(`${kws.length} keywords generated.`)
+    })
+  }
+
+  // PR #104: Save manually edited keywords
+  const onSaveKeywords = () => {
+    setKwSaveMsg(null)
+    setKwSaveErr(null)
+
+    const parsed = keywordsEdit
+      .split(',')
+      .map((k) => k.trim())
+      .filter(Boolean)
+
+    startKeywordsSave(async () => {
+      const result = await updateTenantSiteSettings(tenantId, {
+        seoKeywords: parsed,
+      })
+      if (!result.success) {
+        setKwSaveErr(result.error ?? 'Failed to save keywords.')
+        return
+      }
+      setSeoKeywords(parsed)
+      setKwSaveMsg('Keywords saved.')
+    })
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  const providerLabel = (p: string | null) => {
+    if (p === 'gemini')     return { label: 'Gemini',     color: 'text-blue-300  bg-blue-500/15  border-blue-500/30' }
+    if (p === 'perplexity') return { label: 'Perplexity', color: 'text-violet-300 bg-violet-500/15 border-violet-500/30' }
+    if (p === 'fallback')   return { label: 'Fallback',   color: 'text-amber-300  bg-amber-500/15  border-amber-500/30' }
+    return null
+  }
+
+  const formatDate = (iso: string | null) => {
+    if (!iso) return null
+    try {
+      return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(iso))
+    } catch {
+      return null
+    }
   }
 
   return (
@@ -231,6 +320,105 @@ export function SiteSettingsForm({
         {message && <p className="text-[11px] text-emerald-300">{message}</p>}
         {error && <p className="text-[11px] text-red-300">{error}</p>}
       </div>
+
+      {/* ── SEO Keywords ─────────────────────────────────────────────── */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[11px] uppercase tracking-wide text-white/45">SEO Keywords</p>
+          <div className="flex items-center gap-2">
+            {/* Provider badge */}
+            {(() => {
+              const pb = providerLabel(provider)
+              return pb ? (
+                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${pb.color}`}>
+                  {pb.label}
+                </span>
+              ) : null
+            })()}
+            {/* Last-generated timestamp */}
+            {lastGeneratedAt && (
+              <span className="text-[10px] text-white/30">
+                Generated {formatDate(lastGeneratedAt)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-white/10 bg-white/5 p-3 space-y-3">
+
+          {/* Generate button */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onGenerateKeywords}
+              disabled={isGenerating}
+              className="rounded-lg bg-violet-600 px-3 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isGenerating ? (
+                <span className="flex items-center gap-1.5">
+                  <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                  Generating…
+                </span>
+              ) : (
+                '✨ Generate Keywords'
+              )}
+            </button>
+            {genMessage && <p className="text-[11px] text-emerald-300">{genMessage}</p>}
+            {genError   && <p className="text-[11px] text-red-300">{genError}</p>}
+          </div>
+
+          {/* Keyword chips (AI-generated, read-only display) */}
+          {seoKeywords.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {seoKeywords.map((kw) => (
+                <span
+                  key={kw}
+                  className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-0.5 text-[11px] text-violet-200"
+                >
+                  {kw}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Manual keyword editing */}
+          <div>
+            <p className="text-[10px] text-white/35 mb-1.5">
+              Edit keywords manually — comma-separated, max 20 phrases. Changes here override AI-generated keywords.
+            </p>
+            <textarea
+              value={keywordsEdit}
+              onChange={(e) => setKeywordsEdit(e.target.value)}
+              rows={3}
+              placeholder="hvac repair austin, air conditioning service, furnace tune-up…"
+              className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none focus:border-violet-500/60"
+            />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onSaveKeywords}
+              disabled={keywordsSaving}
+              className="rounded-lg border border-white/20 bg-white/8 px-3 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {keywordsSaving ? 'Saving…' : 'Save Keywords'}
+            </button>
+            {kwSaveMsg && <p className="text-[11px] text-emerald-300">{kwSaveMsg}</p>}
+            {kwSaveErr && <p className="text-[11px] text-red-300">{kwSaveErr}</p>}
+          </div>
+
+          <p className="text-[10px] text-white/30">
+            Keywords are injected into the live site&apos;s <code className="font-mono">&lt;head&gt;</code> as{' '}
+            <code className="font-mono">meta name=&quot;keywords&quot;</code> and used by the AI regeneration engine
+            to anchor copy to your target phrases.
+          </p>
+        </div>
+      </div>
+
     </div>
   )
 }

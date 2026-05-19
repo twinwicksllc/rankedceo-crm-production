@@ -394,6 +394,9 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
                   initialOgImageUrl={siteConfig?.og_image_url ?? ''}
                   initialCustomCss={siteConfig?.custom_css ?? ''}
                   initialHeroImageUrl={(brand?.hero_image_url as string | null | undefined) ?? ''}
+                  initialSeoKeywords={Array.isArray(siteConfig?.seo_keywords) ? (siteConfig.seo_keywords as string[]) : []}
+                  seoKeywordsProvider={siteConfig?.seo_keywords_provider ?? null}
+                  seoLastGeneratedAt={siteConfig?.seo_last_generated_at ?? null}
                 />
               </div>
             </div>
