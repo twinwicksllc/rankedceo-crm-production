@@ -7,9 +7,11 @@ export function getAdminClient() {
   return createClient(url, key)
 }
 
-export type ActionResult<T = void> =
-  | { success: true; data: T }
-  | { success: false; error: string }
+export interface ActionResult<T = null> {
+  success: boolean
+  data?:   T
+  error?:  string
+}
 
 export function parseMissingTenantColumn(msg: string): string | null {
   const match = msg.match(/column "([^"]+)" of relation "waas_tenants"/)
