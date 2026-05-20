@@ -1,0 +1,192 @@
+'use server'
+
+import { revalidatePath } from 'next/cache'
+import type {
+  OnboardingStepTemplateData,
+  OnboardingStep4Data,
+  WaasPackageTier,
+  WaasTenant,
+} from '@/lib/waas/types'
+import { ensureClientReviewToken } from '@/lib/waas/actions/admin'
+import { generateInitialSiteFromTemplate } from '@/lib/waas/services/generate-initial-site'
+import {
+  getRawClient,
+  updateTenantWithFallback,
+  ensureLogosBucket,
+} from './_shared'
+import type { ActionResult } from './_shared'
+
+// ---------------------------------------------------------------------------
+// Step 4 (PR #94): Save Template Selection
+// Writes client_selected_template_slug to tenant_site_config.
+// Called after Step 3 (Brand Identity) before Step 5 (Integrations).
+// ---------------------------------------------------------------------------
+
+export async function saveOnboardingStepTemplate(
+  tenantId: string,
+  data:     OnboardingStepTemplateData,
+): Promise<ActionResult> {
+  try {
+    const supabase = getRawClient()
+
+    // Upsert into tenant_site_config
+    const { error: configError } = await supabase
+      .from('tenant_site_config')
+      .upsert(
+        {
+          tenant_id:                     tenantId,
+          client_selected_template_slug: data.selected_template_slug,
+          client_selected_at:            new Date().toISOString(),
+          updated_at:                    new Date().toISOString(),
+        },
+        { onConflict: 'tenant_id' },
+      )
+
+    if (configError) {
+      // Gracefully handle missing table / column — don't block onboarding
+      const msg = configError.message ?? ''
+      const isSchemaGap =
+        /could not find.*column.*client_selected_template_slug/i.test(msg) ||
+        /could not find.*table.*tenant_site_config/i.test(msg)
+
+      if (!isSchemaGap) {
+        return { success: false, error: msg }
+      }
+      // Schema gap: column doesn't exist yet (pre-PR #96 migration) — continue silently
+    }
+
+    // Also advance onboarding_step counter on tenants row
+    await updateTenantWithFallback(supabase, tenantId, {
+      onboarding_step: 5,
+      updated_at:      new Date().toISOString(),
+    })
+
+    return { success: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Step 4: Save Integrations + Submit (final step)
+// ---------------------------------------------------------------------------
+
+export async function saveOnboardingStep4(
+  tenantId: string,
+  data: OnboardingStep4Data,
+  packageTier: WaasPackageTier = 'standard',
+): Promise<ActionResult<{ reviewToken: string }>> {
+  try {
+    const supabase = getRawClient()
+
+    const { data: tenant } = await supabase
+      .from('tenants')
+      .select('brand_config')
+      .eq('id', tenantId)
+      .single()
+
+    const existingConfig = (tenant as { brand_config: Record<string, unknown> } | null)?.brand_config ?? {}
+
+    const updatedBrandConfig = {
+      ...existingConfig,
+      tone: data.tone || null,
+      fonts: {
+        ...(typeof existingConfig.fonts === 'object' && existingConfig.fonts ? existingConfig.fonts as Record<string, unknown> : {}),
+        preference: data.font_preference || null,
+      },
+      seo: {
+        target_keywords: data.target_keywords || null,
+        service_area: data.service_area || null,
+        key_phrases: data.key_phrases || null,
+      },
+      content: {
+        usp: data.usp,
+        value_propositions: data.value_propositions || null,
+        about_narrative: data.about_narrative || null,
+        primary_cta: data.primary_cta || null,
+      },
+      assets: {
+        hero_image_preference: data.hero_image_preference || null,
+      },
+      inspiration: {
+        urls: data.inspiration_urls || null,
+      },
+      functionality: {
+        contact_form: data.functionality_contact_form ?? true,
+        booking: data.functionality_booking ?? true,
+        gallery: data.functionality_gallery ?? false,
+        ecommerce: data.functionality_ecommerce ?? false,
+        blog: data.functionality_blog ?? false,
+      },
+    }
+
+    const { error } = await updateTenantWithFallback(supabase, tenantId, {
+      calendly_url:            data.calendly_url || null,
+      financing_enabled:       data.financing_enabled,
+      usp:                     data.usp || null,
+      brand_config:            updatedBrandConfig,
+      package_tier:            packageTier,
+      status:                  'pending_review',
+      onboarding_step:         5,
+      onboarding_completed:    true,
+      onboarding_completed_at: new Date().toISOString(),
+      updated_at:              new Date().toISOString(),
+    })
+
+    if (error) return { success: false, error: error.message }
+
+    // Generate and ensure review token for immediate builder access
+    const tokenResult = await ensureClientReviewToken(tenantId)
+    const reviewToken = tokenResult.success && tokenResult.data ? tokenResult.data : tenantId
+
+    // Tier 1: run synchronously (instant deterministic build).
+    // Tier 2 (Gemini AI enhancement) is dispatched fire-and-forget inside
+    // generateInitialSiteFromTemplate and does NOT block the response.
+    const { data: freshTenant } = await supabase
+      .from('tenants')
+      .select('*')
+      .eq('id', tenantId)
+      .single()
+
+    if (freshTenant) {
+      void generateInitialSiteFromTemplate(tenantId, freshTenant as WaasTenant)
+    }
+
+    revalidatePath('/admin/dashboard')
+    return { success: true, data: { reviewToken } }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Get Supabase Storage upload URL (for logo upload from client)
+// Returns the public URL after upload
+// ---------------------------------------------------------------------------
+
+export async function getLogoUploadPath(
+  tenantId: string,
+  fileName: string,
+): Promise<ActionResult<{ uploadPath: string; publicUrl: string }>> {
+  try {
+    const url  = process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL
+    if (!url) throw new Error('NEXT_PUBLIC_WAAS_SUPABASE_URL not set')
+
+    const supabase = getRawClient()
+    const { error: bucketError } = await ensureLogosBucket(supabase)
+    if (bucketError) {
+      return { success: false, error: bucketError.message }
+    }
+
+    const ext         = fileName.split('.').pop() ?? 'png'
+    const uploadPath  = `${tenantId}/logo.${ext}`
+    const publicUrl   = `${url}/storage/v1/object/public/logos/${uploadPath}`
+
+    return { success: true, data: { uploadPath, publicUrl } }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: msg }
+  }
+}
