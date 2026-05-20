@@ -1,0 +1,23 @@
+// lib/waas/services/email-templates/types.ts
+
+export interface NotificationTemplateData {
+  businessName?:  string
+  variantIndex?:  number
+  variantLabel?:  string
+  domain?:        string
+  domainStatus?:  string
+  reviewUrl?:     string
+  supportEmail?:  string
+  adminNotes?:    string
+  // For admin notifications
+  tenantSlug?:    string
+  editCount?:     number
+  // Phase 8.3 — billing
+  planLabel?:     string        // e.g. 'Standard', 'Premium'
+  planInterval?:  string        // e.g. 'monthly', 'annual'
+  planPrice?:     string        // e.g. '$39/mo' or '$399/yr'
+  portalUrl?:     string        // Stripe Billing Portal URL
+  oldPlanLabel?:  string        // For plan_changed
+  newPlanLabel?:  string        // For plan_changed
+}
+
