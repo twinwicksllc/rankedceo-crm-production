@@ -23,7 +23,7 @@ export default function PrivacyPolicyPage() {
       <main style={{ maxWidth: '800px', margin: '0 auto', padding: '48px 24px 80px' }}>
         <h1 style={{ fontSize: '36px', fontWeight: 800, marginBottom: '8px' }}>Privacy Policy</h1>
         <p style={{ color: '#64748b', marginBottom: '40px' }}>
-          <strong>Effective Date:</strong> June 1, 2025 &nbsp;|&nbsp; <strong>Last Updated:</strong> June 1, 2025
+          <strong>Effective Date:</strong> June 1, 2025 &nbsp;|&nbsp; <strong>Last Updated:</strong> May 20, 2026
         </p>
 
         <section style={{ marginBottom: '36px' }}>
@@ -72,6 +72,41 @@ export default function PrivacyPolicyPage() {
             If you use our CRM or WaaS platform to manage your own customers' data, we process that data on your behalf
             as a data processor. You remain the data controller for your customers' information, and you are responsible
             for ensuring you have the appropriate legal basis to collect and share that data with us.
+          </p>
+
+          <h3 style={{ fontSize: '17px', fontWeight: 600, marginBottom: '8px', marginTop: '20px' }}>1.5 Google OAuth and Account Data</h3>
+          <p style={{ lineHeight: 1.8 }}>
+            When you choose to sign in with Google, we collect specific Google user data to authenticate your identity and manage your account:
+          </p>
+          <ul style={{ lineHeight: 2, paddingLeft: '24px', marginTop: '12px' }}>
+            <li><strong>Email address</strong> — your primary Google account email used for account identification and communication.</li>
+            <li><strong>Full name</strong> — your Google account display name or profile name.</li>
+            <li><strong>Profile picture URL</strong> — a link to your Google profile picture, which we display in your user profile on our Services.</li>
+            <li><strong>Google User ID</strong> — a unique identifier assigned by Google to link your Google account to your RankedCEO account.</li>
+            <li><strong>Email verification status</strong> — confirmation that your email address has been verified by Google.</li>
+          </ul>
+          <p style={{ lineHeight: 1.8, marginTop: '16px' }}>
+            <strong>Google Data Usage:</strong> We use this Google user data exclusively to:
+          </p>
+          <ul style={{ lineHeight: 2, paddingLeft: '24px', marginTop: '8px' }}>
+            <li>Authenticate your identity and create/link your RankedCEO account.</li>
+            <li>Send you service-related communications to your Google-verified email address (such as password reset links, billing notifications, and product updates).</li>
+            <li>Display your profile information within the RankedCEO platform to personalize your experience.</li>
+            <li>Comply with our Terms of Service and applicable laws.</li>
+          </ul>
+          <p style={{ lineHeight: 1.8, marginTop: '16px' }}>
+            <strong>Google Data Sharing:</strong> We do not share your Google user data with third parties for marketing, advertising, or commercial purposes. We may share your email address and name with:
+          </p>
+          <ul style={{ lineHeight: 2, paddingLeft: '24px', marginTop: '8px' }}>
+            <li><strong>Service providers</strong> — who perform services on our behalf (e.g., Resend for email delivery, payment processors for billing). These providers are contractually bound to use your data only for the specific services they provide.</li>
+            <li><strong>Google</strong> — only for account link verification and authentication purposes (not for any other purpose).</li>
+            <li><strong>Legal authorities</strong> — only when required by law or court order.</li>
+          </ul>
+          <p style={{ lineHeight: 1.8, marginTop: '16px' }}>
+            <strong>Google Data Storage & Protection:</strong> We store your Google user data securely using industry-standard encryption (TLS/SSL for data in transit, AES-256 for data at rest) in our Supabase database hosted in secure U.S. data centers. Access to your Google data is restricted to authenticated RankedCEO employees and systems who require it to operate our Services. We implement role-based access controls, logging, and monitoring to detect unauthorized access attempts.
+          </p>
+          <p style={{ lineHeight: 1.8, marginTop: '16px' }}>
+            <strong>Google Data Retention & Deletion:</strong> We retain your Google user data for as long as your RankedCEO account is active. Upon account termination or deletion, your Google user data is deleted from our systems within 30 days, unless we are required to retain it by law or to comply with our legitimate business obligations (such as accounting or audit records). You may request deletion of your RankedCEO account at any time by contacting us at <a href="mailto:support@twin-wicks.com" style={{ color: '#4f46e5' }}>support@twin-wicks.com</a>, and we will delete your Google data according to the timeline above. You may also manage connected apps and revoke RankedCEO's access to your Google account by visiting your <a href="https://myaccount.google.com/permissions" style={{ color: '#4f46e5' }}>Google Account Permissions page</a>.
           </p>
         </section>
 
