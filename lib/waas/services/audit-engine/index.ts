@@ -1,21 +1,19 @@
-// =============================================================================
-// Audit Engine — Orchestrator
-// Runs search rankings + PageSpeed, computes gap analysis, builds report_data
-// =============================================================================
-
 import {
   getSearchRankings,
   getMockSearchRankings,
   extractDomain,
   type SearchRankReport,
-} from './serper'
-import { generateIndustryKeywordPlan } from './keyword-generator'
+} from '../serper'
+import { generateIndustryKeywordPlan } from '../keyword-generator'
 import {
   runPageSpeedAudit,
   getMockPageSpeedReport,
   type PageSpeedReport,
-} from './pagespeed'
-import type { AuditReportData, AuditSeoProvider } from '../types'
+} from '../pagespeed'
+import type { AuditReportData, AuditSeoProvider } from '../../types'
+import { computeGapAnalysis } from './gap-analysis'
+import { buildLeaderboard, computeKeywordPerformance } from './leaderboard'
+import { computeOverallScore } from './scoring'
 
 const AUDIT_DEBUG = process.env.WAAS_AUDIT_DEBUG === 'true'
 
@@ -27,246 +25,6 @@ function auditDebug(event: string, payload: Record<string, unknown>) {
     console.log(`[AuditDebug][Engine] ${event}`)
   }
 }
-
-// ---------------------------------------------------------------------------
-// Gap Analysis
-// ---------------------------------------------------------------------------
-
-export interface KeywordGap {
-  keyword:         string
-  competitorDomain: string
-  competitorRank:  number
-  yourRank:        number | null
-  impact:          'critical' | 'warning' | 'info'
-  description:     string
-}
-
-export interface GapAnalysis {
-  missingKeywords:   KeywordGap[]
-  rankingGaps:       KeywordGap[]
-  summary:           string
-  opportunityScore:  number   // 0-100: how much room for improvement
-}
-
-function computeGapAnalysis(
-  targetUrl:    string,
-  rankReports:  SearchRankReport[]
-): GapAnalysis {
-  const missingKeywords: KeywordGap[] = []
-  const rankingGaps:     KeywordGap[] = []
-  const targetDomain = extractDomain(targetUrl)
-
-  for (const report of rankReports) {
-    const targetPos = report.targetResult.position
-
-    for (const comp of report.competitorResults) {
-      if (!comp.position) continue  // competitor not ranking either
-
-      if (!targetPos) {
-        // We're not ranking at all for this keyword
-        missingKeywords.push({
-          keyword:          report.keyword,
-          competitorDomain: comp.domain,
-          competitorRank:   comp.position,
-          yourRank:         null,
-          impact:           comp.position <= 3 ? 'critical' : 'warning',
-            description:      `"${report.keyword}" — ${comp.domain} ranks #${comp.position} but ${targetDomain} does not appear in top ${report.maxTrackedPosition ?? 100}.`,
-        })
-      } else if (comp.position < targetPos) {
-        // Competitor outranks us
-        const gap = targetPos - comp.position
-        rankingGaps.push({
-          keyword:          report.keyword,
-          competitorDomain: comp.domain,
-          competitorRank:   comp.position,
-          yourRank:         targetPos,
-          impact:           gap > 20 ? 'critical' : gap > 5 ? 'warning' : 'info',
-          description:      `"${report.keyword}" — You rank #${targetPos} but ${comp.domain} ranks #${comp.position} (${gap} positions ahead).`,
-        })
-      }
-    }
-  }
-
-  // Build natural language summary
-  const totalGaps    = missingKeywords.length + rankingGaps.length
-  const criticalGaps = [...missingKeywords, ...rankingGaps].filter(g => g.impact === 'critical').length
-  const topCompetitor = rankReports[0]?.competitorResults
-    .filter(c => c.position !== null)
-    .sort((a, b) => (a.position ?? 999) - (b.position ?? 999))[0]
-
-  let summary = ''
-  if (totalGaps === 0) {
-    summary = `${targetDomain} is competitive for the searched keywords.`
-  } else {
-    summary = `${targetDomain} is missing ${missingKeywords.length} key keyword${missingKeywords.length !== 1 ? 's' : ''}`
-    if (topCompetitor?.position) {
-      summary += ` that ${topCompetitor.domain} is using to win local leads`
-    }
-    summary += `. There ${rankingGaps.length === 1 ? 'is' : 'are'} ${rankingGaps.length} ranking gap${rankingGaps.length !== 1 ? 's' : ''} where competitors outrank you by an average of ${
-      rankingGaps.length > 0
-        ? Math.round(rankingGaps.reduce((s, g) => s + (g.yourRank ?? 50) - g.competitorRank, 0) / rankingGaps.length)
-        : 0
-    } positions.`
-  }
-
-  // Opportunity score: higher = more room to improve
-  const opportunityScore = Math.min(100, Math.round(
-    (missingKeywords.length * 15) +
-    (criticalGaps * 10) +
-    (rankingGaps.length * 5)
-  ))
-
-  return {
-    missingKeywords: missingKeywords.sort((a, b) => a.competitorRank - b.competitorRank).slice(0, 5),
-    rankingGaps:     rankingGaps.sort((a, b) => (b.yourRank ?? 0) - b.competitorRank - ((a.yourRank ?? 0) - a.competitorRank)).slice(0, 5),
-    summary,
-    opportunityScore,
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Build Leaderboard (all URLs ranked by best position across keywords)
-// ---------------------------------------------------------------------------
-
-export interface LeaderboardEntry {
-  rank:         number
-  url:          string
-  domain:       string
-  bestPosition: number | null   // best Google position across all keywords
-  isTarget:     boolean
-  badge:        string           // emoji badge
-}
-
-export interface KeywordResultSummary {
-  keyword:  string
-  position: number | null
-}
-
-export interface KeywordPerformanceSummary {
-  topSearchResult:    KeywordResultSummary | null
-  bottomSearchResult: KeywordResultSummary | null
-  meanPosition:       number | null
-  measuredKeywords:   number
-  evaluatedKeywords:  number
-  maxTrackedPosition: number
-  unrankedPositionValue: number
-}
-
-function computeKeywordPerformance(
-  rankReports: SearchRankReport[],
-  evaluatedKeywords: number,
-  maxTrackedPosition: number
-): KeywordPerformanceSummary {
-  const entries = rankReports.map(report => ({
-    keyword: report.keyword,
-    position: report.targetResult.position,
-  }))
-
-  const rankedEntries = entries.filter((entry): entry is { keyword: string; position: number } => entry.position !== null)
-  const topSearchResult = rankedEntries.length > 0
-    ? [...rankedEntries].sort((a, b) => a.position - b.position)[0]
-    : null
-  const bottomSearchResult = rankedEntries.length > 0
-    ? [...rankedEntries].sort((a, b) => b.position - a.position)[0]
-    : null
-
-  // Include non-ranked keywords as (maxTrackedPosition + 1) so the mean reflects all evaluated terms.
-  const unrankedPositionValue = maxTrackedPosition + 1
-  const positions = entries.map(entry => entry.position ?? unrankedPositionValue)
-  const meanPosition = positions.length > 0
-    ? Number((positions.reduce((sum, value) => sum + value, 0) / positions.length).toFixed(1))
-    : null
-
-  return {
-    topSearchResult,
-    bottomSearchResult,
-    meanPosition,
-    measuredKeywords: rankedEntries.length,
-    evaluatedKeywords,
-    maxTrackedPosition,
-    unrankedPositionValue,
-  }
-}
-
-function buildLeaderboard(
-  targetUrl:       string,
-  competitorUrls:  string[],
-  rankReports:     SearchRankReport[]
-): LeaderboardEntry[] {
-  const allUrls = [targetUrl, ...competitorUrls]
-
-  const entries: LeaderboardEntry[] = allUrls.map(url => {
-    const domain = extractDomain(url)
-    let bestPosition: number | null = null
-
-    for (const report of rankReports) {
-      const result = url === targetUrl
-        ? report.targetResult
-        : report.competitorResults.find(c => c.url === url || c.domain === domain)
-
-      if (result?.position && (bestPosition === null || result.position < bestPosition)) {
-        bestPosition = result.position
-      }
-    }
-
-    return {
-      rank:         0,
-      url,
-      domain,
-      bestPosition,
-      isTarget:     url === targetUrl,
-      badge:        '',
-    }
-  })
-
-  // Sort: ranked first (ascending position), then unranked
-  entries.sort((a, b) => {
-    if (a.bestPosition === null && b.bestPosition === null) return 0
-    if (a.bestPosition === null) return 1
-    if (b.bestPosition === null) return -1
-    return a.bestPosition - b.bestPosition
-  })
-
-  // Assign ranks + badges
-  const badges = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣']
-  entries.forEach((e, i) => {
-    e.rank  = i + 1
-    e.badge = badges[i] ?? `${i + 1}.`
-  })
-
-  return entries
-}
-
-// ---------------------------------------------------------------------------
-// Compute overall audit score (0-100)
-// ---------------------------------------------------------------------------
-function computeOverallScore(
-  performanceScore: number,
-  seoScore: number,
-  mobileScore: number,
-  accessibilityScore: number
-): { score: number; grade: 'A' | 'B' | 'C' | 'D' | 'F' } {
-  const weightedTotal =
-    (performanceScore * 0.40) +
-    (seoScore * 0.30) +
-    (mobileScore * 0.20) +
-    (accessibilityScore * 0.10)
-
-  const finalScore = Math.round(weightedTotal)
-
-  let grade: 'A' | 'B' | 'C' | 'D' | 'F'
-  if (finalScore >= 80) grade = 'A'
-  else if (finalScore >= 65) grade = 'B'
-  else if (finalScore >= 50) grade = 'C'
-  else if (finalScore >= 35) grade = 'D'
-  else grade = 'F'
-
-  return { score: finalScore, grade }
-}
-
-// ---------------------------------------------------------------------------
-// MAIN: Run full audit
-// ---------------------------------------------------------------------------
 
 export interface AuditEngineResult {
   reportData:       AuditReportData
@@ -303,7 +61,7 @@ export async function runFullAudit(
     keywords,
   })
 
-  // ── 1. Get search rankings ──────────────────────────────────────────────
+  // ── 1. Get search rankings ─────────────────────────────────────────────────────────
   const rankReports: SearchRankReport[] = []
   if (provider === 'mock') {
     for (const keyword of keywords) {
@@ -351,7 +109,7 @@ export async function runFullAudit(
     manualReviewNote = `${failedKeywordFetches} keyword search request(s) failed and were excluded from ranking analysis.`
   }
 
-  // ── 2. Run PageSpeed ────────────────────────────────────────────────────
+  // ── 2. Run PageSpeed ────────────────────────────────────────────────────────────────────
   let pageSpeed: PageSpeedReport | null = null
 
   if (provider === 'mock') {
@@ -399,7 +157,7 @@ export async function runFullAudit(
   const serpResultsMin = serpResultsReturned.length > 0 ? Math.min(...serpResultsReturned) : 0
   const serpResultsMax = serpResultsReturned.length > 0 ? Math.max(...serpResultsReturned) : 0
 
-  // ── 3. Compute gap analysis ─────────────────────────────────────────────
+  // ── 3. Compute gap analysis ─────────────────────────────────────────────────────────────────
   const gapAnalysis  = computeGapAnalysis(targetUrl, rankReports)
   const leaderboard  = buildLeaderboard(targetUrl, competitorUrls, rankReports)
   const keywordPerformance = computeKeywordPerformance(rankReports, keywords.length, maxTrackedPosition)
@@ -414,7 +172,7 @@ export async function runFullAudit(
     accessibilityScore,
   )
 
-  // ── 4. Build report_data ────────────────────────────────────────────────
+  // ── 4. Build report_data ─────────────────────────────────────────────────────────────────
   const providerMeta = {
     provider:   provider,
     fetched_at: new Date().toISOString(),
@@ -614,3 +372,7 @@ export async function runFullAudit(
     manualReviewNote,
   }
 }
+
+// Re-export sub-module types so consumers can import from the directory
+export type { KeywordGap, GapAnalysis } from './gap-analysis'
+export type { LeaderboardEntry, KeywordResultSummary, KeywordPerformanceSummary } from './leaderboard'
