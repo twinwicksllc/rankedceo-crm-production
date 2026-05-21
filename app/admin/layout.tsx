@@ -40,7 +40,17 @@ async function isAdminSession(
   const hasAllowlistedEmail = allowlist.length > 0 && allowlist.includes(email)
   const hasAdminRoleFlag = user.app_metadata?.role === 'waas_admin' || user.app_metadata?.waas_admin === true || user.app_metadata?.waas_admin === 'true'
 
+  // DEBUG: Log admin auth checks
+  console.log('[Admin Auth Debug]', {
+    email,
+    allowlist,
+    hasAllowlistedEmail,
+    hasAdminRoleFlag,
+    appMetadata: user.app_metadata,
+  })
+
   if (hasAllowlistedEmail || hasAdminRoleFlag) {
+    console.log('[Admin Auth Success] Email or flag matched')
     return true
   }
 
@@ -53,6 +63,11 @@ async function isAdminSession(
   const dbRole = typeof dbUser?.role === 'string' ? dbUser.role.toLowerCase() : ''
   const allowedDbRoles = new Set(['admin', 'super_admin', 'owner'])
   const hasDbAdminRole = allowedDbRoles.has(dbRole)
+
+  console.log('[Admin Auth DB Check]', {
+    dbRole,
+    hasDbAdminRole,
+  })
 
   return hasDbAdminRole
 }
