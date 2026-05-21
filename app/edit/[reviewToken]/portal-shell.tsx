@@ -102,11 +102,12 @@ export function PortalShell({
       {/* Top bar: business name + tab nav                                     */}
       {/* ------------------------------------------------------------------ */}
       <header className="shrink-0 border-b border-slate-200 bg-white">
-        {/* Business name row */}
-        <div className="flex items-center gap-3 px-4 pt-3 pb-1">
-          <span className="text-sm font-semibold text-slate-800 truncate">
-            {session.businessName}
-          </span>
+        {/* Business name row + Logout */}
+        <div className="flex items-center justify-between px-4 pt-3 pb-1">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <span className="text-sm font-semibold text-slate-800 truncate">
+              {session.businessName}
+            </span>
           {session.approvalLocked && (
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -136,6 +137,16 @@ export function PortalShell({
               AI Enhancing
             </span>
           )}
+          </div>
+          {/* Logout button */}
+          <a
+            href="/api/auth/logout"
+            data-testid="logout"
+            className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded transition-colors whitespace-nowrap"
+            title="Exit the portal"
+          >
+            Exit
+          </a>
         </div>
 
         {/* Tab nav row */}
