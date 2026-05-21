@@ -19,8 +19,8 @@ export function AdvantagePointFooter() {
           </span>
         </div>
         <div className="flex items-center gap-4 text-white/30 text-xs">
-          <a href="/privacy" className="hover:text-white/60 transition-colors">Privacy</a>
-          <a href="/terms" className="hover:text-white/60 transition-colors">Terms</a>
+          <a href="https://crm.rankedceo.com/privacy" className="hover:text-white/60 transition-colors">Privacy</a>
+          <a href="https://crm.rankedceo.com/terms" className="hover:text-white/60 transition-colors">Terms</a>
           <a href="mailto:support@rankedceo.com" className="hover:text-white/60 transition-colors">Support</a>
         </div>
       </div>

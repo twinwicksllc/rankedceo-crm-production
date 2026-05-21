@@ -14,8 +14,8 @@ export default function PrivacyPolicyPage() {
           RankedCEO
         </Link>
         <nav style={{ display: 'flex', gap: '24px' }}>
-          <Link href="/privacy" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px' }}>Privacy Policy</Link>
-          <Link href="/terms" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px' }}>Terms of Service</Link>
+          <Link href="https://crm.rankedceo.com/privacy" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px' }}>Privacy Policy</Link>
+          <Link href="https://crm.rankedceo.com/terms" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px' }}>Terms of Service</Link>
         </nav>
       </header>
 
@@ -296,8 +296,8 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <div style={{ marginTop: '48px', paddingTop: '24px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '24px', fontSize: '14px', color: '#64748b' }}>
-          <Link href="/terms" style={{ color: '#4f46e5', textDecoration: 'none' }}>Terms of Service →</Link>
-          <Link href="/" style={{ color: '#64748b', textDecoration: 'none' }}>← Back to Home</Link>
+          <Link href="https://crm.rankedceo.com/terms" style={{ color: '#4f46e5', textDecoration: 'none' }}>Terms of Service →</Link>
+          <Link href="https://crm.rankedceo.com" style={{ color: '#64748b', textDecoration: 'none' }}>← Back to Home</Link>
         </div>
       </main>
 
@@ -305,9 +305,9 @@ export default function PrivacyPolicyPage() {
       <footer style={{ background: '#0f172a', color: '#94a3b8', padding: '24px', textAlign: 'center', fontSize: '14px' }}>
         <p style={{ margin: 0 }}>
           © {new Date().getFullYear()} RankedCEO LLC. All rights reserved. &nbsp;|&nbsp;{' '}
-          <Link href="/privacy" style={{ color: '#94a3b8', textDecoration: 'underline' }}>Privacy Policy</Link>
+          <Link href="https://crm.rankedceo.com/privacy" style={{ color: '#94a3b8', textDecoration: 'underline' }}>Privacy Policy</Link>
           &nbsp;|&nbsp;{' '}
-          <Link href="/terms" style={{ color: '#94a3b8', textDecoration: 'underline' }}>Terms of Service</Link>
+          <Link href="https://crm.rankedceo.com/terms" style={{ color: '#94a3b8', textDecoration: 'underline' }}>Terms of Service</Link>
         </p>
       </footer>
     </div>

@@ -147,8 +147,8 @@ export default function LandingPage() {
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <p style={{ margin: 0 }}>
             © {new Date().getFullYear()} Smile MakeOver by RankedCEO LLC. All rights reserved.&nbsp;&nbsp;
-            <a href="/privacy" style={{ color: '#9ca3af', textDecoration: 'underline', marginRight: '16px' }}>Privacy Policy</a>
-            <a href="/terms" style={{ color: '#9ca3af', textDecoration: 'underline' }}>Terms of Service</a>
+            <a href="https://crm.rankedceo.com/privacy" style={{ color: '#9ca3af', textDecoration: 'underline', marginRight: '16px' }}>Privacy Policy</a>
+            <a href="https://crm.rankedceo.com/terms" style={{ color: '#9ca3af', textDecoration: 'underline' }}>Terms of Service</a>
           </p>
         </div>
       </footer>

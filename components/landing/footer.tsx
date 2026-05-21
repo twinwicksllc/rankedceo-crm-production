@@ -22,8 +22,8 @@ const footerLinks: Record<string, { label: string; href: string }[]> = {
     { label: "Help Center", href: "#" },
   ],
   Legal: [
-    { label: "Privacy Policy", href: "/privacy" },
-    { label: "Terms of Service", href: "/terms" },
+    { label: "Privacy Policy", href: "https://crm.rankedceo.com/privacy" },
+    { label: "Terms of Service", href: "https://crm.rankedceo.com/terms" },
     { label: "HIPAA Compliance", href: "#" },
     { label: "BAA", href: "#" },
   ],
@@ -149,8 +149,8 @@ export function Footer() {
             © {new Date().getFullYear()} RankedCEO LLC. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
-            <a href="/privacy" className="text-xs text-white/50 hover:text-white transition-colors">Privacy Policy</a>
-            <a href="/terms" className="text-xs text-white/50 hover:text-white transition-colors">Terms of Service</a>
+            <a href="https://crm.rankedceo.com/privacy" className="text-xs text-white/50 hover:text-white transition-colors">Privacy Policy</a>
+            <a href="https://crm.rankedceo.com/terms" className="text-xs text-white/50 hover:text-white transition-colors">Terms of Service</a>
             <span className="text-xs text-white/40">Nationwide Network</span>
           </div>
         </div>

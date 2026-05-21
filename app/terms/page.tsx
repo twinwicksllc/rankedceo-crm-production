@@ -14,8 +14,8 @@ export default function TermsOfServicePage() {
           RankedCEO
         </Link>
         <nav style={{ display: 'flex', gap: '24px' }}>
-          <Link href="/privacy" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px' }}>Privacy Policy</Link>
-          <Link href="/terms" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px' }}>Terms of Service</Link>
+          <Link href="https://crm.rankedceo.com/privacy" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px' }}>Privacy Policy</Link>
+          <Link href="https://crm.rankedceo.com/terms" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px' }}>Terms of Service</Link>
         </nav>
       </header>
 
@@ -35,7 +35,7 @@ export default function TermsOfServicePage() {
             <a href="https://audit.rankedceo.com" style={{ color: '#4f46e5' }}>audit.rankedceo.com</a> (collectively,
             the "Services"). By creating an account, clicking "I agree," or otherwise using the Services, you agree to
             be bound by these Terms and our{' '}
-            <Link href="/privacy" style={{ color: '#4f46e5' }}>Privacy Policy</Link>. If you do not agree to these Terms,
+            <Link href="https://crm.rankedceo.com/privacy" style={{ color: '#4f46e5' }}>Privacy Policy</Link>. If you do not agree to these Terms,
             do not use the Services.
           </p>
           <p style={{ lineHeight: 1.8, marginTop: '12px' }}>
@@ -351,8 +351,8 @@ export default function TermsOfServicePage() {
         </section>
 
         <div style={{ marginTop: '48px', paddingTop: '24px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '24px', fontSize: '14px', color: '#64748b' }}>
-          <Link href="/privacy" style={{ color: '#4f46e5', textDecoration: 'none' }}>← Privacy Policy</Link>
-          <Link href="/" style={{ color: '#64748b', textDecoration: 'none' }}>← Back to Home</Link>
+          <Link href="https://crm.rankedceo.com/privacy" style={{ color: '#4f46e5', textDecoration: 'none' }}>← Privacy Policy</Link>
+          <Link href="https://crm.rankedceo.com" style={{ color: '#64748b', textDecoration: 'none' }}>← Back to Home</Link>
         </div>
       </main>
 
@@ -360,9 +360,9 @@ export default function TermsOfServicePage() {
       <footer style={{ background: '#0f172a', color: '#94a3b8', padding: '24px', textAlign: 'center', fontSize: '14px' }}>
         <p style={{ margin: 0 }}>
           © {new Date().getFullYear()} RankedCEO LLC. All rights reserved. &nbsp;|&nbsp;{' '}
-          <Link href="/privacy" style={{ color: '#94a3b8', textDecoration: 'underline' }}>Privacy Policy</Link>
+          <Link href="https://crm.rankedceo.com/privacy" style={{ color: '#94a3b8', textDecoration: 'underline' }}>Privacy Policy</Link>
           &nbsp;|&nbsp;{' '}
-          <Link href="/terms" style={{ color: '#94a3b8', textDecoration: 'underline' }}>Terms of Service</Link>
+          <Link href="https://crm.rankedceo.com/terms" style={{ color: '#94a3b8', textDecoration: 'underline' }}>Terms of Service</Link>
         </p>
       </footer>
     </div>
