@@ -13,13 +13,15 @@ jobs:
     permissions:
       contents: read
       issues: write
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.0
+        uses: actions/checkout@v4.2.1
 
       - name: Setup Node 24
-        uses: actions/setup-node@v4.1.0
+        uses: actions/setup-node@v4.2.0
         with:
           node-version: '24'
           cache: 'npm'
@@ -56,7 +58,7 @@ jobs:
 
       - name: Upload evidence
         if: always()
-        uses: actions/upload-artifact@v4.5.0
+        uses: actions/upload-artifact@v4.6.0
         with:
           name: qa-full-evidence-${{ github.run_id }}
           path: qa-agent/evidence/
@@ -64,7 +66,7 @@ jobs:
 
       - name: Post summary to GitHub Actions
         if: always()
-        uses: actions/github-script@v7.0.1
+        uses: actions/github-script@v7.0.2
         with:
           script: |
             const fs = require('fs')

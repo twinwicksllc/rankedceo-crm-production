@@ -59,11 +59,11 @@ interface PortalShellProps {
 // ---------------------------------------------------------------------------
 
 const TABS = [
-  { id: 'overview', label: '🏠 Overview' },
-  { id: 'edit',     label: '✏️ Edit'     },
-  { id: 'history',  label: '🕐 History'  },
-  { id: 'audits',   label: '📊 Audits'   },
-  { id: 'billing',  label: '💳 Billing'  },
+  { id: 'overview', label: 'Overview' },
+  { id: 'edit',     label: 'Edit'     },
+  { id: 'history',  label: 'History'  },
+  { id: 'audits',   label: 'Audits'   },
+  { id: 'billing',  label: 'Billing'  },
 ] as const
 
 type TabId = typeof TABS[number]['id']
