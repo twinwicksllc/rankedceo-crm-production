@@ -30,6 +30,7 @@ const NavigateStepSchema = BaseStepSchema.extend({ type: z.literal('navigate'), 
 const ClickStepSchema = BaseStepSchema.extend({ type: z.literal('click'), selector: z.string() })
 const FillStepSchema = BaseStepSchema.extend({ type: z.literal('fill'), selector: z.string(), value: z.string() })
 const WaitForStepSchema = BaseStepSchema.extend({ type: z.literal('wait_for'), selector: z.string(), timeout_ms: z.number().optional() })
+const WaitForUrlStepSchema = BaseStepSchema.extend({ type: z.literal('wait_for_url'), pattern: z.string(), timeout_ms: z.number().optional() })
 const AssertTextStepSchema = BaseStepSchema.extend({ type: z.literal('assert_text'), selector: z.string(), contains: z.string() })
 const AssertUrlStepSchema = BaseStepSchema.extend({ type: z.literal('assert_url'), pattern: z.string() })
 const AssertDbStepSchema = BaseStepSchema.extend({ type: z.literal('assert_db'), table: z.string(), where: z.record(z.unknown()), expected_count: z.number() })
@@ -41,6 +42,7 @@ const StepSchema = z.discriminatedUnion('type', [
   ClickStepSchema,
   FillStepSchema,
   WaitForStepSchema,
+  WaitForUrlStepSchema,
   AssertTextStepSchema,
   AssertUrlStepSchema,
   AssertDbStepSchema,
