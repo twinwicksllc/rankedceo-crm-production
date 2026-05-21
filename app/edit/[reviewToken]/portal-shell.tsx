@@ -62,7 +62,7 @@ const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'edit',     label: 'Edit'     },
   { id: 'history',  label: 'History'  },
-  { id: 'audits',   label: 'Audits'   },
+  { id: 'audits',   label: 'Audit'    },
   { id: 'billing',  label: 'Billing'  },
 ] as const
 
@@ -157,7 +157,9 @@ export function PortalShell({
               type="button"
               onClick={() => navigateTab(tab.id)}
               aria-current={activeTab === tab.id ? 'page' : undefined}
+              aria-label={`${tab.label} tab`}
               data-testid={`portal-tab-${tab.id}`}
+              data-tab={tab.id}
               className={`
                 mr-1 flex items-center gap-1.5 border-b-2 px-3 pb-2 pt-1.5 text-xs font-medium transition-colors
                 ${activeTab === tab.id
