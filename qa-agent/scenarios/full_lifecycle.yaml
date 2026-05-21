@@ -55,22 +55,33 @@ steps:
     selector: '[data-testid="admin-login-submit"]'
     intent: Click the login submit button
 
-  - id: s1_admin_wait_for_dashboard
+  - id: s1_admin_wait_for_heading_or_error
     type: wait_for
     persona: admin
     severity: critical
-    description: Wait for dashboard to load
-    selector: '[data-testid="admin-dashboard-heading"]'
+    description: Wait for either dashboard heading or login form
+    selector: '[data-testid="admin-dashboard-heading"], [data-testid="login-form-password"]'
     timeoutMs: 10000
     intent: >-
-      Wait for the dashboard heading to appear (ensures page has navigated
-      and loaded after login form submission).
+      Wait for either the dashboard to load OR the login form to still be visible.
+      This helps diagnose if the login succeeded or failed.
+
+  - id: s1_admin_check_page_content
+    type: assert_text
+    persona: admin
+    severity: error
+    description: Check if we landed on dashboard
+    selector: 'body'
+    contains: Command Center
+    intent: >-
+      Check if the page contains "Command Center" (dashboard).
+      If this fails, we're still on login page and need to diagnose why.
 
   - id: s1_admin_assert_dashboard
     type: assert_url
     persona: admin
     severity: critical
-    description: Confirm redirect to admin dashboard path (not just login redirect)
+    description: Confirm redirect to admin dashboard path
     pattern: /admin/dashboard$
     intent: >-
       Verify admin landed on /admin/dashboard. Matches the path exactly,
