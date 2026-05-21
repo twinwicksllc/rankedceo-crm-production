@@ -92,7 +92,7 @@ A modern, full-featured Customer Relationship Management (CRM) system built with
 
 ### Prerequisites
 
-- **Node.js:** 20.x or higher
+- **Node.js:** 20.x or higher (24.x recommended)
 - **npm:** 10.x or higher (or yarn/pnpm)
 - **Supabase Account:** https://supabase.com
 - **SendGrid Account:** https://sendgrid.com (optional, for email features)

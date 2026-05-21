@@ -77,7 +77,7 @@ All variables above (except `BILLING_MOCK`) are stored as GitHub Actions secrets
 
 ## Running Locally
 
-**Prerequisites:** Node 20+, `npm install` completed in the `qa-agent/` directory, Playwright browsers installed (`npx playwright install --with-deps chromium`).
+**Prerequisites:** Node 20+ (24+ recommended), `npm install` completed in the `qa-agent/` directory, Playwright browsers installed (`npx playwright install --with-deps chromium`).
 
 ### Smoke run (no Stripe, no email)
 

@@ -127,7 +127,7 @@ Every critical-halt GitHub Issue body contains this JSON block, wrapped in HTML 
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 20+ (24+ recommended for GitHub Actions)
 - An OpenAI or Anthropic API key
 - The `qa-agent/` dependencies installed (`npm install`)
 
