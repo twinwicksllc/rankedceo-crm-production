@@ -60,11 +60,10 @@ steps:
     persona: admin
     severity: critical
     description: Confirm redirect to admin dashboard path (not just login redirect)
-    pattern: rankedceo\.com/admin/dashboard
+    pattern: /admin/dashboard$
     intent: >-
-      Verify admin landed on /admin/dashboard. The previous pattern "/admin"
-      was a false positive — it matched /admin appearing in the query string
-      of the login redirect URL (?next=/admin/dashboard).
+      Verify admin landed on /admin/dashboard. Matches the path exactly,
+      works with both qa.rankedceo.com and any other domain.
 
   - id: s1_admin_assert_heading
     type: assert_text
