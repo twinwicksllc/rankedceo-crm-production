@@ -122,7 +122,11 @@ function LoginForm() {
         password,
       })
       if (signInError) throw signInError
-      router.push(resolveRedirectTarget(redirectTo))
+      // For client-side router.push(), use relative path (not absolute URL).
+      // Next.js router.push() expects relative paths like /admin/dashboard, not https://...
+      // This allows proper SPA navigation that Playwright can detect.
+      const clientRedirectPath = redirectTo.startsWith('/') ? redirectTo : '/dashboard'
+      router.push(clientRedirectPath)
       router.refresh()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to sign in')
