@@ -72,7 +72,7 @@ jobs:
 
       - name: Post smoke result to PR
         if: always()
-        uses: actions/github-script@v7.0.2
+        uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
