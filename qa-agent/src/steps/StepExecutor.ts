@@ -88,15 +88,16 @@ export class StepExecutor {
     const timeoutMs = step.timeout_ms ?? DEFAULT_STEP_TIMEOUT_MS
 
     switch (step.type) {
-      case 'navigate':    return this.stepNavigate(step.persona, step.url)
-      case 'click':       return this.stepClick(step.persona, step.selector)
-      case 'fill':        return this.stepFill(step.persona, step.selector, step.value)
-      case 'wait_for':    return this.stepWaitFor(step.persona, step.selector, timeoutMs)
-      case 'assert_text': return this.stepAssertText(step.persona, step.selector, step.contains, timeoutMs)
-      case 'assert_url':  return this.stepAssertUrl(step.persona, step.pattern)
-      case 'assert_db':   return this.stepAssertDb(step.table, step.where, step.expected_count)
-      case 'handoff':     return this.stepHandoff(step.from, step.to, step.message, step.handoff_timeout_ms)
-      case 'pause':       return this.stepPause(step.duration_ms)
+      case 'navigate':      return this.stepNavigate(step.persona, step.url)
+      case 'click':         return this.stepClick(step.persona, step.selector)
+      case 'fill':          return this.stepFill(step.persona, step.selector, step.value)
+      case 'wait_for':      return this.stepWaitFor(step.persona, step.selector, timeoutMs)
+      case 'wait_for_url':  return this.stepWaitForUrl(step.persona, step.pattern, timeoutMs)
+      case 'assert_text':   return this.stepAssertText(step.persona, step.selector, step.contains, timeoutMs)
+      case 'assert_url':    return this.stepAssertUrl(step.persona, step.pattern)
+      case 'assert_db':     return this.stepAssertDb(step.table, step.where, step.expected_count)
+      case 'handoff':       return this.stepHandoff(step.from, step.to, step.message, step.handoff_timeout_ms)
+      case 'pause':         return this.stepPause(step.duration_ms)
       default: {
         // TypeScript exhaustive check
         const _exhaustive: never = step
@@ -127,6 +128,30 @@ export class StepExecutor {
   private async stepWaitFor(persona: Persona, selector: string, timeoutMs: number): Promise<void> {
     const page = await this.router.getPage(persona)
     await page.waitForSelector(selector, { timeout: timeoutMs })
+  }
+
+  /**
+   * Wait for the page URL to match a regex pattern.
+   * Uses Playwright's page.waitForURL() which correctly handles navigation —
+   * it fires as soon as the URL changes regardless of whether the navigation
+   * was a soft SPA transition or a hard full-page reload.
+   *
+   * IMPORTANT: the pattern is matched against the URL *pathname only* (not
+   * the full URL including query string). This prevents false positives where
+   * the pattern appears inside a query parameter, e.g.:
+   *   pattern="/admin/dashboard" should NOT match
+   *   https://qa.rankedceo.com/login?next=/admin/dashboard
+   *
+   * Use this after form submissions where the success path navigates to a
+   * new route (e.g., admin login → /admin/dashboard).
+   */
+  private async stepWaitForUrl(persona: Persona, pattern: string, timeoutMs: number): Promise<void> {
+    const page = await this.router.getPage(persona)
+    const re = new RegExp(pattern)
+    // Match pattern against pathname only to avoid false positives on query params
+    await page.waitForURL((url) => re.test(url.pathname), { timeout: timeoutMs })
+    // After URL settles, also wait for the page to finish loading server components
+    await page.waitForLoadState('load', { timeout: timeoutMs })
   }
 
   private async stepAssertText(

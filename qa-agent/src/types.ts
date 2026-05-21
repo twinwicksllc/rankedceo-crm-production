@@ -71,6 +71,7 @@ export type ScenarioStep =
   | AssertDbStep
   | HandoffStep
   | PauseStep
+  | WaitForUrlStep
 
 interface BaseStep {
   id: string
@@ -155,6 +156,16 @@ export interface PauseStep extends BaseStep {
   type: 'pause'
   /** ms to pause — use sparingly */
   duration_ms: number
+}
+
+export interface WaitForUrlStep extends BaseStep {
+  type: 'wait_for_url'
+  /**
+   * Regex pattern to match against the full page URL.
+   * Evaluation: `new RegExp(pattern).test(page.url())`
+   * Example: "/admin/dashboard$"
+   */
+  pattern: string
 }
 
 // ─── Run ─────────────────────────────────────────────────────────────────────

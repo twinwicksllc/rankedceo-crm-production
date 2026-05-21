@@ -170,8 +170,6 @@ export class PersonaRouter {
     // (Next.js SWC strips data-testid by default — fixed in next.config.js but
     //  fallback ensures old deployments still work.)
     const emailSelector = '[data-testid="admin-email"], input#email, input[type="email"][autocomplete="email"]'
-    const passwordSelector = '[data-testid="admin-password"], input#password, input[type="password"]'
-    const submitSelector = '[data-testid="admin-login-submit"], button[type="submit"]'
     try {
       await page.waitForSelector(emailSelector, { state: 'visible', timeout: 15_000 })
     } catch (err) {
@@ -186,63 +184,16 @@ export class PersonaRouter {
       console.error(`📄 Body HTML (3000 chars):\n${bodyHtml}\n`)
       throw err
     }
-    await page.fill(emailSelector, credentials.email)
-    await page.fill(passwordSelector, credentials.password)
-    console.log(`[PersonaRouter] 📝 Form filled — email: ${credentials.email}`)
-    
-    // Click submit and wait for navigation
-    await page.click(submitSelector)
-    console.log(`[PersonaRouter] 🖱️ Submit button clicked`)
-    
-    // Wait a moment for form submission to start before checking URL
-    await page.waitForTimeout(2000)
-    console.log(`[PersonaRouter] Current URL: ${page.url()}`)
-    
-    // Debug: check form state
-    const formState = await page.evaluate(() => {
-      const form = document.querySelector('form')
-      return {
-        formExists: !!form,
-        formAction: form?.action,
-        formMethod: form?.method,
-        submitValue: (form?.querySelector('[type="submit"]') as HTMLButtonElement)?.value,
-      }
-    })
-    console.log(`[PersonaRouter] Form state:`, formState)
-
-    // Wait for redirect to admin dashboard after successful login.
-    // IMPORTANT: Match the pathname only, not query params. The login URL
-    // itself contains "/admin/dashboard" in its `next=` query parameter, so
-    // we must match on a path-only pattern to avoid false positives.
-    // Use a regex that matches the URL path segment after the origin.
-    try {
-      await page.waitForFunction(
-        () => /^\/(admin|dashboard)/.test(new URL(window.location.href).pathname),
-        { timeout: 15_000 },
-      )
-    } catch (redirectErr) {
-      const currentUrl = page.url()
-      console.error(`[PersonaRouter] ❌ Login redirect timeout — stuck at: ${currentUrl}`)
-      const ts = new Date().toISOString().replace(/[:.]/g, '-')
-      try { 
-        await page.screenshot({ path: `evidence/login-redirect-timeout-${ts}.png`, fullPage: true })
-        console.error(`📸 Screenshot: evidence/login-redirect-timeout-${ts}.png`)
-      } catch { /* ignore */ }
-      throw redirectErr
-    }
-
-    // After URL changes, wait for the dashboard server component to finish
-    // rendering (DB calls, Supabase queries, etc.).
-    // Use 'networkidle' but with shorter timeout since dev containers may timeout.
-    // Fallback to just waiting for page to load if networkidle times out.
-    try {
-      await page.waitForLoadState('networkidle', { timeout: 15_000 })
-    } catch {
-      // Fallback: dashboard might have long-running queries or background fetches
-      // that never truly "idle". Wait for a small delay then proceed.
-      console.warn('[PersonaRouter] Dashboard networkidle timeout — proceeding anyway')
-      await page.waitForTimeout(2000)
-    }
+    // Do NOT fill or submit the login form here.
+    // The QA scenario (full_lifecycle.yaml) owns the admin login steps so that
+    // the form submission is covered by the test. Pre-filling / submitting here
+    // would create a second, redundant sign-in that interferes with the scenario's
+    // own login attempt and causes the second signInWithPassword call to fail to
+    // propagate the session to the subsequent RSC navigation.
+    //
+    // The scenario will fill email/password, click submit, and wait for the URL
+    // to change to /admin/dashboard using the `wait_for_url` step type.
+    console.log(`[PersonaRouter] ✅ Admin context ready — login page loaded, scenario will sign in`)
 
     this.contexts.set('admin', { persona: 'admin', context, page })
   }

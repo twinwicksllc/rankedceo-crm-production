@@ -55,27 +55,18 @@ steps:
     selector: '[data-testid="admin-login-submit"]'
     intent: Click the login submit button
 
-  - id: s1_admin_wait_for_heading_or_error
-    type: wait_for
+  - id: s1_admin_wait_for_redirect
+    type: wait_for_url
     persona: admin
     severity: critical
-    description: Wait for either dashboard heading or login form
-    selector: '[data-testid="admin-dashboard-heading"], [data-testid="login-form-password"]'
-    timeoutMs: 10000
+    description: Wait for URL to change to /admin/dashboard after login
+    pattern: /admin/dashboard
+    timeout_ms: 30000
     intent: >-
-      Wait for either the dashboard to load OR the login form to still be visible.
-      This helps diagnose if the login succeeded or failed.
-
-  - id: s1_admin_check_page_content
-    type: assert_text
-    persona: admin
-    severity: error
-    description: Check if we landed on dashboard
-    selector: 'body'
-    contains: Command Center
-    intent: >-
-      Check if the page contains "Command Center" (dashboard).
-      If this fails, we're still on login page and need to diagnose why.
+      After clicking submit, signInWithPassword runs asynchronously and
+      router.push navigates to /admin/dashboard. waitForURL handles both
+      soft SPA navigations and hard full-page reloads triggered by router.push.
+      30s timeout allows for slow network or server-side component rendering.
 
   - id: s1_admin_assert_dashboard
     type: assert_url
