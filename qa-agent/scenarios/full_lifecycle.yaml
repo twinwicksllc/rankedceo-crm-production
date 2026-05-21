@@ -55,6 +55,17 @@ steps:
     selector: '[data-testid="admin-login-submit"]'
     intent: Click the login submit button
 
+  - id: s1_admin_wait_for_dashboard
+    type: wait_for
+    persona: admin
+    severity: critical
+    description: Wait for dashboard to load
+    selector: '[data-testid="admin-dashboard-heading"]'
+    timeoutMs: 10000
+    intent: >-
+      Wait for the dashboard heading to appear (ensures page has navigated
+      and loaded after login form submission).
+
   - id: s1_admin_assert_dashboard
     type: assert_url
     persona: admin
