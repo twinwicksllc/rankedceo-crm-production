@@ -5,6 +5,12 @@ import type { NotificationTemplateData } from './types'
 import { siteReadyForReview, domainStatusUpdate, siteLive } from './lifecycle'
 import { approvalReceived, clientFirstEdit } from './admin'
 import { subscriptionActivated, paymentFailed, planChanged } from './billing'
+import {
+  auditAbandonedStage1,
+  auditAbandonedStage2,
+  auditAbandonedStage3,
+  auditAbandonedStage4,
+} from './abandonment'
 
 // ---------------------------------------------------------------------------
 // Router: renderEmailTemplate
@@ -24,6 +30,11 @@ export function renderEmailTemplate(
     case 'subscription_activated': return subscriptionActivated(data)
     case 'payment_failed':         return paymentFailed(data)
     case 'plan_changed':           return planChanged(data)
+    // Task 4 — abandonment
+    case 'audit_abandoned_stage_1': return auditAbandonedStage1(data)
+    case 'audit_abandoned_stage_2': return auditAbandonedStage2(data)
+    case 'audit_abandoned_stage_3': return auditAbandonedStage3(data)
+    case 'audit_abandoned_stage_4': return auditAbandonedStage4(data)
     default: {
       const _never: never = type
       return { subject: 'Notification', html: `<p>Unknown notification type: ${String(_never)}</p>` }
@@ -37,3 +48,9 @@ export { wrapLayout } from './layout'
 export { siteReadyForReview, domainStatusUpdate, siteLive } from './lifecycle'
 export { approvalReceived, clientFirstEdit } from './admin'
 export { subscriptionActivated, paymentFailed, planChanged } from './billing'
+export {
+  auditAbandonedStage1,
+  auditAbandonedStage2,
+  auditAbandonedStage3,
+  auditAbandonedStage4,
+} from './abandonment'
