@@ -24,7 +24,7 @@ import type { ActionResult } from './_shared'
 
 export async function saveOnboardingStepTemplate(
   tenantId: string,
-  data:     OnboardingStepTemplateData,
+  data: OnboardingStepTemplateData,
 ): Promise<ActionResult> {
   try {
     const supabase = getRawClient()
@@ -34,10 +34,10 @@ export async function saveOnboardingStepTemplate(
       .from('tenant_site_config')
       .upsert(
         {
-          tenant_id:                     tenantId,
+          tenant_id: tenantId,
           client_selected_template_slug: data.selected_template_slug,
-          client_selected_at:            new Date().toISOString(),
-          updated_at:                    new Date().toISOString(),
+          client_selected_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         },
         { onConflict: 'tenant_id' },
       )
@@ -55,10 +55,10 @@ export async function saveOnboardingStepTemplate(
       // Schema gap: column doesn't exist yet (pre-PR #96 migration) — continue silently
     }
 
-    // Also advance onboarding_step counter on tenants row
+    // FIX #1: Advance to step 4 (template selection IS step 4 — was incorrectly set to 5)
     await updateTenantWithFallback(supabase, tenantId, {
-      onboarding_step: 5,
-      updated_at:      new Date().toISOString(),
+      onboarding_step: 4,
+      updated_at: new Date().toISOString(),
     })
 
     return { success: true }
@@ -69,7 +69,7 @@ export async function saveOnboardingStepTemplate(
 }
 
 // ---------------------------------------------------------------------------
-// Step 4: Save Integrations + Submit (final step)
+// Step 5: Save Integrations + Submit (final step)
 // ---------------------------------------------------------------------------
 
 export async function saveOnboardingStep4(
@@ -122,23 +122,29 @@ export async function saveOnboardingStep4(
     }
 
     const { error } = await updateTenantWithFallback(supabase, tenantId, {
-      calendly_url:            data.calendly_url || null,
-      financing_enabled:       data.financing_enabled,
-      usp:                     data.usp || null,
-      brand_config:            updatedBrandConfig,
-      package_tier:            packageTier,
-      status:                  'pending_review',
-      onboarding_step:         5,
-      onboarding_completed:    true,
+      calendly_url: data.calendly_url || null,
+      financing_enabled: data.financing_enabled,
+      usp: data.usp || null,
+      brand_config: updatedBrandConfig,
+      package_tier: packageTier,
+      status: 'pending_review',
+      onboarding_step: 5,
+      onboarding_completed: true,
       onboarding_completed_at: new Date().toISOString(),
-      updated_at:              new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     })
 
     if (error) return { success: false, error: error.message }
 
-    // Generate and ensure review token for immediate builder access
+    // FIX #6: Hard-fail if review token cannot be generated — never fall back to tenantId
     const tokenResult = await ensureClientReviewToken(tenantId)
-    const reviewToken = tokenResult.success && tokenResult.data ? tokenResult.data : tenantId
+    if (!tokenResult.success || !tokenResult.data) {
+      return {
+        success: false,
+        error: `Failed to generate client review token: ${tokenResult.error ?? 'unknown error'}`,
+      }
+    }
+    const reviewToken = tokenResult.data
 
     // Tier 1: run synchronously (instant deterministic build).
     // Tier 2 (Gemini AI enhancement) is dispatched fire-and-forget inside
@@ -171,7 +177,7 @@ export async function getLogoUploadPath(
   fileName: string,
 ): Promise<ActionResult<{ uploadPath: string; publicUrl: string }>> {
   try {
-    const url  = process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL
+    const url = process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL
     if (!url) throw new Error('NEXT_PUBLIC_WAAS_SUPABASE_URL not set')
 
     const supabase = getRawClient()
@@ -180,9 +186,10 @@ export async function getLogoUploadPath(
       return { success: false, error: bucketError.message }
     }
 
-    const ext         = fileName.split('.').pop() ?? 'png'
-    const uploadPath  = `${tenantId}/logo.${ext}`
-    const publicUrl   = `${url}/storage/v1/object/public/logos/${uploadPath}`
+    const ext = fileName.split('.').pop() ?? 'png'
+    // FIX #4: Add cache-busting timestamp to prevent stale logo caching after re-upload
+    const uploadPath = `${tenantId}/logo-${Date.now()}.${ext}`
+    const publicUrl = `${url}/storage/v1/object/public/logos/${uploadPath}`
 
     return { success: true, data: { uploadPath, publicUrl } }
   } catch (err) {
