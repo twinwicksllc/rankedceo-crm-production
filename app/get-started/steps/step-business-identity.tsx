@@ -4,9 +4,10 @@
 // Step 1: Business Identity
 // =============================================================================
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
 import type { Step1FormData } from '../onboarding-flow'
+import { extractAuditPreFillForStep1, type AuditPreFillData } from '@/lib/waas/actions/onboarding/audit'
 
 const TRADES = [
   'Plumbing', 'HVAC', 'Electrical', 'Roofing', 'Landscaping',
@@ -22,10 +23,84 @@ interface Props {
   auditId?:   string | null
 }
 
+interface PreFilledFields {
+  business_name: boolean
+  city: boolean
+  state: boolean
+  tagline: boolean
+  services_offered: boolean
+}
+
 export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Props) {
-  const { register, handleSubmit, watch, formState: { errors } } = form
+  const { register, handleSubmit, watch, formState: { errors }, setValue } = form
   const selectedTrade = watch('primary_trade')
   const [showOptionalDetails, setShowOptionalDetails] = useState(false)
+  const [auditPreFill, setAuditPreFill] = useState<AuditPreFillData | null>(null)
+  const [preFilledFields, setPreFilledFields] = useState<PreFilledFields>({
+    business_name: false,
+    city: false,
+    state: false,
+    tagline: false,
+    services_offered: false,
+  })
+
+  // Fetch and apply audit pre-fill data when auditId is available
+  useEffect(() => {
+    if (!auditId) return
+
+    const fetchPreFill = async () => {
+      try {
+        const preFill = await extractAuditPreFillForStep1(auditId)
+        setAuditPreFill(preFill)
+
+        // Apply pre-fill values using setValue, marking which fields were pre-filled
+        const filled: PreFilledFields = {
+          business_name: false,
+          city: false,
+          state: false,
+          tagline: false,
+          services_offered: false,
+        }
+
+        if (preFill.business_name_guess) {
+          setValue('legal_name', preFill.business_name_guess, { shouldValidate: true })
+          filled.business_name = true
+        }
+
+        if (preFill.city_guess) {
+          setValue('city', preFill.city_guess, { shouldValidate: true })
+          filled.city = true
+        }
+
+        if (preFill.state_guess) {
+          setValue('state', preFill.state_guess, { shouldValidate: true })
+          filled.state = true
+        }
+
+        if (preFill.suggested_tagline) {
+          setValue('tagline', preFill.suggested_tagline, { shouldValidate: true })
+          filled.tagline = true
+        }
+
+        if (preFill.services_list && preFill.services_list.length > 0) {
+          const servicesList = preFill.services_list.join(', ')
+          setValue('services_offered', servicesList, { shouldValidate: true })
+          filled.services_offered = true
+        }
+
+        setPreFilledFields(filled)
+
+        // If we filled some optional fields, expand the optional section so user sees them
+        if (filled.tagline || filled.services_offered) {
+          setShowOptionalDetails(true)
+        }
+      } catch (err) {
+        console.error('Error loading audit pre-fill:', err)
+      }
+    }
+
+    fetchPreFill()
+  }, [auditId, setValue])
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -46,7 +121,7 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
               <circle cx="7" cy="7" r="6" stroke="#34D399" strokeWidth="1.5"/>
               <path d="M4.5 7l2 2 3-3" stroke="#34D399" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            Linked to your SEO audit report
+            Linked to your SEO audit report — some fields pre-filled below
           </div>
         )}
       </div>
@@ -55,9 +130,16 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
       <div className="space-y-5">
         {/* Legal Name */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
-            Business Legal Name <span className="text-red-400">*</span>
-          </label>
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <label className="block text-sm font-medium text-slate-700 dark:text-white/70">
+              Business Legal Name <span className="text-red-400">*</span>
+            </label>
+            {preFilledFields.business_name && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                From your audit
+              </span>
+            )}
+          </div>
           <input
             {...register('legal_name')}
             type="text"
@@ -99,9 +181,16 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
         {/* City / State / ZIP */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           <div className="col-span-2 sm:col-span-1">
-            <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
-              City <span className="text-red-400">*</span>
-            </label>
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <label className="block text-sm font-medium text-slate-700 dark:text-white/70">
+                City <span className="text-red-400">*</span>
+              </label>
+              {preFilledFields.city && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                  From audit
+                </span>
+              )}
+            </div>
             <input
               {...register('city')}
               type="text"
@@ -111,9 +200,16 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
             {errors.city && <p className="mt-1.5 text-xs text-red-400">{errors.city.message}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
-              State <span className="text-red-400">*</span>
-            </label>
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <label className="block text-sm font-medium text-slate-700 dark:text-white/70">
+                State <span className="text-red-400">*</span>
+              </label>
+              {preFilledFields.state && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                  From audit
+                </span>
+              )}
+            </div>
             <input
               {...register('state')}
               type="text"
@@ -194,9 +290,16 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
             <div className="mt-5 space-y-5 p-4 rounded-lg bg-slate-50 dark:bg-white/5">
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
-                    Tagline
-                  </label>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-white/70">
+                      Tagline
+                    </label>
+                    {preFilledFields.tagline && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                        From audit
+                      </span>
+                    )}
+                  </div>
                   <input
                     {...register('tagline')}
                     type="text"
@@ -244,9 +347,16 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
-                  Services / Products
-                </label>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-white/70">
+                    Services / Products
+                  </label>
+                  {preFilledFields.services_offered && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                      From audit
+                    </span>
+                  )}
+                </div>
                 <textarea
                   {...register('services_offered')}
                   rows={3}
