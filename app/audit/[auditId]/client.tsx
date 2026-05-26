@@ -23,6 +23,7 @@ import { ExpiryCountdown }     from '@/components/audit/expiry-countdown'
 import { ReportSkeleton }      from '@/components/audit/report-skeleton'
 import { ManualAuditState }    from '@/components/audit/manual-audit-state'
 import { BuyNowCta }           from '@/components/audit/buy-now-cta'
+import { ClaimFormCta }        from '@/components/audit/claim-form-cta'
 import { EmailCaptureForm }    from '@/components/audit/email-capture-form'
 import { AdvantagePointHeader } from '@/components/advantagepoint/header'
 import { OnboardingThemeProvider, useOnboardingTheme } from '@/app/get-started/theme-context'
@@ -463,7 +464,19 @@ function FullReport({ audit, userEmail, userName }: { audit: WaasAudit; userEmai
         <ExpiryCountdown expiresAt={audit.expires_at} />
       </div>
 
-      {/* ── BUY NOW CTA ───────────────────────────────────────────────────── */}
+      {/* ── CLAIM FORM CTA (Task 5: Premium conversion with lead capture) ────── */}
+      <div style={{ marginBottom: 24 }}>
+        <ClaimFormCta
+          auditId={audit.id}
+          targetDomain={targetDomain}
+          score={score}
+          grade={grade}
+          userEmail={userEmail}
+          userName={userName}
+        />
+      </div>
+
+      {/* ── BUY NOW CTA (Fallback direct onboarding link) ────────────────────── */}
       <div style={{ marginBottom: 24 }}>
         <BuyNowCta
           auditId={audit.id}
