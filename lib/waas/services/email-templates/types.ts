@@ -2,6 +2,11 @@
 
 export interface NotificationTemplateData {
   businessName?:  string
+  businessTrade?: string        // For abandonment emails
+  auditScore?:    number        // For abandonment emails
+  auditGrade?:    string        // For abandonment emails
+  topOpportunities?: string[]   // For abandonment emails
+  getStartedUrl?: string        // For abandonment emails
   variantIndex?:  number
   variantLabel?:  string
   domain?:        string

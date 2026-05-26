@@ -24,6 +24,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { renderEmailTemplate, type NotificationTemplateData } from './email-templates'
 
+export type { NotificationTemplateData }
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -38,6 +40,11 @@ export type NotificationType =
   | 'subscription_activated'   // Tenant: payment confirmed, plan is active
   | 'payment_failed'           // Tenant: payment failed, action required
   | 'plan_changed'             // Tenant: plan upgraded or downgraded
+  // Task 4 — abandonment emails
+  | 'audit_abandoned_stage_1'  // 1h: gentle reminder, show top opportunity
+  | 'audit_abandoned_stage_2'  // 24h: value prop + scarcity angle
+  | 'audit_abandoned_stage_3'  // 48h: social proof + limited-time offer
+  | 'audit_abandoned_stage_4'  // 72h: final call, emphasize urgency
 
 export interface SendNotificationArgs {
   type:          NotificationType
