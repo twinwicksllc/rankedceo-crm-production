@@ -9,6 +9,7 @@ import type {
 } from '@/lib/waas/types'
 import { ensureClientReviewToken } from '@/lib/waas/actions/admin'
 import { generateInitialSiteFromTemplate } from '@/lib/waas/services/generate-initial-site'
+import { generateSeoDefaults } from '@/lib/waas/services/seo-defaults'
 import {
   getRawClient,
   updateTenantWithFallback,
@@ -140,15 +141,83 @@ export async function saveOnboardingStep4(
     const tokenResult = await ensureClientReviewToken(tenantId)
     const reviewToken = tokenResult.success && tokenResult.data ? tokenResult.data : tenantId
 
-    // Tier 1: run synchronously (instant deterministic build).
-    // Tier 2 (Gemini AI enhancement) is dispatched fire-and-forget inside
-    // generateInitialSiteFromTemplate and does NOT block the response.
+    // Populate SEO defaults (meta_title, meta_description, og_image_url)
+    // Only if they are not already set in tenant_site_config
     const { data: freshTenant } = await supabase
       .from('tenants')
       .select('*')
       .eq('id', tenantId)
       .single()
 
+    if (freshTenant) {
+      const tenantRow = freshTenant as WaasTenant
+
+      // Get current site config to check what's already set
+      const { data: siteConfig } = await supabase
+        .from('tenant_site_config')
+        .select('meta_title, meta_description, og_image_url')
+        .eq('tenant_id', tenantId)
+        .single()
+
+      const configRow = (siteConfig as Record<string, unknown> | null) ?? {}
+
+      // Generate defaults
+      const seoDefaults = generateSeoDefaults(tenantRow)
+
+      // Only upsert if values are not already set (null or empty)
+      const metaTitleToSet = typeof configRow.meta_title === 'string' && configRow.meta_title.trim().length > 0
+        ? undefined
+        : seoDefaults.meta_title
+      const metaDescriptionToSet = typeof configRow.meta_description === 'string' && configRow.meta_description.trim().length > 0
+        ? undefined
+        : seoDefaults.meta_description
+      const ogImageUrlToSet = typeof configRow.og_image_url === 'string' && configRow.og_image_url.trim().length > 0
+        ? undefined
+        : seoDefaults.og_image_url
+
+      // Build upsert payload with only non-undefined values
+      const upsertPayload: Record<string, unknown> = {
+        tenant_id: tenantId,
+        updated_at: new Date().toISOString(),
+      }
+
+      if (metaTitleToSet !== undefined) {
+        upsertPayload.meta_title = metaTitleToSet
+      }
+      if (metaDescriptionToSet !== undefined) {
+        upsertPayload.meta_description = metaDescriptionToSet
+      }
+      if (ogImageUrlToSet !== undefined) {
+        upsertPayload.og_image_url = ogImageUrlToSet
+      }
+
+      // Only upsert if we have something to set
+      if (Object.keys(upsertPayload).length > 2) {
+        const { error: upsertError } = await supabase
+          .from('tenant_site_config')
+          .upsert(upsertPayload, { onConflict: 'tenant_id' })
+
+        if (upsertError) {
+          // Gracefully handle missing schema — don't block onboarding
+          const msg = upsertError.message ?? ''
+          const isSchemaGap =
+            /could not find.*column.*meta_title/i.test(msg) ||
+            /could not find.*column.*meta_description/i.test(msg) ||
+            /could not find.*column.*og_image_url/i.test(msg) ||
+            /could not find.*table.*tenant_site_config/i.test(msg)
+
+          if (!isSchemaGap) {
+            // Only return error if it's not a schema gap
+            console.warn(`Failed to populate SEO defaults: ${msg}`)
+          }
+          // Schema gap: continue silently
+        }
+      }
+    }
+
+    // Tier 1: run synchronously (instant deterministic build).
+    // Tier 2 (Gemini AI enhancement) is dispatched fire-and-forget inside
+    // generateInitialSiteFromTemplate and does NOT block the response.
     if (freshTenant) {
       void generateInitialSiteFromTemplate(tenantId, freshTenant as WaasTenant)
     }
