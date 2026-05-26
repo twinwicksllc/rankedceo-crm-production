@@ -16,6 +16,7 @@
  *   RESEND_API_KEY           Resend API key (for email verification + critical halt emails)
  *   GITHUB_TOKEN             GitHub token (for Issue creation + restart gate)
  *   GITHUB_REPO              GitHub repo (default: twinwicksllc/rankedceo-crm-production)
+ *   QA_RESTART_GATE          true|false override for critical-halt restart gate
  *   QA_BILLING_MOCK          Set to "true" to mock billing (overrides --mode)
  */
 
