@@ -4,7 +4,7 @@
 // Step 1: Business Identity
 // =============================================================================
 
-import React from 'react'
+import React, { useState } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
 import type { Step1FormData } from '../onboarding-flow'
 
@@ -25,6 +25,7 @@ interface Props {
 export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Props) {
   const { register, handleSubmit, watch, formState: { errors } } = form
   const selectedTrade = watch('primary_trade')
+  const [showOptionalDetails, setShowOptionalDetails] = useState(false)
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -169,76 +170,106 @@ export function StepBusinessIdentity({ form, onSubmit, isLoading, auditId }: Pro
           </div>
         )}
 
-        {/* Optional builder intake fields */}
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
-              Tagline <span className="text-slate-400 dark:text-white/30">(optional)</span>
-            </label>
-            <input
-              {...register('tagline')}
-              type="text"
-              placeholder="e.g. Fast, honest service done right"
-              className={inputClass(!!errors.tagline)}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
-              Business Type <span className="text-slate-400 dark:text-white/30">(optional)</span>
-            </label>
-            <input
-              {...register('business_type')}
-              type="text"
-              placeholder="e.g. Local service business"
-              className={inputClass(!!errors.business_type)}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
-              Phone Number <span className="text-slate-400 dark:text-white/30">(optional)</span>
-            </label>
-            <input
-              {...register('phone')}
-              type="tel"
-              placeholder="(312) 555-1212"
-              className={inputClass(!!errors.phone)}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
-              Business Hours <span className="text-slate-400 dark:text-white/30">(optional)</span>
-            </label>
-            <input
-              {...register('business_hours')}
-              type="text"
-              placeholder="Mon-Fri 8AM-6PM, Sat 9AM-2PM"
-              className={inputClass(!!errors.business_hours)}
-            />
-          </div>
-        </div>
+        {/* Optional Details Collapsible Section */}
+        <div className="mt-8 pt-6 border-t border-slate-200 dark:border-white/10">
+          <button
+            type="button"
+            onClick={() => setShowOptionalDetails(!showOptionalDetails)}
+            className="flex items-center gap-2 text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white transition-colors"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              className={`transition-transform duration-200 ${showOptionalDetails ? 'rotate-90' : ''}`}
+            >
+              <path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <span className="text-sm font-medium">Optional details</span>
+            <span className="text-xs text-slate-400 dark:text-white/40">(you can fill these later in your portal)</span>
+          </button>
 
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
-            Services / Products <span className="text-slate-400 dark:text-white/30">(optional)</span>
-          </label>
-          <textarea
-            {...register('services_offered')}
-            rows={3}
-            placeholder="List your top services (comma separated), e.g. Drain cleaning, water heater repair, sewer line replacement"
-            className={inputClass(!!errors.services_offered)}
-          />
-        </div>
+          {showOptionalDetails && (
+            <div className="mt-5 space-y-5 p-4 rounded-lg bg-slate-50 dark:bg-white/5">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+                    Tagline
+                  </label>
+                  <input
+                    {...register('tagline')}
+                    type="text"
+                    placeholder="e.g. Fast, honest service done right"
+                    className={inputClass(!!errors.tagline)}
+                  />
+                  {errors.tagline && <p className="mt-1.5 text-xs text-red-400">{errors.tagline.message}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+                    Business Type
+                  </label>
+                  <input
+                    {...register('business_type')}
+                    type="text"
+                    placeholder="e.g. Local service business"
+                    className={inputClass(!!errors.business_type)}
+                  />
+                  {errors.business_type && <p className="mt-1.5 text-xs text-red-400">{errors.business_type.message}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+                    Phone Number
+                  </label>
+                  <input
+                    {...register('phone')}
+                    type="tel"
+                    placeholder="(312) 555-1212"
+                    className={inputClass(!!errors.phone)}
+                  />
+                  {errors.phone && <p className="mt-1.5 text-xs text-red-400">{errors.phone.message}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+                    Business Hours
+                  </label>
+                  <input
+                    {...register('business_hours')}
+                    type="text"
+                    placeholder="Mon-Fri 8AM-6PM, Sat 9AM-2PM"
+                    className={inputClass(!!errors.business_hours)}
+                  />
+                  {errors.business_hours && <p className="mt-1.5 text-xs text-red-400">{errors.business_hours.message}</p>}
+                </div>
+              </div>
 
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
-            Target Audience <span className="text-slate-400 dark:text-white/30">(optional)</span>
-          </label>
-          <input
-            {...register('target_audience')}
-            type="text"
-            placeholder="e.g. Homeowners in Chicago metro"
-            className={inputClass(!!errors.target_audience)}
-          />
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+                  Services / Products
+                </label>
+                <textarea
+                  {...register('services_offered')}
+                  rows={3}
+                  placeholder="List your top services (comma separated), e.g. Drain cleaning, water heater repair, sewer line replacement"
+                  className={inputClass(!!errors.services_offered)}
+                />
+                {errors.services_offered && <p className="mt-1.5 text-xs text-red-400">{errors.services_offered.message}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+                  Target Audience
+                </label>
+                <input
+                  {...register('target_audience')}
+                  type="text"
+                  placeholder="e.g. Homeowners in Chicago metro"
+                  className={inputClass(!!errors.target_audience)}
+                />
+                {errors.target_audience && <p className="mt-1.5 text-xs text-red-400">{errors.target_audience.message}</p>}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

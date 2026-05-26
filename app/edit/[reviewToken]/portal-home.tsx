@@ -28,6 +28,7 @@ import type {
 } from '@/lib/waas/actions/client-edit'
 import type { EditType } from '@/lib/waas/actions/client-edit'
 import type { WaasPackageTier } from '@/lib/waas/types'
+import { CompleteProfileCard, getMissingProfileFields } from './complete-profile-card'
 import { PlanCard } from './plan-card'
 import { WAAS_PLAN_DISPLAY } from '@/lib/waas/billing-config'
 
@@ -349,6 +350,9 @@ export function PortalHome({
   // Still in initial build: Tier 1 not done yet
   const buildInProgress = !buildDone && siteStatus.tenantStatus === 'onboarding'
 
+  // Get missing optional profile fields for the complete-profile card
+  const missingProfileFields = getMissingProfileFields(data.brandConfig ?? {})
+
   const handleCopyUrl = () => {
     if (!liveUrl) return
     void navigator.clipboard.writeText(liveUrl).then(() => {
@@ -447,25 +451,34 @@ export function PortalHome({
 
         {/* ── Stats row ── only meaningful once build is done */}
         {buildDone && (
-          <div className="mb-5 flex gap-3 overflow-x-auto pb-1">
-            <StatChip
-              label="Total Edits"
-              value={editCount}
-              color={editCount > 0 ? 'text-slate-800' : 'text-slate-400'}
+          <>
+            {/* Complete your profile card — shown when optional fields are missing */}
+            <CompleteProfileCard
+              tenantId={tenantId}
+              reviewToken={reviewToken}
+              missingFields={missingProfileFields}
             />
-            <StatChip
-              label="AI Rewrites"
-              value={aiRewriteCount}
-              color={aiRewriteCount > 0 ? 'text-violet-600' : 'text-slate-400'}
-            />
-            {siteStatus.lastClientEdit && (
+
+            <div className="mb-5 flex gap-3 overflow-x-auto pb-1">
               <StatChip
-                label="Last Edit"
-                value={timeAgo(siteStatus.lastClientEdit)}
-                color="text-slate-600"
+                label="Total Edits"
+                value={editCount}
+                color={editCount > 0 ? 'text-slate-800' : 'text-slate-400'}
               />
-            )}
-          </div>
+              <StatChip
+                label="AI Rewrites"
+                value={aiRewriteCount}
+                color={aiRewriteCount > 0 ? 'text-violet-600' : 'text-slate-400'}
+              />
+              {siteStatus.lastClientEdit && (
+                <StatChip
+                  label="Last Edit"
+                  value={timeAgo(siteStatus.lastClientEdit)}
+                  color="text-slate-600"
+                />
+              )}
+            </div>
+          </>
         )}
 
         {/* ── Quick actions ── disabled / greyed when build is in progress */}

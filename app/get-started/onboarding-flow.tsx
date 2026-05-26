@@ -50,6 +50,7 @@ export const step1Schema = z.object({
   primary_trade:    z.string().min(2, 'Please select your primary trade'),
   primary_trade_other: z.string().max(80, 'Keep it under 80 characters').optional().or(z.literal('')),
   email:            z.string().email('Please enter a valid email address'),
+  // Optional fields — can be filled later in the client portal
   tagline:          z.string().max(120, 'Keep it under 120 characters').optional().or(z.literal('')),
   business_type:    z.string().max(100, 'Keep it under 100 characters').optional().or(z.literal('')),
   phone:            z.string().max(25, 'Keep it under 25 characters').optional().or(z.literal('')),

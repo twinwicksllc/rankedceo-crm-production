@@ -41,6 +41,7 @@ export interface TenantPortalData {
   aiRewriteCount: number                     // total AI rewrites this session
   editCount:      number                     // total edits this session (all types)
   billingStatus:  TenantPortalBillingStatus | null  // Phase 7.4
+  brandConfig:    Record<string, unknown> | null   // For Task 2: complete profile card
 }
 
 // Lightweight billing snapshot embedded in portal data
@@ -67,7 +68,7 @@ export async function getTenantPortalData(
     // 1. Tenant domain/status + billing fields (Phase 7.4)
     const { data: tenantRow } = await supabase
       .from('tenants')
-      .select('status, subdomain, domain, package_tier, plan_interval, stripe_subscription_id')
+      .select('status, subdomain, domain, package_tier, plan_interval, stripe_subscription_id, brand_config')
       .eq('id', tenantId)
       .single()
 
@@ -78,6 +79,7 @@ export async function getTenantPortalData(
       package_tier:           string | null
       plan_interval:          string | null
       stripe_subscription_id: string | null
+      brand_config:           Record<string, unknown> | null
     } | null
 
     // 1b. tenant_site_config build-lifecycle columns (migration 022; schema-gap resilient)
@@ -208,6 +210,7 @@ export async function getTenantPortalData(
         aiRewriteCount,
         editCount,
         billingStatus,
+        brandConfig: tenant?.brand_config ?? null,
       },
     }
   } catch (err) {
