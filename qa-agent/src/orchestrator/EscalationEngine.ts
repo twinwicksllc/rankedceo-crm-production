@@ -54,6 +54,23 @@ export class EscalationEngine {
    * Must be called before the run starts.
    */
   async checkRestartGate(): Promise<void> {
+    const restartGateEnv = process.env.QA_RESTART_GATE?.trim().toLowerCase()
+    const restartGateOverride =
+      restartGateEnv === 'true' ? true : restartGateEnv === 'false' ? false : undefined
+
+    if (restartGateEnv && restartGateOverride === undefined) {
+      console.warn(
+        `[EscalationEngine] QA_RESTART_GATE=${process.env.QA_RESTART_GATE} is invalid; expected "true" or "false". Falling back to mode default.`,
+      )
+    }
+
+    // Default behavior: enforce restart gate for full runs, skip for smoke runs.
+    const shouldCheckRestartGate = restartGateOverride ?? this.config.mode === 'full'
+    if (!shouldCheckRestartGate) {
+      console.log('[EscalationEngine] Restart gate disabled for smoke run.')
+      return
+    }
+
     const token = process.env.GITHUB_TOKEN
     const repo = process.env.GITHUB_REPO ?? 'twinwicksllc/rankedceo-crm-production'
     if (!token) {
