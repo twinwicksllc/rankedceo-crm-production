@@ -429,15 +429,15 @@ export function ClaimFormCta({
             }}
             onMouseEnter={(e) => {
               if (isFormValid && status !== 'submitting') {
-                (e.target as HTMLButtonElement).style.transform = 'translateY(-2px)'
-                (e.target as HTMLButtonElement).style.boxShadow = isUrgent
+                e.currentTarget.style.transform = 'translateY(-2px)'
+                e.currentTarget.style.boxShadow = isUrgent
                   ? '0 8px 30px rgba(220,38,38,0.45)'
                   : '0 8px 30px rgba(37,99,235,0.45)'
               }
             }}
             onMouseLeave={(e) => {
-              (e.target as HTMLButtonElement).style.transform = 'translateY(0)'
-              (e.target as HTMLButtonElement).style.boxShadow = isUrgent
+              e.currentTarget.style.transform = 'translateY(0)'
+              e.currentTarget.style.boxShadow = isUrgent
                 ? '0 4px 20px rgba(220,38,38,0.35)'
                 : '0 4px 20px rgba(37,99,235,0.35)'
             }}
