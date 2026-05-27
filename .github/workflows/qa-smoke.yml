@@ -51,6 +51,8 @@ jobs:
           QA_ADMIN_EMAIL: ${{ secrets.QA_ADMIN_EMAIL }}
           QA_ADMIN_PASSWORD: ${{ secrets.QA_ADMIN_PASSWORD }}
           QA_CLIENT_REVIEW_TOKEN: ${{ secrets.QA_CLIENT_REVIEW_TOKEN }}
+          # Task 9: known audit ID for PDF/results page assertions (info severity — skipped if unset)
+          QA_AUDIT_ID: ${{ secrets.QA_AUDIT_ID }}
           # WaaS-prefixed Supabase variable names (this Vercel project serves both WaaS + CRM)
           NEXT_PUBLIC_WAAS_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           WAAS_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
