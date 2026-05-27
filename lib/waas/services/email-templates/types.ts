@@ -24,5 +24,10 @@ export interface NotificationTemplateData {
   portalUrl?:     string        // Stripe Billing Portal URL
   oldPlanLabel?:  string        // For plan_changed
   newPlanLabel?:  string        // For plan_changed
+  // Task 9 — audit report ready email
+  auditUrl?:      string        // Deep link to web audit report
+  pdfUrl?:        string        // Direct PDF download link
+  targetDomain?:  string        // e.g. 'example.com'
+  requestorName?: string        // e.g. 'Jane Smith'
 }
 

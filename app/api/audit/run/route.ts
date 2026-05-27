@@ -12,6 +12,7 @@ import type { AuditSeoProvider } from '@/lib/waas/types'
 import { runFullAudit } from '@/lib/waas/services/audit-engine'
 import { extractDomain } from '@/lib/waas/services/serper'
 import { buildAuditReportPath } from '@/lib/waas/utils/audit-report-url'
+import { sendAuditReportReadyEmail } from '@/lib/waas/services/notifications'
 
 const AUDIT_EXPIRY_DAYS = 30
 
@@ -147,6 +148,38 @@ export async function POST(req: NextRequest) {
 
     if (engineResult.manualReview) {
       notifyAdmin(auditId, normalizedTarget, engineResult.manualReviewNote ?? 'Unknown').catch(console.error)
+    }
+
+    // Task 9: Fire-and-forget "audit ready" email to requestor
+    if (!engineResult.manualReview && requestor_email) {
+      const reportPath = buildAuditReportPath(auditId, {
+        requestorCompany: requestor_company ? String(requestor_company) : null,
+        requestorName:    requestor_name    ? String(requestor_name)    : null,
+        targetUrl:        normalizedTarget,
+      })
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL_PROD ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://crm.rankedceo.com'
+      const fullReportUrl = `${baseUrl}${reportPath}`
+      const fullPdfUrl    = `${baseUrl}/api/audit/${auditId}/pdf`
+
+      const summary   = engineResult.reportData.summary
+      const score     = summary
+        ? Math.round((summary.performance_score * 0.40) + (summary.seo_score * 0.30) + (summary.mobile_score * 0.20) + (summary.accessibility_score * 0.10))
+        : 0
+      const grade      = (engineResult.reportData as Record<string, unknown>).grade as string ?? 'F'
+      const opps       = (engineResult.reportData.opportunities ?? []).slice(0, 3).map((o: { title?: string; description?: string }) => o.title ?? o.description ?? '')
+      const targetDom  = extractDomain(normalizedTarget)
+
+      sendAuditReportReadyEmail({
+        recipientEmail: String(requestor_email),
+        recipientName:  requestor_name ? String(requestor_name) : null,
+        auditId,
+        targetDomain:   targetDom,
+        score,
+        grade,
+        opportunities:  opps,
+        auditUrl:       fullReportUrl,
+        pdfUrl:         fullPdfUrl,
+      }).catch(err => console.error('[/api/audit/run] audit_report_ready email failed:', err))
     }
 
     const elapsed = Date.now() - startTime

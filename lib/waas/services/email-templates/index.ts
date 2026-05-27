@@ -11,6 +11,7 @@ import {
   auditAbandonedStage3,
   auditAbandonedStage4,
 } from './abandonment'
+import { auditReportReady } from './audit'
 
 // ---------------------------------------------------------------------------
 // Router: renderEmailTemplate
@@ -35,6 +36,8 @@ export function renderEmailTemplate(
     case 'audit_abandoned_stage_2': return auditAbandonedStage2(data)
     case 'audit_abandoned_stage_3': return auditAbandonedStage3(data)
     case 'audit_abandoned_stage_4': return auditAbandonedStage4(data)
+    // Task 9 — audit report ready
+    case 'audit_report_ready':      return auditReportReady(data)
     default: {
       const _never: never = type
       return { subject: 'Notification', html: `<p>Unknown notification type: ${String(_never)}</p>` }
