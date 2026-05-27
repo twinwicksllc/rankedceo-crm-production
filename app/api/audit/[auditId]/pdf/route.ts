@@ -84,7 +84,7 @@ function hr(doc: any, y?: number): void {
 // Section header: colored left bar + bold title
 function sectionHeader(doc: any, title: string, emoji: string): void {
   const y = (doc as any).y + 6
-  doc.rect(MARGIN, y, 3, 16).fill('#2563eb')
+  doc.rect(MARGIN, y, 3, 16).fillColor('#2563eb').fill()
   doc.fillColor('#0f172a').fontSize(12).font('Helvetica-Bold')
      .text(`${emoji}  ${title}`, MARGIN + 10, y + 1, { width: CONTENT_W - 10 })
   doc.moveDown(0.5)
@@ -168,7 +168,7 @@ export async function GET(_req: NextRequest, context: RequestContext) {
     // ==========================================================================
     // SECTION 1 — HEADER BANNER
     // ==========================================================================
-    doc.rect(0, 0, PAGE_WIDTH, 78).fill('#0f172a')
+    doc.rect(0, 0, PAGE_WIDTH, 78).fillColor('#0f172a').fill()
 
     // Branding
     doc.fillColor('#ffffff').fontSize(18).font('Helvetica-Bold')
@@ -195,12 +195,12 @@ export async function GET(_req: NextRequest, context: RequestContext) {
     const scoreCardY = (doc as any).y
 
     // Score card background
-    doc.rect(MARGIN, scoreCardY, CONTENT_W, 80).fill('#f8fafc')
+    doc.rect(MARGIN, scoreCardY, CONTENT_W, 80).fillColor('#f8fafc').fill()
 
     // Grade circle (drawn as filled circle approximation via rect + text)
     const circleX = MARGIN + 20
     const circleY = scoreCardY + 12
-    doc.rect(circleX, circleY, 56, 56).fill(gColor)
+    doc.rect(circleX, circleY, 56, 56).fillColor(gColor).fill()
     doc.fillColor('#ffffff').fontSize(30).font('Helvetica-Bold')
        .text(grade, circleX, circleY + 10, { width: 56, align: 'center' })
 
@@ -260,7 +260,7 @@ export async function GET(_req: NextRequest, context: RequestContext) {
         const rowY = (doc as any).y
 
         if (isTarget) {
-          doc.rect(MARGIN, rowY - 1, CONTENT_W, 16).fill('#eff6ff')
+          doc.rect(MARGIN, rowY - 1, CONTENT_W, 16).fillColor('#eff6ff').fill()
         }
 
         const rankLabel = isTarget ? '★' : `#${entry.rank ?? i + 1}`
@@ -416,7 +416,7 @@ export async function GET(_req: NextRequest, context: RequestContext) {
 
     // CTA box
     const ctaY = (doc as any).y
-    doc.rect(MARGIN, ctaY, CONTENT_W, 52).fill('#eff6ff')
+    doc.rect(MARGIN, ctaY, CONTENT_W, 52).fillColor('#eff6ff').fill()
     doc.fillColor('#1d4ed8').fontSize(10).font('Helvetica-Bold')
        .text('View your interactive report online:', MARGIN + 12, ctaY + 8, { width: CONTENT_W - 24 })
     doc.fillColor('#2563eb').fontSize(9).font('Helvetica')
