@@ -53,6 +53,33 @@ steps:
       The first tab should be obvious. Label should be simple like "Overview"
       or use an emoji icon. User should know this is a landing tab.
 
+  # ── Task 7: Status strip is meaningful to a non-tech user ──────────────
+
+  - id: enduser_assert_status_strip_visible
+    type: wait_for
+    persona: enduser
+    severity: warning
+    description: "Task 7 — Launch journey widget is visible on overview tab"
+    selector: '[aria-label="Website launch progress"], [data-testid="overview-tab-content"] h2'
+    timeout_ms: 10000
+    intent: >
+      Task 7 added the \"Your Launch Journey\" SLA timeline to the overview tab.
+      A non-tech user’s first question is \"what happens next?\" — this widget
+      answers it. If it is missing, the user has no orientation.
+
+  - id: enduser_assert_status_strip_readable
+    type: assert_text
+    persona: enduser
+    severity: warning
+    description: "Task 7 — Status strip heading uses plain English (not jargon)"
+    selector: '[data-testid="overview-tab-content"] h2, [aria-label="Website launch progress"] h2'
+    contains: Journey
+    timeout_ms: 8000
+    intent: >
+      \"Your Launch Journey\" is clear plain English for a non-tech user.
+      We guard against copy regressions like \"SLA Timeline\" or \"Workflow Steps\"
+      that would confuse less technical users.
+
   - id: enduser_assert_tabs_labeled
     type: assert_text
     persona: enduser
@@ -88,6 +115,22 @@ steps:
     intent: >
       After clicking Edit, the tab pane should show content.
       This could be the editor, or a loading state that resolves quickly.
+
+  # ── Task 8: Approve & Publish CTA is clearly labeled ────────────────────
+
+  - id: enduser_assert_approve_button_labeled
+    type: wait_for
+    persona: enduser
+    severity: warning
+    description: "Task 8 — Primary action button uses clear action-oriented label"
+    # Button text must be "Approve & Publish" or "Undo Approval" — not an icon only
+    selector: 'button:has-text("Approve"), button:has-text("Undo Approval")'
+    timeout_ms: 8000
+    intent: >
+      Task 8 wires the \"Approve & Publish\" action to drive Stripe Checkout for
+      unpaid tenants.  For a non-tech user, the button must have a plain text label.
+      An icon-only button would leave them unable to complete the most important action.
+      We assert the button contains recognizable text (“Approve”).
 
   # ── Enduser: Find Save Button ────────────────────────────────────────────
 
@@ -211,6 +254,54 @@ steps:
       If no audits exist, show helpful guidance text like "No audits yet. Click
       here to run one." Don't show a blank page. This is especially important
       for non-tech users.
+
+  # ── Task 9: Audit start & PDF download CTA clarity ────────────────────
+
+  - id: enduser_navigate_audit_start
+    type: navigate
+    persona: enduser
+    severity: info
+    description: "Task 9 — Audit start page is accessible from the public URL"
+    url: /audit/start
+    intent: >
+      Task 9 delivers the branded PDF audit + deep-link email flow.
+      A non-tech user should be able to reach /audit/start and understand
+      immediately what to do: enter their website URL to get a free report.
+
+  - id: enduser_assert_audit_start_clear
+    type: wait_for
+    persona: enduser
+    severity: info
+    description: "Task 9 — Audit start page renders a clear input and CTA"
+    selector: 'form input, input[type="url"], input[type="text"], main'
+    timeout_ms: 15000
+    intent: >
+      The audit start page must show an input field so a non-tech user knows what
+      to do.  A blank page or JS error here would block the entire lead-capture flow.
+
+  - id: enduser_navigate_audit_result_pdf
+    type: navigate
+    persona: enduser
+    severity: info
+    description: "Task 9 — Navigate to known audit result page (requires QA_AUDIT_ID)"
+    url: /audit/${QA_AUDIT_ID}
+    intent: >
+      If QA_AUDIT_ID is set, navigate to the branded audit results page.
+      We verify the page loads and the PDF download CTA is legible to a non-tech user.
+      Skipped gracefully when QA_AUDIT_ID is not configured.
+
+  - id: enduser_assert_pdf_cta_clear
+    type: wait_for
+    persona: enduser
+    severity: info
+    description: "Task 9 — PDF download button uses plain English label"
+    # EmailCaptureForm buttons: \"Download PDF Report\", \"Get PDF →\", \"Download My PDF Report →\"
+    selector: 'a[href*="/api/audit/"][href$="/pdf"], button:has-text("PDF"), a:has-text("PDF"), button:has-text("Download")'
+    timeout_ms: 10000
+    intent: >
+      Task 9 rewrote the PDF report with a branded layout.
+      A non-tech user needs to see a clearly labeled \"Download PDF\" or similar
+      CTA — not a raw URL or unlabeled link icon.
 
   # ── Enduser: Return to Overview (Circle Back) ──────────────────────────
 

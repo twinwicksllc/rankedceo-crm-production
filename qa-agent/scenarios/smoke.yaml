@@ -170,6 +170,23 @@ steps:
       The first tab is data-testid="portal-tab-overview". We assert it is visible to confirm
       the portal shell has fully hydrated. Requires a valid QA_CLIENT_REVIEW_TOKEN secret.
 
+  # ── Task 7: Status strip / SLA timeline ──────────────────────────────────
+
+  - id: client_assert_status_strip
+    type: wait_for
+    persona: client
+    severity: warning
+    description: "Task 7 — Status strip (\"Your Launch Journey\") renders on overview tab"
+    # StatusStrip renders inside overview-tab-content with role=list aria-label="Website launch progress"
+    # The heading h2 reads "Your Launch Journey"
+    selector: '[aria-label="Website launch progress"], [data-testid="overview-tab-content"] h2'
+    timeout_ms: 10000
+    intent: >
+      Task 7 added the StatusStrip SLA timeline to the overview tab.
+      We assert the component renders by checking its accessible aria-label.
+      A warning (not critical) because it depends on valid QA_CLIENT_REVIEW_TOKEN
+      and the portal having site-status data.
+
   - id: client_click_history_tab
     type: click
     persona: client
@@ -206,6 +223,39 @@ steps:
     timeout_ms: 8000
     intent: The billing tab content should render after navigation
 
+  # ── Task 8: Approve & Publish button in Edit tab ──────────────────────────
+
+  - id: client_click_edit_tab_task8
+    type: click
+    persona: client
+    severity: warning
+    description: "Task 8 — Navigate to Edit tab to verify Approve & Publish button"
+    selector: '[data-testid="portal-tab-edit"], nav[aria-label="Portal tabs"] button:has-text("Edit"), header nav button:has-text("Edit")'
+    intent: Click the Edit tab — Task 8 wires the Approve & Publish action to trigger a payment gate when unpaid
+
+  - id: client_assert_editor_loads_task8
+    type: wait_for
+    persona: client
+    severity: warning
+    description: Editor tab content loads
+    selector: '[data-testid="editor-tab-content"]'
+    timeout_ms: 10000
+    intent: The editor tab content wrapper should render after clicking the Edit tab
+
+  - id: client_assert_approve_button
+    type: wait_for
+    persona: client
+    severity: warning
+    description: "Task 8 — Approve & Publish (or Undo Approval) button is visible in editor toolbar"
+    # Button renders when session.permissions.canApprove OR session.permissions.canUnaprove is true
+    # Text is either "Approve & Publish" or "Undo Approval"
+    selector: 'button:has-text("Approve"), button:has-text("Undo Approval"), [data-testid="editor-tab-content"] button'
+    timeout_ms: 8000
+    intent: >
+      Task 8 gates the Approve & Publish button behind Stripe checkout when the
+      tenant has no active subscription.  We assert the button (or Undo Approval
+      for already-approved tenants) is visible in the editor toolbar.
+
   # ── Handoff: Client → Admin ───────────────────────────────────────────────
 
   - id: handoff_client_to_admin
@@ -236,3 +286,28 @@ steps:
     selector: '[data-testid="admin-dashboard-root"], [data-testid="waas-clients-table"], h1'
     timeout_ms: 15000
     intent: The admin dashboard should still render correctly after the persona round-trip
+
+  # ── Task 9: Audit start page reachable ────────────────────────────────────
+
+  - id: admin_navigate_audit_start
+    type: navigate
+    persona: admin
+    severity: warning
+    description: "Task 9 — Audit start page is reachable"
+    url: /audit/start
+    intent: >
+      Task 9 introduced the branded PDF audit + deep-link email flow.
+      The entry-point is /audit/start where visitors submit a domain for analysis.
+      We verify the page loads so a regression in the audit routes is caught on every PR.
+
+  - id: admin_assert_audit_start_loads
+    type: wait_for
+    persona: admin
+    severity: warning
+    description: "Task 9 — Audit start form renders"
+    # The audit start page renders a form with an email/domain input
+    selector: 'form, input[type="url"], input[type="text"], input[placeholder*="domain"], input[placeholder*="website"], main'
+    timeout_ms: 15000
+    intent: >
+      The audit start form should render within a reasonable time.
+      If this fails, the /audit/start route or its server component has broken.

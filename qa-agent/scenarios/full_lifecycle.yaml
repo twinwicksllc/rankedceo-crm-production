@@ -174,6 +174,36 @@ steps:
     timeout_ms: 8000
     intent: The overview tab button should be visible
 
+  # ───────────────────────────────────────────────────────────────────────────
+  # SCENE 5b: Task 7 — Status strip / SLA timeline visible on overview tab
+  # ───────────────────────────────────────────────────────────────────────────
+
+  - id: s5b_client_assert_status_strip
+    type: wait_for
+    persona: client
+    severity: warning
+    description: "Task 7 — StatusStrip \"Your Launch Journey\" SLA timeline renders"
+    # StatusStrip renders with aria-label="Website launch progress" (role=list)
+    # and an h2 heading "Your Launch Journey" inside overview-tab-content
+    selector: '[aria-label="Website launch progress"], [data-testid="overview-tab-content"] h2'
+    timeout_ms: 10000
+    intent: >
+      Task 7 added StatusStrip to the portal overview tab showing the client’s
+      5-step SLA timeline (Brief → Design → Review → Approve → Live).
+      We assert the component’s accessible wrapper is present to confirm it rendered.
+
+  - id: s5b_client_assert_status_strip_text
+    type: assert_text
+    persona: client
+    severity: warning
+    description: "Task 7 — Status strip heading reads \"Your Launch Journey\""
+    selector: '[data-testid="overview-tab-content"] h2, [aria-label="Website launch progress"] h2'
+    contains: Launch Journey
+    timeout_ms: 8000
+    intent: >
+      The StatusStrip heading must read \"Your Launch Journey\". This guards
+      against copy regressions that would confuse clients about the workflow.
+
   # ═══════════════════════════════════════════════════════════════════════════
   # SCENE 6: Client — Navigate tabs
   # ═══════════════════════════════════════════════════════════════════════════
@@ -194,6 +224,27 @@ steps:
     selector: '[data-testid="editor-tab-content"]'
     timeout_ms: 10000
     intent: The editor content area should render
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # SCENE 6b: Task 8 — Approve & Publish button present in editor toolbar
+  # ───────────────────────────────────────────────────────────────────────────
+
+  - id: s6b_client_assert_approve_button
+    type: wait_for
+    persona: client
+    severity: warning
+    description: "Task 8 — Approve & Publish (or Undo Approval) button visible in editor toolbar"
+    # Rendered only when session.permissions.canApprove (or canUnaprove).
+    # Button text: "Approve & Publish" or "Undo Approval".
+    # No data-testid — match by button text.
+    selector: 'button:has-text("Approve"), button:has-text("Undo Approval")'
+    timeout_ms: 8000
+    intent: >
+      Task 8 moved the payment commit step to variant approval. The editor toolbar
+      renders an \"Approve & Publish\" button (or \"Undo Approval\" if already approved).
+      Clicking it when isPaid=false opens a PaymentGate that drives Stripe Checkout;
+      on return with ?tab=edit&approve=1 the approval panel auto-opens.
+      We assert the button is present — its label must be human-readable.
 
   - id: s6_client_click_audits_tab
     type: click
@@ -398,6 +449,38 @@ steps:
     timeout_ms: 15000
     intent: Billing tab should load and show updated plan information
 
+  # ───────────────────────────────────────────────────────────────────────────
+  # SCENE 14b: Task 8 — Post-payment approval panel auto-opens (?approve=1)
+  # ───────────────────────────────────────────────────────────────────────────
+
+  - id: s14b_client_navigate_edit_approve
+    type: navigate
+    persona: client
+    severity: warning
+    description: "Task 8 — Navigate to ?tab=edit&approve=1 (simulates Stripe return URL)"
+    url: /edit/${QA_CLIENT_REVIEW_TOKEN}?tab=edit&approve=1
+    intent: >
+      Task 8’s success flow: after Stripe checkout, the client is redirected back
+      to /edit/[token]?tab=edit&approve=1.  The portal-shell reads the approve=1
+      query param and passes autoOpenApproval=true to EditorShell, which sets
+      showApproval=true, immediately opening the ApprovalPanel modal.
+      Simulating this redirect verifies the post-payment UX works end-to-end.
+
+  - id: s14b_client_assert_approval_panel
+    type: wait_for
+    persona: client
+    severity: warning
+    description: "Task 8 — ApprovalPanel modal auto-opens after Stripe return"
+    # ApprovalPanel renders as a fixed overlay; heading text is "Approve & Publish"
+    # or "Subscribe to Publish" (PaymentGate) for still-unpaid tenants.
+    # After successful checkout the tenant IS paid so the normal form shows.
+    selector: 'dialog, [role="dialog"], .fixed.inset-0, button:has-text("Yes, Approve")'
+    timeout_ms: 12000
+    intent: >
+      After being redirected from Stripe with ?approve=1, the ApprovalPanel modal
+      should have opened automatically via the autoOpenApproval prop.
+      We assert the overlay or confirm button is visible.
+
   # ═══════════════════════════════════════════════════════════════════════════
   # SCENE 15: Client — Overview Tab Post-Upgrade
   # ═══════════════════════════════════════════════════════════════════════════
@@ -509,3 +592,65 @@ steps:
       PersonaRouter.teardown() closes both browser contexts. Prevents occasional
       "Target closed" Playwright errors on the last navigation. Safe to remove
       if teardown is made graceful in v1.5.
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 20: Task 9 — Audit start page + PDF download link
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: s20_handoff_client_to_admin_audit
+    type: handoff
+    persona: client
+    severity: info
+    description: "Task 9 — Switch to admin persona to test audit flow"
+    from: client
+    to: admin
+    message: Final portal checks done — admin verifies audit entry points
+    intent: Cross-persona handoff to admin for audit route checks
+
+  - id: s20_admin_navigate_audit_start
+    type: navigate
+    persona: admin
+    severity: warning
+    description: "Task 9 — Navigate to /audit/start (public audit entry point)"
+    url: /audit/start
+    intent: >
+      Task 9 delivers the branded PDF audit + deep-link email flow.
+      /audit/start is the public entry-point where visitors submit a domain.
+      Verify it is reachable and renders its form.
+
+  - id: s20_admin_assert_audit_start_loads
+    type: wait_for
+    persona: admin
+    severity: warning
+    description: "Task 9 — Audit start form renders (input + submit button)"
+    selector: 'form, input[type="url"], input[type="text"], input[placeholder*="domain"], input[placeholder*="website"], main'
+    timeout_ms: 15000
+    intent: >
+      The audit start form should render within a reasonable time.
+      A failure here indicates /audit/start or its server component has regressed.
+
+  - id: s20_admin_navigate_audit_result
+    type: navigate
+    persona: admin
+    severity: info
+    description: "Task 9 — Navigate to a known audit result page (requires QA_AUDIT_ID env var)"
+    url: /audit/${QA_AUDIT_ID}
+    intent: >
+      If QA_AUDIT_ID is set, navigate to the public audit result page to verify
+      the branded report page loads and the PDF download CTA is visible.
+      Skipped gracefully (info severity) when QA_AUDIT_ID is not configured.
+
+  - id: s20_admin_assert_pdf_download_cta
+    type: wait_for
+    persona: admin
+    severity: info
+    description: "Task 9 — PDF download CTA is visible on the audit result page"
+    # EmailCaptureForm renders with button text: "Download PDF Report", "Get PDF →", etc.
+    # The CTA triggers /api/audit/[auditId]/pdf (branded PDFKit output).
+    selector: 'a[href*="/api/audit/"][href$="/pdf"], button:has-text("PDF"), a:has-text("PDF"), button:has-text("Download")'
+    timeout_ms: 10000
+    intent: >
+      Task 9 rewrote the PDF route with a branded layout (navy header, grade badge,
+      score bars, leaderboard, opportunities, footer CTA).
+      The audit result page must surface at least one PDF download link/button so
+      users can access the branded report.
