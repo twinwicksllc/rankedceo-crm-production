@@ -25,6 +25,7 @@ export interface TenantPortalSiteStatus {
   initialBuildCompletedAt:  string | null                                       // Tier 1 completed
   aiEnhancementStatus:      'in_progress' | 'completed' | 'failed' | null      // Tier 2 state
   templateSlugDisplay:      string | null                                       // slug for human display
+  tenantCreatedAt:          string | null                                       // when tenant record was created
 }
 
 export interface TenantPortalRecentEdit {
@@ -68,7 +69,7 @@ export async function getTenantPortalData(
     // 1. Tenant domain/status + billing fields (Phase 7.4)
     const { data: tenantRow } = await supabase
       .from('tenants')
-      .select('status, subdomain, domain, package_tier, plan_interval, stripe_subscription_id, brand_config')
+      .select('status, subdomain, domain, package_tier, plan_interval, stripe_subscription_id, brand_config, created_at')
       .eq('id', tenantId)
       .single()
 
@@ -80,6 +81,7 @@ export async function getTenantPortalData(
       plan_interval:          string | null
       stripe_subscription_id: string | null
       brand_config:           Record<string, unknown> | null
+      created_at:             string | null
     } | null
 
     // 1b. tenant_site_config build-lifecycle columns (migration 022; schema-gap resilient)
@@ -205,6 +207,7 @@ export async function getTenantPortalData(
           initialBuildCompletedAt,
           aiEnhancementStatus,
           templateSlugDisplay: clientSelectedSlug ?? selectedTemplateSlug,
+          tenantCreatedAt: tenant?.created_at ?? null,
         },
         recentEdits,
         aiRewriteCount,

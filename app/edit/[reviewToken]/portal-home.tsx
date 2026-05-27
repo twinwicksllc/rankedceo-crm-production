@@ -30,6 +30,7 @@ import type { EditType } from '@/lib/waas/actions/client-edit'
 import type { WaasPackageTier } from '@/lib/waas/types'
 import { CompleteProfileCard, getMissingProfileFields } from './complete-profile-card'
 import { PlanCard } from './plan-card'
+import { StatusStrip } from './status-strip'
 import { WAAS_PLAN_DISPLAY } from '@/lib/waas/billing-config'
 
 // ---------------------------------------------------------------------------
@@ -374,6 +375,9 @@ export function PortalHome({
             Here&apos;s an overview of your <span className="font-medium text-slate-700">{businessName}</span> website.
           </p>
         </div>
+
+        {/* ── Status strip / SLA timeline ── always shown */}
+        <StatusStrip siteStatus={siteStatus} />
 
         {/* ── Building skeleton ── shown only while Tier 1 is still in progress */}
         {buildInProgress && (
