@@ -8,6 +8,10 @@ interface RequestContext {
   params: { auditId: string }
 }
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
 function extractDomain(url: string): string {
   try {
     return new URL(url).hostname.replace('www.', '')
@@ -27,30 +31,84 @@ function calculateScore(summary: any): number {
 }
 
 function getGrade(score: number): 'A' | 'B' | 'C' | 'D' | 'F' {
-  if (score >= 90) return 'A'
-  if (score >= 80) return 'B'
-  if (score >= 70) return 'C'
-  if (score >= 60) return 'D'
+  if (score >= 80) return 'A'
+  if (score >= 65) return 'B'
+  if (score >= 50) return 'C'
+  if (score >= 35) return 'D'
   return 'F'
+}
+
+function gradeColor(grade: string): string {
+  switch (grade) {
+    case 'A': return '#16a34a'
+    case 'B': return '#2563eb'
+    case 'C': return '#d97706'
+    case 'D': return '#ea580c'
+    default:  return '#dc2626'
+  }
+}
+
+function scoreBar(value: number, max = 100, width = 20): string {
+  const filled = Math.round((value / max) * width)
+  return '█'.repeat(filled) + '░'.repeat(Math.max(0, width - filled))
+}
+
+function formatMs(ms: number): string {
+  return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${Math.round(ms)}ms`
 }
 
 async function streamToBuffer(stream: any): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = []
     stream.on('data', (chunk: Buffer) => chunks.push(chunk))
-    stream.on('end', () => resolve(Buffer.concat(chunks)))
+    stream.on('end',  () => resolve(Buffer.concat(chunks)))
     stream.on('error', reject)
   })
 }
+
+// ---------------------------------------------------------------------------
+// PDF builder helpers (operate on the doc instance)
+// ---------------------------------------------------------------------------
+
+const PAGE_WIDTH  = 612
+const MARGIN      = 40
+const CONTENT_W   = PAGE_WIDTH - MARGIN * 2
+
+// Draw a horizontal rule
+function hr(doc: any, y?: number): void {
+  const yPos = y ?? (doc as any).y
+  doc.moveTo(MARGIN, yPos).lineTo(PAGE_WIDTH - MARGIN, yPos)
+  ;(doc as any).strokeColor('#e2e8f0').lineWidth(0.5).stroke()
+}
+
+// Section header: colored left bar + bold title
+function sectionHeader(doc: any, title: string, emoji: string): void {
+  const y = (doc as any).y + 6
+  doc.rect(MARGIN, y, 3, 16).fillColor('#2563eb').fill()
+  doc.fillColor('#0f172a').fontSize(12).font('Helvetica-Bold')
+     .text(`${emoji}  ${title}`, MARGIN + 10, y + 1, { width: CONTENT_W - 10 })
+  doc.moveDown(0.5)
+}
+
+// Key-value row
+function kvRow(doc: any, label: string, value: string, labelColor = '#64748b', valueColor = '#0f172a'): void {
+  const y = (doc as any).y
+  doc.fillColor(labelColor).fontSize(9).font('Helvetica').text(label, MARGIN, y, { width: 130, continued: false })
+  doc.fillColor(valueColor).fontSize(9).font('Helvetica-Bold').text(value, MARGIN + 135, y, { width: CONTENT_W - 135 })
+  doc.moveDown(0.25)
+}
+
+// ---------------------------------------------------------------------------
+// GET /api/audit/[auditId]/pdf
+// ---------------------------------------------------------------------------
 
 export async function GET(_req: NextRequest, context: RequestContext) {
   try {
     const auditId = context.params.auditId
 
-    // Check authentication
+    // Auth check
     const authClient = await createClient()
     const { data: { user } } = await authClient.auth.getUser()
-
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -67,7 +125,7 @@ export async function GET(_req: NextRequest, context: RequestContext) {
       return NextResponse.json({ error: 'Audit not found' }, { status: 404 })
     }
 
-    // Verify ownership
+    // Ownership check
     if (audit.tenant_id && user.email) {
       const { data: tenant } = await waasClient
         .from('tenants')
@@ -75,7 +133,6 @@ export async function GET(_req: NextRequest, context: RequestContext) {
         .eq('id', audit.tenant_id)
         .eq('submitted_by_email', user.email)
         .single()
-
       if (!tenant) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
       }
@@ -86,112 +143,306 @@ export async function GET(_req: NextRequest, context: RequestContext) {
       return NextResponse.json({ error: 'No report data' }, { status: 400 })
     }
 
-    // Create PDF
-    const doc = new PDFDocument({ size: 'letter', margin: 40 })
-    const targetDomain = extractDomain(audit.target_url)
-    const score = calculateScore(report.summary)
-    const grade = getGrade(score)
-    const summary = report.summary
+    // -------------------------------------------------------------------------
+    // Build PDF
+    // -------------------------------------------------------------------------
+    const doc = new PDFDocument({ size: 'letter', margin: MARGIN })
+    const bufferPromise = streamToBuffer(doc)
 
-    // Title
-    doc.fontSize(32).font('Helvetica-Bold').text('SEO Audit Report', { align: 'center' })
+    const targetDomain   = extractDomain(audit.target_url)
+    const score          = calculateScore(report.summary)
+    const grade          = getGrade(score)
+    const gColor         = gradeColor(grade)
+    const summary        = report.summary
+    const keywords       = (report as any).keywords_used as string[] ?? []
+    const leaderboard    = (report as any).leaderboard as any[] ?? []
+    const opportunities  = report.opportunities ?? []
+    const techIssues     = report.technical_issues ?? []
+    const completedDate  = audit.completed_at
+      ? new Date(audit.completed_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+      : 'N/A'
+    const baseUrl        = process.env.NEXT_PUBLIC_APP_URL_PROD ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://crm.rankedceo.com'
+    const reportUrl      = `${baseUrl}/audit/${auditId}`
+    const shortId        = auditId.slice(0, 8).toUpperCase()
+
+    // ==========================================================================
+    // SECTION 1 — HEADER BANNER
+    // ==========================================================================
+    doc.rect(0, 0, PAGE_WIDTH, 78).fillColor('#0f172a').fill()
+
+    // Branding
+    doc.fillColor('#ffffff').fontSize(18).font('Helvetica-Bold')
+       .text('Ranked', 40, 16, { continued: true })
+    doc.fillColor('#3b82f6').text('CEO', { continued: false })
+
+    doc.fillColor('rgba(255,255,255,0.5)').fontSize(8).font('Helvetica')
+       .text('SURFACE AUDIT ENGINE v2', 40, 38, { width: 200 })
+
+    // Domain & date (right-aligned)
+    doc.fillColor('#cbd5e1').fontSize(11).font('Helvetica-Bold')
+       .text(targetDomain, PAGE_WIDTH - 240, 16, { width: 200, align: 'right' })
+    doc.fillColor('rgba(255,255,255,0.45)').fontSize(8).font('Helvetica')
+       .text(completedDate, PAGE_WIDTH - 240, 34, { width: 200, align: 'right' })
+    doc.fillColor('rgba(255,255,255,0.3)').fontSize(7).font('Helvetica')
+       .text(`ID: ${shortId}`, PAGE_WIDTH - 240, 48, { width: 200, align: 'right' })
+
+    // Move below header
+    ;(doc as any).y = 90
+
+    // ==========================================================================
+    // SECTION 2 — SCORE CARD
+    // ==========================================================================
+    const scoreCardY = (doc as any).y
+
+    // Score card background
+    doc.rect(MARGIN, scoreCardY, CONTENT_W, 80).fillColor('#f8fafc').fill()
+
+    // Grade circle (drawn as filled circle approximation via rect + text)
+    const circleX = MARGIN + 20
+    const circleY = scoreCardY + 12
+    doc.rect(circleX, circleY, 56, 56).fillColor(gColor).fill()
+    doc.fillColor('#ffffff').fontSize(30).font('Helvetica-Bold')
+       .text(grade, circleX, circleY + 10, { width: 56, align: 'center' })
+
+    // Score number
+    doc.fillColor('#0f172a').fontSize(36).font('Helvetica-Bold')
+       .text(`${score}`, circleX + 70, scoreCardY + 8, { width: 80, continued: true })
+    doc.fillColor('#94a3b8').fontSize(14).font('Helvetica').text('/100', { continued: false })
+
+    // Score label
+    const scoreLabel = score >= 80 ? 'Ahead of most competitors'
+                     : score >= 65 ? 'Good — improvements available'
+                     : score >= 50 ? 'Average — opportunities to capture'
+                     : score >= 35 ? 'Below average — competitors likely outranking'
+                     : 'Critical — significant organic traffic being lost'
+    doc.fillColor(gColor).fontSize(9).font('Helvetica-Bold')
+       .text(scoreLabel, circleX + 70, scoreCardY + 50, { width: CONTENT_W - 100 })
+
+    ;(doc as any).y = scoreCardY + 88
     doc.moveDown(0.5)
-    doc.fontSize(16).text(targetDomain, { align: 'center' })
-    doc.moveDown(2)
 
-    // Metadata
-    const completedDate = audit.completed_at ? new Date(audit.completed_at).toLocaleDateString() : 'N/A'
-    doc.fontSize(10).text(`Report Generated: ${completedDate}`, { align: 'center' })
-    doc.fontSize(10).text(`Report ID: ${audit.id.toUpperCase().slice(0, 8)}`, { align: 'center' })
-    doc.moveDown(2)
-
-    // Overall Score
-    doc.fontSize(14).font('Helvetica-Bold').text('Overall Score')
-    doc.moveDown(0.3)
-    doc.fontSize(12).font('Helvetica').text(`Grade: ${grade}`)
-    doc.fontSize(12).text(`Score: ${score}/100`)
-    doc.moveDown(1)
-
-    // Score Breakdown
+    // ==========================================================================
+    // SECTION 3 — SCORE BREAKDOWN
+    // ==========================================================================
     if (summary) {
-      doc.fontSize(12).font('Helvetica-Bold').text('Score Breakdown')
-      doc.moveDown(0.3)
-      doc.fontSize(11).font('Helvetica')
-      doc.text(`• Performance: ${Math.round(summary.performance_score)}/100`)
-      doc.text(`• SEO: ${Math.round(summary.seo_score)}/100`)
-      doc.text(`• Mobile: ${Math.round(summary.mobile_score)}/100`)
-      doc.text(`• Accessibility: ${Math.round(summary.accessibility_score)}/100`)
-      doc.moveDown(1)
+      sectionHeader(doc, 'Score Breakdown', '📊')
+
+      const metrics = [
+        { label: 'Performance (40%)',   value: Math.round(summary.performance_score) },
+        { label: 'SEO (30%)',           value: Math.round(summary.seo_score) },
+        { label: 'Mobile (20%)',        value: Math.round(summary.mobile_score) },
+        { label: 'Accessibility (10%)', value: Math.round(summary.accessibility_score) },
+      ]
+
+      metrics.forEach(m => {
+        const barColor = m.value >= 70 ? '#16a34a' : m.value >= 50 ? '#d97706' : '#dc2626'
+        kvRow(doc, m.label, `${scoreBar(m.value, 100, 18)}  ${m.value}/100`, '#64748b', barColor)
+      })
+
+      doc.moveDown(0.75)
+      hr(doc)
+      doc.moveDown(0.75)
     }
 
-    // Keywords
-    const keywords = (report as any).keywords_used ?? []
+    // ==========================================================================
+    // SECTION 4 — KEYWORD LEADERBOARD
+    // ==========================================================================
+    if (leaderboard.length > 0) {
+      sectionHeader(doc, 'Google Ranking Leaderboard', '🏆')
+
+      const primaryKw = keywords[0] ?? 'primary keyword'
+      doc.fillColor('#64748b').fontSize(8).font('Helvetica')
+         .text(`Rankings for: "${primaryKw}"`, MARGIN, (doc as any).y, { width: CONTENT_W })
+      doc.moveDown(0.4)
+
+      leaderboard.slice(0, 8).forEach((entry: any, i: number) => {
+        const isTarget = entry.isTarget === true
+        const rowY = (doc as any).y
+
+        if (isTarget) {
+          doc.rect(MARGIN, rowY - 1, CONTENT_W, 16).fillColor('#eff6ff').fill()
+        }
+
+        const rankLabel = isTarget ? '★' : `#${entry.rank ?? i + 1}`
+        const domLabel  = entry.domain ?? entry.url ?? '—'
+        const pos       = entry.bestPosition != null ? `Position ${entry.bestPosition}` : 'Not ranked'
+
+        doc.fillColor(isTarget ? '#1d4ed8' : '#94a3b8')
+           .fontSize(9).font('Helvetica-Bold')
+           .text(rankLabel, MARGIN + 2, rowY, { width: 30 })
+
+        doc.fillColor(isTarget ? '#0f172a' : '#334155')
+           .fontSize(9).font(isTarget ? 'Helvetica-Bold' : 'Helvetica')
+           .text(isTarget ? `${domLabel}  ← Your Site` : domLabel, MARGIN + 36, rowY, { width: CONTENT_W - 130 })
+
+        doc.fillColor(isTarget ? '#2563eb' : '#64748b')
+           .fontSize(8).font('Helvetica')
+           .text(pos, PAGE_WIDTH - MARGIN - 90, rowY, { width: 90, align: 'right' })
+
+        doc.moveDown(0.45)
+      })
+
+      doc.moveDown(0.5)
+      hr(doc)
+      doc.moveDown(0.75)
+    }
+
+    // ==========================================================================
+    // SECTION 5 — KEYWORDS EVALUATED
+    // ==========================================================================
     if (keywords.length > 0) {
-      doc.fontSize(12).font('Helvetica-Bold').text('Keywords Evaluated')
-      doc.moveDown(0.3)
-      doc.fontSize(10).font('Helvetica')
-      doc.text(keywords.slice(0, 5).join(', '), { width: 500 })
+      sectionHeader(doc, 'Keywords Evaluated', '🧩')
+      doc.fillColor('#334155').fontSize(9).font('Helvetica')
+         .text(keywords.slice(0, 8).join('  ·  '), MARGIN, (doc as any).y, { width: CONTENT_W })
       doc.moveDown(1)
+      hr(doc)
+      doc.moveDown(0.75)
     }
 
-    // Keyword Performance
+    // ==========================================================================
+    // SECTION 6 — KEYWORD PERFORMANCE
+    // ==========================================================================
     if (summary && (summary.top_search_result || summary.bottom_search_result)) {
-      doc.fontSize(12).font('Helvetica-Bold').text('Keyword Performance')
-      doc.moveDown(0.3)
-      doc.fontSize(10).font('Helvetica')
+      sectionHeader(doc, 'Keyword Performance', '🔎')
+
       if (summary.top_search_result) {
-        doc.text(`Best: "${summary.top_search_result.keyword}" @ position ${summary.top_search_result.position ?? 'N/A'}`)
+        kvRow(doc, 'Best Ranking Keyword',
+          `"${summary.top_search_result.keyword}"  —  Position ${summary.top_search_result.position ?? 'N/A'}`,
+          '#64748b', '#16a34a')
       }
       if (summary.bottom_search_result) {
-        doc.text(`Lowest: "${summary.bottom_search_result.keyword}" @ position ${summary.bottom_search_result.position ?? 'N/A'}`)
+        kvRow(doc, 'Weakest Keyword',
+          `"${summary.bottom_search_result.keyword}"  —  Position ${summary.bottom_search_result.position ?? 'N/A'}`,
+          '#64748b', '#dc2626')
       }
-      if (summary.mean_position) {
-        doc.text(`Average Position: ${Math.round(summary.mean_position)}`)
+      if (summary.mean_position != null) {
+        kvRow(doc, 'Average Position',
+          `${Math.round(summary.mean_position)} (across ${summary.measured_keywords ?? 0} keywords)`,
+          '#64748b', '#0f172a')
       }
-      doc.moveDown(1)
+
+      doc.moveDown(0.5)
+      hr(doc)
+      doc.moveDown(0.75)
     }
 
-    // Page Speed
-    if ((report as any).page_speed) {
-      const ps = (report as any).page_speed
-      doc.fontSize(12).font('Helvetica-Bold').text('Page Speed')
-      doc.moveDown(0.3)
-      doc.fontSize(10).font('Helvetica')
-      if (ps.mobile) {
-        doc.text(`Mobile LCP: ${ps.mobile.lcp}ms | FID: ${ps.mobile.fid}ms | CLS: ${ps.mobile.cls}`)
+    // ==========================================================================
+    // SECTION 7 — PAGE SPEED
+    // ==========================================================================
+    const pageSpeedFull = (report as any).page_speed_full
+    const pageSpeed     = pageSpeedFull ?? (report as any).page_speed
+
+    if (pageSpeed) {
+      sectionHeader(doc, 'Page Speed', '⚡')
+
+      const mobile  = pageSpeedFull?.mobile  ?? pageSpeed?.mobile
+      const desktop = pageSpeedFull?.desktop ?? pageSpeed?.desktop
+
+      if (mobile) {
+        kvRow(doc, 'Mobile LCP',   mobile.lcp  != null ? formatMs(mobile.lcp)  : 'N/A')
+        kvRow(doc, 'Mobile CLS',   mobile.cls  != null ? String(mobile.cls)    : 'N/A')
+        if (pageSpeedFull?.mobile?.categoryScores?.performance?.score != null) {
+          kvRow(doc, 'Mobile Performance', `${Math.round(pageSpeedFull.mobile.categoryScores.performance.score)}/100`)
+        }
       }
-      if (ps.desktop) {
-        doc.text(`Desktop LCP: ${ps.desktop.lcp}ms | FID: ${ps.desktop.fid}ms | CLS: ${ps.desktop.cls}`)
+      if (desktop) {
+        kvRow(doc, 'Desktop LCP',  desktop.lcp != null ? formatMs(desktop.lcp) : 'N/A')
+        kvRow(doc, 'Desktop CLS',  desktop.cls != null ? String(desktop.cls)   : 'N/A')
       }
-      doc.moveDown(1)
+
+      doc.moveDown(0.5)
+      hr(doc)
+      doc.moveDown(0.75)
     }
 
-    // Leaderboard
-    if ((report as any).leaderboard?.length > 0) {
-      doc.fontSize(12).font('Helvetica-Bold').text('Top Rankings')
-      doc.moveDown(0.3)
-      doc.fontSize(9).font('Helvetica')
-      ;(report as any).leaderboard.slice(0, 5).forEach((e: any, i: number) => {
-        const label = e.isTarget ? 'Your Site' : `#${i + 1}`
-        doc.text(`${label}: ${e.domain} - Position: ${e.bestPosition ?? 'N/A'}`)
+    // ==========================================================================
+    // SECTION 8 — OPPORTUNITIES
+    // ==========================================================================
+    if (opportunities.length > 0) {
+      sectionHeader(doc, 'Top Opportunities', '💡')
+
+      opportunities.slice(0, 8).forEach((opp: any, i: number) => {
+        const title   = opp.title ?? opp.description ?? String(opp)
+        const impact  = opp.impact ?? opp.priority ?? ''
+        const impColor = impact === 'critical' || impact === 'high' ? '#dc2626'
+                       : impact === 'warning'  || impact === 'medium' ? '#d97706'
+                       : '#2563eb'
+
+        const rowY = (doc as any).y
+        doc.fillColor('#94a3b8').fontSize(9).font('Helvetica-Bold')
+           .text(`${i + 1}.`, MARGIN, rowY, { width: 18 })
+        doc.fillColor('#0f172a').fontSize(9).font('Helvetica')
+           .text(title, MARGIN + 22, rowY, { width: CONTENT_W - 80 })
+        if (impact) {
+          doc.fillColor(impColor).fontSize(7).font('Helvetica-Bold')
+             .text(String(impact).toUpperCase(), PAGE_WIDTH - MARGIN - 55, rowY, { width: 55, align: 'right' })
+        }
+        doc.moveDown(0.35)
       })
+
+      doc.moveDown(0.5)
+      hr(doc)
+      doc.moveDown(0.75)
     }
 
-    // Footer
-    doc.moveDown(1)
-    doc.fontSize(8).text(
-      `© ${new Date().getFullYear()} RankedCEO · Surface Audit Engine v2 · rankedceo.com`,
-      { align: 'center' }
-    )
+    // ==========================================================================
+    // SECTION 9 — TECHNICAL ISSUES
+    // ==========================================================================
+    if (techIssues.length > 0) {
+      sectionHeader(doc, 'Technical Issues', '🔧')
 
-    // Convert to buffer
-    const buffer = await streamToBuffer(doc)
+      techIssues.slice(0, 6).forEach((issue: any) => {
+        const desc     = issue.description ?? issue.title ?? String(issue)
+        const severity = issue.severity ?? issue.impact ?? ''
+        const sevColor = severity === 'critical' || severity === 'high' ? '#dc2626' : '#d97706'
+
+        kvRow(doc,
+          severity ? String(severity).toUpperCase() : '•',
+          desc.slice(0, 90),
+          sevColor,
+          '#334155',
+        )
+      })
+
+      doc.moveDown(0.5)
+      hr(doc)
+      doc.moveDown(0.75)
+    }
+
+    // ==========================================================================
+    // SECTION 10 — FOOTER
+    // ==========================================================================
+    doc.moveDown(0.5)
+
+    // CTA box
+    const ctaY = (doc as any).y
+    doc.rect(MARGIN, ctaY, CONTENT_W, 52).fillColor('#eff6ff').fill()
+    doc.fillColor('#1d4ed8').fontSize(10).font('Helvetica-Bold')
+       .text('View your interactive report online:', MARGIN + 12, ctaY + 8, { width: CONTENT_W - 24 })
+    doc.fillColor('#2563eb').fontSize(9).font('Helvetica')
+       .text(reportUrl, MARGIN + 12, ctaY + 24, { width: CONTENT_W - 24 })
+    doc.fillColor('#64748b').fontSize(8).font('Helvetica')
+       .text('Log in or create a free account to access the full interactive dashboard.', MARGIN + 12, ctaY + 38, { width: CONTENT_W - 24 })
+
+    ;(doc as any).y = ctaY + 60
+    doc.moveDown(0.5)
+
+    doc.fillColor('#94a3b8').fontSize(7.5).font('Helvetica')
+       .text(
+         `© ${new Date().getFullYear()} RankedCEO · Twin-Wicks Digital Solutions · Report ID: ${shortId}`,
+         MARGIN, (doc as any).y, { align: 'center', width: CONTENT_W }
+       )
+
+    // Finalize and collect buffer
+    doc.end()
+    const buffer = await bufferPromise
 
     return new NextResponse(buffer, {
       status: 200,
       headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="audit-${targetDomain}-${new Date().toISOString().split('T')[0]}.pdf"`,
+        'Content-Type':        'application/pdf',
+        'Content-Disposition': `attachment; filename="rankedceo-audit-${targetDomain}-${new Date().toISOString().split('T')[0]}.pdf"`,
+        'Cache-Control':       'private, no-cache',
       },
     })
   } catch (err) {
@@ -199,3 +450,4 @@ export async function GET(_req: NextRequest, context: RequestContext) {
     return NextResponse.json({ error: 'Failed to generate PDF' }, { status: 500 })
   }
 }
+

@@ -45,6 +45,8 @@ export type NotificationType =
   | 'audit_abandoned_stage_2'  // 24h: value prop + scarcity angle
   | 'audit_abandoned_stage_3'  // 48h: social proof + limited-time offer
   | 'audit_abandoned_stage_4'  // 72h: final call, emphasize urgency
+  // Task 9 — audit report ready (sent to requestor when audit completes)
+  | 'audit_report_ready'
 
 export interface SendNotificationArgs {
   type:          NotificationType
@@ -332,6 +334,119 @@ export async function sendTenantNotification(
     console.error(`[notifications] Send failed (${provider}): ${sendError}`)
   } else {
     console.log(`[notifications] Sent ${type} to ${recipientEmail} via ${provider}`)
+  }
+
+  return {
+    sent:      status === 'sent',
+    skipped:   false,
+    provider,
+    messageId,
+    error:     sendError,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// sendAuditReportReadyEmail
+// Sends the "your audit is ready" notification to the audit requestor.
+// Used by /api/audit/run — does NOT require a tenant_id (prospect audits).
+// ---------------------------------------------------------------------------
+
+export interface AuditReportReadyArgs {
+  recipientEmail: string
+  recipientName:  string | null
+  auditId:        string
+  targetDomain:   string
+  score:          number
+  grade:          string
+  opportunities:  string[]
+  auditUrl:       string
+  pdfUrl:         string
+  /** Prevent duplicate sends (defaults to 72h window) */
+  dedupWindowHours?: number
+}
+
+export async function sendAuditReportReadyEmail(
+  args: AuditReportReadyArgs,
+): Promise<NotificationResult> {
+  const {
+    recipientEmail,
+    recipientName,
+    auditId,
+    targetDomain,
+    score,
+    grade,
+    opportunities,
+    auditUrl,
+    pdfUrl,
+    dedupWindowHours = 72,
+  } = args
+
+  const dedupKey = `audit_report_ready:${auditId}`
+
+  // Deduplication
+  const dupe = await isDuplicate(dedupKey, dedupWindowHours)
+  if (dupe) {
+    console.log(`[notifications] Skipping duplicate audit_report_ready for ${auditId}`)
+    return { sent: false, skipped: true, provider: 'none', messageId: null }
+  }
+
+  // Render template
+  const data: NotificationTemplateData = {
+    requestorName:  recipientName ?? undefined,
+    targetDomain,
+    auditScore:     score,
+    auditGrade:     grade,
+    topOpportunities: opportunities,
+    auditUrl,
+    pdfUrl,
+  }
+  const { subject, html } = renderEmailTemplate('audit_report_ready', data)
+
+  // Send
+  let provider    = 'log_only'
+  let messageId: string | null = null
+  let sendError: string | undefined
+
+  if (process.env.RESEND_API_KEY) {
+    provider = 'resend'
+    const result = await sendViaResend({ to: recipientEmail, subject, html })
+    messageId = result.messageId
+    sendError = result.error
+  } else if (process.env.SENDGRID_API_KEY) {
+    provider = 'sendgrid'
+    const result = await sendViaSendGrid({ to: recipientEmail, subject, html })
+    messageId = result.messageId
+    sendError = result.error
+  } else {
+    console.log(`[notifications] LOG ONLY — audit_report_ready for ${recipientEmail} auditId=${auditId}`)
+    console.log(`  Subject: ${subject}`)
+  }
+
+  const status = sendError ? 'failed' : 'sent'
+
+  // Log
+  try {
+    const supabase = getAdminClient()
+    await supabase.from('notification_log').insert({
+      tenant_id:           null,
+      recipient_email:     recipientEmail,
+      notification_type:   'audit_report_ready',
+      subject,
+      template_data:       data as Record<string, unknown>,
+      status,
+      provider,
+      provider_message_id: messageId,
+      error_message:       sendError ?? null,
+      dedup_key:           dedupKey,
+    })
+  } catch (logErr) {
+    console.error('[notifications] Failed to log audit_report_ready:', logErr)
+  }
+
+  if (sendError) {
+    console.error(`[notifications] audit_report_ready send failed (${provider}): ${sendError}`)
+  } else {
+    console.log(`[notifications] Sent audit_report_ready to ${recipientEmail} via ${provider}`)
   }
 
   return {

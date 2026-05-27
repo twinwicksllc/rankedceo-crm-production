@@ -39,6 +39,12 @@ export interface NotificationTemplateData {
   topOpportunities?:  string[]
   getStartedUrl?:     string
 
+  // Task 9 — audit report ready
+  requestorName?:     string
+  targetDomain?:      string
+  auditUrl?:          string
+  pdfUrl?:            string
+
   // Generic fallback
   [key: string]: unknown
 }
@@ -352,6 +358,43 @@ const TEMPLATES: Record<NotificationType, (data: NotificationTemplateData) => { 
             <p>Don't let this opportunity disappear. Your new website takes just a few steps to build.</p>
             <p><a href="{{getStartedUrl}}" style="display: inline-block; padding: 12px 24px; background: #991b1b; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">Build Now — Limited Time →</a></p>
             <p style="font-size: 12px; color: #666;">Your audit report expires in 72 hours.</p>
+            <p>—<br>The RankedCEO Team</p>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
+
+  // Task 9 — audit report ready (sent to requestor when audit completes)
+  audit_report_ready: (data) => ({
+    subject: `Your SEO audit for ${data.targetDomain ?? 'your site'} is ready 📊`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Your Audit Is Ready</title>
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;">
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h1>Your audit is ready${data.requestorName ? `, ${data.requestorName.split(' ')[0]}` : ''}!</h1>
+            <p>We've finished analysing <strong>${data.targetDomain ?? 'your site'}</strong> against your competitors.</p>
+            <p style="font-size: 36px; margin: 20px 0; text-align: center;">
+              <strong style="color: ${data.auditGrade === 'A' ? '#16a34a' : data.auditGrade === 'B' ? '#2563eb' : data.auditGrade === 'C' ? '#d97706' : data.auditGrade === 'D' ? '#ea580c' : '#dc2626'};">${data.auditGrade ?? 'F'}</strong>
+              &nbsp; <span style="font-size: 20px; color: #64748b;">${data.auditScore ?? 0}/100</span>
+            </p>
+            ${data.topOpportunities && data.topOpportunities.length > 0 ? `
+            <p><strong>Top opportunities we found:</strong></p>
+            <ol>
+              ${(data.topOpportunities).slice(0, 3).map((o: string) => `<li>${o}</li>`).join('')}
+            </ol>
+            ` : ''}
+            <p style="text-align: center; margin: 24px 0;">
+              <a href="${data.auditUrl ?? '#'}" style="display: inline-block; padding: 14px 32px; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">View Full Report →</a>
+            </p>
+            ${data.pdfUrl ? `<p style="text-align: center;"><a href="${data.pdfUrl}" style="color: #2563eb; font-size: 13px;">📄 Download PDF Report</a></p>` : ''}
+            <p style="font-size: 12px; color: #94a3b8; text-align: center;">Your report is live for 30 days. You may need to log in or create a free account to view it.</p>
             <p>—<br>The RankedCEO Team</p>
           </div>
         </body>
