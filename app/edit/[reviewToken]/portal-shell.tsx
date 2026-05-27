@@ -48,6 +48,7 @@ interface PortalShellProps {
   activeTab:     'overview' | 'edit' | 'history' | 'billing' | 'audits'
   billingStatus?: TenantBillingStatus | null
   checkoutSuccess?: boolean
+  autoOpenApproval?: boolean  // Task 8: auto-open approval panel after Stripe checkout
   auditHistory?:  TenantAuditHistoryItem[]
   editorProps?: {
     initialFields: EditableField[]
@@ -78,6 +79,7 @@ export function PortalShell({
   activeTab,
   billingStatus,
   checkoutSuccess,
+  autoOpenApproval,
   auditHistory,
   editorProps,
 }: PortalShellProps) {
@@ -212,6 +214,8 @@ export function PortalShell({
             session={session}
             initialFields={editorProps.initialFields}
             initialHistoryOpen={historyOpenOnMount}
+            isPaid={billingStatus?.hasActiveSubscription ?? true}
+            autoOpenApproval={autoOpenApproval}
           />
           </div>
         )}

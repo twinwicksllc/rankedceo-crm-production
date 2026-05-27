@@ -52,18 +52,20 @@ interface EditorShellProps {
   session:              EditorSessionProps
   initialFields:        EditableField[]
   initialHistoryOpen?:  boolean   // Phase 6.1: set true when navigating from History tab
+  isPaid?:              boolean   // Task 8: gate Approve & Publish behind payment (default true)
+  autoOpenApproval?:   boolean   // Task 8: auto-open approval panel after Stripe checkout
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function EditorShell({ session, initialFields, initialHistoryOpen = false }: EditorShellProps) {
+export function EditorShell({ session, initialFields, initialHistoryOpen = false, isPaid = true, autoOpenApproval = false }: EditorShellProps) {
   const [fields, setFields]       = useState<EditableField[]>(initialFields)
   const [activeField, setActiveF] = useState<EditableField | null>(null)
   const [toast, setToast]         = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
   const [previewVersion, setPV]   = useState(0)
-  const [showApproval, setSA]     = useState(false)
+  const [showApproval, setSA]     = useState(autoOpenApproval)
   const [showHistory, setShowHistory] = useState(initialHistoryOpen)
   const [isSaving, startSave]     = useTransition()
   const toastTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -413,6 +415,7 @@ export function EditorShell({ session, initialFields, initialHistoryOpen = false
       {showApproval && (
         <ApprovalPanel
           session={session}
+          isPaid={isPaid}
           onClose={() => setSA(false)}
           onCompleted={(kind) => {
             setSA(false)

@@ -29,7 +29,7 @@ export const revalidate = 0
 
 interface PageProps {
   params:       { reviewToken: string }
-  searchParams: { tab?: string; checkout?: string }
+  searchParams: { tab?: string; checkout?: string; approve?: string }
 }
 // ---------------------------------------------------------------------------
 // Server-only helper: load sections_json for the currently-selected variant
@@ -88,6 +88,7 @@ export default async function ClientEditorPage({ params, searchParams }: PagePro
   const reviewToken    = params.reviewToken
   const tab            = searchParams?.tab ?? 'overview'
   const checkoutSuccess = searchParams?.checkout === 'success'
+  const autoOpenApproval = searchParams?.approve === '1'
 
   const result = await resolveClientEditSession(reviewToken)
   if (!result.ok) {
@@ -153,12 +154,15 @@ export default async function ClientEditorPage({ params, searchParams }: PagePro
   }
 
   // ------------------------------------------------------------------
-  // Tab: edit or history — load sections and show the editor shell
+  // Tab: edit or history — load sections + billing and show the editor shell
   // ------------------------------------------------------------------
-  const sections = await loadSelectedVariantSections(
-    session.tenantId,
-    session.selectedVariantIndex,
-  )
+  const [sections, billingResult] = await Promise.all([
+    loadSelectedVariantSections(
+      session.tenantId,
+      session.selectedVariantIndex,
+    ),
+    getTenantBillingStatus(session.tenantId),
+  ])
 
   const editableFields = buildEditableFields({
     sections,
@@ -170,6 +174,8 @@ export default async function ClientEditorPage({ params, searchParams }: PagePro
       session={sessionShape}
       portalData={null}
       activeTab={tab === 'history' ? 'history' : 'edit'}
+      billingStatus={billingResult.success ? (billingResult.data ?? null) : null}
+      autoOpenApproval={autoOpenApproval}
       editorProps={{ initialFields: editableFields }}
     />
   )
