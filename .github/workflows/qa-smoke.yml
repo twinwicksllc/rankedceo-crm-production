@@ -60,7 +60,7 @@ jobs:
           GITHUB_REPO: ${{ github.repository }}
           # Smoke always mocks billing + skips email
           QA_BILLING_MOCK: 'true'
-d to          # Explicitly disable restart gate for PR smoke runs
+          # Explicitly disable restart gate for PR smoke runs
           QA_RESTART_GATE: 'false'
         run: npm run smoke
 
