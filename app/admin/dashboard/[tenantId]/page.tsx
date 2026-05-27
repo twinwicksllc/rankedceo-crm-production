@@ -15,6 +15,8 @@ import { SiteSettingsForm }    from './site-settings-form'
 import { VersionRollbackButton } from './version-rollback-button'
 import { AIVariantsPanel } from './ai-variants-panel'
 import { ChangePlanForm }  from './change-plan-form'
+import { ReadinessChips, ReadinessScore, getTenantReadiness, getReadinessScore } from '@/components/waas/admin/ReadinessChips'
+import type { AdminTenantListItem } from '@/lib/waas/actions/admin'
 import type { WaasDomainRequest, WaasPackageTier } from '@/lib/waas/types'
 
 interface PageProps {
@@ -37,6 +39,15 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
   const variants = variantsResult.success && variantsResult.data ? variantsResult.data : []
   const deployReadiness = readinessResult.success ? readinessResult.data ?? null : null
   const reviewToken = tokenResult.data ?? tenant.id
+
+  // Build an AdminTenantListItem-compatible object by enriching tenant with the
+  // selected template slug from siteConfig so ReadinessChips can show it.
+  const tenantWithHealth: AdminTenantListItem = {
+    ...tenant,
+    client_selected_template_slug: siteConfig?.site_templates?.slug ?? null,
+  }
+  const healthChecks = getTenantReadiness(tenantWithHealth)
+  const { score: healthScore, total: healthTotal } = getReadinessScore(healthChecks)
 
   return (
     <div>
@@ -76,6 +87,25 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-emerald-400 text-sm font-semibold">Live</span>
           </div>
+        )}
+      </div>
+
+      {/* Launch Readiness Health Bar */}
+      <div className="mb-8 rounded-xl bg-white/5 border border-white/10 px-5 py-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-white/70">Launch Readiness</h2>
+          <ReadinessScore tenant={tenantWithHealth} />
+        </div>
+        <ReadinessChips tenant={tenantWithHealth} expanded />
+        {healthScore === healthTotal && (
+          <p className="mt-3 text-xs text-emerald-400/80">
+            ✓ All checks passed — this tenant is ready to go live.
+          </p>
+        )}
+        {healthScore < healthTotal && (
+          <p className="mt-3 text-xs text-white/30">
+            {healthTotal - healthScore} check{healthTotal - healthScore === 1 ? '' : 's'} remaining before this tenant can launch.
+          </p>
         )}
       </div>
 

@@ -25,6 +25,7 @@ import {
 } from '@/lib/waas/actions/admin'
 import type { WaasTenantStatus } from '@/lib/waas/types'
 import { BulkActionBar }  from './bulk-action-bar'
+import { ReadinessChips, ReadinessScore } from '@/components/waas/admin/ReadinessChips'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -308,7 +309,7 @@ export function TenantList({ initialTenants }: TenantListProps) {
                 <th className="px-4 py-3 text-left font-medium">Business</th>
                 <th className="px-4 py-3 text-left font-medium">Status</th>
                 <th className="px-4 py-3 text-left font-medium hidden md:table-cell">Domain</th>
-                <th className="px-4 py-3 text-left font-medium hidden lg:table-cell">Template</th>
+                <th className="px-4 py-3 text-left font-medium hidden xl:table-cell">Readiness</th>
                 <th className="px-4 py-3 text-left font-medium hidden lg:table-cell">Created</th>
                 <th className="px-4 py-3 text-right font-medium">Actions</th>
               </tr>
@@ -352,21 +353,24 @@ export function TenantList({ initialTenants }: TenantListProps) {
                         {domain}
                       </span>
                     </td>
-                    <td className="px-4 py-3 hidden lg:table-cell">
-                      <span className="text-white/40 text-xs">
-                        {tenant.client_selected_template_slug ?? '—'}
-                      </span>
+                    <td className="px-4 py-3 hidden xl:table-cell">
+                      <ReadinessChips tenant={tenant} />
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell text-white/40 text-xs">
                       {formatDate(tenant.created_at)}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Link
-                        href={`/admin/tenants/${tenant.id}`}
-                        className="text-xs text-white/40 hover:text-white transition-colors"
-                      >
-                        View →
-                      </Link>
+                      <div className="flex items-center justify-end gap-2">
+                        <span className="hidden sm:inline">
+                          <ReadinessScore tenant={tenant} />
+                        </span>
+                        <Link
+                          href={`/admin/tenants/${tenant.id}`}
+                          className="text-xs text-white/40 hover:text-white transition-colors"
+                        >
+                          View →
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 )
