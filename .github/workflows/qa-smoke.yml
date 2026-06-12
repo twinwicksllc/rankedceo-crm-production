@@ -41,26 +41,6 @@ jobs:
         working-directory: qa-agent
         run: npx playwright install chromium --with-deps
 
-      - name: Apply QA schema migration (idempotent)
-        # Ensures qa.qa_runs and qa.qa_scenarios exist before the agent tries to write reports.
-        # Migration is idempotent (CREATE SCHEMA IF NOT EXISTS / CREATE TABLE IF NOT EXISTS).
-        # Skips gracefully when SUPABASE_DB_URL is not set — the smoke run still proceeds;
-        # the Supabase report channel will warn but results are saved to disk + GitHub summary.
-        #
-        # NOTE on if: condition — GitHub Actions cannot compare secret values in expressions
-        # (secrets are masked and always resolve to empty string in conditions).  We use an
-        # env var proxy: SUPABASE_DB_URL is set from the secret, then checked with bash -n.
-        env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: |
-          if [[ -z "${SUPABASE_DB_URL}" ]]; then
-            echo "⚠️  SUPABASE_DB_URL not set — skipping qa schema migration (non-fatal)"
-            exit 0
-          fi
-          # Install psql client (not present by default on ubuntu-latest)
-          sudo apt-get install -y postgresql-client --quiet 2>/dev/null || true
-          psql "$SUPABASE_DB_URL" -f supabase/migrations/waas/021_qa_schema.sql
-
       - name: Run smoke suite
         working-directory: qa-agent
         env:
