@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import PDFDocument from 'pdfkit'
-import { createWaasClient } from '@/lib/waas/supabase'
+import { getWaasAdminClient } from '@/lib/waas/supabase'
 import { createClient } from '@/lib/supabase/server'
 import type { AuditReportData, WaasAudit } from '@/lib/waas/types'
 
@@ -12,7 +12,8 @@ interface RequestContext {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function extractDomain(url: string): string {
+function extractDomain(url: string | null | undefined): string {
+  if (!url) return 'unknown-domain'
   try {
     return new URL(url).hostname.replace('www.', '')
   } catch {
@@ -113,21 +114,22 @@ export async function GET(_req: NextRequest, context: RequestContext) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Fetch audit
-    const waasClient = createWaasClient()
-    const { data: audit, error } = await waasClient
+    // Fetch audit — use service-role client so RLS does not block server-side reads
+    const waasAdmin = getWaasAdminClient()
+    const { data: audit, error } = await waasAdmin
       .from('audits')
       .select('*')
       .eq('id', auditId)
       .single() as { data: WaasAudit | null; error: any }
 
     if (error || !audit) {
+      console.error('PDF: audit fetch failed', { auditId, error })
       return NextResponse.json({ error: 'Audit not found' }, { status: 404 })
     }
 
-    // Ownership check
+    // Ownership check — verify user owns the linked tenant (if any)
     if (audit.tenant_id && user.email) {
-      const { data: tenant } = await waasClient
+      const { data: tenant } = await waasAdmin
         .from('tenants')
         .select('id')
         .eq('id', audit.tenant_id)
@@ -140,6 +142,7 @@ export async function GET(_req: NextRequest, context: RequestContext) {
 
     const report = (audit as any).report_data as AuditReportData | null
     if (!report) {
+      console.error('PDF: no report_data', { auditId })
       return NextResponse.json({ error: 'No report data' }, { status: 400 })
     }
 
@@ -154,8 +157,8 @@ export async function GET(_req: NextRequest, context: RequestContext) {
     const grade          = getGrade(score)
     const gColor         = gradeColor(grade)
     const summary        = report.summary
-    const keywords       = (report as any).keywords_used as string[] ?? []
-    const leaderboard    = (report as any).leaderboard as any[] ?? []
+    const keywords       = Array.isArray((report as any).keywords_used) ? (report as any).keywords_used as string[] : []
+    const leaderboard    = Array.isArray((report as any).leaderboard) ? (report as any).leaderboard as any[] : []
     const opportunities  = report.opportunities ?? []
     const techIssues     = report.technical_issues ?? []
     const completedDate  = audit.completed_at
@@ -446,7 +449,10 @@ export async function GET(_req: NextRequest, context: RequestContext) {
       },
     })
   } catch (err) {
-    console.error('PDF error:', err)
+    console.error('PDF generation error:', {
+      message: err instanceof Error ? err.message : String(err),
+      stack:   err instanceof Error ? err.stack : undefined,
+    })
     return NextResponse.json({ error: 'Failed to generate PDF' }, { status: 500 })
   }
 }
