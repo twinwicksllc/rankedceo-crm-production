@@ -44,10 +44,14 @@ Pass if:
 2. Domains step: add one or more domain preferences.
 3. Brand step: add logo and brand colors if available.
 4. Template step: review the suggested template and continue.
-5. Integrations step: complete the final setup form and submit.
+5. Integrations step: fill in your USP, booking URL, and functionality flags.
+6. Website Builder step: review the pre-filled page layout for your chosen template.
+   - Drag blocks from the left panel to reorder or add sections.
+   - Click any block on the canvas to edit its content in the right panel.
+   - Click **Submit for Admin Review** when satisfied.
 
 ### Confirm customer success
-- The success screen should show the business name and a review token link.
+- The success screen should show the business name, a 4-step timeline, and a review token link.
 - Open `<BASE_URL>/edit/<REVIEW_TOKEN>` to confirm the customer portal opens.
 
 ### Customer portal checks

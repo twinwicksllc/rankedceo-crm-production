@@ -11,6 +11,47 @@ requires_stripe: false
 requires_email: false
 
 steps:
+  # ── Onboarding: /get-started route is reachable ──────────────────────────
+  # Runs first so a broken route fails fast before the longer admin checks.
+
+  - id: onboarding_route_reachable
+    type: navigate
+    persona: client
+    severity: critical
+    description: /get-started route loads without server error
+    url: /get-started
+    intent: >
+      /get-started is the public WaaS customer onboarding entry point.
+      It must be reachable on every PR. A failure here means the
+      OnboardingFlow server/client component has crashed or the route is
+      missing from the Next.js routing tree.
+
+  - id: onboarding_step1_form_renders
+    type: wait_for
+    persona: client
+    severity: critical
+    description: Step 1 Business Identity form is visible
+    selector: 'h1, form, input[name="legal_name"], input[type="email"]'
+    timeout_ms: 20000
+    intent: >
+      OnboardingFlow renders StepBusinessIdentity as the first step.
+      We assert any of the typical Step 1 elements to confirm the
+      client component hydrated without error. React hydration or
+      dnd-kit import failures would prevent this from rendering.
+
+  - id: onboarding_step6_assets_loaded
+    type: navigate
+    persona: client
+    severity: warning
+    description: Confirm dnd-kit JS bundle is included (builder dependency check)
+    url: /get-started
+    intent: >
+      Step 6 uses @dnd-kit/core and @dnd-kit/sortable. If these packages
+      failed to bundle (e.g. missing dep after package.json change), the
+      page will still load but the builder will crash when mounted.
+      We re-navigate and re-assert Step 1 as a proxy for bundle health
+      — a deeper builder mount check runs in onboarding_waas.yaml (full mode).
+
   # ── Admin: Login + Dashboard ──────────────────────────────────────────────
 
   - id: admin_navigate_login

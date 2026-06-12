@@ -1,0 +1,434 @@
+id: onboarding_waas
+name: WaaS Customer Onboarding — All 6 Steps + Website Builder
+description: >
+  Full end-to-end test of the customer-facing WaaS onboarding flow at /get-started.
+  Drives a test customer through all 6 steps:
+    Step 1: Business Identity
+    Step 2: Domain Wishlist
+    Step 3: Brand Identity
+    Step 4: Template Selection
+    Step 5: Integrations
+    Step 6: Website Builder (Blocksmith drag-and-drop editor)
+  Verifies each step renders, progresses, and that the builder canvas is
+  pre-filled from the customer's answers before final submission.
+
+  Requires: QA_ONBOARDING_EMAIL, QA_ONBOARDING_BUSINESS_NAME env vars.
+  Optionally uses QA_AUDIT_ID to test the ?auditId= pre-fill path.
+  Uses the 'client' persona since this is the customer-facing flow.
+
+  Runtime: ~3-5 minutes.
+modes:
+  - full
+requires_stripe: false
+requires_email: false
+
+steps:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 1: Navigate to /get-started and verify Step 1 renders
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: ob1_navigate_get_started
+    type: navigate
+    persona: client
+    severity: critical
+    description: Navigate to the WaaS customer onboarding entry point
+    url: /get-started
+    intent: >
+      /get-started is the public entry point for new WaaS customers.
+      It renders OnboardingFlow which starts at Step 1 (Business Identity).
+      A failure here means the route is broken or the server component crashed.
+
+  - id: ob1_assert_url
+    type: assert_url
+    persona: client
+    severity: critical
+    description: Confirm we are on the get-started route
+    pattern: /get-started
+    intent: Verify the browser is on /get-started before proceeding
+
+  - id: ob1_assert_step1_heading
+    type: wait_for
+    persona: client
+    severity: critical
+    description: Step 1 (Business Identity) form heading is visible
+    # StepBusinessIdentity renders an h1 with "Tell us about your business"
+    selector: 'h1, form, input[name="legal_name"], input[placeholder*="business"], input[placeholder*="Business"]'
+    timeout_ms: 20000
+    intent: >
+      The onboarding flow starts with Step 1 which renders a form asking for
+      business name, address, trade, and email. The h1 or a required input
+      must be visible to confirm the step mounted correctly.
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 2: Fill and submit Step 1 (Business Identity)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: ob2_fill_business_name
+    type: fill
+    persona: client
+    severity: critical
+    description: Fill business name (legal_name)
+    selector: 'input[name="legal_name"], input[placeholder*="Business name"], input[placeholder*="business name"]'
+    value: '${QA_ONBOARDING_BUSINESS_NAME}'
+    intent: Enter the test business name into the legal_name field
+
+  - id: ob2_fill_address
+    type: fill
+    persona: client
+    severity: critical
+    description: Fill physical address
+    selector: 'input[name="physical_address"], input[placeholder*="address"], input[placeholder*="Address"]'
+    value: '123 Test Street'
+    intent: Enter a test street address
+
+  - id: ob2_fill_city
+    type: fill
+    persona: client
+    severity: critical
+    description: Fill city
+    selector: 'input[name="city"], input[placeholder*="City"]'
+    value: 'Denver'
+    intent: Enter a test city
+
+  - id: ob2_fill_state
+    type: fill
+    persona: client
+    severity: critical
+    description: Fill state
+    selector: 'input[name="state"], input[placeholder*="State"]'
+    value: 'CO'
+    intent: Enter a test state abbreviation
+
+  - id: ob2_fill_zip
+    type: fill
+    persona: client
+    severity: critical
+    description: Fill ZIP code
+    selector: 'input[name="zip"], input[placeholder*="ZIP"], input[placeholder*="zip"]'
+    value: '80202'
+    intent: Enter a test ZIP code
+
+  - id: ob2_fill_email
+    type: fill
+    persona: client
+    severity: critical
+    description: Fill customer email
+    selector: 'input[name="email"], input[type="email"]'
+    value: '${QA_ONBOARDING_EMAIL}'
+    intent: Enter the test customer email address
+
+  - id: ob2_select_trade
+    type: click
+    persona: client
+    severity: critical
+    description: Select primary trade (HVAC)
+    # Trade is a <select> or styled button/chip list. Click the HVAC option.
+    selector: 'select[name="primary_trade"], button:has-text("HVAC"), [data-value="HVAC"], option[value="HVAC"]'
+    intent: >
+      StepBusinessIdentity renders TRADES as a styled list of clickable chips or
+      a native <select>. Selecting HVAC ensures a valid primary_trade value and
+      triggers template recommendations in Step 4.
+
+  - id: ob2_fill_usp
+    type: fill
+    persona: client
+    severity: error
+    description: Fill USP / about (optional field if visible)
+    selector: 'input[name="usp"], textarea[name="usp"]'
+    value: 'Family-owned HVAC service with 15 years of experience in the Denver metro area.'
+    intent: >
+      USP is an optional field in Step 1 (extended section). If the field is
+      hidden behind "Show more options" it may not be visible — error severity
+      allows this step to be skipped gracefully.
+
+  - id: ob2_submit_step1
+    type: click
+    persona: client
+    severity: critical
+    description: Submit Step 1 and advance to Step 2
+    selector: 'button:has-text("Continue to Domain"), button[type="submit"]:has-text("Continue"), form button[type="submit"]'
+    intent: >
+      StepBusinessIdentity renders a submit button labelled "Continue to Domain
+      Selection". Clicking it triggers handleStep1Submit, which calls
+      saveOnboardingStep1 and advances currentStep to 2.
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 3: Step 2 — Domain Wishlist
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: ob3_assert_step2_renders
+    type: wait_for
+    persona: client
+    severity: critical
+    description: Step 2 (Domain Wishlist) content is visible
+    selector: 'input[placeholder*="domain"], input[placeholder*="acme"], h1, h2'
+    timeout_ms: 15000
+    intent: >
+      After Step 1 submits, the flow advances to Step 2 (Domain Wishlist).
+      StepDomainWishlist renders an input with placeholder "acmeplumbing" and
+      an "Add" button. We wait for the input to confirm the step mounted.
+
+  - id: ob3_fill_domain_name
+    type: fill
+    persona: client
+    severity: error
+    description: Type a domain name into the domain input
+    selector: 'input[placeholder*="acme"], input[placeholder*="domain"], input[aria-label*="domain"]'
+    value: 'qatest-hvac-denver'
+    intent: Enter a test domain name (without extension) into the domain input field
+
+  - id: ob3_click_add_domain
+    type: click
+    persona: client
+    severity: error
+    description: Click the Add button to add the domain to the list
+    selector: 'button:has-text("Add"), button[type="button"]:has-text("+")'
+    intent: >
+      StepDomainWishlist has an "Add" button that appends the typed domain +
+      selected extension to the domains array. At least one domain must be
+      added before "Continue to Brand Identity" is enabled.
+
+  - id: ob3_continue_to_step3
+    type: click
+    persona: client
+    severity: critical
+    description: Continue from Step 2 to Step 3 (Brand Identity)
+    selector: 'button:has-text("Continue to Brand"), button:has-text("Brand Identity"), button:has-text("Continue")'
+    intent: >
+      After adding at least one domain, the "Continue to Brand Identity →"
+      button is enabled. Clicking it calls handleStep2Next which saves
+      domains and advances to Step 3.
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 4: Step 3 — Brand Identity
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: ob4_assert_step3_renders
+    type: wait_for
+    persona: client
+    severity: critical
+    description: Step 3 (Brand Identity) content is visible
+    # StepBrandIdentity renders colour pickers and a logo upload zone
+    selector: 'input[type="color"], input[type="file"], button:has-text("Continue"), h1, h2'
+    timeout_ms: 15000
+    intent: >
+      Step 3 asks for brand colours and an optional logo. We assert any of the
+      typical elements to confirm the step mounted. The colour input is the
+      most reliable selector since it is always present.
+
+  - id: ob4_continue_to_step4
+    type: click
+    persona: client
+    severity: critical
+    description: Continue from Step 3 to Step 4 (Template Selection)
+    selector: 'button:has-text("Continue to Template"), button:has-text("Template"), button:has-text("Continue")'
+    intent: >
+      Brand Identity can be completed without uploading a logo — colours default
+      to blue. Clicking Continue calls handleStep3Next and advances to Step 4.
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 5: Step 4 — Template Selection
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: ob5_assert_step4_renders
+    type: wait_for
+    persona: client
+    severity: critical
+    description: Step 4 (Template Selection) content is visible
+    # StepTemplateSelection renders TemplatePreviewCards and a Continue button
+    selector: 'button:has-text("Continue"), button:has-text("recommendation"), h1, h2'
+    timeout_ms: 15000
+    intent: >
+      Step 4 shows 3 recommended templates (derived from primaryTrade) and a
+      "Browse all 10 templates" link. A Continue button is always present.
+
+  - id: ob5_assert_template_cards_render
+    type: wait_for
+    persona: client
+    severity: warning
+    description: At least one template preview card is visible
+    selector: '[data-testid^="template-card-"], [class*="template"], button:has-text("Select")'
+    timeout_ms: 10000
+    intent: >
+      getRecommendedTemplates(primaryTrade) returns 3 templates for HVAC.
+      At least one TemplatePreviewCard should render so the customer can choose.
+
+  - id: ob5_continue_to_step5
+    type: click
+    persona: client
+    severity: critical
+    description: Continue from Step 4 to Step 5 (Integrations) using top recommendation
+    # Button label is "Use top recommendation & continue" if none selected,
+    # or "Continue with this template" after clicking a card.
+    selector: 'button:has-text("recommendation"), button:has-text("Continue with this"), button:has-text("Continue")'
+    intent: >
+      If the customer does not explicitly select a template, clicking Continue
+      auto-selects the rank-1 recommended template for their trade (handleStep4Next).
+      This advances to Step 5.
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 6: Step 5 — Integrations
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: ob6_assert_step5_renders
+    type: wait_for
+    persona: client
+    severity: critical
+    description: Step 5 (Integrations) form is visible
+    selector: 'input[name="calendly_url"], textarea[name="usp"], h1, h2'
+    timeout_ms: 15000
+    intent: >
+      Step 5 renders fields for Calendly URL, USP textarea, financing toggle,
+      and functionality checkboxes. The USP field is required so the form
+      cannot be submitted without it.
+
+  - id: ob6_fill_usp
+    type: fill
+    persona: client
+    severity: critical
+    description: Fill the USP field (required for Step 5 submission)
+    selector: 'textarea[name="usp"], input[name="usp"]'
+    value: 'Denver HVAC experts — 15 years experience, same-day service, licensed & insured.'
+    intent: >
+      The usp field has a minimum length of 10 characters and is required.
+      Without it, handleSubmit will not fire and the step cannot advance.
+
+  - id: ob6_fill_calendly
+    type: fill
+    persona: client
+    severity: warning
+    description: Fill Calendly booking URL (optional)
+    selector: 'input[name="calendly_url"], input[type="url"][placeholder*="calendly"]'
+    value: 'https://calendly.com/qa-test-hvac'
+    intent: >
+      calendly_url is optional (can be empty string). Filling it tests the URL
+      validation path (must be a valid URL or empty).
+
+  - id: ob6_submit_step5
+    type: click
+    persona: client
+    severity: critical
+    description: Submit Step 5 and advance to Step 6 (Website Builder)
+    selector: 'button:has-text("Next"), button:has-text("Continue"), button[type="submit"]'
+    intent: >
+      handleStep5Submit saves integrations to Supabase and advances to Step 6.
+      It no longer marks the tenant as pending_review — that now happens in Step 6.
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 7: Step 6 — Website Builder (Blocksmith)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: ob7_assert_builder_mounts
+    type: wait_for
+    persona: client
+    severity: critical
+    description: Step 6 — Website Builder full-screen canvas is visible
+    # Builder renders as fixed inset-0. Header has "Blocksmith" / "Website Builder"
+    # text and a Layers icon. The canvas drop zone and block palette are also present.
+    selector: 'header:has-text("Website Builder"), header:has-text("Blocksmith"), [class*="fixed"][class*="inset-0"] header'
+    timeout_ms: 20000
+    intent: >
+      Step 6 mounts the full-screen Blocksmith builder (builder.tsx). The header
+      renders a Layers icon and "Website Builder" label. A failure here means the
+      Builder component crashed on mount or dnd-kit failed to initialise.
+
+  - id: ob7_assert_block_palette
+    type: wait_for
+    persona: client
+    severity: critical
+    description: Step 6 — Block palette sidebar is visible with draggable items
+    # BlockPalette renders <aside> with h2 "Blocks" and PaletteItem buttons
+    selector: 'aside:has-text("Blocks"), aside h2'
+    timeout_ms: 10000
+    intent: >
+      The left sidebar (BlockPalette) must render with its "Blocks" heading and
+      the 8 draggable block type items. If missing, the customer has no way to
+      add new blocks to their page.
+
+  - id: ob7_assert_canvas_prefilled
+    type: wait_for
+    persona: client
+    severity: error
+    description: Step 6 — Canvas has pre-filled hero block from onboarding data
+    # buildInitialBlocks creates a hero block with the business name in the title.
+    # BlockRenderer renders the hero title as an h1 inside the canvas.
+    # We assert any h1 or the canvas card area has content (not empty state).
+    selector: 'main h1, [class*="canvas"] h1, [class*="card"] h1, div:has-text("HVAC")'
+    timeout_ms: 10000
+    intent: >
+      buildInitialBlocks pre-fills the canvas from the customer's onboarding
+      data and chosen template section order. At minimum a Hero block with the
+      business name / trade should be visible. If the canvas is empty, the
+      pre-fill logic failed.
+
+  - id: ob7_assert_inspector_panel
+    type: wait_for
+    persona: client
+    severity: warning
+    description: Step 6 — Inspector panel (right sidebar) is visible
+    # Inspector renders <aside> with h2 "Properties" when no block is selected
+    selector: 'aside:has-text("Properties"), aside h2'
+    timeout_ms: 8000
+    intent: >
+      The Inspector panel (right sidebar) renders "Properties / Select a block
+      to edit". This confirms the 3-panel layout (palette / canvas / inspector)
+      is intact.
+
+  - id: ob7_assert_submit_button
+    type: wait_for
+    persona: client
+    severity: critical
+    description: Step 6 — Submit for Admin Review button is visible in the builder header
+    selector: 'button:has-text("Submit for Admin Review"), header button:has-text("Submit")'
+    timeout_ms: 8000
+    intent: >
+      The builder header renders a "Submit for Admin Review →" button that calls
+      onSubmit(blocks). This is the final CTA of the entire onboarding flow.
+      If it is missing, the customer has no way to complete onboarding.
+
+  - id: ob7_submit_builder
+    type: click
+    persona: client
+    severity: critical
+    description: Step 6 — Click Submit for Admin Review to complete onboarding
+    selector: 'button:has-text("Submit for Admin Review"), header button:has-text("Submit")'
+    intent: >
+      Clicking "Submit for Admin Review" triggers handleStep6Submit which:
+        1. Calls saveOnboardingStepBuilder (saves blocks JSON + HTML to tenant_site_config)
+        2. Sets completed=true, which renders OnboardingSuccess
+      This is the definitive end-to-end test of the full 6-step onboarding flow.
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 8: Success Screen
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: ob8_assert_success_screen
+    type: wait_for
+    persona: client
+    severity: critical
+    description: Onboarding success screen renders after submission
+    # OnboardingSuccess renders with confetti and a heading containing the
+    # business name. It also renders a portal link if reviewToken is available.
+    selector: '[data-testid="onboarding-success"], h1:has-text("submitted"), h1:has-text("Success"), h2:has-text("submitted"), h2:has-text("What happens"), p:has-text("review")'
+    timeout_ms: 30000
+    intent: >
+      After handleStep6Submit sets completed=true, OnboardingFlow renders
+      <OnboardingSuccess>. This component shows a confirmation heading,
+      a 4-step timeline (email sent / review / build / live), and optionally
+      a "View Your Portal" link when reviewToken is available.
+      A timeout here means the final Supabase writes (step-builder server action)
+      are taking too long or the success component crashed.
+
+  - id: ob8_assert_portal_link
+    type: wait_for
+    persona: client
+    severity: warning
+    description: Portal link (View Your Portal) is visible on success screen
+    # OnboardingSuccess renders a link to /edit/[reviewToken] when reviewToken != null
+    selector: 'a[href*="/edit/"], button:has-text("portal"), a:has-text("portal"), a:has-text("Portal")'
+    timeout_ms: 10000
+    intent: >
+      ensureClientReviewToken is called in handleStep5Submit, so the reviewToken
+      should be available on the success screen. If missing, the customer has no
+      way to navigate to their edit portal from the success page.

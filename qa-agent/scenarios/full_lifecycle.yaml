@@ -1,10 +1,10 @@
 id: full_lifecycle
 name: Full Lifecycle — End-to-End Client & Admin Journey
 description: >
-  Complete 19-scene end-to-end test covering the full WaaS lifecycle:
-  admin creates tenant → client portal access → profile review →
-  billing upgrade (Stripe test mode) → email verification →
-  admin verifies state → client site published.
+  Complete end-to-end test covering the full WaaS lifecycle:
+  onboarding entry-point check → admin creates tenant → client portal access
+  → profile review → billing upgrade (Stripe test mode) → email verification
+  → admin verifies state → client site published.
 
   Requires: Stripe test mode, Resend test mode.
   Target: qa.rankedceo.com (weekly run only).
@@ -16,6 +16,48 @@ requires_stripe: true
 requires_email: true
 
 steps:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SCENE 0: Onboarding entry-point health check
+  # Verifies /get-started and the 6-step flow renders before the admin scenes.
+  # The full step-by-step onboarding drive is in onboarding_waas.yaml.
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: s0_onboarding_route_loads
+    type: navigate
+    persona: client
+    severity: critical
+    description: "Scene 0 — /get-started onboarding entry point is reachable"
+    url: /get-started
+    intent: >
+      The WaaS onboarding flow at /get-started must be reachable before
+      running the rest of the lifecycle. A failure here aborts the run
+      (critical) since the full lifecycle assumes a functioning onboarding
+      flow as its prerequisite.
+
+  - id: s0_onboarding_step1_renders
+    type: wait_for
+    persona: client
+    severity: critical
+    description: "Scene 0 — Step 1 Business Identity form renders"
+    selector: 'h1, form, input[name="legal_name"], input[type="email"]'
+    timeout_ms: 20000
+    intent: >
+      OnboardingFlow renders StepBusinessIdentity (Step 1) on mount.
+      A failure here means the React client component failed to hydrate,
+      a required import (e.g. @dnd-kit) is missing from the bundle, or
+      the Supabase client initialisation in onboarding actions threw.
+
+  - id: s0_onboarding_note
+    type: pause
+    persona: client
+    severity: info
+    description: "Scene 0 complete — deep onboarding drive (all 6 steps) runs in onboarding_waas scenario"
+    duration_ms: 500
+    intent: >
+      The full 6-step onboarding drive including the Blocksmith website
+      builder (Step 6) is covered by the standalone onboarding_waas.yaml
+      scenario. This scene only validates the entry-point is healthy.
 
   # ═══════════════════════════════════════════════════════════════════════════
   # SCENE 1: Admin — Login & Dashboard
