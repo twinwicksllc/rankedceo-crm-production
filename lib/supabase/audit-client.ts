@@ -27,7 +27,13 @@ export function createAuditClient(): SupabaseClient {
       {
         auth: {
           flowType: 'implicit',
-          detectSessionInUrl: true,
+          // Do NOT set detectSessionInUrl:true on the login page client.
+          // When true, the Supabase browser client calls history.replaceState()
+          // to strip tokens from the URL on mount.  In Next.js App Router that
+          // triggers a navigation event which re-evaluates useSearchParams(),
+          // causing a re-render loop.  Token extraction from the URL is handled
+          // exclusively by /audit/auth/confirm (the OAuth callback page).
+          detectSessionInUrl: false,
           persistSession: true,
           autoRefreshToken: true,
           // No custom storageKey — must match what the server client reads

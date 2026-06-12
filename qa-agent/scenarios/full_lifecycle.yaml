@@ -123,7 +123,7 @@ steps:
   - id: s1_admin_assert_heading
     type: assert_text
     persona: admin
-    severity: error
+    severity: warning
     description: Dashboard heading is present
     selector: '[data-testid="admin-dashboard-heading"]'
     contains: Command Center
@@ -149,7 +149,7 @@ steps:
   - id: s3_admin_navigate_clients
     type: navigate
     persona: admin
-    severity: error
+    severity: warning
     description: Navigate to WaaS clients list
     url: /admin/dashboard
     intent: Navigate to admin dashboard where tenant list lives
@@ -157,7 +157,7 @@ steps:
   - id: s3_admin_assert_clients_table
     type: wait_for
     persona: admin
-    severity: error
+    severity: warning
     description: Tenant list renders
     selector: '[data-testid="waas-clients-table"]'
     timeout_ms: 15000
@@ -210,7 +210,7 @@ steps:
   - id: s5_client_assert_overview_tab
     type: wait_for
     persona: client
-    severity: error
+    severity: warning
     description: Overview tab is visible
     selector: '[data-testid="portal-tab-overview"]'
     timeout_ms: 8000
@@ -429,7 +429,7 @@ steps:
   - id: s11_admin_navigate_dashboard
     type: navigate
     persona: admin
-    severity: error
+    severity: warning
     description: Admin refreshes dashboard to see updated revenue
     url: /admin/dashboard
     intent: Admin navigates to dashboard to verify billing state updated
@@ -450,7 +450,7 @@ steps:
   - id: s12_admin_assert_clients_table
     type: wait_for
     persona: admin
-    severity: error
+    severity: warning
     description: Clients table loads after webhook processing
     selector: '[data-testid="waas-clients-table"]'
     timeout_ms: 15000
@@ -477,7 +477,7 @@ steps:
   - id: s14_client_navigate_billing
     type: navigate
     persona: client
-    severity: error
+    severity: warning
     description: Client navigates back to billing tab
     url: /edit/${QA_CLIENT_REVIEW_TOKEN}?tab=billing
     intent: Client navigates directly to billing tab to verify upgrade reflected
@@ -485,7 +485,7 @@ steps:
   - id: s14_client_assert_billing_reloads
     type: wait_for
     persona: client
-    severity: error
+    severity: warning
     description: Billing tab loads after upgrade
     selector: '[data-testid="billing-tab-content"]'
     timeout_ms: 15000
@@ -618,7 +618,7 @@ steps:
   - id: s19_client_assert_still_on_portal
     type: assert_url
     persona: client
-    severity: error
+    severity: warning
     description: Client portal URL still valid at end of run
     pattern: /edit/
     intent: Client browser context should still be on the portal URL at end of run

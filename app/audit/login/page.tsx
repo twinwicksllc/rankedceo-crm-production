@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useState, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Search } from 'lucide-react'
@@ -30,7 +30,12 @@ function AuditLoginForm() {
   const [magicSent, setMagicSent] = useState(false)
   const [mode, setMode] = useState<'password' | 'magic'>('password')
 
-  const supabase = createAuditClient()
+  // Hold the client in a ref — createAuditClient() must not be called on
+  // every render because the Supabase browser client registers internal
+  // auth-state listeners on construction; doing so on re-renders stacks
+  // duplicate listeners which can produce a re-render loop.
+  const supabaseRef = useRef(createAuditClient())
+  const supabase = supabaseRef.current
 
   const resolveRedirectTarget = (target: string) => {
     if (target.startsWith('/')) {
@@ -135,11 +140,10 @@ function AuditLoginForm() {
 
   if (magicSent) {
     return (
-      <div className="relative min-h-screen overflow-hidden bg-[#020b2c] flex items-center justify-center px-4">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -left-28 top-0 h-80 w-80 rounded-full bg-cyan-500/20 blur-[120px]" />
-          <div className="absolute -right-24 top-24 h-80 w-80 rounded-full bg-emerald-500/15 blur-[120px]" />
-        </div>
+      // Glows use CSS radial-gradient (not filter:blur divs) — see comment
+      // on the main return below for why this matters.
+      <div className="relative min-h-screen flex items-center justify-center px-4"
+        style={{ background: 'radial-gradient(ellipse 65% 55% at 10% 0%, rgba(6,182,212,0.18) 0%, transparent 70%), radial-gradient(ellipse 65% 55% at 90% 30%, rgba(16,185,129,0.14) 0%, transparent 70%), #020b2c' }}>
         <div className="relative w-full max-w-md rounded-2xl border border-cyan-400/20 bg-[#0a1a3b]/90 p-10 text-center shadow-[0_0_50px_rgba(14,165,233,0.08)] backdrop-blur-xl">
           <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15 text-3xl">
             📧
@@ -161,13 +165,15 @@ function AuditLoginForm() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#020b2c]">
-      {/* Background glows */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-28 top-0 h-80 w-80 rounded-full bg-cyan-500/20 blur-[120px]" />
-        <div className="absolute -right-24 top-24 h-80 w-80 rounded-full bg-emerald-500/15 blur-[120px]" />
-        <div className="absolute bottom-0 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-blue-700/25 blur-[140px]" />
-      </div>
+    // IMPORTANT: Decorative glows are CSS radial-gradient on the background
+    // property — NOT filter:blur() divs.  Chrome uses software (CPU)
+    // rendering for filter:blur() on elements inside overflow:hidden when the
+    // radius exceeds ~30px.  At blur-[120px]/blur-[140px] on 320-384px circles
+    // this blocks the compositor thread long enough to trigger Chrome's
+    // "Page not responding" / "Wait or Exit" dialog.  radial-gradient achieves
+    // the same visual at GPU-trivial cost.
+    <div className="relative min-h-screen"
+      style={{ background: 'radial-gradient(ellipse 55% 45% at 0% 0%, rgba(6,182,212,0.2) 0%, transparent 65%), radial-gradient(ellipse 55% 45% at 100% 25%, rgba(16,185,129,0.15) 0%, transparent 65%), radial-gradient(ellipse 60% 55% at 50% 100%, rgba(29,78,216,0.22) 0%, transparent 65%), #020b2c' }}>
 
       <div className="relative flex min-h-screen flex-col items-center justify-center px-4 py-12">
         {/* Logo */}
