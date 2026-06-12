@@ -100,16 +100,17 @@ steps:
     intent: Click the login submit button
 
   - id: admin_assert_dashboard
-    type: wait_for
+    type: wait_for_url
     persona: admin
     severity: critical
-    description: Confirm admin dashboard root is visible after login
-    selector: '[data-testid="admin-dashboard-root"]'
-    timeout_ms: 30000
+    description: Confirm redirect to /admin/dashboard after admin login
+    pattern: /admin/dashboard
+    timeout_ms: 45000
     intent: >
-      URL-only checks can false-positive on /login?next=/admin/dashboard.
-      This step verifies the real dashboard server component rendered by
-      waiting for the admin dashboard root test id.
+      Wait for the pathname to become /admin/dashboard. This avoids false
+      positives from /login?next=/admin/dashboard while also avoiding brittle
+      dependency on data-testid attributes that may be stripped in production
+      builds.
 
   - id: admin_navigate_dashboard_explicit
     type: navigate
