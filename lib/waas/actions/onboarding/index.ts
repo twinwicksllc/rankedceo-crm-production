@@ -9,3 +9,7 @@ export {
   saveOnboardingStep4,
   getLogoUploadPath,
 } from './steps-final'
+export {
+  saveOnboardingStepBuilder,
+} from './step-builder'
+export type { BuilderBlock } from './step-builder'

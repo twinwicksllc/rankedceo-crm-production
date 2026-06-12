@@ -2,13 +2,14 @@
 
 // =============================================================================
 // RankedCEO Website Builder — Multi-Step Onboarding Flow (Client Component)
-// React Hook Form + Zod, 5 steps, state-managed, glassmorphism dark theme
+// React Hook Form + Zod, 6 steps, state-managed, glassmorphism dark theme
 //
 // Step 1: Business Identity   (legal name, trade, address, email)
 // Step 2: Domain Wishlist     (domain preferences)
 // Step 3: Brand Identity      (logo, colors)
 // Step 4: Template Selection  (PR #94 — picks from 10 templates)
 // Step 5: Integrations        (Calendly, USP, financing, functionality flags)
+// Step 6: Website Builder     (customer edits pre-filled section content)
 // =============================================================================
 
 import React, { useState, useCallback, useEffect, useRef } from 'react'
@@ -21,6 +22,7 @@ import { StepDomainWishlist }        from './steps/step-domain-wishlist'
 import { StepBrandIdentity }         from './steps/step-brand-identity'
 import { StepTemplateSelection }     from './steps/step-template-selection'
 import { StepIntegrations }          from './steps/step-integrations'
+import { StepWebsiteBuilder }        from './steps/step-website-builder'
 import { OnboardingSuccess }         from './onboarding-success'
 import {
   saveOnboardingStep1,
@@ -28,7 +30,9 @@ import {
   saveOnboardingStep3,
   saveOnboardingStepTemplate,
   saveOnboardingStep4,
+  saveOnboardingStepBuilder,
 } from '@/lib/waas/actions/onboarding'
+import type { Block } from '@/lib/waas/website-builder/blocks'
 import type {
   DomainWishlistItem,
   WaasPackageTier,
@@ -130,7 +134,10 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
   const trackedSteps    = useRef<Set<number>>(new Set())
   const trackingContext = useRef<Record<string, string | number | boolean | null | undefined>>({})
 
-  const TOTAL_STEPS = 5
+  const TOTAL_STEPS = 6
+
+  // Step 5 captured data — needed to pass pre-fill context into Step 6
+  const [step5Data, setStep5Data] = useState<Step4FormData | null>(null)
 
   useEffect(() => {
     trackingContext.current = getAuditFunnelProperties(
@@ -345,15 +352,19 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
     setCurrentStep(5)
   }
 
+  // Step 5: Save integrations, advance to Step 6 (website builder)
   const handleStep5Submit = async (data: Step4FormData) => {
     if (!tenantId) { handleError('Session expired. Please refresh.'); return }
     setIsLoading(true)
     setError(null)
 
+    // Save integrations data but don't finalise yet — Step 6 does the final submit
     const result = await saveOnboardingStep4(tenantId, data, initialTier)
-    if (!result.success) { handleError(result.error ?? 'Failed to submit.'); return }
+    if (!result.success) { handleError(result.error ?? 'Failed to save integrations.'); return }
 
+    // Stash reviewToken and step5 data; stay in the flow for Step 6
     setReviewToken(result.data?.reviewToken ?? null)
+    setStep5Data(data)
     setIsLoading(false)
     trackEvent('audit_onboarding_step_completed', {
       ...trackingContext.current,
@@ -361,6 +372,26 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
       stepName: 'integrations',
       calendlyConnected: Boolean(data.calendly_url),
       financingEnabled: data.financing_enabled,
+      templateSlug: selectedTemplateSlug,
+      tier: initialTier,
+    })
+    setCurrentStep(6)
+  }
+
+  // Step 6: Save website builder content then mark onboarding complete
+  const handleStep6Submit = async (blocks: Block[]) => {
+    if (!tenantId) { handleError('Session expired. Please refresh.'); return }
+    setIsLoading(true)
+    setError(null)
+
+    // Save the customer-edited blocks (non-blocking on schema gap)
+    await saveOnboardingStepBuilder(tenantId, blocks, businessName || undefined)
+
+    setIsLoading(false)
+    trackEvent('audit_onboarding_step_completed', {
+      ...trackingContext.current,
+      step: 6,
+      stepName: 'website_builder',
       templateSlug: selectedTemplateSlug,
       tier: initialTier,
     })
@@ -397,7 +428,7 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
   // Step labels for progress indicator
   // ---------------------------------------------------------------------------
 
-  const stepLabels = ['Business', 'Domains', 'Brand', 'Template', 'Integrations']
+  const stepLabels = ['Business', 'Domains', 'Brand', 'Template', 'Integrations', 'Website']
 
   return (
     <div className="flex flex-col flex-1">
@@ -510,6 +541,31 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
                 <StepIntegrations
                   form={step4Form}
                   onSubmit={handleStep5Submit}
+                  onBack={goBack}
+                  isLoading={isLoading}
+                />
+              )}
+              {currentStep === 6 && (
+                <StepWebsiteBuilder
+                  tenantId={tenantId!}
+                  businessName={businessName}
+                  primaryTrade={primaryTrade}
+                  primaryColor={primaryColor}
+                  selectedTemplateSlug={selectedTemplateSlug}
+                  // Step 1 fields
+                  tagline={step1Form.getValues('tagline')}
+                  servicesOffered={step1Form.getValues('services_offered')}
+                  targetAudience={step1Form.getValues('target_audience')}
+                  city={step1Form.getValues('city')}
+                  state={step1Form.getValues('state')}
+                  // Step 5 fields
+                  usp={step5Data?.usp ?? ''}
+                  valuePropositions={step5Data?.value_propositions}
+                  aboutNarrative={step5Data?.about_narrative}
+                  primaryCta={step5Data?.primary_cta}
+                  serviceArea={step5Data?.service_area}
+                  financingEnabled={step5Data?.financing_enabled ?? false}
+                  onSubmit={handleStep6Submit}
                   onBack={goBack}
                   isLoading={isLoading}
                 />
