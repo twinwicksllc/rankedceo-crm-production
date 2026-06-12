@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@playwright/test": "^1.44.0",
+    "@playwright/test": "^1.60.0",
     "@supabase/supabase-js": "^2.43.4",
     "@types/ws": "^8.18.1",
     "chalk": "^5.3.0",
