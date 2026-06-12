@@ -175,6 +175,23 @@ steps:
     intent: Cross-persona handoff from admin to client context
 
   # ── Client: Edit Portal ───────────────────────────────────────────────────
+  # An explicit navigate is required here because the onboarding route-health
+  # checks at the top of this file (onboarding_route_reachable, etc.) leave
+  # the client persona browser at /get-started.  Without this step the
+  # assert_url below would always fail when those steps ran first.
+
+  - id: client_navigate_edit_portal
+    type: navigate
+    persona: client
+    severity: critical
+    description: Navigate client persona to their edit portal
+    url: /edit/${QA_CLIENT_REVIEW_TOKEN}
+    intent: >
+      Explicitly navigate to /edit/[token] so the client browser is on the
+      correct path before any assertions.  The onboarding smoke steps earlier
+      in this file leave the client persona at /get-started; without this
+      navigate the assert_url below would fail.  Requires QA_CLIENT_REVIEW_TOKEN
+      to be set in the QA environment.
 
   - id: client_assert_edit_portal
     type: assert_url
@@ -182,7 +199,7 @@ steps:
     severity: critical
     description: Client is on the edit portal
     pattern: /edit/
-    intent: The client should be on their edit portal URL
+    intent: The client should be on their edit portal URL after explicit navigation
 
   - id: client_assert_portal_loads
     type: wait_for
