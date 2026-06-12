@@ -124,13 +124,11 @@ export async function resolveClientEditSession(
           if (!newToken) {
             console.warn('[resolveClientEditSession] tenant_id fallback succeeded but no token stored; row needs ensureClientReviewToken re-run')
           }
-          // Reassign configRow to the fallback
-          Object.assign(fallbackRow as any, {
-            // Ensure the session uses the stored token (or the tenantId if still null)
-            client_review_token: (fallbackRow as any).client_review_token ?? reviewToken,
-          })
-          ;(configRow as any) // TypeScript: reassign via cast below
-          const patchedConfig = fallbackRow as typeof configRow
+          // Normalise the fallback row — ensure token field is populated
+          const patchedConfig = fallbackRow as any
+          if (!patchedConfig.client_review_token) {
+            patchedConfig.client_review_token = reviewToken
+          }
           // Re-run rest of resolution with patchedConfig
           const { data: tenantRowFallback, error: tenantErrFallback } = await supabase
             .from('tenants')
