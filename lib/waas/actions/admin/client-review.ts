@@ -37,12 +37,21 @@ export async function ensureClientReviewToken(tenantId: string): Promise<ActionR
       .upsert(payload, { onConflict: 'tenant_id' })
 
     if (error) {
-      // Backward-safe fallback until migration 010 is applied.
+      // Log the real error so it is visible in Vercel logs
+      console.error('[ensureClientReviewToken] upsert failed:', {
+        tenantId,
+        code:    error.code,
+        message: error.message,
+        hint:    error.hint,
+      })
+      // Return the tenant ID as a last-resort fallback so the caller still gets
+      // a value; resolveClientEditSession handles this via tenant_id lookup.
       return { success: true, data: tenantId }
     }
 
     return { success: true, data: newToken }
-  } catch {
+  } catch (err) {
+    console.error('[ensureClientReviewToken] unexpected error:', err)
     return { success: true, data: tenantId }
   }
 }

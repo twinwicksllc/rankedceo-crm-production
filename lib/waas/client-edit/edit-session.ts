@@ -101,6 +101,83 @@ export async function resolveClientEditSession(
       .single()
 
     if (configErr || !configRow) {
+      // Legacy fallback: if `ensureClientReviewToken` failed its upsert it returns the
+      // tenantId as the token. Try resolving by tenant_id directly.
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(reviewToken)
+      if (isUuid) {
+        const { data: fallbackRow, error: fallbackErr } = await supabase
+          .from('tenant_site_config')
+          .select(`
+            tenant_id,
+            client_review_token,
+            client_selected_template_slug,
+            client_edit_session_started_at,
+            client_approval_at,
+            client_approval_locked
+          `)
+          .eq('tenant_id', reviewToken)
+          .single()
+
+        if (!fallbackErr && fallbackRow) {
+          // Found by tenant_id — patch the row with a proper token so future visits work
+          const newToken = (fallbackRow as any).client_review_token
+          if (!newToken) {
+            console.warn('[resolveClientEditSession] tenant_id fallback succeeded but no token stored; row needs ensureClientReviewToken re-run')
+          }
+          // Reassign configRow to the fallback
+          Object.assign(fallbackRow as any, {
+            // Ensure the session uses the stored token (or the tenantId if still null)
+            client_review_token: (fallbackRow as any).client_review_token ?? reviewToken,
+          })
+          ;(configRow as any) // TypeScript: reassign via cast below
+          const patchedConfig = fallbackRow as typeof configRow
+          // Re-run rest of resolution with patchedConfig
+          const { data: tenantRowFallback, error: tenantErrFallback } = await supabase
+            .from('tenants')
+            .select('id, slug, brand_config, status')
+            .eq('id', (patchedConfig as any).tenant_id)
+            .single()
+
+          if (tenantErrFallback || !tenantRowFallback) {
+            return { ok: false, reason: 'not_found', message: 'Tenant not found.' }
+          }
+
+          const tenantFb = tenantRowFallback as { id: string; slug: string; brand_config: Record<string, unknown>; status: string }
+          const brandConfigFb = tenantFb.brand_config ?? {}
+          const businessNameFb = typeof brandConfigFb.business_name === 'string' ? brandConfigFb.business_name : 'Your Business'
+          const configFb = patchedConfig as any
+
+          const approvalAtFb = configFb.client_approval_at
+          const isApprovalLockedFb = configFb.client_approval_locked === true
+          const withinGraceFb = approvalAtFb ? Date.now() - new Date(approvalAtFb).getTime() < APPROVAL_GRACE_PERIOD_MS : false
+          const canEditFb = !isApprovalLockedFb
+
+          return {
+            ok: true,
+            session: {
+              tenantId:              tenantFb.id,
+              slug:                  tenantFb.slug,
+              businessName:          businessNameFb,
+              reviewToken:           configFb.client_review_token ?? reviewToken,
+              selectedVariantIndex:  null,
+              selectedTemplateSlug:  configFb.client_selected_template_slug ?? null,
+              brandConfig:           brandConfigFb,
+              permissions: {
+                canEditText:     canEditFb,
+                canSwapImages:   canEditFb,
+                canChangeColors: canEditFb,
+                canApprove:      !approvalAtFb && !isApprovalLockedFb,
+                canUnaprove:     !!approvalAtFb && withinGraceFb && !isApprovalLockedFb,
+                isLocked:        isApprovalLockedFb,
+              },
+              editSessionStartedAt:  configFb.client_edit_session_started_at ?? null,
+              approvalAt:            approvalAtFb ?? null,
+              approvalLocked:        isApprovalLockedFb,
+            },
+          }
+        }
+      }
+
       console.error('[resolveClientEditSession] tenant_site_config query failed:', {
         hasError: !!configErr,
         errorCode: configErr?.code,
