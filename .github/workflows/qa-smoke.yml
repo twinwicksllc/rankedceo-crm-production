@@ -45,17 +45,22 @@ jobs:
         working-directory: qa-agent
         env:
           # Target: Vercel preview URL for this PR
-          # Set QA_PREVIEW_BASE_URL secret to your production/staging URL
-          # (e.g. https://ranked-ceo-crm.vercel.app) until per-PR preview URLs are wired up
-          QA_BASE_URL: ${{ secrets.QA_PREVIEW_BASE_URL }}
+          # Use existing repo secret names; keep fallback order to avoid empty envs.
+          # Preferred: QA_PREVIEW_BASE_URL (explicit smoke target)
+          # Fallback: Vercel preview URL if your org exposes it as VERCEL_URL
+          QA_BASE_URL: ${{ secrets.QA_PREVIEW_BASE_URL || secrets.VERCEL_URL }}
           QA_ADMIN_EMAIL: ${{ secrets.QA_ADMIN_EMAIL }}
           QA_ADMIN_PASSWORD: ${{ secrets.QA_ADMIN_PASSWORD }}
           QA_CLIENT_REVIEW_TOKEN: ${{ secrets.QA_CLIENT_REVIEW_TOKEN }}
           # Task 9: known audit ID for PDF/results page assertions (info severity — skipped if unset)
           QA_AUDIT_ID: ${{ secrets.QA_AUDIT_ID }}
           # WaaS-prefixed Supabase variable names (this Vercel project serves both WaaS + CRM)
-          NEXT_PUBLIC_WAAS_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          # Prefer existing NEXT_PUBLIC_SUPABASE_URL, then SUPABASE_URL, then WAAS_SUPABASE_URL
+          NEXT_PUBLIC_WAAS_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || secrets.SUPABASE_URL || secrets.WAAS_SUPABASE_URL }}
+          # Also provide the non-WaaS name for adapters that read the short form.
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || secrets.SUPABASE_URL || secrets.WAAS_SUPABASE_URL }}
           WAAS_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           QA_ADMIN_EMAIL_NOTIFY: ${{ secrets.QA_ADMIN_EMAIL_NOTIFY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
