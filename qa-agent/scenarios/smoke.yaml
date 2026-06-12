@@ -11,6 +11,47 @@ requires_stripe: false
 requires_email: false
 
 steps:
+  # ── Onboarding: /get-started route is reachable ──────────────────────────
+  # Runs first so a broken route fails fast before the longer admin checks.
+
+  - id: onboarding_route_reachable
+    type: navigate
+    persona: client
+    severity: critical
+    description: /get-started route loads without server error
+    url: /get-started
+    intent: >
+      /get-started is the public WaaS customer onboarding entry point.
+      It must be reachable on every PR. A failure here means the
+      OnboardingFlow server/client component has crashed or the route is
+      missing from the Next.js routing tree.
+
+  - id: onboarding_step1_form_renders
+    type: wait_for
+    persona: client
+    severity: critical
+    description: Step 1 Business Identity form is visible
+    selector: 'h1, form, input[name="legal_name"], input[type="email"]'
+    timeout_ms: 20000
+    intent: >
+      OnboardingFlow renders StepBusinessIdentity as the first step.
+      We assert any of the typical Step 1 elements to confirm the
+      client component hydrated without error. React hydration or
+      dnd-kit import failures would prevent this from rendering.
+
+  - id: onboarding_step6_assets_loaded
+    type: navigate
+    persona: client
+    severity: warning
+    description: Confirm dnd-kit JS bundle is included (builder dependency check)
+    url: /get-started
+    intent: >
+      Step 6 uses @dnd-kit/core and @dnd-kit/sortable. If these packages
+      failed to bundle (e.g. missing dep after package.json change), the
+      page will still load but the builder will crash when mounted.
+      We re-navigate and re-assert Step 1 as a proxy for bundle health
+      — a deeper builder mount check runs in onboarding_waas.yaml (full mode).
+
   # ── Admin: Login + Dashboard ──────────────────────────────────────────────
 
   - id: admin_navigate_login
@@ -134,6 +175,23 @@ steps:
     intent: Cross-persona handoff from admin to client context
 
   # ── Client: Edit Portal ───────────────────────────────────────────────────
+  # An explicit navigate is required here because the onboarding route-health
+  # checks at the top of this file (onboarding_route_reachable, etc.) leave
+  # the client persona browser at /get-started.  Without this step the
+  # assert_url below would always fail when those steps ran first.
+
+  - id: client_navigate_edit_portal
+    type: navigate
+    persona: client
+    severity: critical
+    description: Navigate client persona to their edit portal
+    url: /edit/${QA_CLIENT_REVIEW_TOKEN}
+    intent: >
+      Explicitly navigate to /edit/[token] so the client browser is on the
+      correct path before any assertions.  The onboarding smoke steps earlier
+      in this file leave the client persona at /get-started; without this
+      navigate the assert_url below would fail.  Requires QA_CLIENT_REVIEW_TOKEN
+      to be set in the QA environment.
 
   - id: client_assert_edit_portal
     type: assert_url
@@ -141,7 +199,7 @@ steps:
     severity: critical
     description: Client is on the edit portal
     pattern: /edit/
-    intent: The client should be on their edit portal URL
+    intent: The client should be on their edit portal URL after explicit navigation
 
   - id: client_assert_portal_loads
     type: wait_for

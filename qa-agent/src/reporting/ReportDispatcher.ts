@@ -48,21 +48,39 @@ export class ReportDispatcher {
   // ── 1. Supabase `qa` schema ──────────────────────────────────────────────
 
   private async pushToSupabase(report: RunReport, html: string): Promise<void> {
-    await this.db.insert('qa_runs', {
-      run_id:        report.runId,
-      run_tag:       SupabaseAdapter.buildRunTag(report.runId),
-      scenario:      report.scenario,
-      mode:          report.mode,
-      status:        report.status,
-      started_at:    report.startedAt,
-      completed_at:  report.completedAt,
-      total_steps:   report.totalSteps,
-      passed_steps:  report.passedSteps,
-      finding_steps: report.findingSteps,
-      findings:      JSON.stringify(report.findings),
-      report_html:   html,
-      critical_step: report.criticalFinding?.stepId ?? null,
-    })
+    try {
+      await this.db.insert('qa_runs', {
+        run_id:        report.runId,
+        run_tag:       SupabaseAdapter.buildRunTag(report.runId),
+        scenario:      report.scenario,
+        mode:          report.mode,
+        status:        report.status,
+        started_at:    report.startedAt,
+        completed_at:  report.completedAt,
+        total_steps:   report.totalSteps,
+        passed_steps:  report.passedSteps,
+        finding_steps: report.findingSteps,
+        findings:      JSON.stringify(report.findings),
+        report_html:   html,
+        critical_step: report.criticalFinding?.stepId ?? null,
+      })
+    } catch (err) {
+      const msg = (err as Error).message ?? ''
+      // PostgREST returns "Invalid schema: qa" when either:
+      //   a) supabase/migrations/waas/021_qa_schema.sql has not been applied, or
+      //   b) the `qa` schema is not listed in Supabase → Settings → API → Extra search path.
+      // Neither condition affects the test run itself; the HTML report is still saved to disk.
+      if (msg.includes('Invalid schema')) {
+        throw new Error(
+          'SupabaseAdapter.insert error: Invalid schema: qa\n' +
+          '  → The `qa` schema is missing or not exposed via PostgREST.\n' +
+          '  → Fix: run supabase/migrations/waas/021_qa_schema.sql against your Supabase\n' +
+          '    project, then add "qa" to Settings → API → Extra search path in the dashboard.\n' +
+          '  → Run results are still saved to qa-agent/evidence/ and the GitHub step summary.',
+        )
+      }
+      throw err
+    }
   }
 
   // ── 2. Resend email ──────────────────────────────────────────────────────
