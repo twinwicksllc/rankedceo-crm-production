@@ -2,6 +2,8 @@
 
 Use this script for a non-technical visual pass of Audit + WaaS.
 
+If you need the full end-to-end completion path, use [WAAS_AUDIT_CUSTOMER_ADMIN_WALKTHROUGH.md](WAAS_AUDIT_CUSTOMER_ADMIN_WALKTHROUGH.md).
+
 ## Fill In Before You Start
 - Base URL: ____________________
 - Review Token: ____________________
@@ -71,6 +73,8 @@ Mark each item: Pass, Minor Issue, Fail, or N/A.
 # Client-Safe UAT Program (External Testers)
 
 Use this version for client/external users. No admin-only pages.
+
+For the full completion path, start with [WAAS_AUDIT_CUSTOMER_ADMIN_WALKTHROUGH.md](WAAS_AUDIT_CUSTOMER_ADMIN_WALKTHROUGH.md).
 
 ## Fill In Before You Start
 - Base URL: ____________________

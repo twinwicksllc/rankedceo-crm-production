@@ -2,6 +2,8 @@
 
 Use these copy/paste templates to invite testers.
 
+For the full audit -> customer WaaS -> admin WaaS completion path, use [WAAS_AUDIT_CUSTOMER_ADMIN_WALKTHROUGH.md](WAAS_AUDIT_CUSTOMER_ADMIN_WALKTHROUGH.md).
+
 ## External Tester Invite (Client-Safe)
 
 Subject: Quick Website Experience Test (15 minutes)
