@@ -61,8 +61,10 @@ The **Orchestrator** is the central coordinator. It checks the restart gate (ope
 | `QA_ADMIN_EMAIL` | ✅ | Admin user email for the admin Playwright context |
 | `QA_ADMIN_PASSWORD` | ✅ | Admin user password |
 | `QA_CLIENT_REVIEW_TOKEN` | ✅ | A valid review token for the client Playwright context |
-| `SUPABASE_URL` | ✅ | Supabase project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Supabase service role key (full access to `qa` schema) |
+| `QA_SUPABASE_URL` | ✅ in CI | QA Supabase project URL dedicated to QA runs |
+| `QA_SUPABASE_SERVICE_ROLE_KEY` | ✅ in CI | QA Supabase service role key (full access to `qa` schema) |
+| `SUPABASE_URL` | ✅ (runtime fallback) | Supabase project URL consumed by the adapter |
+| `SUPABASE_SERVICE_ROLE_KEY` | ✅ (runtime fallback) | Service role key consumed by the adapter |
 | `RESEND_API_KEY` | ✅ | Resend API key for report email delivery |
 | `QA_REPORT_TO_EMAIL` | ✅ | Email address to receive QA run reports |
 | `GITHUB_TOKEN` | ✅ in CI | GitHub token for critical halt issue creation and restart gate |
@@ -87,6 +89,8 @@ BILLING_MOCK=true \
 QA_ADMIN_EMAIL=admin@example.com \
 QA_ADMIN_PASSWORD=yourpassword \
 QA_CLIENT_REVIEW_TOKEN=your-token \
+QA_SUPABASE_URL=https://xxx.supabase.co \
+QA_SUPABASE_SERVICE_ROLE_KEY=xxx \
 SUPABASE_URL=https://xxx.supabase.co \
 SUPABASE_SERVICE_ROLE_KEY=xxx \
 RESEND_API_KEY=re_xxx \

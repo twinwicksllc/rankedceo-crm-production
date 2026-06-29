@@ -67,13 +67,11 @@ jobs:
           QA_CLIENT_REVIEW_TOKEN: ${{ secrets.QA_CLIENT_REVIEW_TOKEN }}
           # Task 9: known audit ID for PDF/results page assertions (info severity — skipped if unset)
           QA_AUDIT_ID: ${{ secrets.QA_AUDIT_ID }}
-          # WaaS-prefixed Supabase variable names (this Vercel project serves both WaaS + CRM)
-          # Prefer existing NEXT_PUBLIC_SUPABASE_URL, then SUPABASE_URL, then WAAS_SUPABASE_URL
-          NEXT_PUBLIC_WAAS_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || secrets.SUPABASE_URL || secrets.WAAS_SUPABASE_URL }}
-          # Also provide the non-WaaS name for adapters that read the short form.
-          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || secrets.SUPABASE_URL || secrets.WAAS_SUPABASE_URL }}
-          WAAS_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # IMPORTANT: QA workflows must use QA-dedicated Supabase secrets only.
+          NEXT_PUBLIC_WAAS_SUPABASE_URL: ${{ secrets.QA_SUPABASE_URL }}
+          SUPABASE_URL: ${{ secrets.QA_SUPABASE_URL }}
+          WAAS_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.QA_SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.QA_SUPABASE_SERVICE_ROLE_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           QA_ADMIN_EMAIL_NOTIFY: ${{ secrets.QA_ADMIN_EMAIL_NOTIFY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
