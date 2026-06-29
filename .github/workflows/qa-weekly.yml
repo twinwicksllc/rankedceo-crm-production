@@ -46,10 +46,13 @@ jobs:
           # Task 9: known audit ID for PDF/results page assertions (info severity — skipped if unset)
           QA_AUDIT_ID: ${{ secrets.QA_AUDIT_ID }}
           # IMPORTANT: QA workflows must use QA-dedicated Supabase secrets only.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.QA_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.QA_SUPABASE_ANON_KEY }}
           NEXT_PUBLIC_WAAS_SUPABASE_URL: ${{ secrets.QA_SUPABASE_URL }}
           WAAS_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.QA_SUPABASE_SERVICE_ROLE_KEY }}
           SUPABASE_URL: ${{ secrets.QA_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.QA_SUPABASE_SERVICE_ROLE_KEY }}
+          # If not already defined, add QA_SUPABASE_ANON_KEY in GitHub Actions secrets.
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           QA_ADMIN_EMAIL_NOTIFY: ${{ secrets.QA_ADMIN_EMAIL_NOTIFY }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
