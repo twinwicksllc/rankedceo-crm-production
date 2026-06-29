@@ -222,9 +222,10 @@ export class StepExecutor {
   private async stepAssertUrl(persona: Persona, pattern: string): Promise<void> {
     const page = await this.router.getPage(persona)
     const url = page.url()
+    const pathname = new URL(url).pathname
     const re = new RegExp(pattern)
-    if (!re.test(url)) {
-      throw new Error(`assert_url failed: pattern "${pattern}" did not match "${url}"`)
+    if (!re.test(pathname)) {
+      throw new Error(`assert_url failed: pattern "${pattern}" did not match pathname "${pathname}" (url: "${url}")`)
     }
   }
 

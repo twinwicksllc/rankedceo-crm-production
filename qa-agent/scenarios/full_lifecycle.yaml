@@ -203,6 +203,17 @@ steps:
   # SCENE 5: Client — Portal Loads
   # ═══════════════════════════════════════════════════════════════════════════
 
+  - id: s5_client_navigate_edit_portal
+    type: navigate
+    persona: client
+    severity: critical
+    description: Navigate client persona back to edit portal after onboarding checks
+    url: /edit/${QA_CLIENT_REVIEW_TOKEN}
+    intent: >-
+      Scene 0 intentionally moves the client persona to /get-started. Before
+      portal assertions, navigate back to /edit/[token] so this scene validates
+      the intended client portal state.
+
   - id: s5_client_assert_portal_url
     type: assert_url
     persona: client
