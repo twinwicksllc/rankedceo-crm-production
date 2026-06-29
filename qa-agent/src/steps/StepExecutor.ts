@@ -67,6 +67,7 @@ export class StepExecutor {
     const message = lastErr instanceof Error ? lastErr.message : String(lastErr)
     const stack = lastErr instanceof Error ? lastErr.stack : undefined
     const screenshotPath = await this.captureEvidence(step.persona, step.id)
+    const domSnippet = await this.captureDomSnippet(step.persona)
 
     return {
       stepId: step.id,
@@ -75,6 +76,11 @@ export class StepExecutor {
       message: maxAttempts > 1
         ? `[after ${maxAttempts} attempts] ${message}`
         : message,
+      stepType: step.type,
+      failedSelector: this.extractFailedSelector(step),
+      failedPattern: this.extractFailedPattern(step),
+      intent: step.intent,
+      domSnippet,
       screenshotPath,
       timestamp: new Date().toISOString(),
       stack,
@@ -127,7 +133,13 @@ export class StepExecutor {
 
   private async stepWaitFor(persona: Persona, selector: string, timeoutMs: number): Promise<void> {
     const page = await this.router.getPage(persona)
-    await page.waitForSelector(selector, { timeout: timeoutMs })
+    try {
+      await page.waitForSelector(selector, { timeout: timeoutMs })
+    } catch (err) {
+      const currentUrl = page.url()
+      const msg = err instanceof Error ? err.message : String(err)
+      throw new Error(`wait_for timeout for selector "${selector}" at "${currentUrl}": ${msg}`)
+    }
   }
 
   /**
@@ -161,13 +173,19 @@ export class StepExecutor {
         throw firstErr
       }
 
-      await page.goto(pattern, { waitUntil: 'load', timeout: timeoutMs })
-      await page.waitForFunction(
-        (regexSource) => new RegExp(regexSource).test(window.location.pathname),
-        pathRegex.source,
-        { timeout: timeoutMs },
-      )
-      await page.waitForLoadState('networkidle', { timeout: timeoutMs })
+      try {
+        await page.goto(pattern, { waitUntil: 'load', timeout: timeoutMs })
+        await page.waitForFunction(
+          (regexSource) => new RegExp(regexSource).test(window.location.pathname),
+          pathRegex.source,
+          { timeout: timeoutMs },
+        )
+        await page.waitForLoadState('networkidle', { timeout: timeoutMs })
+      } catch (fallbackErr) {
+        const currentUrl = page.url()
+        const msg = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)
+        throw new Error(`wait_for_url timeout for pattern "${pattern}" at "${currentUrl}": ${msg}`)
+      }
     }
   }
 
@@ -238,6 +256,38 @@ export class StepExecutor {
     } catch {
       // Don't let evidence capture failure mask the original error
       return undefined
+    }
+  }
+
+  private async captureDomSnippet(persona: Persona): Promise<string | undefined> {
+    try {
+      const html = await this.router.domSnapshot(persona)
+      // Keep payload small enough for issue body + LLM context.
+      return html.slice(0, 4000)
+    } catch {
+      return undefined
+    }
+  }
+
+  private extractFailedSelector(step: ScenarioStep): string | undefined {
+    switch (step.type) {
+      case 'click':
+      case 'fill':
+      case 'wait_for':
+      case 'assert_text':
+        return step.selector
+      default:
+        return undefined
+    }
+  }
+
+  private extractFailedPattern(step: ScenarioStep): string | undefined {
+    switch (step.type) {
+      case 'wait_for_url':
+      case 'assert_url':
+        return step.pattern
+      default:
+        return undefined
     }
   }
 }

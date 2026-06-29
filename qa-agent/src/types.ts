@@ -194,6 +194,16 @@ export interface Finding {
   persona: Persona
   severity: Severity
   message: string
+  /** Scenario step type at failure time */
+  stepType?: ScenarioStep['type']
+  /** Failed selector for selector-based steps */
+  failedSelector?: string
+  /** Failed URL pattern for URL assertion/wait steps */
+  failedPattern?: string
+  /** Scenario-authored intent text */
+  intent?: string
+  /** Truncated DOM HTML snapshot captured at failure point */
+  domSnippet?: string
   screenshotPath?: string
   domSnapshotPath?: string
   dbSnapshot?: Record<string, unknown>

@@ -193,20 +193,74 @@ async function callLlm(
 ): Promise<SelfHealProposal | null> {
   // ── v1.5 OpenAI implementation ──────────────────────────────────────────────
   if (config.provider === 'openai') {
-    // TODO v1.5: Replace this comment with the actual OpenAI SDK call:
-    //
-    // import OpenAI from 'openai'
-    // const client = new OpenAI({ apiKey: config.apiKey })
-    // const response = await client.chat.completions.create({
-    //   model: config.model ?? 'gpt-4o',
-    //   messages: [{ role: 'user', content: prompt }],
-    //   response_format: { type: 'json_object' },
-    // })
-    // const raw = JSON.parse(response.choices[0].message.content ?? '{}')
-    // return { ...raw, model: config.model ?? 'gpt-4o', tokensUsed: response.usage?.total_tokens }
+    if (!config.apiKey) {
+      console.warn('[llm-relocate] OPENAI_API_KEY is required when SELF_HEAL_PROVIDER=openai')
+      return null
+    }
 
-    console.warn('[llm-relocate] OpenAI provider selected but not yet wired. See docs/qa-agent/self-healing.md')
-    return null
+    const model = config.model ?? 'gpt-4o-mini'
+    const minConfidence = config.minConfidence ?? 0.7
+
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        response_format: { type: 'json_object' },
+        messages: [
+          {
+            role: 'system',
+            content: 'You repair Playwright selectors and URL assertions. Return strict JSON only.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+      }),
+    })
+
+    if (!res.ok) {
+      const text = await res.text()
+      console.warn(`[llm-relocate] OpenAI API error ${res.status}: ${text}`)
+      return null
+    }
+
+    type OpenAiResponse = {
+      choices?: Array<{ message?: { content?: string | null } }>
+      usage?: { total_tokens?: number }
+    }
+
+    const data = (await res.json()) as OpenAiResponse
+    const content = data.choices?.[0]?.message?.content ?? '{}'
+
+    let raw: Partial<SelfHealProposal>
+    try {
+      raw = JSON.parse(content) as Partial<SelfHealProposal>
+    } catch {
+      console.warn('[llm-relocate] OpenAI response was not valid JSON')
+      return null
+    }
+
+    const confidence = typeof raw.confidence === 'number' ? raw.confidence : 0
+    if (confidence < minConfidence) {
+      console.log(`[llm-relocate] Proposal below confidence threshold (${confidence} < ${minConfidence})`)
+      return null
+    }
+
+    return {
+      canFix: Boolean(raw.canFix),
+      confidence,
+      proposedSelector: raw.proposedSelector,
+      proposedPattern: raw.proposedPattern,
+      reasoning: raw.reasoning ?? `Model returned no reasoning for step ${payload.stepId}`,
+      yamlPatch: raw.yamlPatch,
+      model,
+      tokensUsed: data.usage?.total_tokens,
+    }
   }
 
   // ── v1.5 Anthropic implementation ──────────────────────────────────────────

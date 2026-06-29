@@ -76,6 +76,8 @@ jobs:
           QA_ADMIN_EMAIL_NOTIFY: ${{ secrets.QA_ADMIN_EMAIL_NOTIFY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPO: ${{ github.repository }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SELF_HEAL_PROVIDER: openai
           # Smoke always mocks billing + skips email
           QA_BILLING_MOCK: 'true'
           # Explicitly disable restart gate for PR smoke runs

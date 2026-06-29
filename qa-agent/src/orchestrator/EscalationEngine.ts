@@ -207,14 +207,14 @@ export class EscalationEngine {
       scenario: this.config.scenarioPath,
       stepId: finding.stepId,
       persona: finding.persona,
-      stepType: 'unknown', // populated from step metadata when StepExecutor passes it through in v1.5
-      failedSelector: undefined as string | undefined,  // populated in v1.5 when StepExecutor passes selector through
-      failedPattern: undefined as string | undefined,   // populated in v1.5 for assert_url failures
-      intent: '(intent not yet passed through to EscalationEngine — v1.5 wires this from the step)',
+      stepType: finding.stepType ?? 'unknown',
+      failedSelector: finding.failedSelector,
+      failedPattern: finding.failedPattern,
+      intent: finding.intent ?? '(intent missing)',
       errorMessage: finding.message,
       failedAt: finding.timestamp,
       screenshotPath: finding.screenshotPath ?? null,
-      domSnippet: null, // populated in v1.5 when StepExecutor captures DOM at failure point
+      domSnippet: finding.domSnippet ?? null,
     }
 
     const issueBody = `

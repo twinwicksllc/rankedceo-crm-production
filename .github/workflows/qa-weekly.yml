@@ -55,6 +55,8 @@ jobs:
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPO: ${{ github.repository }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SELF_HEAL_PROVIDER: openai
           # Full run uses real Stripe test mode + Resend test mode
           QA_BILLING_MOCK: 'false'
         run: npm run full
