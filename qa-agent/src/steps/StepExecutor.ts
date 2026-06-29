@@ -143,17 +143,11 @@ export class StepExecutor {
   private async stepWaitForUrl(persona: Persona, pattern: string, timeoutMs: number): Promise<void> {
     const page = await this.router.getPage(persona)
     // Validate regex up-front so invalid patterns fail immediately
-    new RegExp(pattern)
+    const pathRegex = new RegExp(pattern)
 
     await page.waitForFunction(
-      (regexPattern) => {
-        try {
-          return new RegExp(regexPattern).test(window.location.pathname)
-        } catch {
-          return false
-        }
-      },
-      pattern,
+      (regexSource) => new RegExp(regexSource).test(window.location.pathname),
+      pathRegex.source,
       { timeout: timeoutMs },
     )
 

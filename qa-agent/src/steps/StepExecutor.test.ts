@@ -23,7 +23,7 @@ test('stepWaitForUrl waits on pathname matcher and preserves timeout', async () 
 
   assert.equal(calls.length, 2)
   assert.equal(calls[0]?.method, 'waitForFunction')
-  assert.equal(calls[0]?.args[1], '/admin/dashboard')
+  assert.equal(calls[0]?.args[1], new RegExp('/admin/dashboard').source)
   assert.deepEqual(calls[0]?.args[2], { timeout: 30_000 })
 
   assert.equal(calls[1]?.method, 'waitForLoadState')
