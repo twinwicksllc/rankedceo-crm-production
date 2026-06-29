@@ -261,8 +261,14 @@ export class StepExecutor {
 
   private async captureDomSnippet(persona: Persona): Promise<string | undefined> {
     try {
+      const page = await this.router.getPage(persona)
+      const bodyHtml = await page.evaluate(() => document.body?.outerHTML ?? '')
+      if (bodyHtml) {
+        // Keep payload small enough for issue body + LLM context.
+        return bodyHtml.slice(0, 4000)
+      }
+
       const html = await this.router.domSnapshot(persona)
-      // Keep payload small enough for issue body + LLM context.
       return html.slice(0, 4000)
     } catch {
       return undefined
