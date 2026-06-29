@@ -131,25 +131,26 @@ export class StepExecutor {
   }
 
   /**
-   * Wait for the page URL to match a regex pattern.
-   * Uses Playwright's page.waitForURL() which correctly handles navigation —
-   * it fires as soon as the URL changes regardless of whether the navigation
-   * was a soft SPA transition or a hard full-page reload.
+   * Wait for the page pathname to match a regex pattern.
    *
-   * IMPORTANT: the pattern is matched against the URL *pathname only* (not
-   * the full URL including query string). This prevents false positives where
-   * the pattern appears inside a query parameter, e.g.:
-   *   pattern="/admin/dashboard" should NOT match
-   *   https://qa.rankedceo.com/login?next=/admin/dashboard
+   * IMPORTANT: we match against pathname only (not full URL including query
+   * string) to avoid false positives where the pattern appears in query params.
    *
-   * Use this after form submissions where the success path navigates to a
-   * new route (e.g., admin login → /admin/dashboard).
+   * We intentionally use waitForFunction(window.location.pathname) instead of
+   * waitForURL default navigation waiting because SPA router.push transitions
+   * can update pathname without a full "load" navigation event.
    */
   private async stepWaitForUrl(persona: Persona, pattern: string, timeoutMs: number): Promise<void> {
     const page = await this.router.getPage(persona)
-    const re = new RegExp(pattern)
-    // Match pattern against pathname only to avoid false positives on query params
-    await page.waitForURL((url) => re.test(url.pathname), { timeout: timeoutMs })
+    // Validate regex up-front so invalid patterns fail immediately
+    const pathRegex = new RegExp(pattern)
+
+    await page.waitForFunction(
+      (regexSource) => new RegExp(regexSource).test(window.location.pathname),
+      pathRegex.source,
+      { timeout: timeoutMs },
+    )
+
     // After URL settles, also wait for the page to finish loading server components
     await page.waitForLoadState('load', { timeout: timeoutMs })
   }
