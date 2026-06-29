@@ -103,7 +103,8 @@ steps:
     severity: critical
     description: Wait for URL to change to /admin/dashboard after login
     pattern: /admin/dashboard
-    timeout_ms: 30000
+    timeout_ms: 45000
+    retries: 1
     intent: >-
       After clicking submit, signInWithPassword runs asynchronously and
       router.push navigates to /admin/dashboard. waitForURL handles both

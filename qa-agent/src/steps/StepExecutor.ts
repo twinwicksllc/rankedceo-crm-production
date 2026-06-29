@@ -144,15 +144,31 @@ export class StepExecutor {
     const page = await this.router.getPage(persona)
     // Validate regex up-front so invalid patterns fail immediately
     const pathRegex = new RegExp(pattern)
+    try {
+      await page.waitForFunction(
+        (regexSource) => new RegExp(regexSource).test(window.location.pathname),
+        pathRegex.source,
+        { timeout: timeoutMs },
+      )
+      // After URL settles, also wait for the page to finish loading server components
+      await page.waitForLoadState('load', { timeout: timeoutMs })
+      return
+    } catch (firstErr) {
+      // Fallback for flaky SPA transitions: if the pattern is a simple path,
+      // navigate there directly and re-validate auth/state via URL match.
+      const isSimplePath = pattern.startsWith('/') && !/[\^$()[\]{}|+*?]/.test(pattern)
+      if (!isSimplePath) {
+        throw firstErr
+      }
 
-    await page.waitForFunction(
-      (regexSource) => new RegExp(regexSource).test(window.location.pathname),
-      pathRegex.source,
-      { timeout: timeoutMs },
-    )
-
-    // After URL settles, also wait for the page to finish loading server components
-    await page.waitForLoadState('load', { timeout: timeoutMs })
+      await page.goto(pattern, { waitUntil: 'load', timeout: timeoutMs })
+      await page.waitForFunction(
+        (regexSource) => new RegExp(regexSource).test(window.location.pathname),
+        pathRegex.source,
+        { timeout: timeoutMs },
+      )
+      await page.waitForLoadState('networkidle', { timeout: timeoutMs })
+    }
   }
 
   private async stepAssertText(

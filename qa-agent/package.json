@@ -7,7 +7,7 @@
   "scripts": {
     "qa-agent": "tsx src/cli.ts",
     "smoke": "tsx src/cli.ts --scenario scenarios/smoke.yaml",
-    "full": "tsx src/cli.ts --scenario scenarios/full_lifecycle.yaml",
+    "full": "tsx src/cli.ts --scenario scenarios/full_lifecycle.yaml --mode full",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
