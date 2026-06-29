@@ -184,7 +184,21 @@ export class StepExecutor {
       } catch (fallbackErr) {
         const currentUrl = page.url()
         const msg = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)
-        throw new Error(`wait_for_url timeout for pattern "${pattern}" at "${currentUrl}": ${msg}`)
+        let loginErrorText = ''
+        if (currentUrl.includes('/login')) {
+          try {
+            const alertText = await page
+              .locator('[role="alert"], [data-testid="login-error"], .text-destructive')
+              .first()
+              .textContent({ timeout: 1000 })
+            if (alertText?.trim()) {
+              loginErrorText = ` Login error: ${alertText.trim()}`
+            }
+          } catch {
+            // no visible login error element — keep default timeout message
+          }
+        }
+        throw new Error(`wait_for_url timeout for pattern "${pattern}" at "${currentUrl}": ${msg}${loginErrorText}`)
       }
     }
   }

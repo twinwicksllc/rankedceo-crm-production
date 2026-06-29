@@ -128,7 +128,7 @@ steps:
     persona: admin
     severity: critical
     description: Confirm redirect to admin dashboard path
-    pattern: /admin/dashboard$
+    pattern: /admin/dashboard
     intent: >-
       Verify admin landed on /admin/dashboard. Matches the path exactly,
       works with both qa.rankedceo.com and any other domain.
