@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from "@/lib/supabase/server";
 import type {
   Commission,
   CommissionWithDetails,
@@ -10,38 +10,43 @@ import type {
   CommissionStats,
   UserCommissionStats,
   CommissionFilters,
-} from '@/lib/types/commission';
+} from "@/lib/types/commission";
 
 export class CommissionService {
   private async getUserInfo() {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (!user) {
-      throw new Error('Not authenticated');
+      throw new Error("Not authenticated");
     }
 
     const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('account_id')
-      .eq('email', user.email)
+      .from("users")
+      .select("account_id")
+      .eq("email", user.email)
       .single();
 
     if (userError || !userData) {
-      throw new Error('User not found');
+      throw new Error("User not found");
     }
 
     return { user, account_id: userData.account_id };
   }
 
   // Commission CRUD operations
-  async getCommissions(filters?: CommissionFilters): Promise<CommissionWithDetails[]> {
+  async getCommissions(
+    filters?: CommissionFilters,
+  ): Promise<CommissionWithDetails[]> {
     const supabase = await createClient();
     const { account_id } = await this.getUserInfo();
 
     let query = supabase
-      .from('commissions')
-      .select(`
+      .from("commissions")
+      .select(
+        `
         *,
         deal:deals(
           id,
@@ -55,28 +60,29 @@ export class CommissionService {
           name,
           email
         )
-      `)
-      .eq('account_id', account_id)
-      .order('created_at', { ascending: false });
+      `,
+      )
+      .eq("account_id", account_id)
+      .order("created_at", { ascending: false });
 
     if (filters?.status) {
-      query = query.eq('status', filters.status);
+      query = query.eq("status", filters.status);
     }
 
     if (filters?.user_id) {
-      query = query.eq('user_id', filters.user_id);
+      query = query.eq("user_id", filters.user_id);
     }
 
     if (filters?.deal_id) {
-      query = query.eq('deal_id', filters.deal_id);
+      query = query.eq("deal_id", filters.deal_id);
     }
 
     if (filters?.start_date) {
-      query = query.gte('created_at', filters.start_date);
+      query = query.gte("created_at", filters.start_date);
     }
 
     if (filters?.end_date) {
-      query = query.lte('created_at', filters.end_date);
+      query = query.lte("created_at", filters.end_date);
     }
 
     const { data, error } = await query;
@@ -93,8 +99,9 @@ export class CommissionService {
     const { account_id } = await this.getUserInfo();
 
     const { data, error } = await supabase
-      .from('commissions')
-      .select(`
+      .from("commissions")
+      .select(
+        `
         *,
         deal:deals(
           id,
@@ -109,9 +116,10 @@ export class CommissionService {
           name,
           email
         )
-      `)
-      .eq('id', id)
-      .eq('account_id', account_id)
+      `,
+      )
+      .eq("id", id)
+      .eq("account_id", account_id)
       .single();
 
     if (error) {
@@ -126,7 +134,7 @@ export class CommissionService {
     const { account_id } = await this.getUserInfo();
 
     const { data, error } = await supabase
-      .from('commissions')
+      .from("commissions")
       .insert({
         ...input,
         account_id,
@@ -141,15 +149,18 @@ export class CommissionService {
     return data;
   }
 
-  async updateCommission(id: string, input: UpdateCommissionInput): Promise<Commission> {
+  async updateCommission(
+    id: string,
+    input: UpdateCommissionInput,
+  ): Promise<Commission> {
     const supabase = await createClient();
     const { account_id } = await this.getUserInfo();
 
     const { data, error } = await supabase
-      .from('commissions')
+      .from("commissions")
       .update(input)
-      .eq('id', id)
-      .eq('account_id', account_id)
+      .eq("id", id)
+      .eq("account_id", account_id)
       .select()
       .single();
 
@@ -165,10 +176,10 @@ export class CommissionService {
     const { account_id } = await this.getUserInfo();
 
     const { error } = await supabase
-      .from('commissions')
+      .from("commissions")
       .delete()
-      .eq('id', id)
-      .eq('account_id', account_id);
+      .eq("id", id)
+      .eq("account_id", account_id);
 
     if (error) {
       throw new Error(`Failed to delete commission: ${error.message}`);
@@ -181,13 +192,13 @@ export class CommissionService {
     const { account_id } = await this.getUserInfo();
 
     let query = supabase
-      .from('commission_rates')
-      .select('*')
-      .eq('account_id', account_id)
-      .order('effective_from', { ascending: false });
+      .from("commission_rates")
+      .select("*")
+      .eq("account_id", account_id)
+      .order("effective_from", { ascending: false });
 
     if (userId) {
-      query = query.eq('user_id', userId);
+      query = query.eq("user_id", userId);
     }
 
     const { data, error } = await query;
@@ -204,10 +215,10 @@ export class CommissionService {
     const { account_id } = await this.getUserInfo();
 
     const { data, error } = await supabase
-      .from('commission_rates')
-      .select('*')
-      .eq('id', id)
-      .eq('account_id', account_id)
+      .from("commission_rates")
+      .select("*")
+      .eq("id", id)
+      .eq("account_id", account_id)
       .single();
 
     if (error) {
@@ -217,37 +228,43 @@ export class CommissionService {
     return data;
   }
 
-  async getActiveCommissionRate(userId: string): Promise<CommissionRate | null> {
+  async getActiveCommissionRate(
+    userId: string,
+  ): Promise<CommissionRate | null> {
     const supabase = await createClient();
     const { account_id } = await this.getUserInfo();
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
 
     const { data, error } = await supabase
-      .from('commission_rates')
-      .select('*')
-      .eq('account_id', account_id)
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .lte('effective_from', today)
+      .from("commission_rates")
+      .select("*")
+      .eq("account_id", account_id)
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .lte("effective_from", today)
       .or(`effective_to.is.null,effective_to.gte.${today}`)
-      .order('effective_from', { ascending: false })
+      .order("effective_from", { ascending: false })
       .limit(1)
       .single();
 
-    if (error && error.code !== 'PGRST116') {
-      throw new Error(`Failed to fetch active commission rate: ${error.message}`);
+    if (error && error.code !== "PGRST116") {
+      throw new Error(
+        `Failed to fetch active commission rate: ${error.message}`,
+      );
     }
 
     return data || null;
   }
 
-  async createCommissionRate(input: CreateCommissionRateInput): Promise<CommissionRate> {
+  async createCommissionRate(
+    input: CreateCommissionRateInput,
+  ): Promise<CommissionRate> {
     const supabase = await createClient();
     const { account_id } = await this.getUserInfo();
 
     const { data, error } = await supabase
-      .from('commission_rates')
+      .from("commission_rates")
       .insert({
         ...input,
         account_id,
@@ -262,15 +279,18 @@ export class CommissionService {
     return data;
   }
 
-  async updateCommissionRate(id: string, input: UpdateCommissionRateInput): Promise<CommissionRate> {
+  async updateCommissionRate(
+    id: string,
+    input: UpdateCommissionRateInput,
+  ): Promise<CommissionRate> {
     const supabase = await createClient();
     const { account_id } = await this.getUserInfo();
 
     const { data, error } = await supabase
-      .from('commission_rates')
+      .from("commission_rates")
       .update(input)
-      .eq('id', id)
-      .eq('account_id', account_id)
+      .eq("id", id)
+      .eq("account_id", account_id)
       .select()
       .single();
 
@@ -286,10 +306,10 @@ export class CommissionService {
     const { account_id } = await this.getUserInfo();
 
     const { error } = await supabase
-      .from('commission_rates')
+      .from("commission_rates")
       .delete()
-      .eq('id', id)
-      .eq('account_id', account_id);
+      .eq("id", id)
+      .eq("account_id", account_id);
 
     if (error) {
       throw new Error(`Failed to delete commission rate: ${error.message}`);
@@ -302,9 +322,9 @@ export class CommissionService {
     const { account_id } = await this.getUserInfo();
 
     const { data, error } = await supabase
-      .from('commissions')
-      .select('status, amount')
-      .eq('account_id', account_id);
+      .from("commissions")
+      .select("status, amount")
+      .eq("account_id", account_id);
 
     if (error) {
       throw new Error(`Failed to fetch commission stats: ${error.message}`);
@@ -323,19 +343,19 @@ export class CommissionService {
 
     data?.forEach((commission) => {
       switch (commission.status) {
-        case 'pending':
+        case "pending":
           stats.total_pending++;
           stats.pending_amount += Number(commission.amount);
           break;
-        case 'approved':
+        case "approved":
           stats.total_approved++;
           stats.approved_amount += Number(commission.amount);
           break;
-        case 'paid':
+        case "paid":
           stats.total_paid++;
           stats.paid_amount += Number(commission.amount);
           break;
-        case 'cancelled':
+        case "cancelled":
           stats.total_cancelled++;
           break;
       }
@@ -349,8 +369,9 @@ export class CommissionService {
     const { account_id } = await this.getUserInfo();
 
     const { data, error } = await supabase
-      .from('commissions')
-      .select(`
+      .from("commissions")
+      .select(
+        `
         user_id,
         amount,
         status,
@@ -360,11 +381,14 @@ export class CommissionService {
           name,
           email
         )
-      `)
-      .eq('account_id', account_id);
+      `,
+      )
+      .eq("account_id", account_id);
 
     if (error) {
-      throw new Error(`Failed to fetch user commission stats: ${error.message}`);
+      throw new Error(
+        `Failed to fetch user commission stats: ${error.message}`,
+      );
     }
 
     // Group by user
@@ -372,12 +396,12 @@ export class CommissionService {
 
     data?.forEach((commission: any) => {
       const userId = commission.user_id;
-      
+
       if (!userStatsMap.has(userId)) {
         userStatsMap.set(userId, {
           user_id: userId,
-          user_name: commission.user?.name || 'Unknown',
-          user_email: commission.user?.email || '',
+          user_name: commission.user?.name || "Unknown",
+          user_email: commission.user?.email || "",
           total_commissions: 0,
           total_amount: 0,
           pending_amount: 0,
@@ -392,9 +416,9 @@ export class CommissionService {
       stats.total_amount += Number(commission.amount);
       stats.total_commissions += Number(commission.rate);
 
-      if (commission.status === 'pending') {
+      if (commission.status === "pending") {
         stats.pending_amount += Number(commission.amount);
-      } else if (commission.status === 'paid') {
+      } else if (commission.status === "paid") {
         stats.paid_amount += Number(commission.amount);
       }
     });
@@ -402,9 +426,10 @@ export class CommissionService {
     // Calculate average rates
     const userStats = Array.from(userStatsMap.values());
     userStats.forEach((stats) => {
-      stats.average_rate = stats.commission_count > 0
-        ? stats.total_commissions / stats.commission_count
-        : 0;
+      stats.average_rate =
+        stats.commission_count > 0
+          ? stats.total_commissions / stats.commission_count
+          : 0;
     });
 
     return userStats.sort((a, b) => b.total_amount - a.total_amount);

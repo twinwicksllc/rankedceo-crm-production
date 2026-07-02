@@ -1,84 +1,92 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { IndustryLogo } from '@/components/ui/industry-logo'
-import { createClient } from '@/lib/supabase/client'
-import { useRecaptcha } from '@/lib/hooks/use-recaptcha'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { IndustryLogo } from "@/components/ui/industry-logo";
+import { createClient } from "@/lib/supabase/client";
+import { useRecaptcha } from "@/lib/hooks/use-recaptcha";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function SmileSignupPage() {
-  const router = useRouter()
-  const { isReady, executeRecaptcha } = useRecaptcha()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [practiceName, setPracticeName] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const router = useRouter();
+  const { isReady, executeRecaptcha } = useRecaptcha();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [practiceName, setPracticeName] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
+    e.preventDefault();
+    setError("");
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
-      return
+      setError("Passwords do not match");
+      return;
     }
 
     if (password.length < 8) {
-      setError('Password must be at least 8 characters')
-      return
+      setError("Password must be at least 8 characters");
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
 
     try {
-      if (!isReady) throw new Error('reCAPTCHA not loaded. Please refresh the page.')
+      if (!isReady)
+        throw new Error("reCAPTCHA not loaded. Please refresh the page.");
 
-      const token = await executeRecaptcha('smile_signup')
-      if (!token) throw new Error('reCAPTCHA verification failed')
+      const token = await executeRecaptcha("smile_signup");
+      if (!token) throw new Error("reCAPTCHA verification failed");
 
-      const verifyResponse = await fetch('/api/auth/verify-recaptcha', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, action: 'smile_signup' }),
-      })
-      const verifyData = await verifyResponse.json()
+      const verifyResponse = await fetch("/api/auth/verify-recaptcha", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, action: "smile_signup" }),
+      });
+      const verifyData = await verifyResponse.json();
       if (!verifyResponse.ok || !verifyData.valid) {
-        throw new Error(verifyData.error || 'reCAPTCHA verification failed')
+        throw new Error(verifyData.error || "reCAPTCHA verification failed");
       }
 
-      const supabase = createClient()
+      const supabase = createClient();
       const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            industry: 'smile',
-            product: 'smile_makeover',
+            industry: "smile",
+            product: "smile_makeover",
             company_name: practiceName,
           },
           emailRedirectTo: `${window.location.origin}/`,
         },
-      })
+      });
 
-      if (signUpError) throw signUpError
+      if (signUpError) throw signUpError;
 
-      router.push('/onboarding')
-      router.refresh()
+      router.push("/onboarding");
+      router.refresh();
     } catch (err: any) {
-      console.error('[SmileSignup] Error:', err.message)
-      setError(err.message || 'Failed to sign up')
+      console.error("[SmileSignup] Error:", err.message);
+      setError(err.message || "Failed to sign up");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-purple-100 p-4">
@@ -106,7 +114,7 @@ export default function SmileSignupPage() {
               <Input
                 id="practiceName"
                 value={practiceName}
-                onChange={e => setPracticeName(e.target.value)}
+                onChange={(e) => setPracticeName(e.target.value)}
                 placeholder="Smith Family Dentistry"
                 className="border-purple-200 focus:ring-purple-500"
               />
@@ -117,7 +125,7 @@ export default function SmileSignupPage() {
                 id="email"
                 type="email"
                 value={email}
-                onChange={e => setEmail(e.target.value)}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@practice.com"
                 required
                 className="border-purple-200 focus:ring-purple-500"
@@ -129,7 +137,7 @@ export default function SmileSignupPage() {
                 id="password"
                 type="password"
                 value={password}
-                onChange={e => setPassword(e.target.value)}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="Min. 8 characters"
                 required
                 className="border-purple-200 focus:ring-purple-500"
@@ -141,7 +149,7 @@ export default function SmileSignupPage() {
                 id="confirmPassword"
                 type="password"
                 value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value)}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Repeat your password"
                 required
                 className="border-purple-200 focus:ring-purple-500"
@@ -153,15 +161,20 @@ export default function SmileSignupPage() {
               disabled={loading || !isReady}
               className="w-full bg-purple-600 hover:bg-purple-700 text-white"
             >
-              {loading ? 'Creating account...' : 'Create Smile MakeOver Account'}
+              {loading
+                ? "Creating account..."
+                : "Create Smile MakeOver Account"}
             </Button>
           </form>
         </CardContent>
 
         <CardFooter className="flex flex-col gap-2 text-center text-sm text-gray-500">
           <p>
-            Already have an account?{' '}
-            <Link href="/login" className="font-medium text-purple-600 hover:underline">
+            Already have an account?{" "}
+            <Link
+              href="/login"
+              className="font-medium text-purple-600 hover:underline"
+            >
               Sign in
             </Link>
           </p>
@@ -171,5 +184,5 @@ export default function SmileSignupPage() {
         </CardFooter>
       </Card>
     </div>
-  )
+  );
 }

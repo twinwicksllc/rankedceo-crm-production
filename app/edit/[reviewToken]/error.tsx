@@ -1,19 +1,19 @@
-'use client'
+"use client";
 
 // Friendly client-facing error boundary for /edit/[reviewToken]
-import { useEffect } from 'react'
+import { useEffect } from "react";
 
 export default function EditorError({
   error,
   reset,
 }: {
-  error: Error & { digest?: string }
-  reset: () => void
+  error: Error & { digest?: string };
+  reset: () => void;
 }) {
   useEffect(() => {
     // Best-effort log; do not leak to UI
-    console.error('[editor-error]', error)
-  }, [error])
+    console.error("[editor-error]", error);
+  }, [error]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
@@ -22,8 +22,8 @@ export default function EditorError({
           Something went wrong
         </h1>
         <p className="text-sm text-slate-600 mb-6">
-          We hit an unexpected error loading your editor. Try again, or
-          email our team if the problem continues.
+          We hit an unexpected error loading your editor. Try again, or email
+          our team if the problem continues.
         </p>
         <div className="flex items-center justify-center gap-3">
           <button
@@ -42,5 +42,5 @@ export default function EditorError({
         </div>
       </div>
     </div>
-  )
+  );
 }

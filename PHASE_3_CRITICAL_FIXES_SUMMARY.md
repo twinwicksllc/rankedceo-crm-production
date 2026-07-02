@@ -1,6 +1,7 @@
 # Phase 3 Critical Fixes - Summary
 
 ## Overview
+
 This document summarizes the critical fixes applied to address two "showstopper" bugs identified during Phase 3 testing.
 
 ---
@@ -8,9 +9,11 @@ This document summarizes the critical fixes applied to address two "showstopper"
 ## Bug #1: Direct Redirect on Close (Test C Failure)
 
 ### Problem
+
 When a user provided their info and clicked the "X" to close the widget, the system was triggering the Calendly redirect. The close button should ONLY close the widget, never trigger a redirect.
 
 ### Root Cause
+
 The redirect logic was checking `triggerBooking` and `calendlyUrl` state variables, but these could be set even after the user closed the widget. The redirect would fire regardless of whether the widget was still open.
 
 ### Solution Implemented
@@ -18,20 +21,23 @@ The redirect logic was checking `triggerBooking` and `calendlyUrl` state variabl
 **File: `components/agent/chat-widget.tsx`**
 
 1. **Track Widget State at Message Send Time**
+
    ```typescript
-   const wasOpenWhenSent = isOpen
+   const wasOpenWhenSent = isOpen;
    ```
    - Captures the widget state when the user sends a message
    - Prevents race conditions where user closes widget during API response
 
 2. **Double-Check Before Redirecting**
+
    ```typescript
    if (data.triggerBooking && data.calendlyUrl && isOpen && wasOpenWhenSent) {
      setTimeout(() => {
-       if (isOpen) { // Double-check before redirecting
-         window.open(data.calendlyUrl!, '_blank')
+       if (isOpen) {
+         // Double-check before redirecting
+         window.open(data.calendlyUrl!, "_blank");
        }
-     }, 800)
+     }, 800);
    }
    ```
    - Only redirect if widget is STILL open
@@ -44,6 +50,7 @@ The redirect logic was checking `triggerBooking` and `calendlyUrl` state variabl
    - Redirect logic is completely isolated to message processing
 
 ### Testing Steps
+
 1. Open chat widget on any industry landing page
 2. Provide your info (name, email, phone)
 3. Click the "X" button to close the widget
@@ -55,9 +62,11 @@ The redirect logic was checking `triggerBooking` and `calendlyUrl` state variabl
 ## Bug #2: Database Write Failures (Silent Errors)
 
 ### Problem
+
 Even though the AI acknowledges "I have your info," no records were appearing in the `industry_leads` table or the CRM Contacts page. The upsert logic or database connection was failing silently.
 
 ### Root Cause
+
 The `upsertChatLead` function had minimal error logging. When database writes failed, errors were caught but not logged with enough detail to diagnose the issue.
 
 ### Solution Implemented
@@ -74,32 +83,36 @@ The `upsertChatLead` function had minimal error logging. When database writes fa
    - Log insufficient info scenarios
 
 2. **Enhanced Logging Examples**
+
    ```typescript
-   console.log('[Agent Chat] upsertChatLead called with:', {
+   console.log("[Agent Chat] upsertChatLead called with:", {
      accountId,
      source,
      leadInfo,
-   })
-   
-   console.log('[Agent Chat] Email lookup result:', existingLead ? 'Found' : 'Not found')
-   
-   console.log('[Agent Chat] Updates to apply:', updates)
-   
-   console.log('[Agent Chat] Lead data to insert:', {
+   });
+
+   console.log(
+     "[Agent Chat] Email lookup result:",
+     existingLead ? "Found" : "Not found",
+   );
+
+   console.log("[Agent Chat] Updates to apply:", updates);
+
+   console.log("[Agent Chat] Lead data to insert:", {
      account_id: accountId,
      industry,
      customer_name: leadInfo.name,
-     customer_email: leadInfo.email || '',
-     customer_phone: leadInfo.phone || '',
-   })
-   
+     customer_email: leadInfo.email || "",
+     customer_phone: leadInfo.phone || "",
+   });
+
    if (error) {
-     console.error('[Agent Chat] Failed to create lead:', {
+     console.error("[Agent Chat] Failed to create lead:", {
        message: error.message,
        code: error.code,
        details: error.details,
        hint: error.hint,
-     })
+     });
    }
    ```
 
@@ -109,6 +122,7 @@ The `upsertChatLead` function had minimal error logging. When database writes fa
    - Log when insufficient info prevents creation
 
 ### Testing Steps
+
 1. Open chat widget on any industry landing page
 2. Provide your info (name, email, phone)
 3. Wait for AI to acknowledge "I have your info"
@@ -117,6 +131,7 @@ The `upsertChatLead` function had minimal error logging. When database writes fa
 6. **Expected**: Lead appears in `industry_leads` table in Supabase
 
 ### How to Check Vercel Logs
+
 1. Go to https://vercel.com/twinwicksllc/rankedceo-crm-production
 2. Click "Logs" tab
 3. Filter by `[Agent Chat]` to see all chat-related logs
@@ -131,9 +146,11 @@ The `upsertChatLead` function had minimal error logging. When database writes fa
 ## Bug #3: Intent Logic Too Sensitive
 
 ### Problem
+
 The "short-circuit" logic that bypasses AI for booking was too sensitive. It was triggering when the user had info saved in their session, even if the current message didn't contain booking intent.
 
 ### Root Cause
+
 The `BOOKING_KEYWORDS` array included agreement words like 'yes', 'sure', 'sounds good', 'let's do it', 'ready', 'proceed'. These would trigger the booking redirect even when the user was just agreeing to provide their information.
 
 ### Solution Implemented
@@ -141,12 +158,27 @@ The `BOOKING_KEYWORDS` array included agreement words like 'yes', 'sure', 'sound
 **File: `app/api/agent/chat/route.ts`**
 
 1. **Refined Booking Keywords**
+
    ```typescript
    const BOOKING_KEYWORDS = [
-     'book', 'schedule', 'appointment', 'call', 'meeting', 'available',
-     'availability', 'time', 'slot', 'calendar', 'talk', 'speak',
-     'consult', 'consultation', 'set up', 'arrange', 'reserve',
-   ]
+     "book",
+     "schedule",
+     "appointment",
+     "call",
+     "meeting",
+     "available",
+     "availability",
+     "time",
+     "slot",
+     "calendar",
+     "talk",
+     "speak",
+     "consult",
+     "consultation",
+     "set up",
+     "arrange",
+     "reserve",
+   ];
    ```
    - Removed: 'yes', 'sure', 'sounds good', "let's do it", 'ready', 'proceed'
    - Only explicit booking-related keywords remain
@@ -154,16 +186,17 @@ The `BOOKING_KEYWORDS` array included agreement words like 'yes', 'sure', 'sound
 
 2. **Added Intent Detection Logging**
    ```typescript
-   console.log('[Agent Chat] Booking intent check:', {
+   console.log("[Agent Chat] Booking intent check:", {
      message: msgLower.substring(0, 50),
      hasBookingIntent,
-     keywordsFound: BOOKING_KEYWORDS.filter(kw => msgLower.includes(kw)),
-   })
+     keywordsFound: BOOKING_KEYWORDS.filter((kw) => msgLower.includes(kw)),
+   });
    ```
    - Logs which keywords were found in the message
    - Helps debug intent detection issues
 
 ### Testing Steps
+
 1. Open chat widget on any industry landing page
 2. Provide your info (name, email, phone)
 3. Type "yes" or "sure" (without booking keywords)
@@ -176,6 +209,7 @@ The `BOOKING_KEYWORDS` array included agreement words like 'yes', 'sure', 'sound
 ## Deployment Status
 
 ### Commit Details
+
 - **Commit Hash**: `bbf60f7`
 - **Branch**: `main`
 - **Repository**: `twinwicksllc/rankedceo-crm-production`
@@ -183,10 +217,12 @@ The `BOOKING_KEYWORDS` array included agreement words like 'yes', 'sure', 'sound
 - **Vercel**: 🔄 Auto-deploying (check https://vercel.com/twinwicksllc/rankedceo-crm-production)
 
 ### Files Modified
+
 1. `components/agent/chat-widget.tsx` - Event decoupling and redirect prevention
 2. `app/api/agent/chat/route.ts` - Enhanced logging and refined intent logic
 
 ### Build Status
+
 - ✅ Build completed successfully
 - ✅ 70 routes generated
 - ✅ No TypeScript errors
@@ -197,6 +233,7 @@ The `BOOKING_KEYWORDS` array included agreement words like 'yes', 'sure', 'sound
 ## Next Steps
 
 ### Immediate Actions Required
+
 1. **Wait for Vercel Deployment** (1-2 minutes)
    - Check deployment status at https://vercel.com/twinwicksllc/rankedceo-crm-production
    - Wait for "Ready" status
@@ -228,11 +265,13 @@ The `BOOKING_KEYWORDS` array included agreement words like 'yes', 'sure', 'sound
 ### If Issues Persist
 
 #### For Bug #1 (Redirect on Close)
+
 - Check browser console for JavaScript errors
 - Check Vercel logs for any errors
 - Verify widget state changes in React DevTools
 
 #### For Bug #2 (Database Write)
+
 - Check Vercel logs for `[Agent Chat]` entries
 - Look for specific error messages:
   - `[Agent Chat] Failed to create lead:`
@@ -243,6 +282,7 @@ The `BOOKING_KEYWORDS` array included agreement words like 'yes', 'sure', 'sound
 - Check Supabase RLS policies on `industry_leads` table
 
 #### For Bug #3 (Intent Logic)
+
 - Check Vercel logs for `[Agent Chat] Booking intent check:` entries
 - Verify which keywords are being detected
 - Adjust `BOOKING_KEYWORDS` array if needed
@@ -252,6 +292,7 @@ The `BOOKING_KEYWORDS` array included agreement words like 'yes', 'sure', 'sound
 ## Environment Variables Required
 
 Ensure these are set in Vercel:
+
 ```bash
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=...
@@ -270,18 +311,22 @@ GEMINI_API_KEY=...
 ## Summary
 
 ### What Was Fixed
+
 1. ✅ **Redirect on Close**: Widget state tracking prevents redirect when user closes widget
 2. ✅ **Database Write Logging**: Comprehensive logging for debugging lead creation failures
 3. ✅ **Intent Logic**: Refined keywords prevent false positives
 
 ### How to Verify
+
 1. Check Vercel deployment status
 2. Test all three scenarios described above
 3. Review Vercel logs for `[Agent Chat]` entries
 4. Verify leads appear in Supabase `industry_leads` table
 
 ### Support
+
 If issues persist after deployment:
+
 1. Check Vercel logs for detailed error messages
 2. Review this document for troubleshooting steps
 3. Share Vercel log excerpts for further debugging

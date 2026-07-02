@@ -1,9 +1,11 @@
 # Dashboard 404 Error - Fix Required
 
 ## Issue
+
 The dashboard and other CRM pages are showing 404 errors or not loading properly.
 
 ## Root Cause
+
 The `users` and `accounts` tables don't exist in your Supabase database yet. These tables are required for the CRM to function as they link Supabase Auth users to account data.
 
 ## Solution
@@ -28,9 +30,9 @@ You should see success messages indicating the tables were created.
 After running the migration, verify it worked by running this query in the SQL Editor:
 
 ```sql
-SELECT table_name 
-FROM information_schema.tables 
-WHERE table_schema = 'public' 
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
 AND table_name IN ('users', 'accounts');
 ```
 
@@ -48,16 +50,19 @@ You should see both `users` and `accounts` listed.
 The migration creates two essential tables:
 
 ### `accounts` Table
+
 - Stores account information (account name, created/updated timestamps)
 - Each user belongs to one account
 - Supports multi-tenancy (multiple users per account)
 
 ### `users` Table
+
 - Links Supabase Auth users to accounts
 - Stores user profile information (full name, avatar URL)
 - Has automatic triggers to create accounts for new signups
 
 ### Automatic Features
+
 - **New User Signup**: When a new user signs up, an account is automatically created
 - **User-Account Link**: Users are automatically linked to their account
 - **Row Level Security**: All data is scoped to the user's account
@@ -67,12 +72,15 @@ The migration creates two essential tables:
 After fixing the users/accounts issue, you should also run these migrations for full functionality:
 
 ### Phase 7: Activities
+
 - File: `supabase/migrations/20240116000000_create_activities.sql`
 
 ### Phase 9: Emails
+
 - File: `supabase/migrations/20240116000002_create_email_messages.sql`
 
 ### Phase 10: Forms
+
 - File: `supabase/migrations/20240116000003_create_forms.sql`
 
 Run these in the same SQL Editor after the users/accounts migration.
@@ -88,6 +96,7 @@ The CRM uses a multi-tenant architecture where all data (contacts, companies, de
 ## Support
 
 If you encounter any issues after running the migration:
+
 1. Check the SQL Editor for any error messages
 2. Verify the tables were created using the verification query above
 3. Try logging out and logging back in

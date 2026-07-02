@@ -9,36 +9,56 @@
  *   - Screenshot-linked (relative paths to evidence/ dir)
  */
 
-import type { RunReport, Finding, Severity } from '../types.js'
+import type { RunReport, Finding, Severity } from "../types.js";
 
-const SEVERITY_COLOR: Record<Severity, { bg: string; border: string; text: string; badge: string }> = {
-  info:     { bg: '#f0f9ff', border: '#bae6fd', text: '#0369a1', badge: '#0ea5e9' },
-  warning:  { bg: '#fffbeb', border: '#fde68a', text: '#92400e', badge: '#f59e0b' },
-  error:    { bg: '#fff1f2', border: '#fecdd3', text: '#9f1239', badge: '#f43f5e' },
-  critical: { bg: '#fdf2f8', border: '#f5d0fe', text: '#701a75', badge: '#d946ef' },
-}
+const SEVERITY_COLOR: Record<
+  Severity,
+  { bg: string; border: string; text: string; badge: string }
+> = {
+  info: { bg: "#f0f9ff", border: "#bae6fd", text: "#0369a1", badge: "#0ea5e9" },
+  warning: {
+    bg: "#fffbeb",
+    border: "#fde68a",
+    text: "#92400e",
+    badge: "#f59e0b",
+  },
+  error: {
+    bg: "#fff1f2",
+    border: "#fecdd3",
+    text: "#9f1239",
+    badge: "#f43f5e",
+  },
+  critical: {
+    bg: "#fdf2f8",
+    border: "#f5d0fe",
+    text: "#701a75",
+    badge: "#d946ef",
+  },
+};
 
 const STATUS_COLOR: Record<string, string> = {
-  pass:               '#10b981',
-  pass_with_findings: '#f59e0b',
-  error:              '#f43f5e',
-  critical_halt:      '#d946ef',
-  running:            '#6366f1',
-}
+  pass: "#10b981",
+  pass_with_findings: "#f59e0b",
+  error: "#f43f5e",
+  critical_halt: "#d946ef",
+  running: "#6366f1",
+};
 
 export class ReportGenerator {
   generate(report: RunReport): string {
-    const statusColor = STATUS_COLOR[report.status] ?? '#6b7280'
-    const duration = this.formatDuration(report.startedAt, report.completedAt)
-    const clientFindings = report.findings.filter(f => f.persona === 'client')
-    const adminFindings  = report.findings.filter(f => f.persona === 'admin')
+    const statusColor = STATUS_COLOR[report.status] ?? "#6b7280";
+    const duration = this.formatDuration(report.startedAt, report.completedAt);
+    const clientFindings = report.findings.filter(
+      (f) => f.persona === "client",
+    );
+    const adminFindings = report.findings.filter((f) => f.persona === "admin");
 
     const bySeverity = {
-      critical: report.findings.filter(f => f.severity === 'critical'),
-      error:    report.findings.filter(f => f.severity === 'error'),
-      warning:  report.findings.filter(f => f.severity === 'warning'),
-      info:     report.findings.filter(f => f.severity === 'info'),
-    }
+      critical: report.findings.filter((f) => f.severity === "critical"),
+      error: report.findings.filter((f) => f.severity === "error"),
+      warning: report.findings.filter((f) => f.severity === "warning"),
+      info: report.findings.filter((f) => f.severity === "info"),
+    };
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -105,7 +125,7 @@ export class ReportGenerator {
         <div class="run-title">QA Agent Run Report</div>
         <div class="run-id">Run ID: ${report.runId}</div>
       </div>
-      <div class="status-badge">${this.statusEmoji(report.status)} ${report.status.replace(/_/g, ' ').toUpperCase()}</div>
+      <div class="status-badge">${this.statusEmoji(report.status)} ${report.status.replace(/_/g, " ").toUpperCase()}</div>
     </div>
 
     <div class="meta-grid">
@@ -127,12 +147,14 @@ export class ReportGenerator {
       <div class="meta-card">
         <div class="meta-label">Duration</div>
         <div class="meta-value">${duration}</div>
-        <div class="meta-sub">${report.startedAt.slice(0, 19).replace('T', ' ')} UTC</div>
+        <div class="meta-sub">${report.startedAt.slice(0, 19).replace("T", " ")} UTC</div>
       </div>
     </div>
   </div>
 
-  ${report.status === 'critical_halt' && report.criticalFinding ? `
+  ${
+    report.status === "critical_halt" && report.criticalFinding
+      ? `
   <!-- ── Critical Halt Banner ─────────────────────────────────────────── -->
   <div class="critical-banner">
     <div class="critical-banner-title">🚨 Critical Halt — Run stopped at step: ${this.esc(report.criticalFinding.stepId)}</div>
@@ -141,20 +163,24 @@ export class ReportGenerator {
       A GitHub Issue has been created and an email notification sent to the admin.
       The QA agent will not run again until the issue is closed.
     </div>
-  </div>` : ''}
+  </div>`
+      : ""
+  }
 
   <!-- ── Severity Summary ───────────────────────────────────────────────── -->
   <div class="section">
     <div class="section-title">📊 Findings by Severity</div>
     <div class="severity-row">
-      ${(['critical', 'error', 'warning', 'info'] as Severity[]).map(sev => {
-        const c = SEVERITY_COLOR[sev]
-        const count = bySeverity[sev].length
-        return `<div class="sev-chip" style="background:${c.bg};border-color:${c.border}">
+      ${(["critical", "error", "warning", "info"] as Severity[])
+        .map((sev) => {
+          const c = SEVERITY_COLOR[sev];
+          const count = bySeverity[sev].length;
+          return `<div class="sev-chip" style="background:${c.bg};border-color:${c.border}">
           <div class="sev-count" style="color:${c.badge}">${count}</div>
           <div class="sev-label" style="color:${c.text}">${sev.toUpperCase()}</div>
-        </div>`
-      }).join('')}
+        </div>`;
+        })
+        .join("")}
     </div>
   </div>
 
@@ -163,73 +189,85 @@ export class ReportGenerator {
     <div class="section-title">👥 Findings by Persona</div>
     <div class="swimlanes">
       <div class="lane">
-        <div class="lane-title client">🧑 Client (${clientFindings.length} finding${clientFindings.length !== 1 ? 's' : ''})</div>
-        ${clientFindings.length === 0
-          ? '<div class="no-findings">✅ No findings</div>'
-          : clientFindings.map(f => this.renderFinding(f)).join('')}
+        <div class="lane-title client">🧑 Client (${clientFindings.length} finding${clientFindings.length !== 1 ? "s" : ""})</div>
+        ${
+          clientFindings.length === 0
+            ? '<div class="no-findings">✅ No findings</div>'
+            : clientFindings.map((f) => this.renderFinding(f)).join("")
+        }
       </div>
       <div class="lane">
-        <div class="lane-title admin">🛡️ Admin (${adminFindings.length} finding${adminFindings.length !== 1 ? 's' : ''})</div>
-        ${adminFindings.length === 0
-          ? '<div class="no-findings">✅ No findings</div>'
-          : adminFindings.map(f => this.renderFinding(f)).join('')}
+        <div class="lane-title admin">🛡️ Admin (${adminFindings.length} finding${adminFindings.length !== 1 ? "s" : ""})</div>
+        ${
+          adminFindings.length === 0
+            ? '<div class="no-findings">✅ No findings</div>'
+            : adminFindings.map((f) => this.renderFinding(f)).join("")
+        }
       </div>
     </div>
   </div>
 
-  ${report.findings.length > 0 ? `
+  ${
+    report.findings.length > 0
+      ? `
   <!-- ── All Findings ───────────────────────────────────────────────────── -->
   <div class="section">
     <div class="section-title">🔍 All Findings (${report.findings.length})</div>
-    ${report.findings.map(f => this.renderFinding(f, true)).join('')}
-  </div>` : ''}
+    ${report.findings.map((f) => this.renderFinding(f, true)).join("")}
+  </div>`
+      : ""
+  }
 
   <div class="footer">
-    Generated by RankedCEO QA Agent · Run ${this.esc(report.runId)} · ${report.completedAt.slice(0, 19).replace('T', ' ')} UTC
+    Generated by RankedCEO QA Agent · Run ${this.esc(report.runId)} · ${report.completedAt.slice(0, 19).replace("T", " ")} UTC
   </div>
 
 </div>
 </body>
-</html>`
+</html>`;
   }
 
   // ─── Private ──────────────────────────────────────────────────────────────
 
   private renderFinding(f: Finding, showPersona = false): string {
-    const c = SEVERITY_COLOR[f.severity]
+    const c = SEVERITY_COLOR[f.severity];
     return `
     <div class="finding" style="background:${c.bg};border-color:${c.border}">
       <div class="finding-header">
-        <span class="finding-step" style="color:${c.text}">${showPersona ? `[${f.persona}] ` : ''}${this.esc(f.stepId)}</span>
+        <span class="finding-step" style="color:${c.text}">${showPersona ? `[${f.persona}] ` : ""}${this.esc(f.stepId)}</span>
         <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:${c.badge}22;color:${c.badge}">${f.severity.toUpperCase()}</span>
       </div>
-      <div class="finding-time" style="margin-bottom:4px">${f.timestamp.slice(0, 19).replace('T', ' ')} UTC</div>
+      <div class="finding-time" style="margin-bottom:4px">${f.timestamp.slice(0, 19).replace("T", " ")} UTC</div>
       <div class="finding-msg" style="color:${c.text}">${this.esc(f.message)}</div>
-      ${f.stack ? `<div class="finding-stack">${this.esc(f.stack.slice(0, 800))}</div>` : ''}
-      ${f.screenshotPath ? `<div class="finding-screenshot">📸 <a href="${this.esc(f.screenshotPath)}" target="_blank">View screenshot</a></div>` : ''}
-    </div>`
+      ${f.stack ? `<div class="finding-stack">${this.esc(f.stack.slice(0, 800))}</div>` : ""}
+      ${f.screenshotPath ? `<div class="finding-screenshot">📸 <a href="${this.esc(f.screenshotPath)}" target="_blank">View screenshot</a></div>` : ""}
+    </div>`;
   }
 
   private statusEmoji(status: string): string {
     const map: Record<string, string> = {
-      pass: '✅', pass_with_findings: '⚠️', error: '❌', critical_halt: '🚨', running: '🔄'
-    }
-    return map[status] ?? '❓'
+      pass: "✅",
+      pass_with_findings: "⚠️",
+      error: "❌",
+      critical_halt: "🚨",
+      running: "🔄",
+    };
+    return map[status] ?? "❓";
   }
 
   private formatDuration(start: string, end: string): string {
-    const ms = new Date(end).getTime() - new Date(start).getTime()
-    const s = Math.floor(ms / 1000)
-    const m = Math.floor(s / 60)
-    return m > 0 ? `${m}m ${s % 60}s` : `${s}s`
+    const ms = new Date(end).getTime() - new Date(start).getTime();
+    const s = Math.floor(ms / 1000);
+    const m = Math.floor(s / 60);
+    return m > 0 ? `${m}m ${s % 60}s` : `${s}s`;
   }
 
   private esc(str: string): string {
     return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;')
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
   }
 }

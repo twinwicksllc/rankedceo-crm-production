@@ -6,14 +6,18 @@
 // metadata and lets the page fill the full viewport.
 // =============================================================================
 
-import type { Metadata } from 'next'
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title:       'Your Website | RankedCEO',
-  description: 'Manage and customise your website.',
-  robots:      { index: false, follow: false },
-}
+  title: "Your Website | RankedCEO",
+  description: "Manage and customise your website.",
+  robots: { index: false, follow: false },
+};
 
-export default function EditorLayout({ children }: { children: React.ReactNode }) {
-  return children
+export default function EditorLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return children;
 }

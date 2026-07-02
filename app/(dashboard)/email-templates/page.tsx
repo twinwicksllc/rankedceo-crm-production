@@ -1,22 +1,30 @@
-import Link from 'next/link'
-import { CampaignService } from '@/lib/services/campaign-service'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Plus, FileText } from 'lucide-react'
+import Link from "next/link";
+import { CampaignService } from "@/lib/services/campaign-service";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Plus, FileText } from "lucide-react";
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
 export default async function EmailTemplatesPage() {
-  const campaignService = new CampaignService()
-  const templates = await campaignService.getTemplates()
+  const campaignService = new CampaignService();
+  const templates = await campaignService.getTemplates();
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Email Templates</h1>
-          <p className="text-gray-500">Manage reusable email templates for your campaigns</p>
+          <p className="text-gray-500">
+            Manage reusable email templates for your campaigns
+          </p>
         </div>
         <Link href="/email-templates/new">
           <Button>
@@ -45,7 +53,10 @@ export default async function EmailTemplatesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {templates.map((template) => (
-            <Card key={template.id} className="hover:shadow-lg transition-shadow">
+            <Card
+              key={template.id}
+              className="hover:shadow-lg transition-shadow"
+            >
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -60,14 +71,16 @@ export default async function EmailTemplatesPage() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm text-gray-500">
                     <span>
-                      {template.variables && template.variables.length > 0 
+                      {template.variables && template.variables.length > 0
                         ? `${template.variables.length} variables`
-                        : 'No variables'
-                      }
+                        : "No variables"}
                     </span>
                   </div>
                   <div className="flex gap-2 pt-2">
-                    <Link href={`/email-templates/${template.id}`} className="flex-1">
+                    <Link
+                      href={`/email-templates/${template.id}`}
+                      className="flex-1"
+                    >
                       <Button variant="outline" className="w-full" size="sm">
                         View
                       </Button>
@@ -80,5 +93,5 @@ export default async function EmailTemplatesPage() {
         </div>
       )}
     </div>
-  )
+  );
 }

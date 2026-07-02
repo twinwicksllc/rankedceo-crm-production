@@ -1,7 +1,7 @@
 // lib/waas/services/email-templates/layout.ts
 
 export function wrapLayout(content: string, preview?: string): string {
-  const supportEmail = 'support@rankedceo.com'
+  const supportEmail = "support@rankedceo.com";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -10,7 +10,7 @@ export function wrapLayout(content: string, preview?: string): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="x-apple-disable-message-reformatting" />
   <title>RankedCEO</title>
-  ${preview ? `<span style="display:none;font-size:1px;color:#fff;max-height:0;max-width:0;overflow:hidden;">${preview}</span>` : ''}
+  ${preview ? `<span style="display:none;font-size:1px;color:#fff;max-height:0;max-width:0;overflow:hidden;">${preview}</span>` : ""}
 </head>
 <body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:32px 16px;">
@@ -49,6 +49,5 @@ export function wrapLayout(content: string, preview?: string): string {
     </tr>
   </table>
 </body>
-</html>`
+</html>`;
 }
-

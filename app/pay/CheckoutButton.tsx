@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 // ============================================================
 // CheckoutButton — Client Component
@@ -7,44 +7,46 @@
 // the Stripe hosted checkout page.
 // ============================================================
 
-import { useState } from 'react'
+import { useState } from "react";
 
 interface CheckoutButtonProps {
-  priceId: string
-  industry: string
+  priceId: string;
+  industry: string;
 }
 
-export default function CheckoutButton({ priceId, industry }: CheckoutButtonProps) {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+export default function CheckoutButton({
+  priceId,
+  industry,
+}: CheckoutButtonProps) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleCheckout = async () => {
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
 
     try {
-      const response = await fetch('/api/stripe/create-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/stripe/create-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ priceId, industry }),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Failed to start checkout. Please try again.')
-        return
+        setError(data.error || "Failed to start checkout. Please try again.");
+        return;
       }
 
       // Redirect to Stripe hosted checkout
-      window.location.href = data.url
-
+      window.location.href = data.url;
     } catch (err) {
-      setError('Something went wrong. Please try again.')
+      setError("Something went wrong. Please try again.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div>
@@ -60,18 +62,31 @@ export default function CheckoutButton({ priceId, industry }: CheckoutButtonProp
       >
         {loading ? (
           <>
-            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            <svg
+              className="animate-spin h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="none"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              />
             </svg>
             Redirecting to payment...
           </>
         ) : (
-          <>
-            🔒 Proceed to Secure Payment
-          </>
+          <>🔒 Proceed to Secure Payment</>
         )}
       </button>
     </div>
-  )
+  );
 }

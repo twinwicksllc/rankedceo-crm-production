@@ -1,52 +1,62 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Switch } from '@/components/ui/switch'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 
 interface EmailTemplate {
-  id?: string
-  name: string
-  subject: string
-  description?: string
-  html_content: string
-  text_content?: string
-  variables?: string[]
-  is_default?: boolean
+  id?: string;
+  name: string;
+  subject: string;
+  description?: string;
+  html_content: string;
+  text_content?: string;
+  variables?: string[];
+  is_default?: boolean;
 }
 
 interface EmailTemplateFormProps {
-  template?: EmailTemplate
-  action: (formData: FormData) => Promise<void>
-  submitLabel?: string
+  template?: EmailTemplate;
+  action: (formData: FormData) => Promise<void>;
+  submitLabel?: string;
 }
 
-export function EmailTemplateForm({ template, action, submitLabel = 'Save Template' }: EmailTemplateFormProps) {
-  const router = useRouter()
+export function EmailTemplateForm({
+  template,
+  action,
+  submitLabel = "Save Template",
+}: EmailTemplateFormProps) {
+  const router = useRouter();
   const [variables, setVariables] = useState<string[]>(
-    template?.variables || []
-  )
-  const [newVariable, setNewVariable] = useState('')
+    template?.variables || [],
+  );
+  const [newVariable, setNewVariable] = useState("");
 
   const addVariable = () => {
     if (newVariable.trim() && !variables.includes(newVariable.trim())) {
-      setVariables([...variables, newVariable.trim()])
-      setNewVariable('')
+      setVariables([...variables, newVariable.trim()]);
+      setNewVariable("");
     }
-  }
+  };
 
   const removeVariable = (variable: string) => {
-    setVariables(variables.filter(v => v !== variable))
-  }
+    setVariables(variables.filter((v) => v !== variable));
+  };
 
   async function handleSubmit(formData: FormData) {
-    formData.append('variables', JSON.stringify(variables))
-    await action(formData)
+    formData.append("variables", JSON.stringify(variables));
+    await action(formData);
   }
 
   return (
@@ -57,9 +67,7 @@ export function EmailTemplateForm({ template, action, submitLabel = 'Save Templa
           <Card>
             <CardHeader>
               <CardTitle>Basic Information</CardTitle>
-              <CardDescription>
-                Template name and subject line
-              </CardDescription>
+              <CardDescription>Template name and subject line</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -101,7 +109,8 @@ export function EmailTemplateForm({ template, action, submitLabel = 'Save Templa
             <CardHeader>
               <CardTitle>HTML Content</CardTitle>
               <CardDescription>
-                Design your email using HTML. Use variables like {'{{name}}'} for personalization.
+                Design your email using HTML. Use variables like {"{{name}}"}{" "}
+                for personalization.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -163,23 +172,23 @@ export function EmailTemplateForm({ template, action, submitLabel = 'Save Templa
           <Card>
             <CardHeader>
               <CardTitle>Variables</CardTitle>
-              <CardDescription>
-                Add personalization variables
-              </CardDescription>
+              <CardDescription>Add personalization variables</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex gap-2">
                 <Input
                   value={newVariable}
                   onChange={(e) => setNewVariable(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addVariable())}
+                  onKeyPress={(e) =>
+                    e.key === "Enter" && (e.preventDefault(), addVariable())
+                  }
                   placeholder="Variable name"
                 />
                 <Button type="button" onClick={addVariable} size="sm">
                   Add
                 </Button>
               </div>
-              
+
               {variables.length > 0 ? (
                 <div className="space-y-2">
                   {variables.map((variable, index) => (
@@ -200,17 +209,15 @@ export function EmailTemplateForm({ template, action, submitLabel = 'Save Templa
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">
-                  No variables added yet
-                </p>
+                <p className="text-sm text-gray-500">No variables added yet</p>
               )}
-              
+
               <div className="pt-2">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setVariables(['name', 'email', 'company'])}
+                  onClick={() => setVariables(["name", "email", "company"])}
                   className="w-full"
                 >
                   Add Common Variables
@@ -235,5 +242,5 @@ export function EmailTemplateForm({ template, action, submitLabel = 'Save Templa
         </div>
       </div>
     </form>
-  )
+  );
 }

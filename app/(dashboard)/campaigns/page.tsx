@@ -1,21 +1,29 @@
-import { Suspense } from 'react';
-import { createClient } from '@/lib/supabase/server';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Mail, Users, Send, TrendingUp, Calendar } from 'lucide-react';
-import Link from 'next/link';
+import { Suspense } from "react";
+import { createClient } from "@/lib/supabase/server";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Mail, Users, Send, TrendingUp, Calendar } from "lucide-react";
+import Link from "next/link";
 
 export default async function CampaignsPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   if (!user) return null;
 
   const { data: userData } = await supabase
-    .from('users')
-    .select('account_id')
-    .eq('id', user.id)
+    .from("users")
+    .select("account_id")
+    .eq("id", user.id)
     .single();
 
   if (!userData?.account_id) return null;
@@ -50,18 +58,21 @@ export default async function CampaignsPage() {
 
 async function CampaignsStats({ accountId }: { accountId: string }) {
   const supabase = await createClient();
-  
+
   const { data: campaigns } = await supabase
-    .from('campaigns')
-    .select('status, metrics')
-    .eq('account_id', accountId);
+    .from("campaigns")
+    .select("status, metrics")
+    .eq("account_id", accountId);
 
   const stats = {
     totalCampaigns: campaigns?.length || 0,
-    activeCampaigns: campaigns?.filter(c => c.status === 'active').length || 0,
-    totalEmailsSent: campaigns?.reduce((sum, c) => sum + (c.metrics?.sent || 0), 0) || 0,
-    averageOpenRate: campaigns?.length 
-      ? campaigns.reduce((sum, c) => sum + (c.metrics?.opened || 0), 0) / campaigns.length 
+    activeCampaigns:
+      campaigns?.filter((c) => c.status === "active").length || 0,
+    totalEmailsSent:
+      campaigns?.reduce((sum, c) => sum + (c.metrics?.sent || 0), 0) || 0,
+    averageOpenRate: campaigns?.length
+      ? campaigns.reduce((sum, c) => sum + (c.metrics?.opened || 0), 0) /
+        campaigns.length
       : 0,
   };
 
@@ -93,7 +104,12 @@ async function CampaignsStats({ accountId }: { accountId: string }) {
   );
 }
 
-function StatCard({ title, value, icon, trend }: {
+function StatCard({
+  title,
+  value,
+  icon,
+  trend,
+}: {
   title: string;
   value: string | number;
   icon: React.ReactNode;
@@ -107,9 +123,7 @@ function StatCard({ title, value, icon, trend }: {
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>
-        {trend && (
-          <p className="text-xs text-muted-foreground mt-1">{trend}</p>
-        )}
+        {trend && <p className="text-xs text-muted-foreground mt-1">{trend}</p>}
       </CardContent>
     </Card>
   );
@@ -117,12 +131,12 @@ function StatCard({ title, value, icon, trend }: {
 
 async function CampaignsList({ accountId }: { accountId: string }) {
   const supabase = await createClient();
-  
+
   const { data: campaigns } = await supabase
-    .from('campaigns')
-    .select('*')
-    .eq('account_id', accountId)
-    .order('created_at', { ascending: false });
+    .from("campaigns")
+    .select("*")
+    .eq("account_id", accountId)
+    .order("created_at", { ascending: false });
 
   if (!campaigns || campaigns.length === 0) {
     return (
@@ -148,9 +162,7 @@ async function CampaignsList({ accountId }: { accountId: string }) {
     <Card>
       <CardHeader>
         <CardTitle>All Campaigns</CardTitle>
-        <CardDescription>
-          View and manage your email campaigns
-        </CardDescription>
+        <CardDescription>View and manage your email campaigns</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -166,31 +178,31 @@ async function CampaignsList({ accountId }: { accountId: string }) {
 function CampaignCard({ campaign }: { campaign: any }) {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active':
-        return 'bg-green-500';
-      case 'scheduled':
-        return 'bg-blue-500';
-      case 'draft':
-        return 'bg-gray-500';
-      case 'paused':
-        return 'bg-yellow-500';
-      case 'completed':
-        return 'bg-purple-500';
+      case "active":
+        return "bg-green-500";
+      case "scheduled":
+        return "bg-blue-500";
+      case "draft":
+        return "bg-gray-500";
+      case "paused":
+        return "bg-yellow-500";
+      case "completed":
+        return "bg-purple-500";
       default:
-        return 'bg-gray-500';
+        return "bg-gray-500";
     }
   };
 
   const getTypeLabel = (type: string) => {
     switch (type) {
-      case 'one-time':
-        return 'One-time';
-      case 'drip':
-        return 'Drip Campaign';
-      case 'automation':
-        return 'Automation';
-      case 'ab_test':
-        return 'A/B Test';
+      case "one-time":
+        return "One-time";
+      case "drip":
+        return "Drip Campaign";
+      case "automation":
+        return "Automation";
+      case "ab_test":
+        return "A/B Test";
       default:
         return type;
     }
@@ -207,7 +219,7 @@ function CampaignCard({ campaign }: { campaign: any }) {
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground mb-2">
-          {campaign.description || 'No description'}
+          {campaign.description || "No description"}
         </p>
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <span className="flex items-center gap-1">

@@ -49,16 +49,16 @@ export interface TeamMember {
 }
 
 export const USER_ROLES = [
-  { value: 'admin', label: 'Administrator' },
-  { value: 'manager', label: 'Manager' },
-  { value: 'sales', label: 'Sales Representative' },
-  { value: 'support', label: 'Support' },
-  { value: 'viewer', label: 'Viewer' },
+  { value: "admin", label: "Administrator" },
+  { value: "manager", label: "Manager" },
+  { value: "sales", label: "Sales Representative" },
+  { value: "support", label: "Support" },
+  { value: "viewer", label: "Viewer" },
 ];
 
 export const ACCOUNT_PLANS = [
-  { value: 'free', label: 'Free Plan' },
-  { value: 'starter', label: 'Starter Plan' },
-  { value: 'professional', label: 'Professional Plan' },
-  { value: 'enterprise', label: 'Enterprise Plan' },
+  { value: "free", label: "Free Plan" },
+  { value: "starter", label: "Starter Plan" },
+  { value: "professional", label: "Professional Plan" },
+  { value: "enterprise", label: "Enterprise Plan" },
 ];

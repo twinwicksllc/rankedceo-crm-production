@@ -5,6 +5,7 @@
 **Status:** ✅ Exposed key has been revoked and removed from repository
 
 **Action Taken:**
+
 - Old API key has been revoked in Google Cloud Console
 - All references removed from repository
 - New API key updated in Vercel environment variables
@@ -56,6 +57,7 @@ After revoking the key:
 ## What Happened?
 
 The API key was accidentally committed to the repository in:
+
 - `RECAPTCHA_TESTING_CHECKLIST.md` (line with Gemini API key)
 - `summarized_conversations/original_conversation_3632082.txt` (conversation summary)
 

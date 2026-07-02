@@ -5,21 +5,24 @@
 // (Decision Q7: Admin UI, form-based, no code required)
 // =============================================================================
 
-import { listQaScenarios } from '@/lib/waas/actions/qa'
-import { ScenarioList } from './scenario-list'
-import { NewScenarioForm } from './new-scenario-form'
+import { listQaScenarios } from "@/lib/waas/actions/qa";
+import { ScenarioList } from "./scenario-list";
+import { NewScenarioForm } from "./new-scenario-form";
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
 export default async function QaScenariosPage() {
-  const { data: scenarios, error } = await listQaScenarios()
+  const { data: scenarios, error } = await listQaScenarios();
 
   return (
     <div data-testid="qa-scenarios-page">
       {/* Header */}
       <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white" data-testid="qa-scenarios-heading">
+          <h1
+            className="text-2xl sm:text-3xl font-bold text-white"
+            data-testid="qa-scenarios-heading"
+          >
             QA Scenarios
           </h1>
           <p className="text-white/40 mt-1 text-sm">
@@ -52,5 +55,5 @@ export default async function QaScenariosPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

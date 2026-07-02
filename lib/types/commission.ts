@@ -19,7 +19,7 @@ export interface Commission {
   amount: number;
   rate: number;
   deal_value: number;
-  status: 'pending' | 'approved' | 'paid' | 'cancelled';
+  status: "pending" | "approved" | "paid" | "cancelled";
   paid_at: string | null;
   notes: string | null;
   created_at: string;
@@ -68,7 +68,7 @@ export interface CreateCommissionInput {
   amount: number;
   rate: number;
   deal_value: number;
-  status?: 'pending' | 'approved' | 'paid' | 'cancelled';
+  status?: "pending" | "approved" | "paid" | "cancelled";
   notes?: string | null;
 }
 
@@ -76,7 +76,7 @@ export interface UpdateCommissionInput {
   amount?: number;
   rate?: number;
   deal_value?: number;
-  status?: 'pending' | 'approved' | 'paid' | 'cancelled';
+  status?: "pending" | "approved" | "paid" | "cancelled";
   paid_at?: string | null;
   notes?: string | null;
 }
@@ -105,7 +105,7 @@ export interface UserCommissionStats {
 }
 
 export interface CommissionFilters {
-  status?: 'pending' | 'approved' | 'paid' | 'cancelled';
+  status?: "pending" | "approved" | "paid" | "cancelled";
   user_id?: string;
   deal_id?: string;
   start_date?: string;

@@ -1,45 +1,47 @@
-import { Suspense } from 'react';
-import Link from 'next/link';
-import { ActivityTimeline } from '@/components/activities/activity-timeline';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { createClient } from '@/lib/supabase/server';
+import { Suspense } from "react";
+import Link from "next/link";
+import { ActivityTimeline } from "@/components/activities/activity-timeline";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/server";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 async function getActivities(filters: any, accountId: string) {
   const supabase = await createClient();
-  
-  let query = supabase
-    .from('activities')
-    .select('*')
-    .eq('account_id', accountId)
-    .order('created_at', { ascending: false });
 
-  if (filters.type) query = query.eq('type', filters.type);
-  if (filters.status) query = query.eq('status', filters.status);
+  let query = supabase
+    .from("activities")
+    .select("*")
+    .eq("account_id", accountId)
+    .order("created_at", { ascending: false });
+
+  if (filters.type) query = query.eq("type", filters.type);
+  if (filters.status) query = query.eq("status", filters.status);
   if (filters.search) {
-    query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+    query = query.or(
+      `title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`,
+    );
   }
 
   const { data, error } = await query;
-  
+
   if (error) {
-    console.error('Error fetching activities:', error);
+    console.error("Error fetching activities:", error);
     return [];
   }
-  
+
   return data || [];
 }
 
 async function getActivityStats(accountId: string) {
   const supabase = await createClient();
-  
+
   const { data: activities, error } = await supabase
-    .from('activities')
-    .select('type, status')
-    .eq('account_id', accountId);
-  
+    .from("activities")
+    .select("type, status")
+    .eq("account_id", accountId);
+
   if (error || !activities) {
     return {
       total: 0,
@@ -48,17 +50,17 @@ async function getActivityStats(accountId: string) {
       byType: {},
     };
   }
-  
+
   const stats = {
     total: activities.length,
-    completed: activities.filter(a => a.status === 'completed').length,
-    pending: activities.filter(a => a.status === 'pending').length,
+    completed: activities.filter((a) => a.status === "completed").length,
+    pending: activities.filter((a) => a.status === "pending").length,
     byType: activities.reduce((acc: any, activity) => {
       acc[activity.type] = (acc[activity.type] || 0) + 1;
       return acc;
     }, {}),
   };
-  
+
   return stats;
 }
 
@@ -68,15 +70,17 @@ export default async function ActivitiesPage({
   searchParams: { type?: string; status?: string; search?: string };
 }) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   if (!user) return null;
 
   // Get user's account_id by email
   const { data: userData } = await supabase
-    .from('users')
-    .select('account_id')
-    .eq('id', user.id)
+    .from("users")
+    .select("account_id")
+    .eq("id", user.id)
     .single();
 
   if (!userData?.account_id) return null;
@@ -115,11 +119,15 @@ export default async function ActivitiesPage({
         </Card>
         <Card className="p-6">
           <div className="text-sm text-gray-600 mb-1">Completed</div>
-          <div className="text-3xl font-bold text-green-600">{stats.completed}</div>
+          <div className="text-3xl font-bold text-green-600">
+            {stats.completed}
+          </div>
         </Card>
         <Card className="p-6">
           <div className="text-sm text-gray-600 mb-1">Pending Tasks</div>
-          <div className="text-3xl font-bold text-yellow-600">{stats.pending}</div>
+          <div className="text-3xl font-bold text-yellow-600">
+            {stats.pending}
+          </div>
         </Card>
         <Card className="p-6">
           <div className="text-sm text-gray-600 mb-1">Activity Types</div>

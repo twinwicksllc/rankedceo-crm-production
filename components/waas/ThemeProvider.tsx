@@ -5,13 +5,13 @@
 // Phase 7.1: Also injects Google Fonts <link> tags for brand_config.fonts
 // =============================================================================
 
-import type { BrandConfig } from '@/lib/waas/templates/types'
-import { buildThemeStyleSheet } from '@/lib/waas/utils/theme'
-import { buildGoogleFontsUrl } from '@/lib/waas/client-edit/font-options'
+import type { BrandConfig } from "@/lib/waas/templates/types";
+import { buildThemeStyleSheet } from "@/lib/waas/utils/theme";
+import { buildGoogleFontsUrl } from "@/lib/waas/client-edit/font-options";
 
 interface ThemeProviderProps {
-  brandConfig: BrandConfig
-  customCss?:  string | null
+  brandConfig: BrandConfig;
+  customCss?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -21,29 +21,32 @@ interface ThemeProviderProps {
 // ---------------------------------------------------------------------------
 
 export function ThemeProvider({ brandConfig, customCss }: ThemeProviderProps) {
-  const styleSheet = buildThemeStyleSheet(brandConfig, customCss)
+  const styleSheet = buildThemeStyleSheet(brandConfig, customCss);
 
   // Build Google Fonts URL for the brand's chosen fonts (Phase 7.1)
-  const headingFont = brandConfig.fonts?.heading
-  const bodyFont    = brandConfig.fonts?.body
-  const fontSlugs   = [...new Set([headingFont, bodyFont].filter((s): s is string => Boolean(s)))]
-  const gfUrl       = fontSlugs.length > 0 ? buildGoogleFontsUrl(fontSlugs) : null
+  const headingFont = brandConfig.fonts?.heading;
+  const bodyFont = brandConfig.fonts?.body;
+  const fontSlugs = [
+    ...new Set([headingFont, bodyFont].filter((s): s is string => Boolean(s))),
+  ];
+  const gfUrl = fontSlugs.length > 0 ? buildGoogleFontsUrl(fontSlugs) : null;
 
   return (
     <>
       {gfUrl && (
         <>
           <link rel="preconnect" href="https://fonts.googleapis.com" />
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+          <link
+            rel="preconnect"
+            href="https://fonts.gstatic.com"
+            crossOrigin="anonymous"
+          />
           <link rel="stylesheet" href={gfUrl} />
         </>
       )}
-      <style
-        id="waas-theme"
-        dangerouslySetInnerHTML={{ __html: styleSheet }}
-      />
+      <style id="waas-theme" dangerouslySetInnerHTML={{ __html: styleSheet }} />
     </>
-  )
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -53,12 +56,12 @@ export function ThemeProvider({ brandConfig, customCss }: ThemeProviderProps) {
 // ---------------------------------------------------------------------------
 
 interface ThemeScriptProps {
-  brandConfig: BrandConfig
-  customCss?:  string | null
+  brandConfig: BrandConfig;
+  customCss?: string | null;
 }
 
 export function ThemeScript({ brandConfig, customCss }: ThemeScriptProps) {
-  const styleSheet = buildThemeStyleSheet(brandConfig, customCss)
+  const styleSheet = buildThemeStyleSheet(brandConfig, customCss);
 
   // Inject as a script that sets the style tag content immediately
   // This prevents flash of unstyled content
@@ -74,13 +77,15 @@ export function ThemeScript({ brandConfig, customCss }: ThemeScriptProps) {
         document.head.appendChild(style);
       }
     })();
-  `
+  `;
 
   // Phase 7.1: also inject Google Fonts for the brand's fonts
-  const headingFont = brandConfig.fonts?.heading
-  const bodyFont    = brandConfig.fonts?.body
-  const fontSlugs   = [...new Set([headingFont, bodyFont].filter((s): s is string => Boolean(s)))]
-  const gfUrl       = fontSlugs.length > 0 ? buildGoogleFontsUrl(fontSlugs) : null
+  const headingFont = brandConfig.fonts?.heading;
+  const bodyFont = brandConfig.fonts?.body;
+  const fontSlugs = [
+    ...new Set([headingFont, bodyFont].filter((s): s is string => Boolean(s))),
+  ];
+  const gfUrl = fontSlugs.length > 0 ? buildGoogleFontsUrl(fontSlugs) : null;
 
   const fontScript = gfUrl
     ? `
@@ -95,7 +100,7 @@ export function ThemeScript({ brandConfig, customCss }: ThemeScriptProps) {
       }
     })();
     `
-    : ''
+    : "";
 
   return (
     <>
@@ -110,5 +115,5 @@ export function ThemeScript({ brandConfig, customCss }: ThemeScriptProps) {
         />
       )}
     </>
-  )
+  );
 }

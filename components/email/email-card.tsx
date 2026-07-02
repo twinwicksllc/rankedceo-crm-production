@@ -1,49 +1,51 @@
-'use client'
+"use client";
 
-import { EmailMessageWithThread } from '@/lib/types/email'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { 
-  Mail, 
-  ArrowRight, 
-  Calendar, 
-  User, 
-  Building, 
+import { EmailMessageWithThread } from "@/lib/types/email";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Mail,
+  ArrowRight,
+  Calendar,
+  User,
+  Building,
   DollarSign,
   Eye,
-  EyeOff
-} from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
+  EyeOff,
+} from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
 interface EmailCardProps {
-  email: EmailMessageWithThread
-  onView?: (emailId: string) => void
-  onMarkAsRead?: (emailId: string) => void
+  email: EmailMessageWithThread;
+  onView?: (emailId: string) => void;
+  onMarkAsRead?: (emailId: string) => void;
 }
 
 export function EmailCard({ email, onView, onMarkAsRead }: EmailCardProps) {
-  const isUnread = !email.opened
-  const isInbound = email.direction === 'inbound'
+  const isUnread = !email.opened;
+  const isInbound = email.direction === "inbound";
 
   const formatDate = (dateString: string) => {
     try {
-      return formatDistanceToNow(new Date(dateString), { addSuffix: true })
+      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
     } catch {
-      return dateString
+      return dateString;
     }
-  }
+  };
 
   const getPreviewText = () => {
     if (email.body_plain) {
-      const preview = email.body_plain.replace(/\n/g, ' ').trim()
-      return preview.length > 150 ? preview.substring(0, 150) + '...' : preview
+      const preview = email.body_plain.replace(/\n/g, " ").trim();
+      return preview.length > 150 ? preview.substring(0, 150) + "..." : preview;
     }
-    return 'No content'
-  }
+    return "No content";
+  };
 
   return (
-    <Card className={`hover:shadow-md transition-shadow ${isUnread ? 'border-l-4 border-l-blue-500' : ''}`}>
+    <Card
+      className={`hover:shadow-md transition-shadow ${isUnread ? "border-l-4 border-l-blue-500" : ""}`}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
@@ -53,9 +55,13 @@ export function EmailCard({ email, onView, onMarkAsRead }: EmailCardProps) {
               ) : (
                 <ArrowRight className="h-4 w-4 text-green-500 rotate-180" />
               )}
-              <h3 className="font-semibold truncate text-lg">{email.subject}</h3>
+              <h3 className="font-semibold truncate text-lg">
+                {email.subject}
+              </h3>
               {isUnread && (
-                <Badge variant="default" className="ml-2">New</Badge>
+                <Badge variant="default" className="ml-2">
+                  New
+                </Badge>
               )}
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -63,12 +69,14 @@ export function EmailCard({ email, onView, onMarkAsRead }: EmailCardProps) {
               <span className="font-medium">
                 {email.from_name || email.from_address}
               </span>
-              {!email.from_name && <span className="text-xs">({email.from_address})</span>}
+              {!email.from_name && (
+                <span className="text-xs">({email.from_address})</span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2 ml-4">
             <Badge variant={isInbound ? "secondary" : "outline"}>
-              {isInbound ? 'Inbound' : 'Outbound'}
+              {isInbound ? "Inbound" : "Outbound"}
             </Badge>
             {isUnread && onMarkAsRead && (
               <Button
@@ -84,10 +92,8 @@ export function EmailCard({ email, onView, onMarkAsRead }: EmailCardProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-muted-foreground mb-4">
-          {getPreviewText()}
-        </p>
-        
+        <p className="text-sm text-muted-foreground mb-4">{getPreviewText()}</p>
+
         <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mb-3">
           <div className="flex items-center gap-1">
             <Calendar className="h-3 w-3" />
@@ -142,5 +148,5 @@ export function EmailCard({ email, onView, onMarkAsRead }: EmailCardProps) {
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

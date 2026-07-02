@@ -1,13 +1,16 @@
-import { ActivityWithRelations } from '@/lib/types/activity';
-import { Card } from '@/components/ui/card';
-import { ActivityCard } from './activity-card';
+import { ActivityWithRelations } from "@/lib/types/activity";
+import { Card } from "@/components/ui/card";
+import { ActivityCard } from "./activity-card";
 
 interface ActivityTimelineProps {
   activities: ActivityWithRelations[];
   title?: string;
 }
 
-export function ActivityTimeline({ activities, title = 'Activity Timeline' }: ActivityTimelineProps) {
+export function ActivityTimeline({
+  activities,
+  title = "Activity Timeline",
+}: ActivityTimelineProps) {
   if (activities.length === 0) {
     return (
       <Card className="p-6">

@@ -3,25 +3,30 @@
 // Auto-generates a high-end SVG logo from business name + primary color
 // =============================================================================
 
-export function generateTextmarkSvg(businessName: string, primaryColor: string): string {
+export function generateTextmarkSvg(
+  businessName: string,
+  primaryColor: string,
+): string {
   // Get initials (up to 2 characters)
-  const words    = businessName.trim().split(/\s+/)
-  const initials = words.length === 1
-    ? words[0].substring(0, 2).toUpperCase()
-    : (words[0][0] + words[words.length - 1][0]).toUpperCase()
+  const words = businessName.trim().split(/\s+/);
+  const initials =
+    words.length === 1
+      ? words[0].substring(0, 2).toUpperCase()
+      : (words[0][0] + words[words.length - 1][0]).toUpperCase();
 
   // Derive a darker shade for gradient
-  const hex     = primaryColor.replace('#', '')
-  const r       = parseInt(hex.substring(0, 2), 16)
-  const g       = parseInt(hex.substring(2, 4), 16)
-  const b       = parseInt(hex.substring(4, 6), 16)
-  const darker  = `rgb(${Math.max(0, r - 40)}, ${Math.max(0, g - 40)}, ${Math.max(0, b - 40)})`
-  const lighter = `rgb(${Math.min(255, r + 40)}, ${Math.min(255, g + 40)}, ${Math.min(255, b + 40)})`
+  const hex = primaryColor.replace("#", "");
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  const darker = `rgb(${Math.max(0, r - 40)}, ${Math.max(0, g - 40)}, ${Math.max(0, b - 40)})`;
+  const lighter = `rgb(${Math.min(255, r + 40)}, ${Math.min(255, g + 40)}, ${Math.min(255, b + 40)})`;
 
   // Truncate business name for display
-  const displayName = businessName.length > 20
-    ? businessName.substring(0, 18) + '…'
-    : businessName
+  const displayName =
+    businessName.length > 20
+      ? businessName.substring(0, 18) + "…"
+      : businessName;
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="80" viewBox="0 0 320 80">
   <defs>
@@ -75,12 +80,12 @@ export function generateTextmarkSvg(businessName: string, primaryColor: string):
     fill="#6B7280"
     letter-spacing="0.5"
   >POWERED BY RANKEDCEO</text>
-</svg>`
+</svg>`;
 
-  return svg
+  return svg;
 }
 
 export function svgToDataUrl(svg: string): string {
-  const encoded = encodeURIComponent(svg)
-  return `data:image/svg+xml,${encoded}`
+  const encoded = encodeURIComponent(svg);
+  return `data:image/svg+xml,${encoded}`;
 }

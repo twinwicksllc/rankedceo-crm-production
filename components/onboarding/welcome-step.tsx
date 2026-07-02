@@ -1,56 +1,56 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { useRouter } from 'next/navigation';
-import { Rocket, Users, BarChart3, Zap } from 'lucide-react';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { Rocket, Users, BarChart3, Zap } from "lucide-react";
 
 export function WelcomeStep() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const handleNext = async () => {
     setLoading(true);
-    setError('');
-    
+    setError("");
+
     try {
-      console.log('[Welcome] Calling API to update step to 1');
-      const response = await fetch('/api/onboarding/step', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      console.log("[Welcome] Calling API to update step to 1");
+      const response = await fetch("/api/onboarding/step", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ step: 1 }),
       });
 
       const data = await response.json();
-      console.log('[Welcome] API response:', data);
+      console.log("[Welcome] API response:", data);
 
       if (response.ok) {
-        console.log('[Welcome] Success, reloading page');
+        console.log("[Welcome] Success, reloading page");
         window.location.reload();
       } else {
-        console.error('[Welcome] API error:', data);
-        setError(data.error || 'Failed to update step');
+        console.error("[Welcome] API error:", data);
+        setError(data.error || "Failed to update step");
         setLoading(false);
       }
     } catch (error) {
-      console.error('[Welcome] Network error:', error);
-      setError('Network error. Please try again.');
+      console.error("[Welcome] Network error:", error);
+      setError("Network error. Please try again.");
       setLoading(false);
     }
   };
 
   const handleSkip = async () => {
     try {
-      const response = await fetch('/api/onboarding/skip', {
-        method: 'POST',
+      const response = await fetch("/api/onboarding/skip", {
+        method: "POST",
       });
 
       if (response.ok) {
-        router.push('/dashboard');
+        router.push("/dashboard");
       }
     } catch (error) {
-      console.error('Error skipping onboarding:', error);
+      console.error("Error skipping onboarding:", error);
     }
   };
 
@@ -60,9 +60,12 @@ export function WelcomeStep() {
         <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
           <Rocket className="h-8 w-8 text-blue-600" />
         </div>
-        <h2 className="text-2xl font-bold text-gray-900">Welcome to RankedCEO CRM!</h2>
+        <h2 className="text-2xl font-bold text-gray-900">
+          Welcome to RankedCEO CRM!
+        </h2>
         <p className="mt-2 text-gray-600">
-          Your all-in-one solution for managing customer relationships and growing your business
+          Your all-in-one solution for managing customer relationships and
+          growing your business
         </p>
       </div>
 
@@ -77,17 +80,23 @@ export function WelcomeStep() {
 
         <div className="text-center p-6 bg-gray-50 rounded-lg">
           <BarChart3 className="h-8 w-8 text-blue-600 mx-auto mb-3" />
-          <h3 className="font-semibold text-gray-900 mb-2">Track Performance</h3>
+          <h3 className="font-semibold text-gray-900 mb-2">
+            Track Performance
+          </h3>
           <p className="text-sm text-gray-600">
-            Monitor your sales pipeline and team performance with detailed analytics
+            Monitor your sales pipeline and team performance with detailed
+            analytics
           </p>
         </div>
 
         <div className="text-center p-6 bg-gray-50 rounded-lg">
           <Zap className="h-8 w-8 text-blue-600 mx-auto mb-3" />
-          <h3 className="font-semibold text-gray-900 mb-2">Automate Workflows</h3>
+          <h3 className="font-semibold text-gray-900 mb-2">
+            Automate Workflows
+          </h3>
           <p className="text-sm text-gray-600">
-            Save time with automated campaigns, email tracking, and commission calculations
+            Save time with automated campaigns, email tracking, and commission
+            calculations
           </p>
         </div>
       </div>
@@ -125,7 +134,7 @@ export function WelcomeStep() {
           Skip for now
         </Button>
         <Button onClick={handleNext} disabled={loading}>
-          {loading ? 'Loading...' : 'Get Started'}
+          {loading ? "Loading..." : "Get Started"}
         </Button>
       </div>
     </div>

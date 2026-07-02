@@ -1,6 +1,7 @@
 # Phase 11: Analytics & Reporting - Implementation Plan
 
 ## Overview
+
 **Goal:** Build comprehensive analytics dashboards for revenue, pipeline health, and activity tracking
 **Estimated Time:** 60 minutes
 **Status:** Ready to begin
@@ -10,6 +11,7 @@
 ## Current Status
 
 ### Completed Phases
+
 - ✅ Phase 1: Foundation
 - ✅ Phase 2: Authentication System
 - ✅ Phase 3: Dashboard Layout
@@ -22,6 +24,7 @@
 - ✅ Phase 10: Forms & Lead Capture
 
 ### Next Phase
+
 - ⏳ Phase 11: Analytics & Reporting (Current)
 
 ---
@@ -29,105 +32,113 @@
 ## Implementation Tasks
 
 ### Task 1: Revenue Analytics (15 minutes)
+
 **File:** `lib/analytics/revenue.ts`
 
 **Functions to implement:**
+
 ```typescript
 // Calculate total revenue from won deals
 export async function getTotalRevenue(
   accountId: string,
   startDate?: Date,
-  endDate?: Date
-): Promise<number>
+  endDate?: Date,
+): Promise<number>;
 
 // Revenue by month for charts
 export async function getRevenueByMonth(
   accountId: string,
-  months: number
-): Promise<{ month: string; revenue: number }[]>
+  months: number,
+): Promise<{ month: string; revenue: number }[]>;
 
 // Revenue by sales rep
 export async function getRevenueByUser(
-  accountId: string
-): Promise<{ userId: string; userName: string; revenue: number }[]>
+  accountId: string,
+): Promise<{ userId: string; userName: string; revenue: number }[]>;
 
 // Average deal size
-export async function getAverageDealSize(
-  accountId: string
-): Promise<number>
+export async function getAverageDealSize(accountId: string): Promise<number>;
 
 // Revenue trend (growth rate)
 export async function getRevenueTrend(
-  accountId: string
-): Promise<{ currentPeriod: number; previousPeriod: number; growthRate: number }>
+  accountId: string,
+): Promise<{
+  currentPeriod: number;
+  previousPeriod: number;
+  growthRate: number;
+}>;
 ```
 
 ### Task 2: Pipeline Analytics (15 minutes)
+
 **File:** `lib/analytics/pipeline.ts`
 
 **Functions to implement:**
+
 ```typescript
 // Total pipeline value by stage
 export async function getPipelineValueByStage(
-  accountId: string
-): Promise<{ stage: string; count: number; value: number }[]>
+  accountId: string,
+): Promise<{ stage: string; count: number; value: number }[]>;
 
 // Win rate calculation
 export async function getWinRate(
   accountId: string,
   startDate?: Date,
-  endDate?: Date
-): Promise<number>
+  endDate?: Date,
+): Promise<number>;
 
 // Average deal cycle time
-export async function getAverageDealCycle(
-  accountId: string
-): Promise<number>
+export async function getAverageDealCycle(accountId: string): Promise<number>;
 
 // Deals by source
 export async function getDealsBySource(
-  accountId: string
-): Promise<{ source: string; count: number; value: number }[]>
+  accountId: string,
+): Promise<{ source: string; count: number; value: number }[]>;
 
 // Pipeline velocity (days between stages)
 export async function getPipelineVelocity(
-  accountId: string
-): Promise<{ stage: string; avgDays: number }[]>
+  accountId: string,
+): Promise<{ stage: string; avgDays: number }[]>;
 ```
 
 ### Task 3: Activity Analytics (10 minutes)
+
 **File:** `lib/analytics/activity.ts`
 
 **Functions to implement:**
+
 ```typescript
 // Activity count by type
 export async function getActivityByType(
   accountId: string,
   startDate?: Date,
-  endDate?: Date
-): Promise<{ type: string; count: number }[]>
+  endDate?: Date,
+): Promise<{ type: string; count: number }[]>;
 
 // Activity completion rate
 export async function getActivityCompletionRate(
-  accountId: string
-): Promise<number>
+  accountId: string,
+): Promise<number>;
 
 // User activity leaderboard
 export async function getActivityLeaderboard(
-  accountId: string
-): Promise<{ userId: string; userName: string; activityCount: number }[]>
+  accountId: string,
+): Promise<{ userId: string; userName: string; activityCount: number }[]>;
 
 // Upcoming activities
 export async function getUpcomingActivities(
   accountId: string,
-  days: number
-): Promise<Activity[]>
+  days: number,
+): Promise<Activity[]>;
 ```
 
 ### Task 4: Reports Dashboard Page (10 minutes)
+
 **File:** `app/(dashboard)/reports/page.tsx`
 
 **Features:**
+
 - Overview cards with key metrics
 - Revenue trend chart
 - Pipeline funnel visualization
@@ -137,6 +148,7 @@ export async function getUpcomingActivities(
 - Responsive layout
 
 **Key Metrics Cards:**
+
 - Total Revenue (selected period)
 - Pipeline Value
 - Win Rate
@@ -145,9 +157,11 @@ export async function getUpcomingActivities(
 - Active Deals
 
 ### Task 5: Revenue Dashboard Component (5 minutes)
+
 **File:** `components/analytics/revenue-dashboard.tsx`
 
 **Components:**
+
 - Revenue trend line chart
 - Revenue by user bar chart
 - Revenue by month bar chart
@@ -157,9 +171,11 @@ export async function getUpcomingActivities(
 **Chart Library:** Use Recharts (lightweight, React-native)
 
 ### Task 6: Pipeline Dashboard Component (5 minutes)
+
 **File:** `components/analytics/pipeline-dashboard.tsx`
 
 **Components:**
+
 - Pipeline funnel chart
 - Deals by stage table
 - Win rate gauge
@@ -167,9 +183,11 @@ export async function getUpcomingActivities(
 - Deal sources pie chart
 
 ### Task 7: Activity Dashboard Component (5 minutes)
+
 **File:** `components/analytics/activity-dashboard.tsx`
 
 **Components:**
+
 - Activity by type bar chart
 - Activity completion rate
 - User leaderboard
@@ -181,13 +199,16 @@ export async function getUpcomingActivities(
 ## Technical Requirements
 
 ### Dependencies to Install
+
 ```bash
 npm install recharts date-fns
 npm install -D @types/recharts
 ```
 
 ### Database Queries
+
 All analytics functions will:
+
 - Use Supabase client for data fetching
 - Filter by `account_id` for multi-tenancy
 - Support date range filtering
@@ -195,7 +216,9 @@ All analytics functions will:
 - Return typed responses
 
 ### API Routes (if needed)
+
 May create:
+
 - `app/api/analytics/revenue/route.ts`
 - `app/api/analytics/pipeline/route.ts`
 - `app/api/analytics/activity/route.ts`
@@ -203,6 +226,7 @@ May create:
 ---
 
 ## File Structure
+
 ```
 lib/
 ├── analytics/
@@ -223,11 +247,13 @@ components/analytics/
 ## Implementation Checklist
 
 ### Phase 11.1: Setup & Dependencies
+
 - [ ] Install recharts and date-fns
 - [ ] Create analytics directory structure
 - [ ] Set up TypeScript types for analytics
 
 ### Phase 11.2: Revenue Analytics
+
 - [ ] Create `lib/analytics/revenue.ts`
 - [ ] Implement `getTotalRevenue()`
 - [ ] Implement `getRevenueByMonth()`
@@ -237,6 +263,7 @@ components/analytics/
 - [ ] Add unit tests
 
 ### Phase 11.3: Pipeline Analytics
+
 - [ ] Create `lib/analytics/pipeline.ts`
 - [ ] Implement `getPipelineValueByStage()`
 - [ ] Implement `getWinRate()`
@@ -246,6 +273,7 @@ components/analytics/
 - [ ] Add unit tests
 
 ### Phase 11.4: Activity Analytics
+
 - [ ] Create `lib/analytics/activity.ts`
 - [ ] Implement `getActivityByType()`
 - [ ] Implement `getActivityCompletionRate()`
@@ -254,6 +282,7 @@ components/analytics/
 - [ ] Add unit tests
 
 ### Phase 11.5: Dashboard Components
+
 - [ ] Create `components/analytics/revenue-dashboard.tsx`
 - [ ] Create `components/analytics/pipeline-dashboard.tsx`
 - [ ] Create `components/analytics/activity-dashboard.tsx`
@@ -262,6 +291,7 @@ components/analytics/
 - [ ] Add error handling
 
 ### Phase 11.6: Reports Page
+
 - [ ] Create `app/(dashboard)/reports/page.tsx`
 - [ ] Integrate all dashboard components
 - [ ] Add date range filter
@@ -270,6 +300,7 @@ components/analytics/
 - [ ] Test with sample data
 
 ### Phase 11.7: Testing & Polish
+
 - [ ] Test all analytics functions
 - [ ] Verify charts render correctly
 - [ ] Test date range filtering
@@ -283,18 +314,21 @@ components/analytics/
 ## Testing Requirements
 
 ### Unit Tests
+
 - Test all analytics functions with mock data
 - Test date range filtering
 - Test account_id scoping
 - Test error handling
 
 ### Integration Tests
+
 - Test dashboard renders with real data
 - Test charts update with date changes
 - Test export functionality
 - Test multi-tenant data isolation
 
 ### Manual Testing Checklist
+
 - [ ] Dashboard loads without errors
 - [ ] All charts display correctly
 - [ ] Date range filter works
@@ -309,6 +343,7 @@ components/analytics/
 ## Success Criteria
 
 ### Functional Requirements
+
 - ✅ Revenue analytics accurately calculate totals and trends
 - ✅ Pipeline analytics show accurate funnel data
 - ✅ Activity analytics track all user activities
@@ -318,11 +353,13 @@ components/analytics/
 - ✅ Multi-tenant data isolation works
 
 ### Performance Requirements
+
 - ✅ Analytics queries complete in < 2 seconds
 - ✅ Dashboard loads in < 3 seconds
 - ✅ Charts render smoothly without lag
 
 ### User Experience Requirements
+
 - ✅ Intuitive dashboard layout
 - ✅ Clear visualizations
 - ✅ Responsive design
@@ -334,25 +371,33 @@ components/analytics/
 ## Potential Challenges & Solutions
 
 ### Challenge 1: Performance with Large Datasets
-**Solution:** 
+
+**Solution:**
+
 - Use database indexes on date columns
 - Implement caching for frequently accessed data
 - Use pagination for large result sets
 
 ### Challenge 2: Complex Date Range Queries
+
 **Solution:**
+
 - Use date-fns for date manipulation
 - Implement consistent timezone handling
 - Pre-calculate common date ranges (this week, this month)
 
 ### Challenge 3: Chart Library Learning Curve
+
 **Solution:**
+
 - Use Recharts (well-documented, React-native)
 - Start with simple charts, add complexity incrementally
 - Reference existing chart examples
 
 ### Challenge 4: Multi-Tenant Data Isolation
+
 **Solution:**
+
 - All queries include `account_id` filter
 - RLS policies enforce data isolation
 - Test with multiple accounts
@@ -362,21 +407,25 @@ components/analytics/
 ## Next Steps After Phase 11
 
 ### Phase 12: Commission Tracking
+
 - Commission calculation logic
 - Commission dashboard
 - Payout management
 
 ### Phase 13: Onboarding Wizard
+
 - Welcome flow for new users
 - Setup guidance
 - Tutorial walkthroughs
 
 ### Phase 14: Settings & User Management
+
 - User profile settings
 - Team management
 - Account settings
 
 ### Phase 15: Final Polish & Testing
+
 - Comprehensive testing
 - Bug fixes
 - Performance optimization
@@ -387,17 +436,20 @@ components/analytics/
 ## Notes
 
 ### Database Considerations
+
 - Ensure `deals` table has proper indexes on `created_at`, `stage`, `account_id`
 - Ensure `activities` table has proper indexes on `created_at`, `type`, `account_id`
 - Consider materialized views for complex aggregations
 
 ### Chart Configuration
+
 - Use consistent color scheme across all charts
 - Add tooltips for better UX
 - Include legends where appropriate
 - Ensure charts are accessible (ARIA labels)
 
 ### Performance Optimization
+
 - Implement data caching (Redis or Supabase Edge Functions)
 - Use Supabase Edge Functions for complex aggregations
 - Consider pre-calculating daily metrics
@@ -406,6 +458,7 @@ components/analytics/
 ---
 
 ## Commit Message
+
 ```
 feat: Add analytics and reporting dashboards
 

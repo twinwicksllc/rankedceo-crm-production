@@ -1,17 +1,20 @@
 // lib/waas/services/email-templates/lifecycle.ts
 
-import { wrapLayout } from './layout'
-import type { NotificationTemplateData } from './types'
+import { wrapLayout } from "./layout";
+import type { NotificationTemplateData } from "./types";
 
 // ---------------------------------------------------------------------------
 // Template: site_ready_for_review
 // ---------------------------------------------------------------------------
 
-export function siteReadyForReview(data: NotificationTemplateData): { subject: string; html: string } {
-  const name       = data.businessName ?? 'Your business'
-  const reviewUrl  = data.reviewUrl ?? '#'
+export function siteReadyForReview(data: NotificationTemplateData): {
+  subject: string;
+  html: string;
+} {
+  const name = data.businessName ?? "Your business";
+  const reviewUrl = data.reviewUrl ?? "#";
 
-  const subject = `Your ${name} website designs are ready to review 🎨`
+  const subject = `Your ${name} website designs are ready to review 🎨`;
 
   const content = `
     <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">
@@ -50,30 +53,42 @@ export function siteReadyForReview(data: NotificationTemplateData): { subject: s
     <p style="margin:20px 0 0;font-size:12px;color:#94a3b8;text-align:center;">
       This link is unique to you — don't share it with others.
     </p>
-  `
+  `;
 
-  return { subject, html: wrapLayout(content, 'Your 3 website designs are ready — click to review and approve.') }
+  return {
+    subject,
+    html: wrapLayout(
+      content,
+      "Your 3 website designs are ready — click to review and approve.",
+    ),
+  };
 }
 
 // ---------------------------------------------------------------------------
 // Template: domain_status_update
 // ---------------------------------------------------------------------------
 
-export function domainStatusUpdate(data: NotificationTemplateData): { subject: string; html: string } {
-  const domain       = data.domain ?? 'your domain'
-  const domainStatus = data.domainStatus ?? 'under review'
-  const adminNotes   = data.adminNotes
+export function domainStatusUpdate(data: NotificationTemplateData): {
+  subject: string;
+  html: string;
+} {
+  const domain = data.domain ?? "your domain";
+  const domainStatus = data.domainStatus ?? "under review";
+  const adminNotes = data.adminNotes;
 
-  const subject = `Update on your domain: ${domain}`
+  const subject = `Update on your domain: ${domain}`;
 
   const statusDescriptions: Record<string, string> = {
-    under_review:  'Our team is currently reviewing your domain request.',
-    provisioning:  'We\'re provisioning your domain — this usually takes 24–48 hours.',
-    live:          'Your domain is live and connected to your website!',
-    rejected:      'Unfortunately, we weren\'t able to fulfil this domain request.',
-  }
+    under_review: "Our team is currently reviewing your domain request.",
+    provisioning:
+      "We're provisioning your domain — this usually takes 24–48 hours.",
+    live: "Your domain is live and connected to your website!",
+    rejected: "Unfortunately, we weren't able to fulfil this domain request.",
+  };
 
-  const description = statusDescriptions[domainStatus] ?? 'There\'s an update on your domain request.'
+  const description =
+    statusDescriptions[domainStatus] ??
+    "There's an update on your domain request.";
 
   const content = `
     <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">
@@ -83,7 +98,9 @@ export function domainStatusUpdate(data: NotificationTemplateData): { subject: s
       ${description}
     </p>
 
-    ${adminNotes ? `
+    ${
+      adminNotes
+        ? `
     <table role="presentation" width="100%">
       <tr>
         <td style="background:#f8fafc;border-left:3px solid #2563eb;padding:12px 16px;border-radius:0 8px 8px 0;">
@@ -91,25 +108,30 @@ export function domainStatusUpdate(data: NotificationTemplateData): { subject: s
         </td>
       </tr>
     </table>
-    ` : ''}
+    `
+        : ""
+    }
 
     <p style="margin:20px 0 0;font-size:13px;color:#475569;">
       Questions? Reply to this email and we'll be happy to help.
     </p>
-  `
+  `;
 
-  return { subject, html: wrapLayout(content) }
+  return { subject, html: wrapLayout(content) };
 }
 
 // ---------------------------------------------------------------------------
 // Template: site_live
 // ---------------------------------------------------------------------------
 
-export function siteLive(data: NotificationTemplateData): { subject: string; html: string } {
-  const name   = data.businessName ?? 'Your business'
-  const domain = data.domain
+export function siteLive(data: NotificationTemplateData): {
+  subject: string;
+  html: string;
+} {
+  const name = data.businessName ?? "Your business";
+  const domain = data.domain;
 
-  const subject = `🎉 Your ${name} website is live!`
+  const subject = `🎉 Your ${name} website is live!`;
 
   const content = `
     <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">
@@ -119,7 +141,9 @@ export function siteLive(data: NotificationTemplateData): { subject: string; htm
       Congratulations — <strong>${name}</strong> is now live and ready for customers!
     </p>
 
-    ${domain ? `
+    ${
+      domain
+        ? `
     <table role="presentation" width="100%">
       <tr>
         <td style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:16px 20px;text-align:center;">
@@ -133,14 +157,18 @@ export function siteLive(data: NotificationTemplateData): { subject: string; htm
         </td>
       </tr>
     </table>
-    ` : ''}
+    `
+        : ""
+    }
 
     <p style="margin:20px 0 0;font-size:13px;color:#475569;line-height:1.6;">
       Share your new website with your customers, add it to your Google Business
       Profile, and start getting more enquiries online.
     </p>
-  `
+  `;
 
-  return { subject, html: wrapLayout(content, `${name} is now live — see your new website!`) }
+  return {
+    subject,
+    html: wrapLayout(content, `${name} is now live — see your new website!`),
+  };
 }
-

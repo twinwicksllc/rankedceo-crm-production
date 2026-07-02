@@ -1,7 +1,9 @@
 # AI Chat Integration Plan - RankedCEO CRM
 
 ## Overview
+
 Build an intelligent AI chat widget that can:
+
 - Engage visitors in natural conversation
 - Qualify leads through dialogue
 - Book appointments via Calendly
@@ -13,6 +15,7 @@ Build an intelligent AI chat widget that can:
 ## Architecture
 
 ### Components
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    AI Chat Widget                            │
@@ -74,6 +77,7 @@ Build an intelligent AI chat widget that can:
 ## Phase 1: Foundation (2-3 hours)
 
 ### 1.1 Database Schema
+
 **File:** `supabase/migrations/20240301000003_create_agent_conversations.sql`
 
 ```sql
@@ -81,28 +85,28 @@ CREATE TABLE agent_conversations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
-  
+
   -- Multi-tenant
   account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-  
+
   -- Session tracking
   session_id TEXT NOT NULL UNIQUE,
-  
+
   -- Lead capture
   visitor_name TEXT,
   visitor_email TEXT,
   visitor_phone TEXT,
-  
+
   -- Conversation state
   status TEXT DEFAULT 'active' CHECK (status IN ('active', 'qualified', 'booked', 'closed')),
   intent TEXT, -- 'booking', 'inquiry', 'support', 'general'
-  
+
   -- Industry context
   industry TEXT, -- 'hvac', 'plumbing', 'electrical', 'smile', 'crm'
-  
+
   -- Metadata
   metadata JSONB DEFAULT '{}',
-  
+
   -- RLS
   CONSTRAINT valid_session CHECK (session_id IS NOT NULL)
 );
@@ -110,16 +114,16 @@ CREATE TABLE agent_conversations (
 CREATE TABLE agent_messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at TIMESTAMPTZ DEFAULT now(),
-  
+
   conversation_id UUID NOT NULL REFERENCES agent_conversations(id) ON DELETE CASCADE,
-  
+
   -- Message content
   role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
   content TEXT NOT NULL,
-  
+
   -- Message metadata
   metadata JSONB DEFAULT '{}',
-  
+
   -- Intent detection
   detected_intent TEXT,
   confidence_score NUMERIC
@@ -149,7 +153,7 @@ CREATE POLICY "Users can view account messages" ON agent_messages
   FOR SELECT TO authenticated
   USING (
     conversation_id IN (
-      SELECT id FROM agent_conversations 
+      SELECT id FROM agent_conversations
       WHERE account_id = get_current_user_account_id()
     )
   );
@@ -158,113 +162,115 @@ CREATE POLICY "Users can manage account messages" ON agent_messages
   FOR ALL TO authenticated
   USING (
     conversation_id IN (
-      SELECT id FROM agent_conversations 
+      SELECT id FROM agent_conversations
       WHERE account_id = get_current_user_account_id()
     )
   )
   WITH CHECK (
     conversation_id IN (
-      SELECT id FROM agent_conversations 
+      SELECT id FROM agent_conversations
       WHERE account_id = get_current_user_account_id()
     )
   );
 ```
 
 ### 1.2 TypeScript Types
+
 **File:** `lib/types/agent.ts`
 
 ```typescript
 export interface AgentConversation {
-  id: string
-  created_at: string
-  updated_at: string
-  account_id: string
-  session_id: string
-  visitor_name?: string
-  visitor_email?: string
-  visitor_phone?: string
-  status: 'active' | 'qualified' | 'booked' | 'closed'
-  intent?: string
-  industry?: string
-  metadata: Record<string, any>
+  id: string;
+  created_at: string;
+  updated_at: string;
+  account_id: string;
+  session_id: string;
+  visitor_name?: string;
+  visitor_email?: string;
+  visitor_phone?: string;
+  status: "active" | "qualified" | "booked" | "closed";
+  intent?: string;
+  industry?: string;
+  metadata: Record<string, any>;
 }
 
 export interface AgentMessage {
-  id: string
-  created_at: string
-  conversation_id: string
-  role: 'user' | 'assistant' | 'system'
-  content: string
-  metadata: Record<string, any>
-  detected_intent?: string
-  confidence_score?: number
+  id: string;
+  created_at: string;
+  conversation_id: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  metadata: Record<string, any>;
+  detected_intent?: string;
+  confidence_score?: number;
 }
 
 export interface ChatMessage {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  timestamp: string
-  isTyping?: boolean
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
+  isTyping?: boolean;
 }
 
 export interface BookingIntent {
-  detected: boolean
-  confidence: number
-  preferredDate?: string
-  preferredTime?: string
-  serviceType?: string
-  notes?: string
+  detected: boolean;
+  confidence: number;
+  preferredDate?: string;
+  preferredTime?: string;
+  serviceType?: string;
+  notes?: string;
 }
 
 export interface IndustryContext {
-  industry: 'hvac' | 'plumbing' | 'electrical' | 'smile' | 'crm'
-  services: string[]
-  operatingHours: string
-  serviceArea: string
+  industry: "hvac" | "plumbing" | "electrical" | "smile" | "crm";
+  services: string[];
+  operatingHours: string;
+  serviceArea: string;
   contactInfo: {
-    phone?: string
-    email?: string
-  }
+    phone?: string;
+    email?: string;
+  };
 }
 ```
 
 ### 1.3 AI Agent Service
+
 **File:** `lib/services/ai-agent-service.ts`
 
 ```typescript
-import { GoogleGenerativeAI } from '@google/generative-ai'
-import { createAdminClient } from '@/lib/supabase/admin'
-import type { 
-  AgentConversation, 
-  AgentMessage, 
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { createAdminClient } from "@/lib/supabase/admin";
+import type {
+  AgentConversation,
+  AgentMessage,
   ChatMessage,
   BookingIntent,
-  IndustryContext 
-} from '@/lib/types/agent'
+  IndustryContext,
+} from "@/lib/types/agent";
 
 export class AIAgentService {
-  private genAI: GoogleGenerativeAI
-  private model: any
-  private supabase: any
+  private genAI: GoogleGenerativeAI;
+  private model: any;
+  private supabase: any;
 
   constructor() {
-    const apiKey = process.env.GEMINI_API_KEY
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      throw new Error('GEMINI_API_KEY not configured')
+      throw new Error("GEMINI_API_KEY not configured");
     }
-    
-    this.genAI = new GoogleGenerativeAI(apiKey)
-    this.model = this.genAI.getGenerativeModel({ 
-      model: 'gemini-1.5-pro',
+
+    this.genAI = new GoogleGenerativeAI(apiKey);
+    this.model = this.genAI.getGenerativeModel({
+      model: "gemini-1.5-pro",
       generationConfig: {
         temperature: 0.7,
         topK: 40,
         topP: 0.95,
         maxOutputTokens: 8192,
-      }
-    })
-    this.supabase = createAdminClient()
+      },
+    });
+    this.supabase = createAdminClient();
   }
 
   // Get industry-specific system prompt
@@ -283,7 +289,7 @@ export class AIAgentService {
       Service area: Greater Chicago area
       
       Be conversational, professional, and helpful. Don't be overly salesy.`,
-      
+
       plumbing: `You are a helpful plumbing service assistant for RankedCEO Plumb Pro.
       Your role is to:
       - Engage visitors in friendly conversation
@@ -297,7 +303,7 @@ export class AIAgentService {
       Service area: Greater Chicago area
       
       Be conversational, professional, and helpful. Don't be overly salesy.`,
-      
+
       electrical: `You are a helpful electrical service assistant for RankedCEO Spark Pro.
       Your role is to:
       - Engage visitors in friendly conversation
@@ -311,7 +317,7 @@ export class AIAgentService {
       Service area: Greater Chicago area
       
       Be conversational, professional, and helpful. Don't be overly salesy.`,
-      
+
       smile: `You are a helpful dental assistant for RankedCEO Smile Dashboard.
       Your role is to:
       - Engage visitors in friendly conversation
@@ -325,7 +331,7 @@ export class AIAgentService {
       Service area: Chicago metropolitan area
       
       Be conversational, professional, and helpful. Don't be overly salesy.`,
-      
+
       crm: `You are a helpful assistant for RankedCEO CRM.
       Your role is to:
       - Engage visitors in friendly conversation
@@ -338,18 +344,19 @@ export class AIAgentService {
       Operating hours: 9AM-5PM, Monday-Friday
       Service area: Nationwide (remote services)
       
-      Be conversational, professional, and helpful. Don't be overly salesy.`
-    }
-    
-    return prompts[industry as keyof typeof prompts] || prompts.crm
+      Be conversational, professional, and helpful. Don't be overly salesy.`,
+    };
+
+    return prompts[industry as keyof typeof prompts] || prompts.crm;
   }
 
   // Detect booking intent from conversation
-  async detectBookingIntent(
-    messages: ChatMessage[]
-  ): Promise<BookingIntent> {
-    const recentMessages = messages.slice(-5).map(m => `${m.role}: ${m.content}`).join('\n')
-    
+  async detectBookingIntent(messages: ChatMessage[]): Promise<BookingIntent> {
+    const recentMessages = messages
+      .slice(-5)
+      .map((m) => `${m.role}: ${m.content}`)
+      .join("\n");
+
     const prompt = `Analyze this conversation and determine if the user wants to book an appointment.
 
 Conversation:
@@ -363,24 +370,24 @@ Respond in JSON format:
   "preferredTime": "time mentioned or null",
   "serviceType": "service mentioned or null",
   "notes": "summary of what they need"
-}`
+}`;
 
     try {
-      const result = await this.model.generateContent(prompt)
-      const response = result.response.text()
-      const parsed = JSON.parse(response)
-      
+      const result = await this.model.generateContent(prompt);
+      const response = result.response.text();
+      const parsed = JSON.parse(response);
+
       return {
         detected: parsed.detected || false,
         confidence: parsed.confidence || 0,
         preferredDate: parsed.preferredDate,
         preferredTime: parsed.preferredTime,
         serviceType: parsed.serviceType,
-        notes: parsed.notes
-      }
+        notes: parsed.notes,
+      };
     } catch (error) {
-      console.error('Error detecting booking intent:', error)
-      return { detected: false, confidence: 0 }
+      console.error("Error detecting booking intent:", error);
+      return { detected: false, confidence: 0 };
     }
   }
 
@@ -388,21 +395,22 @@ Respond in JSON format:
   async generateResponse(
     conversationId: string,
     userMessage: string,
-    industry: string
+    industry: string,
   ): Promise<string> {
     // Get conversation history
     const { data: messages } = await this.supabase
-      .from('agent_messages')
-      .select('role, content')
-      .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true })
-      .limit(10)
+      .from("agent_messages")
+      .select("role, content")
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: true })
+      .limit(10);
 
     // Build conversation context
-    const history = messages?.map(m => `${m.role}: ${m.content}`).join('\n') || ''
-    
-    const systemPrompt = this.getSystemPrompt(industry)
-    
+    const history =
+      messages?.map((m) => `${m.role}: ${m.content}`).join("\n") || "";
+
+    const systemPrompt = this.getSystemPrompt(industry);
+
     const prompt = `${systemPrompt}
 
 Previous conversation:
@@ -410,89 +418,87 @@ ${history}
 
 User: ${userMessage}
 
-Respond as the assistant. Be concise (2-3 sentences max) and conversational.`
+Respond as the assistant. Be concise (2-3 sentences max) and conversational.`;
 
     try {
-      const result = await this.model.generateContent(prompt)
-      return result.response.text()
+      const result = await this.model.generateContent(prompt);
+      return result.response.text();
     } catch (error) {
-      console.error('Error generating response:', error)
-      return "I'm having trouble understanding. Could you please rephrase that?"
+      console.error("Error generating response:", error);
+      return "I'm having trouble understanding. Could you please rephrase that?";
     }
   }
 
   // Create or get conversation
   async getOrCreateConversation(
     sessionId: string,
-    industry: string
+    industry: string,
   ): Promise<AgentConversation> {
     const { data: existing } = await this.supabase
-      .from('agent_conversations')
-      .select('*')
-      .eq('session_id', sessionId)
-      .single()
+      .from("agent_conversations")
+      .select("*")
+      .eq("session_id", sessionId)
+      .single();
 
     if (existing) {
-      return existing
+      return existing;
     }
 
     // Get account ID from industry
     const { data: account } = await this.supabase
-      .from('accounts')
-      .select('id')
-      .eq('slug', industry === 'crm' ? 'my-account' : `${industry}-pool`)
-      .single()
+      .from("accounts")
+      .select("id")
+      .eq("slug", industry === "crm" ? "my-account" : `${industry}-pool`)
+      .single();
 
     if (!account) {
-      throw new Error(`Account not found for industry: ${industry}`)
+      throw new Error(`Account not found for industry: ${industry}`);
     }
 
     const { data: newConversation } = await this.supabase
-      .from('agent_conversations')
+      .from("agent_conversations")
       .insert({
         account_id: account.id,
         session_id: sessionId,
         industry,
-        status: 'active'
+        status: "active",
       })
       .select()
-      .single()
+      .single();
 
-    return newConversation
+    return newConversation;
   }
 
   // Save message
   async saveMessage(
     conversationId: string,
-    role: 'user' | 'assistant',
+    role: "user" | "assistant",
     content: string,
     detectedIntent?: string,
-    confidenceScore?: number
+    confidenceScore?: number,
   ): Promise<void> {
-    await this.supabase
-      .from('agent_messages')
-      .insert({
-        conversation_id: conversationId,
-        role,
-        content,
-        detected_intent: detectedIntent,
-        confidence_score: confidenceScore
-      })
+    await this.supabase.from("agent_messages").insert({
+      conversation_id: conversationId,
+      role,
+      content,
+      detected_intent: detectedIntent,
+      confidence_score: confidenceScore,
+    });
   }
 
   // Update conversation status
   async updateConversationStatus(
     conversationId: string,
-    status: 'active' | 'qualified' | 'booked' | 'closed',
-    metadata?: Record<string, any>
+    status: "active" | "qualified" | "booked" | "closed",
+    metadata?: Record<string, any>,
   ): Promise<void> {
     await this.supabase
-      .from('agent_conversations')
-      .update({ 
+      .from("agent_conversations")
+      .update({
         status,
-        ...(metadata && { metadata })
+        ...(metadata && { metadata }),
       })
-      .eq('id', conversationId)
+      .eq("id", conversationId);
   }
 }
 ```
@@ -502,127 +508,131 @@ Respond as the assistant. Be concise (2-3 sentences max) and conversational.`
 ## Phase 2: API Routes (1-2 hours)
 
 ### 2.1 Chat API Route
+
 **File:** `app/api/agent/chat/route.ts`
 
 ```typescript
-import { NextRequest, NextResponse } from 'next/server'
-import { AIAgentService } from '@/lib/services/ai-agent-service'
+import { NextRequest, NextResponse } from "next/server";
+import { AIAgentService } from "@/lib/services/ai-agent-service";
 
-export const runtime = 'edge'
-export const dynamic = 'force-dynamic'
+export const runtime = "edge";
+export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, sessionId, industry } = await request.json()
+    const { message, sessionId, industry } = await request.json();
 
     if (!message || !sessionId || !industry) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      )
+        { error: "Missing required fields" },
+        { status: 400 },
+      );
     }
 
-    const service = new AIAgentService()
-    
+    const service = new AIAgentService();
+
     // Get or create conversation
-    const conversation = await service.getOrCreateConversation(sessionId, industry)
-    
+    const conversation = await service.getOrCreateConversation(
+      sessionId,
+      industry,
+    );
+
     // Save user message
-    await service.saveMessage(conversation.id, 'user', message)
-    
+    await service.saveMessage(conversation.id, "user", message);
+
     // Generate AI response
     const response = await service.generateResponse(
       conversation.id,
       message,
-      industry
-    )
-    
+      industry,
+    );
+
     // Save AI response
-    await service.saveMessage(conversation.id, 'assistant', response)
-    
+    await service.saveMessage(conversation.id, "assistant", response);
+
     // Detect booking intent
     const { data: messages } = await service.supabase
-      .from('agent_messages')
-      .select('role, content')
-      .eq('conversation_id', conversation.id)
-      .order('created_at', { ascending: true })
-      .limit(10)
+      .from("agent_messages")
+      .select("role, content")
+      .eq("conversation_id", conversation.id)
+      .order("created_at", { ascending: true })
+      .limit(10);
 
-    const chatMessages = messages?.map(m => ({
-      id: m.id,
-      role: m.role,
-      content: m.content,
-      timestamp: m.created_at
-    })) || []
+    const chatMessages =
+      messages?.map((m) => ({
+        id: m.id,
+        role: m.role,
+        content: m.content,
+        timestamp: m.created_at,
+      })) || [];
 
-    const bookingIntent = await service.detectBookingIntent(chatMessages)
-    
+    const bookingIntent = await service.detectBookingIntent(chatMessages);
+
     // Update conversation if booking intent detected
     if (bookingIntent.detected && bookingIntent.confidence > 0.7) {
-      await service.updateConversationStatus(
-        conversation.id,
-        'qualified',
-        { bookingIntent }
-      )
+      await service.updateConversationStatus(conversation.id, "qualified", {
+        bookingIntent,
+      });
     }
 
     return NextResponse.json({
       response,
       bookingIntent: bookingIntent.detected ? bookingIntent : null,
-      conversationId: conversation.id
-    })
+      conversationId: conversation.id,
+    });
   } catch (error) {
-    console.error('Chat API error:', error)
+    console.error("Chat API error:", error);
     return NextResponse.json(
-      { error: 'Failed to process message' },
-      { status: 500 }
-    )
+      { error: "Failed to process message" },
+      { status: 500 },
+    );
   }
 }
 ```
 
 ### 2.2 Get Conversation History
+
 **File:** `app/api/agent/conversation/[sessionId]/route.ts`
 
 ```typescript
-import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { NextRequest, NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { sessionId: string } }
+  { params }: { params: { sessionId: string } },
 ) {
   try {
-    const supabase = createAdminClient()
-    
+    const supabase = createAdminClient();
+
     const { data: conversation } = await supabase
-      .from('agent_conversations')
-      .select('*')
-      .eq('session_id', params.sessionId)
-      .single()
+      .from("agent_conversations")
+      .select("*")
+      .eq("session_id", params.sessionId)
+      .single();
 
     if (!conversation) {
-      return NextResponse.json({ messages: [] })
+      return NextResponse.json({ messages: [] });
     }
 
     const { data: messages } = await supabase
-      .from('agent_messages')
-      .select('*')
-      .eq('conversation_id', conversation.id)
-      .order('created_at', { ascending: true })
+      .from("agent_messages")
+      .select("*")
+      .eq("conversation_id", conversation.id)
+      .order("created_at", { ascending: true });
 
     return NextResponse.json({
       conversation,
-      messages: messages || []
-    })
+      messages: messages || [],
+    });
   } catch (error) {
-    console.error('Get conversation error:', error)
+    console.error("Get conversation error:", error);
     return NextResponse.json(
-      { error: 'Failed to get conversation' },
-      { status: 500 }
-    )
+      { error: "Failed to get conversation" },
+      { status: 500 },
+    );
   }
 }
 ```
@@ -632,6 +642,7 @@ export async function GET(
 ## Phase 3: UI Components (3-4 hours)
 
 ### 3.1 Chat Widget Component
+
 **File:** `components/agent/chat-widget.tsx`
 
 ```typescript
@@ -671,7 +682,7 @@ export function ChatWidget({ industry, calendlyUrl }: ChatWidgetProps) {
     return `session_${Date.now()}`
   })
   const [bookingIntent, setBookingIntent] = useState<any>(null)
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Load conversation history on mount
@@ -688,7 +699,7 @@ export function ChatWidget({ industry, calendlyUrl }: ChatWidgetProps) {
     try {
       const response = await fetch(`/api/agent/conversation/${sessionId}`)
       const data = await response.json()
-      
+
       if (data.messages && data.messages.length > 0) {
         setMessages(data.messages.map((m: any) => ({
           id: m.id,
@@ -737,7 +748,7 @@ export function ChatWidget({ industry, calendlyUrl }: ChatWidgetProps) {
       }
 
       setMessages(prev => [...prev, assistantMessage])
-      
+
       if (data.bookingIntent) {
         setBookingIntent(data.bookingIntent)
       }
@@ -890,6 +901,7 @@ export function ChatWidget({ industry, calendlyUrl }: ChatWidgetProps) {
 ### 4.1 Add to Industry Landing Pages
 
 **HVAC:** `app/hvac/page.tsx`
+
 ```typescript
 import { ChatWidget } from '@/components/agent/chat-widget'
 
@@ -897,8 +909,8 @@ export default function HVACPage() {
   return (
     <div>
       {/* Existing HVAC content */}
-      
-      <ChatWidget 
+
+      <ChatWidget
         industry="hvac"
         calendlyUrl="https://calendly.com/your-hvac-calendly"
       />
@@ -908,6 +920,7 @@ export default function HVACPage() {
 ```
 
 **Plumbing:** `app/plumbing/page.tsx`
+
 ```typescript
 import { ChatWidget } from '@/components/agent/chat-widget'
 
@@ -915,8 +928,8 @@ export default function PlumbingPage() {
   return (
     <div>
       {/* Existing plumbing content */}
-      
-      <ChatWidget 
+
+      <ChatWidget
         industry="plumbing"
         calendlyUrl="https://calendly.com/your-plumbing-calendly"
       />
@@ -926,6 +939,7 @@ export default function PlumbingPage() {
 ```
 
 **Electrical:** `app/electrical/page.tsx`
+
 ```typescript
 import { ChatWidget } from '@/components/agent/chat-widget'
 
@@ -933,8 +947,8 @@ export default function ElectricalPage() {
   return (
     <div>
       {/* Existing electrical content */}
-      
-      <ChatWidget 
+
+      <ChatWidget
         industry="electrical"
         calendlyUrl="https://calendly.com/your-electrical-calendly"
       />
@@ -944,6 +958,7 @@ export default function ElectricalPage() {
 ```
 
 **Smile:** `app/smile/page.tsx`
+
 ```typescript
 import { ChatWidget } from '@/components/agent/chat-widget'
 
@@ -951,8 +966,8 @@ export default function SmilePage() {
   return (
     <div>
       {/* Existing smile content */}
-      
-      <ChatWidget 
+
+      <ChatWidget
         industry="smile"
         calendlyUrl="https://calendly.com/your-smile-calendly"
       />
@@ -962,6 +977,7 @@ export default function SmilePage() {
 ```
 
 **CRM:** `app/page.tsx`
+
 ```typescript
 import { ChatWidget } from '@/components/agent/chat-widget'
 
@@ -969,8 +985,8 @@ export default function HomePage() {
   return (
     <div>
       {/* Existing CRM landing page */}
-      
-      <ChatWidget 
+
+      <ChatWidget
         industry="crm"
         calendlyUrl="https://calendly.com/your-crm-calendly"
       />
@@ -984,6 +1000,7 @@ export default function HomePage() {
 ## Phase 5: Testing & Polish (1-2 hours)
 
 ### 5.1 Testing Checklist
+
 - [ ] Chat widget opens/closes correctly
 - [ ] Messages send and receive correctly
 - [ ] Conversation history persists across page refreshes
@@ -996,12 +1013,14 @@ export default function HomePage() {
 - [ ] Error handling works
 
 ### 5.2 Performance Optimization
+
 - [ ] Implement message caching
 - [ ] Add rate limiting
 - [ ] Optimize Gemini API calls
 - [ ] Add conversation cleanup (old conversations)
 
 ### 5.3 Analytics
+
 - [ ] Track chat opens
 - [ ] Track message sends
 - [ ] Track booking intents

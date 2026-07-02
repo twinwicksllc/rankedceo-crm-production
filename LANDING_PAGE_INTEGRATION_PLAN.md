@@ -1,6 +1,7 @@
 # Landing Page Integration Plan
 
 ## Overview
+
 Integrate the v0-created landing page from `rankedceo-crm-production-an` branch into the main production CRM without breaking existing functionality.
 
 ---
@@ -8,9 +9,10 @@ Integrate the v0-created landing page from `rankedceo-crm-production-an` branch 
 ## Current State Analysis
 
 ### Production CRM (Current)
+
 - **Location**: `/workspace` (main branch)
 - **Homepage**: Simple card with Sign In/Create Account buttons
-- **Auth Routes**: 
+- **Auth Routes**:
   - `/login` - Full authentication with reCAPTCHA v3
   - `/signup` - Full authentication with reCAPTCHA v3
   - `/dashboard` - Protected dashboard with full CRM functionality
@@ -18,6 +20,7 @@ Integrate the v0-created landing page from `rankedceo-crm-production-an` branch 
 - **Dependencies**: Supabase, SendGrid, Gemini AI, Perplexity AI, reCAPTCHA v3
 
 ### V0 Landing Page
+
 - **Location**: `/tmp/v0-landing` (rankedceo-crm-landing-page branch)
 - **Homepage**: Comprehensive marketing landing page
 - **Links**: Points to `/login` and `/signup` (correct paths!)
@@ -30,21 +33,25 @@ Integrate the v0-created landing page from `rankedceo-crm-production-an` branch 
 ## Key Differences &amp; Compatibility Issues
 
 ### 1. Next.js Version Mismatch
+
 - **Production**: Next.js 14.2.18
 - **V0**: Next.js 16.0.10
 - **Impact**: Need to ensure v0 code works with Next.js 14
 
 ### 2. React Version Mismatch
+
 - **Production**: React 18.2.46
 - **V0**: React 19.2.0
 - **Impact**: Need to ensure compatibility
 
 ### 3. Tailwind CSS Version Mismatch
+
 - **Production**: Tailwind CSS 3.4.0
 - **V0**: Tailwind CSS 4.1.9
 - **Impact**: May have different class names or utilities
 
 ### 4. Component Overlap
+
 - **Both have**: Badge, Button, Card components
 - **Production has additional**: Input, Label, Select, Switch, Textarea, Toast, Progress, Alert
 - **V0 has additional**: Many Radix UI components not used in landing page
@@ -54,16 +61,20 @@ Integrate the v0-created landing page from `rankedceo-crm-production-an` branch 
 ## Integration Strategy
 
 ### Option 1: Replace Homepage Only (RECOMMENDED)
+
 **Pros:**
+
 - Minimal risk to existing functionality
 - No dependency conflicts
 - Quick implementation
 - Easy to test and rollback
 
 **Cons:**
+
 - Need to verify component compatibility
 
 **Steps:**
+
 1. Copy v0 landing page content to production `app/page.tsx`
 2. Verify all UI components exist in production (Badge, Button, Card)
 3. Test all links point to correct auth routes
@@ -71,11 +82,14 @@ Integrate the v0-created landing page from `rankedceo-crm-production-an` branch 
 5. Test build and deployment
 
 ### Option 2: Merge with Dependency Upgrades
+
 **Pros:**
+
 - Get latest Next.js and React features
 - Future-proof the application
 
 **Cons:**
+
 - High risk of breaking changes
 - Extensive testing required
 - May break Supabase, SendGrid, or other integrations
@@ -88,6 +102,7 @@ Integrate the v0-created landing page from `rankedceo-crm-production-an` branch 
 ## Detailed Implementation Plan (Option 1)
 
 ### Phase 1: Pre-Integration Verification ✓
+
 - [x] Clone v0 repository
 - [x] Review landing page code
 - [x] Identify component dependencies
@@ -95,6 +110,7 @@ Integrate the v0-created landing page from `rankedceo-crm-production-an` branch 
 - [x] Analyze styling approach
 
 ### Phase 2: Component Compatibility Check
+
 - [ ] Compare Badge component implementations
 - [ ] Compare Button component implementations
 - [ ] Compare Card component implementations
@@ -102,11 +118,13 @@ Integrate the v0-created landing page from `rankedceo-crm-production-an` branch 
 - [ ] Test if v0 components work with production Tailwind
 
 ### Phase 3: Create Backup &amp; Branch
+
 - [ ] Create backup of current homepage
 - [ ] Create feature branch: `feature/v0-landing-page`
 - [ ] Commit current state before changes
 
 ### Phase 4: Integration
+
 - [ ] Copy v0 `app/page.tsx` to production
 - [ ] Verify all imports resolve correctly
 - [ ] Check if any v0-specific components need to be copied
@@ -114,12 +132,14 @@ Integrate the v0-created landing page from `rankedceo-crm-production-an` branch 
 - [ ] Test component rendering
 
 ### Phase 5: Styling Verification
+
 - [ ] Test with production Tailwind CSS 3.4.0
 - [ ] Verify responsive design works
 - [ ] Check dark mode compatibility (if applicable)
 - [ ] Ensure no style conflicts with dashboard
 
 ### Phase 6: Link &amp; Navigation Testing
+
 - [ ] Test "Log in" button → `/login`
 - [ ] Test "Start Free Trial" buttons → `/signup`
 - [ ] Test "View Demo" button → `/login`
@@ -127,6 +147,7 @@ Integrate the v0-created landing page from `rankedceo-crm-production-an` branch 
 - [ ] Verify footer links
 
 ### Phase 7: Build &amp; Test
+
 - [ ] Run `npm run build` to verify no errors
 - [ ] Test in development mode
 - [ ] Test all routes still work:
@@ -137,6 +158,7 @@ Integrate the v0-created landing page from `rankedceo-crm-production-an` branch 
   - [ ] All other CRM routes
 
 ### Phase 8: Production Deployment
+
 - [ ] Commit changes to feature branch
 - [ ] Push to GitHub
 - [ ] Create pull request
@@ -150,6 +172,7 @@ Integrate the v0-created landing page from `rankedceo-crm-production-an` branch 
 ## Risk Assessment
 
 ### Low Risk ✅
+
 - Replacing homepage content only
 - Links already point to correct routes
 - No authentication logic changes
@@ -157,11 +180,13 @@ Integrate the v0-created landing page from `rankedceo-crm-production-an` branch 
 - No API changes
 
 ### Medium Risk ⚠️
+
 - Component styling differences
 - Tailwind CSS version differences
 - Potential icon availability issues
 
 ### High Risk ❌
+
 - None (if following Option 1)
 
 ---
@@ -169,6 +194,7 @@ Integrate the v0-created landing page from `rankedceo-crm-production-an` branch 
 ## Rollback Plan
 
 If issues occur:
+
 1. Revert commit: `git revert HEAD`
 2. Push revert to GitHub
 3. Redeploy previous version
@@ -179,18 +205,19 @@ If issues occur:
 
 ## Component Compatibility Matrix
 
-| Component | Production | V0 | Compatible? | Action |
-|-----------|-----------|-----|-------------|--------|
-| Badge | ✅ | ✅ | TBD | Test |
-| Button | ✅ | ✅ | TBD | Test |
-| Card | ✅ | ✅ | TBD | Test |
-| Lucide Icons | ✅ | ✅ | TBD | Verify all icons exist |
+| Component    | Production | V0  | Compatible? | Action                 |
+| ------------ | ---------- | --- | ----------- | ---------------------- |
+| Badge        | ✅         | ✅  | TBD         | Test                   |
+| Button       | ✅         | ✅  | TBD         | Test                   |
+| Card         | ✅         | ✅  | TBD         | Test                   |
+| Lucide Icons | ✅         | ✅  | TBD         | Verify all icons exist |
 
 ---
 
 ## Testing Checklist
 
 ### Visual Testing
+
 - [ ] Homepage renders correctly
 - [ ] All sections display properly
 - [ ] Images/icons load correctly
@@ -199,6 +226,7 @@ If issues occur:
 - [ ] Footer displays correctly
 
 ### Functional Testing
+
 - [ ] All navigation links work
 - [ ] Anchor links scroll to sections
 - [ ] Login button redirects to /login
@@ -206,6 +234,7 @@ If issues occur:
 - [ ] Demo button redirects correctly
 
 ### Integration Testing
+
 - [ ] Login flow still works
 - [ ] Signup flow still works
 - [ ] Dashboard access still works
@@ -214,6 +243,7 @@ If issues occur:
 - [ ] No build errors
 
 ### Performance Testing
+
 - [ ] Page load time acceptable
 - [ ] No performance regressions
 - [ ] Lighthouse score acceptable

@@ -1,16 +1,16 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
+import Link from "next/link";
 
 interface MissingField {
-  key: string
-  label: string
+  key: string;
+  label: string;
 }
 
 interface CompleteProfileCardProps {
-  tenantId: string
-  reviewToken: string
-  missingFields: MissingField[]
+  tenantId: string;
+  reviewToken: string;
+  missingFields: MissingField[];
 }
 
 /**
@@ -22,11 +22,12 @@ export function CompleteProfileCard({
   reviewToken,
   missingFields,
 }: CompleteProfileCardProps) {
-  if (missingFields.length === 0) return null
+  if (missingFields.length === 0) return null;
 
-  const fieldsText = missingFields.length === 1
-    ? missingFields[0].label
-    : `${missingFields.length} fields`
+  const fieldsText =
+    missingFields.length === 1
+      ? missingFields[0].label
+      : `${missingFields.length} fields`;
 
   return (
     <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 mb-5">
@@ -43,7 +44,10 @@ export function CompleteProfileCard({
           </p>
           <div className="space-y-1 mb-3">
             {missingFields.map((field) => (
-              <p key={field.key} className="text-xs text-amber-700 flex items-center gap-1.5">
+              <p
+                key={field.key}
+                className="text-xs text-amber-700 flex items-center gap-1.5"
+              >
                 <span className="w-1 h-1 rounded-full bg-amber-600 shrink-0" />
                 {field.label}
               </p>
@@ -58,34 +62,38 @@ export function CompleteProfileCard({
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 /**
  * Helper to identify missing optional profile fields from tenant data.
  */
-export function getMissingProfileFields(tenantData: Record<string, unknown>): MissingField[] {
-  const fields: MissingField[] = []
+export function getMissingProfileFields(
+  tenantData: Record<string, unknown>,
+): MissingField[] {
+  const fields: MissingField[] = [];
 
-  const brandConfig = (tenantData.brand_config as Record<string, unknown> | null) ?? {}
+  const brandConfig =
+    (tenantData.brand_config as Record<string, unknown> | null) ?? {};
 
   // Check each optional field
   const optionalFields: Array<[string, string]> = [
-    ['tagline', 'Business tagline'],
-    ['phone', 'Phone number'],
-    ['services_offered', 'Services offered'],
-    ['business_hours', 'Business hours'],
-    ['target_audience', 'Target audience'],
-  ]
+    ["tagline", "Business tagline"],
+    ["phone", "Phone number"],
+    ["services_offered", "Services offered"],
+    ["business_hours", "Business hours"],
+    ["target_audience", "Target audience"],
+  ];
 
   for (const [key, label] of optionalFields) {
-    const value = brandConfig[key]
-    const isEmpty = !value || (typeof value === 'string' && value.trim().length === 0)
+    const value = brandConfig[key];
+    const isEmpty =
+      !value || (typeof value === "string" && value.trim().length === 0);
 
     if (isEmpty) {
-      fields.push({ key, label })
+      fields.push({ key, label });
     }
   }
 
-  return fields
+  return fields;
 }

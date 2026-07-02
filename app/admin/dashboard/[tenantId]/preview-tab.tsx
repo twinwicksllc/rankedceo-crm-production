@@ -3,129 +3,160 @@
 // Live iframe preview of tenant site + theme switcher
 // =============================================================================
 
-'use client'
+"use client";
 
-import { useState, useCallback } from 'react'
-import type { ThemeName }        from '@/lib/waas/templates/types'
-import { ALL_TEMPLATES }         from '@/lib/waas/templates/registry'
-import { applyTemplate, generateTemplateRecommendations } from '@/lib/waas/actions/admin'
-import type { TemplateRecommendation } from '@/lib/waas/services/template-recommender'
+import { useState, useCallback } from "react";
+import type { ThemeName } from "@/lib/waas/templates/types";
+import { ALL_TEMPLATES } from "@/lib/waas/templates/registry";
+import {
+  applyTemplate,
+  generateTemplateRecommendations,
+} from "@/lib/waas/actions/admin";
+import type { TemplateRecommendation } from "@/lib/waas/services/template-recommender";
 
 interface PreviewTabProps {
-  tenantId:    string
-  slug:        string
-  currentTheme: string | null
-  reviewToken?: string | null
-  clientSelectedTemplate?: string | null
-  clientSelectedAt?: string | null
+  tenantId: string;
+  slug: string;
+  currentTheme: string | null;
+  reviewToken?: string | null;
+  clientSelectedTemplate?: string | null;
+  clientSelectedAt?: string | null;
 }
 
-const THEMES: { name: ThemeName; label: string; description: string; icon: string }[] = [
+const THEMES: {
+  name: ThemeName;
+  label: string;
+  description: string;
+  icon: string;
+}[] = [
   {
-    name:        'modern',
-    label:       'Modern',
-    icon:        '✨',
-    description: 'Clean & minimal',
+    name: "modern",
+    label: "Modern",
+    icon: "✨",
+    description: "Clean & minimal",
   },
   {
-    name:        'bold',
-    label:       'Bold',
-    icon:        '⚡',
-    description: 'High-contrast CTAs',
+    name: "bold",
+    label: "Bold",
+    icon: "⚡",
+    description: "High-contrast CTAs",
   },
   {
-    name:        'trust-first',
-    label:       'Trust-First',
-    icon:        '🏆',
-    description: 'Reviews front & center',
+    name: "trust-first",
+    label: "Trust-First",
+    icon: "🏆",
+    description: "Reviews front & center",
   },
-]
+];
 
-export function PreviewTab({ tenantId, slug, currentTheme, reviewToken, clientSelectedTemplate, clientSelectedAt }: PreviewTabProps) {
-  const [activeTheme, setActiveTheme] = useState<string>(currentTheme ?? 'modern')
-  const [applying, setApplying]       = useState(false)
-  const [applied, setApplied]         = useState(false)
-  const [error, setError]             = useState<string | null>(null)
-  const [iframeKey, setIframeKey]     = useState(0)
-  const [recommendations, setRecommendations] = useState<TemplateRecommendation[]>([])
-  const [generating, setGenerating] = useState(false)
-  const [copied, setCopied] = useState(false)
+export function PreviewTab({
+  tenantId,
+  slug,
+  currentTheme,
+  reviewToken,
+  clientSelectedTemplate,
+  clientSelectedAt,
+}: PreviewTabProps) {
+  const [activeTheme, setActiveTheme] = useState<string>(
+    currentTheme ?? "modern",
+  );
+  const [applying, setApplying] = useState(false);
+  const [applied, setApplied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [iframeKey, setIframeKey] = useState(0);
+  const [recommendations, setRecommendations] = useState<
+    TemplateRecommendation[]
+  >([]);
+  const [generating, setGenerating] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Build preview URL — points to tenant subdomain or local _sites route
   const previewUrl = slug
-    ? `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/_sites/${slug}`
-    : null
+    ? `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/_sites/${slug}`
+    : null;
 
   const handleThemeSelect = useCallback((theme: string) => {
-    setActiveTheme(theme)
-    setApplied(false)
-    setError(null)
-  }, [])
+    setActiveTheme(theme);
+    setApplied(false);
+    setError(null);
+  }, []);
 
   const handleApplyTheme = useCallback(async () => {
-    setApplying(true)
-    setError(null)
+    setApplying(true);
+    setError(null);
     try {
-      await applyTemplate(tenantId, activeTheme)
-      setApplied(true)
+      await applyTemplate(tenantId, activeTheme);
+      setApplied(true);
       // Reload iframe to reflect new theme
-      setIframeKey(k => k + 1)
+      setIframeKey((k) => k + 1);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to apply theme')
+      setError(err instanceof Error ? err.message : "Failed to apply theme");
     } finally {
-      setApplying(false)
+      setApplying(false);
     }
-  }, [tenantId, activeTheme])
+  }, [tenantId, activeTheme]);
 
   const handleGenerateRecommendations = useCallback(async () => {
-    setGenerating(true)
-    setError(null)
+    setGenerating(true);
+    setError(null);
     try {
-      const result = await generateTemplateRecommendations(tenantId)
+      const result = await generateTemplateRecommendations(tenantId);
       if (!result.success || !result.data) {
-        throw new Error(result.error ?? 'Failed to generate recommendations')
+        throw new Error(result.error ?? "Failed to generate recommendations");
       }
-      setRecommendations(result.data)
+      setRecommendations(result.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate recommendations')
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to generate recommendations",
+      );
     } finally {
-      setGenerating(false)
+      setGenerating(false);
     }
-  }, [tenantId])
+  }, [tenantId]);
 
   const handleCopyReviewLink = useCallback(async () => {
-    if (typeof window === 'undefined' || !navigator?.clipboard) return
-    const path = `/review/${reviewToken ?? tenantId}`
-    const absolute = `${window.location.origin}${path}`
+    if (typeof window === "undefined" || !navigator?.clipboard) return;
+    const path = `/review/${reviewToken ?? tenantId}`;
+    const absolute = `${window.location.origin}${path}`;
     try {
-      await navigator.clipboard.writeText(absolute)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1800)
+      await navigator.clipboard.writeText(absolute);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
     } catch {
-      setCopied(false)
+      setCopied(false);
     }
-  }, [reviewToken, tenantId])
+  }, [reviewToken, tenantId]);
 
   return (
     <div className="flex flex-col gap-6">
       {/* Theme Switcher */}
       <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-        <h3 className="text-white font-semibold text-lg mb-1">Theme Selection</h3>
+        <h3 className="text-white font-semibold text-lg mb-1">
+          Theme Selection
+        </h3>
         <p className="text-white/50 text-sm mb-6">
-          Choose a template layout. Click &ldquo;Apply Theme&rdquo; to update the live site.
+          Choose a template layout. Click &ldquo;Apply Theme&rdquo; to update
+          the live site.
         </p>
 
         <div className="mb-5 flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-cyan-300/85">Client Review</p>
-            <p className="text-xs text-white/50">Share the comparison page so clients can choose their preferred direction.</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-cyan-300/85">
+              Client Review
+            </p>
+            <p className="text-xs text-white/50">
+              Share the comparison page so clients can choose their preferred
+              direction.
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handleCopyReviewLink}
               className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/15 transition-all"
             >
-              {copied ? 'Copied' : 'Copy Link'}
+              {copied ? "Copied" : "Copy Link"}
             </button>
             <a
               href={`/review/${reviewToken ?? tenantId}`}
@@ -140,10 +171,15 @@ export function PreviewTab({ tenantId, slug, currentTheme, reviewToken, clientSe
 
         {clientSelectedTemplate && (
           <div className="mb-4 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-4 py-3">
-            <p className="text-[11px] uppercase tracking-wider text-emerald-300/90 font-semibold">Client Approved</p>
+            <p className="text-[11px] uppercase tracking-wider text-emerald-300/90 font-semibold">
+              Client Approved
+            </p>
             <p className="text-sm text-emerald-100 mt-1">
-              Selected variant: <span className="font-semibold">{clientSelectedTemplate}</span>
-              {clientSelectedAt ? ` • ${new Date(clientSelectedAt).toLocaleString()}` : ''}
+              Selected variant:{" "}
+              <span className="font-semibold">{clientSelectedTemplate}</span>
+              {clientSelectedAt
+                ? ` • ${new Date(clientSelectedAt).toLocaleString()}`
+                : ""}
             </p>
           </div>
         )}
@@ -151,35 +187,54 @@ export function PreviewTab({ tenantId, slug, currentTheme, reviewToken, clientSe
         <div className="mb-6 rounded-xl border border-indigo-500/25 bg-indigo-500/8 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
             <div>
-              <p className="text-white text-sm font-semibold">AI Variant Direction (Sprint 1)</p>
-              <p className="text-white/50 text-xs">Generate ranked template recommendations from onboarding profile data.</p>
+              <p className="text-white text-sm font-semibold">
+                AI Variant Direction (Sprint 1)
+              </p>
+              <p className="text-white/50 text-xs">
+                Generate ranked template recommendations from onboarding profile
+                data.
+              </p>
             </div>
             <button
               onClick={handleGenerateRecommendations}
               disabled={generating}
               className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
                 generating
-                  ? 'bg-indigo-500/40 text-white/50 cursor-not-allowed'
-                  : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                  ? "bg-indigo-500/40 text-white/50 cursor-not-allowed"
+                  : "bg-indigo-600 hover:bg-indigo-500 text-white"
               }`}
             >
-              {generating ? 'Generating…' : 'Generate Recommendations'}
+              {generating ? "Generating…" : "Generate Recommendations"}
             </button>
           </div>
 
           {recommendations.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {recommendations.map((rec, index) => (
-                <div key={`${rec.templateSlug}-${index}`} className="rounded-lg border border-white/10 bg-white/5 p-3">
+                <div
+                  key={`${rec.templateSlug}-${index}`}
+                  className="rounded-lg border border-white/10 bg-white/5 p-3"
+                >
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="text-[10px] uppercase tracking-wider text-indigo-300 font-semibold">#{index + 1} Recommendation</span>
-                    <span className="text-[10px] text-white/60">{rec.confidence}% fit</span>
+                    <span className="text-[10px] uppercase tracking-wider text-indigo-300 font-semibold">
+                      #{index + 1} Recommendation
+                    </span>
+                    <span className="text-[10px] text-white/60">
+                      {rec.confidence}% fit
+                    </span>
                   </div>
-                  <p className="text-white text-sm font-semibold mb-1">{rec.label}</p>
-                  <p className="text-white/60 text-xs mb-3 leading-relaxed">{rec.rationale}</p>
+                  <p className="text-white text-sm font-semibold mb-1">
+                    {rec.label}
+                  </p>
+                  <p className="text-white/60 text-xs mb-3 leading-relaxed">
+                    {rec.rationale}
+                  </p>
                   <div className="flex flex-wrap gap-1 mb-3">
                     {rec.highlights.slice(0, 4).map((item) => (
-                      <span key={item} className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/60">
+                      <span
+                        key={item}
+                        className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/60"
+                      >
                         {item}
                       </span>
                     ))}
@@ -197,15 +252,16 @@ export function PreviewTab({ tenantId, slug, currentTheme, reviewToken, clientSe
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          {THEMES.map(theme => (
+          {THEMES.map((theme) => (
             <button
               key={theme.name}
               onClick={() => handleThemeSelect(theme.name)}
               className={`
                 relative flex flex-col items-start gap-2 p-5 rounded-xl border-2 text-left transition-all
-                ${activeTheme === theme.name
-                  ? 'border-indigo-500 bg-indigo-500/10'
-                  : 'border-white/10 bg-white/5 hover:border-white/30'
+                ${
+                  activeTheme === theme.name
+                    ? "border-indigo-500 bg-indigo-500/10"
+                    : "border-white/10 bg-white/5 hover:border-white/30"
                 }
               `}
             >
@@ -223,23 +279,23 @@ export function PreviewTab({ tenantId, slug, currentTheme, reviewToken, clientSe
               <span className="text-3xl">{theme.icon}</span>
               <div>
                 <div className="text-white font-semibold">{theme.label}</div>
-                <div className="text-white/50 text-xs mt-0.5">{theme.description}</div>
+                <div className="text-white/50 text-xs mt-0.5">
+                  {theme.description}
+                </div>
               </div>
 
               {/* Section preview pills */}
               <div className="flex flex-wrap gap-1 mt-1">
-                {ALL_TEMPLATES.find(t => t.slug === theme.name)
-                  ?.default_layout_json
-                  .filter(s => s.enabled)
-                  .map(s => (
+                {ALL_TEMPLATES.find((t) => t.slug === theme.name)
+                  ?.default_layout_json.filter((s) => s.enabled)
+                  .map((s) => (
                     <span
                       key={s.section}
                       className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/50 capitalize"
                     >
                       {s.section}
                     </span>
-                  ))
-                }
+                  ))}
               </div>
             </button>
           ))}
@@ -252,19 +308,35 @@ export function PreviewTab({ tenantId, slug, currentTheme, reviewToken, clientSe
             disabled={applying || activeTheme === currentTheme}
             className={`
               flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all
-              ${applying
-                ? 'bg-indigo-500/50 text-white/50 cursor-not-allowed'
-                : activeTheme === currentTheme
-                  ? 'bg-white/10 text-white/40 cursor-not-allowed'
-                  : 'bg-indigo-600 text-white hover:bg-indigo-500'
+              ${
+                applying
+                  ? "bg-indigo-500/50 text-white/50 cursor-not-allowed"
+                  : activeTheme === currentTheme
+                    ? "bg-white/10 text-white/40 cursor-not-allowed"
+                    : "bg-indigo-600 text-white hover:bg-indigo-500"
               }
             `}
           >
             {applying ? (
               <>
-                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                <svg
+                  className="animate-spin w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  />
                 </svg>
                 Applying...
               </>
@@ -278,9 +350,7 @@ export function PreviewTab({ tenantId, slug, currentTheme, reviewToken, clientSe
               <span>✓</span> Theme applied — iframe refreshed
             </span>
           )}
-          {error && (
-            <span className="text-red-400 text-sm">{error}</span>
-          )}
+          {error && <span className="text-red-400 text-sm">{error}</span>}
         </div>
       </div>
 
@@ -312,7 +382,7 @@ export function PreviewTab({ tenantId, slug, currentTheme, reviewToken, clientSe
 
         {/* iframe */}
         {previewUrl ? (
-          <div className="relative w-full" style={{ height: '800px' }}>
+          <div className="relative w-full" style={{ height: "800px" }}>
             <iframe
               key={iframeKey}
               src={previewUrl}
@@ -325,10 +395,12 @@ export function PreviewTab({ tenantId, slug, currentTheme, reviewToken, clientSe
         ) : (
           <div className="flex flex-col items-center justify-center h-64 text-white/30 gap-3">
             <span className="text-4xl">🌐</span>
-            <p className="text-sm">No site URL available — tenant needs a slug or domain</p>
+            <p className="text-sm">
+              No site URL available — tenant needs a slug or domain
+            </p>
           </div>
         )}
       </div>
     </div>
-  )
+  );
 }

@@ -3,6 +3,7 @@
 Quick reference for tracking progress during the rebuild.
 
 ## Phase 1: Foundation (30 min) ✅ COMPLETE
+
 - [x] `app/layout.tsx` - Root layout
 - [x] `app/globals.css` - Global styles
 - [x] `lib/utils.ts` - Utility functions
@@ -12,6 +13,7 @@ Quick reference for tracking progress during the rebuild.
 - [x] Commit: "feat: Add foundation"
 
 ## Phase 2: Authentication (45 min)
+
 - [ ] `lib/supabase/client.ts`
 - [ ] `lib/supabase/server.ts`
 - [ ] `lib/supabase/middleware.ts`
@@ -23,6 +25,7 @@ Quick reference for tracking progress during the rebuild.
 - [ ] Commit: "feat: Add authentication"
 
 ## Phase 3: Dashboard (30 min) ✅ COMPLETE
+
 - [x] `app/(dashboard)/layout.tsx`
 - [x] `app/(dashboard)/page.tsx`
 - [x] `types/database.ts`
@@ -31,6 +34,7 @@ Quick reference for tracking progress during the rebuild.
 - [x] Commit: "feat: Add dashboard layout"
 
 ## Phase 4: Contacts (60 min)
+
 - [ ] `app/(dashboard)/contacts/page.tsx`
 - [ ] `app/(dashboard)/contacts/new/page.tsx`
 - [ ] `app/(dashboard)/contacts/[id]/page.tsx`
@@ -41,6 +45,7 @@ Quick reference for tracking progress during the rebuild.
 - [ ] Commit: "feat: Add contacts module"
 
 ## Phase 5: Companies (45 min)
+
 - [ ] `app/(dashboard)/companies/page.tsx`
 - [ ] `app/(dashboard)/companies/new/page.tsx`
 - [ ] `app/(dashboard)/companies/[id]/page.tsx`
@@ -51,6 +56,7 @@ Quick reference for tracking progress during the rebuild.
 - [ ] Commit: "feat: Add companies module"
 
 ## Phase 6: Deals & Pipelines (60 min)
+
 - [ ] `app/(dashboard)/deals/page.tsx`
 - [ ] `app/(dashboard)/deals/new/page.tsx`
 - [ ] `app/(dashboard)/deals/[id]/page.tsx`
@@ -63,6 +69,7 @@ Quick reference for tracking progress during the rebuild.
 - [ ] Commit: "feat: Add deals and pipelines"
 
 ## Phase 7: Activities (45 min)
+
 - [ ] `app/(dashboard)/activities/page.tsx`
 - [ ] `components/forms/activity-form.tsx`
 - [ ] `components/timeline/activity-timeline.tsx`
@@ -71,6 +78,7 @@ Quick reference for tracking progress during the rebuild.
 - [ ] Commit: "feat: Add activities module"
 
 ## Phase 8: Campaigns (60 min)
+
 - [ ] `lib/email/sendgrid.ts`
 - [ ] `lib/email/templates.ts`
 - [ ] `lib/campaigns/campaign-service.ts`
@@ -83,6 +91,7 @@ Quick reference for tracking progress during the rebuild.
 - [ ] Commit: "feat: Add campaigns"
 
 ## Phase 9: Smart BCC (45 min)
+
 - [ ] `app/(dashboard)/email/page.tsx`
 - [ ] `app/api/email/webhook/route.ts`
 - [ ] `components/email/bcc-instructions.tsx`
@@ -92,6 +101,7 @@ Quick reference for tracking progress during the rebuild.
 - [ ] Commit: "feat: Add smart BCC"
 
 ## Phase 10: Forms (45 min)
+
 - [ ] `app/(dashboard)/forms/page.tsx`
 - [ ] `app/(dashboard)/forms/new/page.tsx`
 - [ ] `app/(dashboard)/forms/[id]/edit/page.tsx`
@@ -102,6 +112,7 @@ Quick reference for tracking progress during the rebuild.
 - [ ] Commit: "feat: Add forms"
 
 ## Phase 11: Analytics (60 min)
+
 - [ ] `lib/analytics/revenue.ts`
 - [ ] `lib/analytics/pipeline.ts`
 - [ ] `lib/analytics/activity.ts`
@@ -113,6 +124,7 @@ Quick reference for tracking progress during the rebuild.
 - [ ] Commit: "feat: Add analytics"
 
 ## Phase 12: Commissions (60 min)
+
 - [ ] `lib/commission/commission-service.ts`
 - [ ] `app/(dashboard)/commissions/page.tsx`
 - [ ] `app/(dashboard)/commissions/schemes/page.tsx`
@@ -123,6 +135,7 @@ Quick reference for tracking progress during the rebuild.
 - [ ] Commit: "feat: Add commissions"
 
 ## Phase 13: Onboarding (45 min)
+
 - [ ] `lib/onboarding/onboarding-service.ts`
 - [ ] `app/onboarding/page.tsx`
 - [ ] `components/onboarding/onboarding-wizard.tsx`
@@ -135,6 +148,7 @@ Quick reference for tracking progress during the rebuild.
 - [ ] Commit: "feat: Add onboarding"
 
 ## Phase 14: Settings (30 min)
+
 - [ ] `app/(dashboard)/settings/page.tsx`
 - [ ] `app/(dashboard)/settings/profile/page.tsx`
 - [ ] `app/(dashboard)/settings/team/page.tsx`
@@ -144,6 +158,7 @@ Quick reference for tracking progress during the rebuild.
 - [ ] Commit: "feat: Add settings"
 
 ## Phase 15: Polish (30 min)
+
 - [ ] Add loading states
 - [ ] Add error boundaries
 - [ ] Add empty states
@@ -154,6 +169,7 @@ Quick reference for tracking progress during the rebuild.
 - [ ] Commit: "feat: Final polish"
 
 ## Final Deployment
+
 - [ ] All phases complete
 - [ ] All tests passing
 - [ ] Build succeeds

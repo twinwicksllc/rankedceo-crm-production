@@ -3,21 +3,21 @@
 // Individual QA run report viewer — renders the stored HTML report inline.
 // =============================================================================
 
-import { notFound } from 'next/navigation'
-import Link from 'next/link'
-import { getQaRunDetail } from '@/lib/waas/actions/qa'
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { getQaRunDetail } from "@/lib/waas/actions/qa";
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
 interface Props {
-  params: { runId: string }
+  params: { runId: string };
 }
 
 export default async function QaRunReportPage({ params }: Props) {
-  const { runId } = params
-  const { data: run, error } = await getQaRunDetail(runId)
+  const { runId } = params;
+  const { data: run, error } = await getQaRunDetail(runId);
 
-  if (error || !run) notFound()
+  if (error || !run) notFound();
 
   return (
     <div>
@@ -33,7 +33,10 @@ export default async function QaRunReportPage({ params }: Props) {
 
       {run.report_html ? (
         // Render the full standalone HTML report in an iframe for isolation
-        <div className="rounded-2xl overflow-hidden border border-white/10" style={{ height: '80vh' }}>
+        <div
+          className="rounded-2xl overflow-hidden border border-white/10"
+          style={{ height: "80vh" }}
+        >
           <iframe
             srcDoc={run.report_html}
             className="w-full h-full"
@@ -47,12 +50,12 @@ export default async function QaRunReportPage({ params }: Props) {
           <h2 className="text-white font-semibold mb-4">Run: {run.run_id}</h2>
           <dl className="grid grid-cols-2 gap-3 text-sm">
             {[
-              ['Status',   run.status],
-              ['Scenario', run.scenario],
-              ['Mode',     run.mode],
-              ['Steps',    `${run.passed_steps}/${run.total_steps}`],
-              ['Started',  run.started_at],
-              ['Ended',    run.completed_at],
+              ["Status", run.status],
+              ["Scenario", run.scenario],
+              ["Mode", run.mode],
+              ["Steps", `${run.passed_steps}/${run.total_steps}`],
+              ["Started", run.started_at],
+              ["Ended", run.completed_at],
             ].map(([label, value]) => (
               <div key={label}>
                 <dt className="text-white/40 text-xs">{label}</dt>
@@ -61,7 +64,9 @@ export default async function QaRunReportPage({ params }: Props) {
             ))}
           </dl>
           <div className="mt-6">
-            <p className="text-white/40 text-xs mb-2">Findings ({run.findings?.length ?? 0})</p>
+            <p className="text-white/40 text-xs mb-2">
+              Findings ({run.findings?.length ?? 0})
+            </p>
             <pre className="text-xs text-white/50 bg-white/5 rounded-lg p-4 overflow-auto max-h-64">
               {JSON.stringify(run.findings, null, 2)}
             </pre>
@@ -69,5 +74,5 @@ export default async function QaRunReportPage({ params }: Props) {
         </div>
       )}
     </div>
-  )
+  );
 }

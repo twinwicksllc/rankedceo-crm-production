@@ -1,6 +1,13 @@
-import { createClient } from '@/lib/supabase/server';
-import { Company, CreateCompanyInput, UpdateCompanyInput } from '@/lib/types/company';
-import { createCompanySchema, updateCompanySchema } from '@/lib/validations/company';
+import { createClient } from "@/lib/supabase/server";
+import {
+  Company,
+  CreateCompanyInput,
+  UpdateCompanyInput,
+} from "@/lib/types/company";
+import {
+  createCompanySchema,
+  updateCompanySchema,
+} from "@/lib/validations/company";
 
 export class CompanyService {
   private supabase;
@@ -21,24 +28,26 @@ export class CompanyService {
     const validatedInput = createCompanySchema.parse(input);
 
     const client = await this.getClient();
-    
-    const { data: { user } } = await client.auth.getUser();
+
+    const {
+      data: { user },
+    } = await client.auth.getUser();
     if (!user) {
-      throw new Error('User not authenticated');
+      throw new Error("User not authenticated");
     }
 
     const { data: accountData, error: accountError } = await client
-      .from('accounts')
-      .select('id')
-      .eq('user_id', user.id)
+      .from("accounts")
+      .select("id")
+      .eq("user_id", user.id)
       .single();
 
     if (accountError || !accountData) {
-      throw new Error('Account not found');
+      throw new Error("Account not found");
     }
 
     const { data, error } = await client
-      .from('companies')
+      .from("companies")
       .insert({
         account_id: accountData.id,
         user_id: user.id,
@@ -56,14 +65,16 @@ export class CompanyService {
 
   async getCompanies(filters: any = {}): Promise<Company[]> {
     const client = await this.getClient();
-    
+
     let query = client
-      .from('companies')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .from("companies")
+      .select("*")
+      .order("created_at", { ascending: false });
 
     if (filters.search) {
-      query = query.or(`name.ilike.%${filters.search}%,industry.ilike.%${filters.search}%`);
+      query = query.or(
+        `name.ilike.%${filters.search}%,industry.ilike.%${filters.search}%`,
+      );
     }
 
     const { data, error } = await query;
@@ -77,15 +88,15 @@ export class CompanyService {
 
   async getCompanyById(id: string): Promise<Company | null> {
     const client = await this.getClient();
-    
+
     const { data, error } = await client
-      .from('companies')
-      .select('*')
-      .eq('id', id)
+      .from("companies")
+      .select("*")
+      .eq("id", id)
       .single();
 
     if (error) {
-      if (error.code === 'PGRST116') {
+      if (error.code === "PGRST116") {
         return null;
       }
       throw new Error(`Failed to fetch company: ${error.message}`);
@@ -99,9 +110,9 @@ export class CompanyService {
     const client = await this.getClient();
 
     const { data, error } = await client
-      .from('companies')
+      .from("companies")
       .update(validatedInput)
-      .eq('id', id)
+      .eq("id", id)
       .select()
       .single();
 
@@ -114,11 +125,8 @@ export class CompanyService {
 
   async deleteCompany(id: string): Promise<void> {
     const client = await this.getClient();
-    
-    const { error } = await client
-      .from('companies')
-      .delete()
-      .eq('id', id);
+
+    const { error } = await client.from("companies").delete().eq("id", id);
 
     if (error) {
       throw new Error(`Failed to delete company: ${error.message}`);
@@ -127,10 +135,8 @@ export class CompanyService {
 
   async getCompanyStats() {
     const client = await this.getClient();
-    
-    const { data, error } = await client
-      .from('companies')
-      .select('status');
+
+    const { data, error } = await client.from("companies").select("status");
 
     if (error) {
       throw new Error(`Failed to fetch company stats: ${error.message}`);
@@ -144,9 +150,9 @@ export class CompanyService {
     };
 
     data?.forEach((company: any) => {
-      if (company.status === 'active') stats.active++;
-      if (company.status === 'inactive') stats.inactive++;
-      if (company.status === 'prospect') stats.prospect++;
+      if (company.status === "active") stats.active++;
+      if (company.status === "inactive") stats.inactive++;
+      if (company.status === "prospect") stats.prospect++;
     });
 
     return stats;

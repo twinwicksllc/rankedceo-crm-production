@@ -1,15 +1,22 @@
-'use client'
+"use client";
 
-import { Suspense, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Separator } from '@/components/ui/separator'
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 
 // Google SVG icon
 function GoogleIcon() {
@@ -32,7 +39,7 @@ function GoogleIcon() {
         fill="#EA4335"
       />
     </svg>
-  )
+  );
 }
 
 // Loading skeleton for the login form
@@ -56,90 +63,94 @@ function LoginLoading() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
 
 // Inner component that uses useSearchParams - must be wrapped in Suspense
 function LoginForm() {
-  const router       = useRouter()
-  const searchParams = useSearchParams()
-  const redirectTo   = searchParams.get('redirectTo') ?? searchParams.get('next') ?? '/dashboard'
-  const urlError     = searchParams.get('error')
-  const adminOnlyFlag = searchParams.get('adminOnly') === '1'
-  const adminOnly = adminOnlyFlag || redirectTo.startsWith('/admin')
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo =
+    searchParams.get("redirectTo") ?? searchParams.get("next") ?? "/dashboard";
+  const urlError = searchParams.get("error");
+  const adminOnlyFlag = searchParams.get("adminOnly") === "1";
+  const adminOnly = adminOnlyFlag || redirectTo.startsWith("/admin");
 
-  const [email,       setEmail]       = useState('')
-  const [password,    setPassword]    = useState('')
-  const [error,       setError]       = useState(urlError ?? '')
-  const [loading,     setLoading]     = useState(false)
-  const [googleLoading, setGoogleLoading] = useState(false)
-  const [magicSent,   setMagicSent]   = useState(false)
-  const [mode,        setMode]        = useState<'password' | 'magic'>('password')
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState(urlError ?? "");
+  const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [magicSent, setMagicSent] = useState(false);
+  const [mode, setMode] = useState<"password" | "magic">("password");
 
-  const supabase = createClient()
+  const supabase = createClient();
 
   const resolveRedirectTarget = (target: string) => {
-    if (target.startsWith('/')) {
-      return `${window.location.origin}${target}`
+    if (target.startsWith("/")) {
+      return `${window.location.origin}${target}`;
     }
 
     try {
-      const parsed = new URL(target)
-      const isHttps = parsed.protocol === 'https:'
+      const parsed = new URL(target);
+      const isHttps = parsed.protocol === "https:";
       const isRankedCeoHost =
-        parsed.hostname === 'rankedceo.com' || parsed.hostname.endsWith('.rankedceo.com')
+        parsed.hostname === "rankedceo.com" ||
+        parsed.hostname.endsWith(".rankedceo.com");
 
       if (isHttps && isRankedCeoHost) {
-        return parsed.toString()
+        return parsed.toString();
       }
     } catch {
       // Fall through to default.
     }
 
-    return `${window.location.origin}/dashboard`
-  }
+    return `${window.location.origin}/dashboard`;
+  };
 
   const buildAuthCallbackUrl = () => {
-    const callbackUrl = new URL('/api/auth/callback', window.location.origin)
+    const callbackUrl = new URL("/api/auth/callback", window.location.origin);
 
     // Preserve the requested destination, including safe absolute
     // rankedceo.com URLs when auth starts on crm.rankedceo.com.
-    const nextAbsolute = resolveRedirectTarget(redirectTo)
-    callbackUrl.searchParams.set('next', nextAbsolute)
+    const nextAbsolute = resolveRedirectTarget(redirectTo);
+    callbackUrl.searchParams.set("next", nextAbsolute);
 
-    return callbackUrl.toString()
-  }
+    return callbackUrl.toString();
+  };
 
   // ─── Email + Password ───────────────────────────────────────────────────────────────────────────
   const handleEmailLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+    e.preventDefault();
+    setError("");
+    setLoading(true);
 
     try {
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
-      })
-      if (signInError) throw signInError
+      });
+      if (signInError) throw signInError;
       // For client-side router.push(), use relative path (not absolute URL).
       // Next.js router.push() expects relative paths like /admin/dashboard, not https://...
       // This allows proper SPA navigation that Playwright can detect.
-      const clientRedirectPath = redirectTo.startsWith('/') ? redirectTo : '/dashboard'
-      router.push(clientRedirectPath)
-      router.refresh()
+      const clientRedirectPath = redirectTo.startsWith("/")
+        ? redirectTo
+        : "/dashboard";
+      router.push(clientRedirectPath);
+      router.refresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to sign in')
+      setError(err instanceof Error ? err.message : "Failed to sign in");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // ─── Magic Link ─────────────────────────────────────────────────────────────────────────────────
   const handleMagicLink = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+    e.preventDefault();
+    setError("");
+    setLoading(true);
 
     try {
       const { error: otpError } = await supabase.auth.signInWithOtp({
@@ -147,38 +158,42 @@ function LoginForm() {
         options: {
           emailRedirectTo: buildAuthCallbackUrl(),
         },
-      })
-      if (otpError) throw otpError
-      setMagicSent(true)
+      });
+      if (otpError) throw otpError;
+      setMagicSent(true);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to send magic link')
+      setError(
+        err instanceof Error ? err.message : "Failed to send magic link",
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // ─── Google OAuth ───────────────────────────────────────────────────────────────────────────────
   const handleGoogleLogin = async () => {
-    setError('')
-    setGoogleLoading(true)
+    setError("");
+    setGoogleLoading(true);
 
     try {
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider: "google",
         options: {
           redirectTo: buildAuthCallbackUrl(),
           queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
+            access_type: "offline",
+            prompt: "consent",
           },
         },
-      })
-      if (oauthError) throw oauthError
+      });
+      if (oauthError) throw oauthError;
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to sign in with Google')
-      setGoogleLoading(false)
+      setError(
+        err instanceof Error ? err.message : "Failed to sign in with Google",
+      );
+      setGoogleLoading(false);
     }
-  }
+  };
 
   // ─── Magic link sent state ─────────────────────────────────────────────────────────────────────
   if (magicSent) {
@@ -187,11 +202,23 @@ function LoginForm() {
         <Card className="w-full max-w-md text-center">
           <CardHeader>
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-              <svg className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              <svg
+                className="h-8 w-8 text-green-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                />
               </svg>
             </div>
-            <CardTitle className="text-2xl font-bold">Check your email</CardTitle>
+            <CardTitle className="text-2xl font-bold">
+              Check your email
+            </CardTitle>
             <CardDescription>
               We sent a magic link to <strong>{email}</strong>.<br />
               Click the link to sign in.
@@ -199,7 +226,7 @@ function LoginForm() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Didn't receive it? Check your spam folder or{' '}
+              Didn't receive it? Check your spam folder or{" "}
               <button
                 className="text-primary hover:underline"
                 onClick={() => setMagicSent(false)}
@@ -210,16 +237,20 @@ function LoginForm() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Welcome back</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">
+            Welcome back
+          </CardTitle>
           <CardDescription className="text-center">
-            {adminOnly ? 'Sign in with an approved admin account' : 'Sign in to your RankedCEO account'}
+            {adminOnly
+              ? "Sign in with an approved admin account"
+              : "Sign in to your RankedCEO account"}
           </CardDescription>
           {adminOnly && (
             <p className="text-center text-xs text-muted-foreground">
@@ -244,7 +275,9 @@ function LoginForm() {
             disabled={googleLoading || loading}
           >
             <GoogleIcon />
-            {googleLoading ? 'Redirecting to Google...' : 'Continue with Google'}
+            {googleLoading
+              ? "Redirecting to Google..."
+              : "Continue with Google"}
           </Button>
 
           <div className="relative">
@@ -258,22 +291,22 @@ function LoginForm() {
           <div className="flex rounded-lg border overflow-hidden">
             <button
               type="button"
-              onClick={() => setMode('password')}
+              onClick={() => setMode("password")}
               className={`flex-1 py-2 text-sm font-medium transition-colors ${
-                mode === 'password'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-white text-muted-foreground hover:bg-slate-50'
+                mode === "password"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-white text-muted-foreground hover:bg-slate-50"
               }`}
             >
               Password
             </button>
             <button
               type="button"
-              onClick={() => setMode('magic')}
+              onClick={() => setMode("magic")}
               className={`flex-1 py-2 text-sm font-medium transition-colors ${
-                mode === 'magic'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-white text-muted-foreground hover:bg-slate-50'
+                mode === "magic"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-white text-muted-foreground hover:bg-slate-50"
               }`}
             >
               Magic Link
@@ -281,8 +314,12 @@ function LoginForm() {
           </div>
 
           {/* Email/Password Form */}
-          {mode === 'password' && (
-            <form onSubmit={handleEmailLogin} className="space-y-4" data-testid="login-form-password">
+          {mode === "password" && (
+            <form
+              onSubmit={handleEmailLogin}
+              className="space-y-4"
+              data-testid="login-form-password"
+            >
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -318,14 +355,19 @@ function LoginForm() {
                   data-testid="admin-password"
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading} data-testid="admin-login-submit">
-                {loading ? 'Signing in...' : 'Sign in'}
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={loading}
+                data-testid="admin-login-submit"
+              >
+                {loading ? "Signing in..." : "Sign in"}
               </Button>
             </form>
           )}
 
           {/* Magic Link Form */}
-          {mode === 'magic' && (
+          {mode === "magic" && (
             <form onSubmit={handleMagicLink} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="magic-email">Email</Label>
@@ -341,7 +383,7 @@ function LoginForm() {
                 />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Sending...' : 'Send Magic Link'}
+                {loading ? "Sending..." : "Send Magic Link"}
               </Button>
               <p className="text-xs text-center text-muted-foreground">
                 We'll email you a secure link — no password needed.
@@ -353,18 +395,27 @@ function LoginForm() {
         {!adminOnly && (
           <CardFooter className="flex flex-col space-y-2">
             <p className="text-sm text-center text-muted-foreground">
-              Don't have an account?{' '}
-              <Link href="/signup" className="text-primary hover:underline font-medium">
+              Don't have an account?{" "}
+              <Link
+                href="/signup"
+                className="text-primary hover:underline font-medium"
+              >
                 Sign up free
               </Link>
             </p>
             <p className="text-xs text-center text-muted-foreground">
-              By signing in, you agree to our{' '}
-              <Link href="https://crm.rankedceo.com/terms" className="underline hover:text-primary">
+              By signing in, you agree to our{" "}
+              <Link
+                href="https://crm.rankedceo.com/terms"
+                className="underline hover:text-primary"
+              >
                 Terms of Service
-              </Link>{' '}
-              and{' '}
-              <Link href="https://crm.rankedceo.com/privacy" className="underline hover:text-primary">
+              </Link>{" "}
+              and{" "}
+              <Link
+                href="https://crm.rankedceo.com/privacy"
+                className="underline hover:text-primary"
+              >
                 Privacy Policy
               </Link>
             </p>
@@ -372,7 +423,7 @@ function LoginForm() {
         )}
       </Card>
     </div>
-  )
+  );
 }
 
 // Main page component - wraps LoginForm in Suspense
@@ -381,5 +432,5 @@ export default function LoginPage() {
     <Suspense fallback={<LoginLoading />}>
       <LoginForm />
     </Suspense>
-  )
+  );
 }

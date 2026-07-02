@@ -16,7 +16,6 @@ requires_stripe: true
 requires_email: true
 
 steps:
-
   # ═══════════════════════════════════════════════════════════════════════════
   # SCENE 0: Onboarding entry-point health check
   # Verifies /get-started and the 6-step flow renders before the admin scenes.
@@ -77,7 +76,7 @@ steps:
     severity: critical
     description: Fill admin email
     selector: '[data-testid="admin-email"]'
-    value: '${QA_ADMIN_EMAIL}'
+    value: "${QA_ADMIN_EMAIL}"
     intent: Enter admin email into login form
 
   - id: s1_admin_fill_password
@@ -86,7 +85,7 @@ steps:
     severity: critical
     description: Fill admin password
     selector: '[data-testid="admin-password"]'
-    value: '${QA_ADMIN_PASSWORD}'
+    value: "${QA_ADMIN_PASSWORD}"
     intent: Enter admin password into login form
 
   - id: s1_admin_submit_login
@@ -248,7 +247,7 @@ steps:
     type: wait_for
     persona: client
     severity: warning
-    description: "Task 7 — StatusStrip \"Your Launch Journey\" SLA timeline renders"
+    description: 'Task 7 — StatusStrip "Your Launch Journey" SLA timeline renders'
     # StatusStrip renders with aria-label="Website launch progress" (role=list)
     # and an h2 heading "Your Launch Journey" inside overview-tab-content
     selector: '[aria-label="Website launch progress"], [data-testid="overview-tab-content"] h2'
@@ -262,7 +261,7 @@ steps:
     type: assert_text
     persona: client
     severity: warning
-    description: "Task 7 — Status strip heading reads \"Your Launch Journey\""
+    description: 'Task 7 — Status strip heading reads "Your Launch Journey"'
     selector: '[data-testid="overview-tab-content"] h2, [aria-label="Website launch progress"] h2'
     contains: Launch Journey
     timeout_ms: 8000

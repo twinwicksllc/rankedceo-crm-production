@@ -1,83 +1,92 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
-import { useRecaptcha } from '@/lib/hooks/use-recaptcha'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+import { useRecaptcha } from "@/lib/hooks/use-recaptcha";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function SignupPage() {
-  const router = useRouter()
-  const { isReady, executeRecaptcha } = useRecaptcha()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const router = useRouter();
+  const { isReady, executeRecaptcha } = useRecaptcha();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
+    e.preventDefault();
+    setError("");
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
-      return
+      setError("Passwords do not match");
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
 
     try {
       if (!isReady) {
-        throw new Error('reCAPTCHA not loaded. Please refresh the page.')
+        throw new Error("reCAPTCHA not loaded. Please refresh the page.");
       }
 
       // Execute reCAPTCHA
-      const token = await executeRecaptcha('signup')
+      const token = await executeRecaptcha("signup");
       if (!token) {
-        throw new Error('reCAPTCHA verification failed')
+        throw new Error("reCAPTCHA verification failed");
       }
 
       // Verify token on server
-      const verifyResponse = await fetch('/api/auth/verify-recaptcha', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, action: 'signup' }),
-      })
+      const verifyResponse = await fetch("/api/auth/verify-recaptcha", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, action: "signup" }),
+      });
 
-      const verifyData = await verifyResponse.json()
+      const verifyData = await verifyResponse.json();
       if (!verifyResponse.ok || !verifyData.valid) {
-        throw new Error(verifyData.error || 'reCAPTCHA verification failed')
+        throw new Error(verifyData.error || "reCAPTCHA verification failed");
       }
 
       // Sign up with Supabase
-      const supabase = createClient()
+      const supabase = createClient();
       const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
-      })
+      });
 
-      if (signUpError) throw signUpError
+      if (signUpError) throw signUpError;
 
-      router.push('/onboarding')
-      router.refresh()
+      router.push("/onboarding");
+      router.refresh();
     } catch (err: any) {
-      console.error('[Signup] Error:', err)
-      setError(err.message || 'Failed to sign up')
+      console.error("[Signup] Error:", err);
+      setError(err.message || "Failed to sign up");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Create an account</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">
+            Create an account
+          </CardTitle>
           <CardDescription className="text-center">
             Get started with RankedCEO CRM
           </CardDescription>
@@ -92,7 +101,9 @@ export default function SignupPage() {
 
             {!isReady && (
               <Alert>
-                <AlertDescription>Loading security verification...</AlertDescription>
+                <AlertDescription>
+                  Loading security verification...
+                </AlertDescription>
               </Alert>
             )}
 
@@ -135,24 +146,34 @@ export default function SignupPage() {
           </CardContent>
 
           <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={loading || !isReady}>
-              {loading ? 'Creating account...' : 'Sign up'}
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={loading || !isReady}
+            >
+              {loading ? "Creating account..." : "Sign up"}
             </Button>
 
             <p className="text-sm text-center text-muted-foreground">
-              Already have an account?{' '}
+              Already have an account?{" "}
               <Link href="/login" className="text-primary hover:underline">
                 Sign in
               </Link>
             </p>
 
             <p className="text-xs text-center text-muted-foreground">
-              By creating an account, you agree to our{' '}
-              <Link href="https://crm.rankedceo.com/terms" className="underline hover:text-primary">
+              By creating an account, you agree to our{" "}
+              <Link
+                href="https://crm.rankedceo.com/terms"
+                className="underline hover:text-primary"
+              >
                 Terms of Service
-              </Link>{' '}
-              and{' '}
-              <Link href="https://crm.rankedceo.com/privacy" className="underline hover:text-primary">
+              </Link>{" "}
+              and{" "}
+              <Link
+                href="https://crm.rankedceo.com/privacy"
+                className="underline hover:text-primary"
+              >
                 Privacy Policy
               </Link>
             </p>
@@ -160,5 +181,5 @@ export default function SignupPage() {
         </form>
       </Card>
     </div>
-  )
+  );
 }

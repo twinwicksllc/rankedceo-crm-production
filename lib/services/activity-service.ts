@@ -1,7 +1,19 @@
-import { createClient } from '@/lib/supabase/server';
-import { Activity, ActivityWithRelations, CreateActivityInput, UpdateActivityInput, ActivityFilters, ActivityType, ActivityStatus } from '@/lib/types/activity';
-import { createActivitySchema, updateActivitySchema, activityFiltersSchema } from '@/lib/validations/activity';
-import { z } from 'zod';
+import { createClient } from "@/lib/supabase/server";
+import {
+  Activity,
+  ActivityWithRelations,
+  CreateActivityInput,
+  UpdateActivityInput,
+  ActivityFilters,
+  ActivityType,
+  ActivityStatus,
+} from "@/lib/types/activity";
+import {
+  createActivitySchema,
+  updateActivitySchema,
+  activityFiltersSchema,
+} from "@/lib/validations/activity";
+import { z } from "zod";
 
 export class ActivityService {
   private supabase;
@@ -26,32 +38,37 @@ export class ActivityService {
     const validatedInput = createActivitySchema.parse(input);
 
     const client = await this.getClient();
-    
+
     // Get current account
-    const { data: { user } } = await client.auth.getUser();
+    const {
+      data: { user },
+    } = await client.auth.getUser();
     if (!user) {
-      throw new Error('User not authenticated');
+      throw new Error("User not authenticated");
     }
 
     // Get user's account
     const { data: accountData, error: accountError } = await client
-      .from('accounts')
-      .select('id')
-      .eq('user_id', user.id)
+      .from("accounts")
+      .select("id")
+      .eq("user_id", user.id)
       .single();
 
     if (accountError || !accountData) {
-      throw new Error('Account not found');
+      throw new Error("Account not found");
     }
 
     // Create activity
     const { data, error } = await client
-      .from('activities')
+      .from("activities")
       .insert({
         account_id: accountData.id,
         user_id: user.id,
         ...validatedInput,
-        completed_at: validatedInput.status === 'completed' ? new Date().toISOString() : null,
+        completed_at:
+          validatedInput.status === "completed"
+            ? new Date().toISOString()
+            : null,
       })
       .select()
       .single();
@@ -66,51 +83,57 @@ export class ActivityService {
   /**
    * Get activities with filters
    */
-  async getActivities(filters: ActivityFilters = {}): Promise<ActivityWithRelations[]> {
+  async getActivities(
+    filters: ActivityFilters = {},
+  ): Promise<ActivityWithRelations[]> {
     const validatedFilters = activityFiltersSchema.parse(filters);
     const client = await this.getClient();
 
     let query = client
-      .from('activities')
-      .select(`
+      .from("activities")
+      .select(
+        `
         *,
         contact:contacts(id, first_name, last_name, email),
         company:companies(id, name),
         deal:deals(id, title)
-      `)
-      .order('created_at', { ascending: false });
+      `,
+      )
+      .order("created_at", { ascending: false });
 
     // Apply filters
     if (validatedFilters.type) {
-      query = query.eq('type', validatedFilters.type);
+      query = query.eq("type", validatedFilters.type);
     }
 
     if (validatedFilters.status) {
-      query = query.eq('status', validatedFilters.status);
+      query = query.eq("status", validatedFilters.status);
     }
 
     if (validatedFilters.contact_id) {
-      query = query.eq('contact_id', validatedFilters.contact_id);
+      query = query.eq("contact_id", validatedFilters.contact_id);
     }
 
     if (validatedFilters.company_id) {
-      query = query.eq('company_id', validatedFilters.company_id);
+      query = query.eq("company_id", validatedFilters.company_id);
     }
 
     if (validatedFilters.deal_id) {
-      query = query.eq('deal_id', validatedFilters.deal_id);
+      query = query.eq("deal_id", validatedFilters.deal_id);
     }
 
     if (validatedFilters.date_from) {
-      query = query.gte('created_at', validatedFilters.date_from);
+      query = query.gte("created_at", validatedFilters.date_from);
     }
 
     if (validatedFilters.date_to) {
-      query = query.lte('created_at', validatedFilters.date_to);
+      query = query.lte("created_at", validatedFilters.date_to);
     }
 
     if (validatedFilters.search) {
-      query = query.or(`title.ilike.%${validatedFilters.search}%,description.ilike.%${validatedFilters.search}%`);
+      query = query.or(
+        `title.ilike.%${validatedFilters.search}%,description.ilike.%${validatedFilters.search}%`,
+      );
     }
 
     const { data, error } = await query;
@@ -127,20 +150,22 @@ export class ActivityService {
    */
   async getActivityById(id: string): Promise<ActivityWithRelations | null> {
     const client = await this.getClient();
-    
+
     const { data, error } = await client
-      .from('activities')
-      .select(`
+      .from("activities")
+      .select(
+        `
         *,
         contact:contacts(id, first_name, last_name, email),
         company:companies(id, name),
         deal:deals(id, title)
-      `)
-      .eq('id', id)
+      `,
+      )
+      .eq("id", id)
       .single();
 
     if (error) {
-      if (error.code === 'PGRST116') {
+      if (error.code === "PGRST116") {
         return null;
       }
       throw new Error(`Failed to fetch activity: ${error.message}`);
@@ -152,14 +177,18 @@ export class ActivityService {
   /**
    * Get activities by contact ID
    */
-  async getActivitiesByContact(contactId: string): Promise<ActivityWithRelations[]> {
+  async getActivitiesByContact(
+    contactId: string,
+  ): Promise<ActivityWithRelations[]> {
     return this.getActivities({ contact_id: contactId });
   }
 
   /**
    * Get activities by company ID
    */
-  async getActivitiesByCompany(companyId: string): Promise<ActivityWithRelations[]> {
+  async getActivitiesByCompany(
+    companyId: string,
+  ): Promise<ActivityWithRelations[]> {
     return this.getActivities({ company_id: companyId });
   }
 
@@ -173,21 +202,24 @@ export class ActivityService {
   /**
    * Update an activity
    */
-  async updateActivity(id: string, input: UpdateActivityInput): Promise<Activity> {
+  async updateActivity(
+    id: string,
+    input: UpdateActivityInput,
+  ): Promise<Activity> {
     // Validate input
     const validatedInput = updateActivitySchema.parse(input);
 
     // If status is being changed to completed, set completed_at
-    if (validatedInput.status === 'completed' && !validatedInput.completed_at) {
+    if (validatedInput.status === "completed" && !validatedInput.completed_at) {
       validatedInput.completed_at = new Date().toISOString();
     }
 
     const client = await this.getClient();
-    
+
     const { data, error } = await client
-      .from('activities')
+      .from("activities")
       .update(validatedInput)
-      .eq('id', id)
+      .eq("id", id)
       .select()
       .single();
 
@@ -203,11 +235,8 @@ export class ActivityService {
    */
   async deleteActivity(id: string): Promise<void> {
     const client = await this.getClient();
-    
-    const { error } = await client
-      .from('activities')
-      .delete()
-      .eq('id', id);
+
+    const { error } = await client.from("activities").delete().eq("id", id);
 
     if (error) {
       throw new Error(`Failed to delete activity: ${error.message}`);
@@ -219,10 +248,10 @@ export class ActivityService {
    */
   async getActivityStats() {
     const client = await this.getClient();
-    
+
     const { data, error } = await client
-      .from('activities')
-      .select('type, status');
+      .from("activities")
+      .select("type, status");
 
     if (error) {
       throw new Error(`Failed to fetch activity stats: ${error.message}`);
@@ -252,10 +281,10 @@ export class ActivityService {
       stats.byStatus[status]++;
 
       // Count pending tasks
-      if (activity.status === 'pending') {
+      if (activity.status === "pending") {
         stats.pending++;
       }
-      if (activity.status === 'completed') {
+      if (activity.status === "completed") {
         stats.completed++;
       }
     });
@@ -266,21 +295,25 @@ export class ActivityService {
   /**
    * Get upcoming activities (tasks with due dates)
    */
-  async getUpcomingActivities(limit: number = 10): Promise<ActivityWithRelations[]> {
+  async getUpcomingActivities(
+    limit: number = 10,
+  ): Promise<ActivityWithRelations[]> {
     const client = await this.getClient();
-    
+
     const { data, error } = await client
-      .from('activities')
-      .select(`
+      .from("activities")
+      .select(
+        `
         *,
         contact:contacts(id, first_name, last_name, email),
         company:companies(id, name),
         deal:deals(id, title)
-      `)
-      .eq('status', 'pending')
-      .is('due_date', 'not.null')
-      .gte('due_date', new Date().toISOString())
-      .order('due_date', { ascending: true })
+      `,
+      )
+      .eq("status", "pending")
+      .is("due_date", "not.null")
+      .gte("due_date", new Date().toISOString())
+      .order("due_date", { ascending: true })
       .limit(limit);
 
     if (error) {

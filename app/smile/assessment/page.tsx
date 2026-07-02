@@ -1,38 +1,38 @@
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { SmileAssessmentForm } from '@/components/smile/assessment-form'
-import { submitSmileAssessment } from '@/lib/actions/smile-assessment'
-import { ArrowLeft } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { ChatWidget } from '@/components/agent/chat-widget'
-import { IndustryLogo } from '@/components/ui/industry-logo'
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import { SmileAssessmentForm } from "@/components/smile/assessment-form";
+import { submitSmileAssessment } from "@/lib/actions/smile-assessment";
+import { ArrowLeft } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ChatWidget } from "@/components/agent/chat-widget";
+import { IndustryLogo } from "@/components/ui/industry-logo";
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 async function AssessmentClientWrapper({ dentistId }: { dentistId?: string }) {
   async function handleSubmit(formData: any) {
-    'use server'
-    const result = await submitSmileAssessment({ ...formData, dentistId })
+    "use server";
+    const result = await submitSmileAssessment({ ...formData, dentistId });
     if (result.success) {
-      redirect('/smile/assessment/success')
+      redirect("/smile/assessment/success");
     } else {
-      throw new Error(result.error || 'Submission failed')
+      throw new Error(result.error || "Submission failed");
     }
   }
-  return <SmileAssessmentForm onSubmit={handleSubmit} dentistId={dentistId} />
+  return <SmileAssessmentForm onSubmit={handleSubmit} dentistId={dentistId} />;
 }
 
 export default async function SmileAssessmentPage({
   searchParams,
 }: {
-  searchParams: { dentistId?: string; company?: string; ref?: string }
+  searchParams: { dentistId?: string; company?: string; ref?: string };
 }) {
-  const dentistId = searchParams.dentistId
-  const companyName = searchParams.company
-  const referralSource = searchParams.ref
-  const POOL_ACCOUNT_ID = '00000000-0000-4000-a000-000000000004'
-  const finalDentistId = dentistId || POOL_ACCOUNT_ID
+  const dentistId = searchParams.dentistId;
+  const companyName = searchParams.company;
+  const referralSource = searchParams.ref;
+  const POOL_ACCOUNT_ID = "00000000-0000-4000-a000-000000000004";
+  const finalDentistId = dentistId || POOL_ACCOUNT_ID;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-25">
@@ -41,7 +41,12 @@ export default async function SmileAssessmentPage({
         <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <Link href="/smile">
-              <IndustryLogo industry="smile" height={48} priority className="cursor-pointer" />
+              <IndustryLogo
+                industry="smile"
+                height={48}
+                priority
+                className="cursor-pointer"
+              />
             </Link>
             <Link href="/smile">
               <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-200 cursor-pointer">
@@ -57,9 +62,15 @@ export default async function SmileAssessmentPage({
       <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
         {/* Centered logo above form */}
         <div className="mb-8 text-center flex flex-col items-center gap-4">
-          <IndustryLogo industry="smile" height={126} priority className="mx-auto" />
+          <IndustryLogo
+            industry="smile"
+            height={126}
+            priority
+            className="mx-auto"
+          />
           <p className="text-gray-500">
-            Complete this comprehensive assessment to begin your smile transformation journey
+            Complete this comprehensive assessment to begin your smile
+            transformation journey
           </p>
         </div>
 
@@ -82,10 +93,13 @@ export default async function SmileAssessmentPage({
               </svg>
             </div>
             <div className="flex-1">
-              <h3 className="text-sm font-semibold text-purple-900">HIPAA Protected</h3>
+              <h3 className="text-sm font-semibold text-purple-900">
+                HIPAA Protected
+              </h3>
               <p className="mt-1 text-xs text-gray-600">
-                All patient information is encrypted and protected by HIPAA-compliant security measures.
-                Only authorized users can access this data.
+                All patient information is encrypted and protected by
+                HIPAA-compliant security measures. Only authorized users can
+                access this data.
               </p>
             </div>
           </div>
@@ -96,9 +110,13 @@ export default async function SmileAssessmentPage({
         source="smile"
         primaryColor="#9333ea"
         position="bottom-right"
-        {...(companyName ? { companyName: decodeURIComponent(companyName) } : {})}
-        {...(referralSource ? { referralSource: decodeURIComponent(referralSource) } : {})}
+        {...(companyName
+          ? { companyName: decodeURIComponent(companyName) }
+          : {})}
+        {...(referralSource
+          ? { referralSource: decodeURIComponent(referralSource) }
+          : {})}
       />
     </div>
-  )
+  );
 }

@@ -8,26 +8,26 @@
 //   - Appointment booking logic
 // ---------------------------------------------------------------------------
 
-export type IndustryType = 'hvac' | 'plumbing' | 'electrical'
+export type IndustryType = "hvac" | "plumbing" | "electrical";
 
 export interface IndustryScript {
-  industry: IndustryType
-  inbound_opener: string
-  discovery_questions: string[]
-  appointment_booking_logic: AppointmentBookingLogic
-  objection_handlers: ObjectionHandler[]
+  industry: IndustryType;
+  inbound_opener: string;
+  discovery_questions: string[];
+  appointment_booking_logic: AppointmentBookingLogic;
+  objection_handlers: ObjectionHandler[];
 }
 
 export interface AppointmentBookingLogic {
-  emergency: string
-  urgent: string
-  scheduled: string
-  estimate_only: string
+  emergency: string;
+  urgent: string;
+  scheduled: string;
+  estimate_only: string;
 }
 
 export interface ObjectionHandler {
-  objection: string
-  response: string
+  objection: string;
+  response: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -35,7 +35,7 @@ export interface ObjectionHandler {
 // ---------------------------------------------------------------------------
 
 const hvacScript: IndustryScript = {
-  industry: 'hvac',
+  industry: "hvac",
 
   inbound_opener:
     "Hi, this is [Name] calling from [Company]. I'm reaching out because you recently submitted a service request for your HVAC system. I wanted to make sure we get you taken care of quickly — can I ask, is this something that's affecting your comfort right now, or are you looking to get ahead of it before the season changes?",
@@ -76,14 +76,14 @@ const hvacScript: IndustryScript = {
         "Of course — I completely understand. Would it help if I sent over some information you could share with them? And I can hold a time slot for 24 hours if you'd like to lock something in while you chat.",
     },
   ],
-}
+};
 
 // ---------------------------------------------------------------------------
 // Plumb Pro Scripts
 // ---------------------------------------------------------------------------
 
 const plumbingScript: IndustryScript = {
-  industry: 'plumbing',
+  industry: "plumbing",
 
   inbound_opener:
     "Hi, this is [Name] from [Company]. I'm following up on your plumbing service request. I want to make sure we get someone out to you quickly — can you tell me, is there any active water damage happening right now, or has the situation stabilized?",
@@ -124,14 +124,14 @@ const plumbingScript: IndustryScript = {
         "I'm sorry to hear that — unfortunately that happens in our industry. I can tell you that we're licensed, insured, and all our work comes with a written warranty. We also do background checks on all our technicians. Would you like me to send over some customer reviews?",
     },
   ],
-}
+};
 
 // ---------------------------------------------------------------------------
 // Spark Pro Scripts
 // ---------------------------------------------------------------------------
 
 const electricalScript: IndustryScript = {
-  industry: 'electrical',
+  industry: "electrical",
 
   inbound_opener:
     "Hi, this is [Name] from [Company]. I'm calling about your electrical service request. Safety is our top priority — can I ask, is everything currently safe in your home, or are you experiencing any flickering lights, burning smells, or tripped breakers that won't reset?",
@@ -172,7 +172,7 @@ const electricalScript: IndustryScript = {
         "For small things like replacing a light switch, sure. But for panel work, new circuits, or anything involving your main service, most jurisdictions require a licensed electrician and a permit. Unpermitted electrical work can also affect your homeowner's insurance. Happy to explain what's required for your specific project.",
     },
   ],
-}
+};
 
 // ---------------------------------------------------------------------------
 // Exports
@@ -182,11 +182,11 @@ export const INDUSTRY_SCRIPTS: Record<IndustryType, IndustryScript> = {
   hvac: hvacScript,
   plumbing: plumbingScript,
   electrical: electricalScript,
-}
+};
 
 /**
  * Get the script for a specific industry.
  */
 export function getIndustryScript(industry: IndustryType): IndustryScript {
-  return INDUSTRY_SCRIPTS[industry]
+  return INDUSTRY_SCRIPTS[industry];
 }

@@ -1,23 +1,25 @@
-import { createClient } from '@/lib/supabase/server';
-import type { OnboardingStatus, CompanyInfo } from '@/lib/types/onboarding';
+import { createClient } from "@/lib/supabase/server";
+import type { OnboardingStatus, CompanyInfo } from "@/lib/types/onboarding";
 
 export class OnboardingService {
   private async getUserInfo() {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (!user) {
-      throw new Error('Not authenticated');
+      throw new Error("Not authenticated");
     }
 
     const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('account_id')
-      .eq('email', user.email)
+      .from("users")
+      .select("account_id")
+      .eq("email", user.email)
       .single();
 
     if (userError || !userData) {
-      throw new Error('User not found');
+      throw new Error("User not found");
     }
 
     return { user, account_id: userData.account_id };
@@ -28,9 +30,11 @@ export class OnboardingService {
     const { account_id } = await this.getUserInfo();
 
     const { data, error } = await supabase
-      .from('accounts')
-      .select('onboarding_completed, onboarding_step, onboarding_skipped, onboarding_completed_at')
-      .eq('id', account_id)
+      .from("accounts")
+      .select(
+        "onboarding_completed, onboarding_step, onboarding_skipped, onboarding_completed_at",
+      )
+      .eq("id", account_id)
       .single();
 
     if (error) {
@@ -45,9 +49,9 @@ export class OnboardingService {
     const { account_id } = await this.getUserInfo();
 
     const { error } = await supabase
-      .from('accounts')
+      .from("accounts")
       .update({ onboarding_step: step })
-      .eq('id', account_id);
+      .eq("id", account_id);
 
     if (error) {
       throw new Error(`Failed to update onboarding step: ${error.message}`);
@@ -59,7 +63,7 @@ export class OnboardingService {
     const { account_id } = await this.getUserInfo();
 
     const { error } = await supabase
-      .from('accounts')
+      .from("accounts")
       .update({
         name: companyInfo.name,
         company_size: companyInfo.company_size,
@@ -68,7 +72,7 @@ export class OnboardingService {
         phone: companyInfo.phone,
         address: companyInfo.address,
       })
-      .eq('id', account_id);
+      .eq("id", account_id);
 
     if (error) {
       throw new Error(`Failed to update company info: ${error.message}`);
@@ -80,13 +84,13 @@ export class OnboardingService {
     const { account_id } = await this.getUserInfo();
 
     const { error } = await supabase
-      .from('accounts')
+      .from("accounts")
       .update({
         onboarding_completed: true,
         onboarding_completed_at: new Date().toISOString(),
         onboarding_step: 5,
       })
-      .eq('id', account_id);
+      .eq("id", account_id);
 
     if (error) {
       throw new Error(`Failed to complete onboarding: ${error.message}`);
@@ -98,13 +102,13 @@ export class OnboardingService {
     const { account_id } = await this.getUserInfo();
 
     const { error } = await supabase
-      .from('accounts')
+      .from("accounts")
       .update({
         onboarding_skipped: true,
         onboarding_completed: true,
         onboarding_completed_at: new Date().toISOString(),
       })
-      .eq('id', account_id);
+      .eq("id", account_id);
 
     if (error) {
       throw new Error(`Failed to skip onboarding: ${error.message}`);
@@ -116,9 +120,9 @@ export class OnboardingService {
     const { account_id } = await this.getUserInfo();
 
     const { data, error } = await supabase
-      .from('accounts')
-      .select('*')
-      .eq('id', account_id)
+      .from("accounts")
+      .select("*")
+      .eq("id", account_id)
       .single();
 
     if (error) {

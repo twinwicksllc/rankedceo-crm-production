@@ -1,84 +1,92 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { IndustryLogo } from '@/components/ui/industry-logo'
-import { createClient } from '@/lib/supabase/client'
-import { useRecaptcha } from '@/lib/hooks/use-recaptcha'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { IndustryLogo } from "@/components/ui/industry-logo";
+import { createClient } from "@/lib/supabase/client";
+import { useRecaptcha } from "@/lib/hooks/use-recaptcha";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function HvacSignupPage() {
-  const router = useRouter()
-  const { isReady, executeRecaptcha } = useRecaptcha()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [companyName, setCompanyName] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const router = useRouter();
+  const { isReady, executeRecaptcha } = useRecaptcha();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
+    e.preventDefault();
+    setError("");
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
-      return
+      setError("Passwords do not match");
+      return;
     }
 
     if (password.length < 8) {
-      setError('Password must be at least 8 characters')
-      return
+      setError("Password must be at least 8 characters");
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
 
     try {
-      if (!isReady) throw new Error('reCAPTCHA not loaded. Please refresh the page.')
+      if (!isReady)
+        throw new Error("reCAPTCHA not loaded. Please refresh the page.");
 
-      const token = await executeRecaptcha('hvac_signup')
-      if (!token) throw new Error('reCAPTCHA verification failed')
+      const token = await executeRecaptcha("hvac_signup");
+      if (!token) throw new Error("reCAPTCHA verification failed");
 
-      const verifyResponse = await fetch('/api/auth/verify-recaptcha', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, action: 'hvac_signup' }),
-      })
-      const verifyData = await verifyResponse.json()
+      const verifyResponse = await fetch("/api/auth/verify-recaptcha", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, action: "hvac_signup" }),
+      });
+      const verifyData = await verifyResponse.json();
       if (!verifyResponse.ok || !verifyData.valid) {
-        throw new Error(verifyData.error || 'reCAPTCHA verification failed')
+        throw new Error(verifyData.error || "reCAPTCHA verification failed");
       }
 
-      const supabase = createClient()
+      const supabase = createClient();
       const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            industry: 'hvac',
-            product: 'hvac_pro',
+            industry: "hvac",
+            product: "hvac_pro",
             company_name: companyName,
           },
           emailRedirectTo: `${window.location.origin}/`,
         },
-      })
+      });
 
-      if (signUpError) throw signUpError
+      if (signUpError) throw signUpError;
 
-      router.push('/onboarding')
-      router.refresh()
+      router.push("/onboarding");
+      router.refresh();
     } catch (err: any) {
-      console.error('[HvacSignup] Error:', err.message)
-      setError(err.message || 'Failed to sign up')
+      console.error("[HvacSignup] Error:", err.message);
+      setError(err.message || "Failed to sign up");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 p-4">
@@ -106,7 +114,7 @@ export default function HvacSignupPage() {
               <Input
                 id="companyName"
                 value={companyName}
-                onChange={e => setCompanyName(e.target.value)}
+                onChange={(e) => setCompanyName(e.target.value)}
                 placeholder="Smith HVAC Services"
                 className="border-blue-200 focus:ring-blue-500"
               />
@@ -117,7 +125,7 @@ export default function HvacSignupPage() {
                 id="email"
                 type="email"
                 value={email}
-                onChange={e => setEmail(e.target.value)}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
                 required
                 className="border-blue-200 focus:ring-blue-500"
@@ -129,7 +137,7 @@ export default function HvacSignupPage() {
                 id="password"
                 type="password"
                 value={password}
-                onChange={e => setPassword(e.target.value)}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="Min. 8 characters"
                 required
                 className="border-blue-200 focus:ring-blue-500"
@@ -141,7 +149,7 @@ export default function HvacSignupPage() {
                 id="confirmPassword"
                 type="password"
                 value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value)}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Repeat your password"
                 required
                 className="border-blue-200 focus:ring-blue-500"
@@ -153,15 +161,18 @@ export default function HvacSignupPage() {
               disabled={loading || !isReady}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white"
             >
-              {loading ? 'Creating account...' : 'Create HVAC Pro Account'}
+              {loading ? "Creating account..." : "Create HVAC Pro Account"}
             </Button>
           </form>
         </CardContent>
 
         <CardFooter className="flex flex-col gap-2 text-center text-sm text-gray-500">
           <p>
-            Already have an account?{' '}
-            <Link href="/login" className="font-medium text-blue-600 hover:underline">
+            Already have an account?{" "}
+            <Link
+              href="/login"
+              className="font-medium text-blue-600 hover:underline"
+            >
               Sign in
             </Link>
           </p>
@@ -171,5 +182,5 @@ export default function HvacSignupPage() {
         </CardFooter>
       </Card>
     </div>
-  )
+  );
 }

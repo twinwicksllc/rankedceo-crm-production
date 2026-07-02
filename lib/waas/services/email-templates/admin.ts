@@ -1,18 +1,22 @@
 // lib/waas/services/email-templates/admin.ts
 
-import { wrapLayout } from './layout'
-import type { NotificationTemplateData } from './types'
+import { wrapLayout } from "./layout";
+import type { NotificationTemplateData } from "./types";
 
 // ---------------------------------------------------------------------------
 // Template: approval_received (admin notification)
 // ---------------------------------------------------------------------------
 
-export function approvalReceived(data: NotificationTemplateData): { subject: string; html: string } {
-  const name         = data.businessName ?? 'A tenant'
-  const tenantSlug   = data.tenantSlug ?? 'unknown'
-  const variantLabel = data.variantLabel ?? `Variant ${data.variantIndex ?? '?'}`
+export function approvalReceived(data: NotificationTemplateData): {
+  subject: string;
+  html: string;
+} {
+  const name = data.businessName ?? "A tenant";
+  const tenantSlug = data.tenantSlug ?? "unknown";
+  const variantLabel =
+    data.variantLabel ?? `Variant ${data.variantIndex ?? "?"}`;
 
-  const subject = `[Action needed] ${name} approved ${variantLabel}`
+  const subject = `[Action needed] ${name} approved ${variantLabel}`;
 
   const content = `
     <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#0f172a;">
@@ -35,28 +39,31 @@ export function approvalReceived(data: NotificationTemplateData): { subject: str
     <p style="margin:16px 0 0;font-size:13px;color:#475569;">
       Log in to the Command Center to review and deploy.
     </p>
-  `
+  `;
 
-  return { subject, html: wrapLayout(content) }
+  return { subject, html: wrapLayout(content) };
 }
 
 // ---------------------------------------------------------------------------
 // Template: client_first_edit (admin digest stub)
 // ---------------------------------------------------------------------------
 
-export function clientFirstEdit(data: NotificationTemplateData): { subject: string; html: string } {
-  const name       = data.businessName ?? 'A tenant'
-  const tenantSlug = data.tenantSlug ?? 'unknown'
-  const editCount  = data.editCount ?? 1
+export function clientFirstEdit(data: NotificationTemplateData): {
+  subject: string;
+  html: string;
+} {
+  const name = data.businessName ?? "A tenant";
+  const tenantSlug = data.tenantSlug ?? "unknown";
+  const editCount = data.editCount ?? 1;
 
-  const subject = `[Activity] ${name} has started editing their site`
+  const subject = `[Activity] ${name} has started editing their site`;
 
   const content = `
     <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#0f172a;">
       Client is editing their site
     </h1>
     <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
-      <strong>${name}</strong> has made <strong>${editCount} edit${editCount === 1 ? '' : 's'}</strong>
+      <strong>${name}</strong> has made <strong>${editCount} edit${editCount === 1 ? "" : "s"}</strong>
       to their website. No action needed — just a heads up!
     </p>
 
@@ -68,8 +75,7 @@ export function clientFirstEdit(data: NotificationTemplateData): { subject: stri
         </td>
       </tr>
     </table>
-  `
+  `;
 
-  return { subject, html: wrapLayout(content) }
+  return { subject, html: wrapLayout(content) };
 }
-

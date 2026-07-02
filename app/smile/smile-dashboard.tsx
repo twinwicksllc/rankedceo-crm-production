@@ -1,8 +1,8 @@
-'use client'
+"use client";
 
-import Image from 'next/image'
-import Link from 'next/link'
-import { useState } from 'react'
+import Image from "next/image";
+import Link from "next/link";
+import { useState } from "react";
 import {
   BarChart,
   Bar,
@@ -17,162 +17,181 @@ import {
   PieChart,
   Pie,
   Cell,
-} from 'recharts'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { IndustryLogo } from '@/components/ui/industry-logo'
-import { Button } from '@/components/ui/button'
-import { Sparkles, Users, Target, TrendingUp, Clock, AlertCircle, Plus, Copy, Check } from 'lucide-react'
+} from "recharts";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { IndustryLogo } from "@/components/ui/industry-logo";
+import { Button } from "@/components/ui/button";
+import {
+  Sparkles,
+  Users,
+  Target,
+  TrendingUp,
+  Clock,
+  AlertCircle,
+  Plus,
+  Copy,
+  Check,
+} from "lucide-react";
 
 interface SmileDashboardProps {
-  userId: string
-  assessmentCount: number
+  userId: string;
+  assessmentCount: number;
 }
 
 // Sample data for Patient Qualification
 const patientQualificationData = [
-  { month: 'Jan', qualified: 12, unqualified: 8, consultation: 5 },
-  { month: 'Feb', qualified: 15, unqualified: 6, consultation: 7 },
-  { month: 'Mar', qualified: 18, unqualified: 5, consultation: 9 },
-  { month: 'Apr', qualified: 22, unqualified: 4, consultation: 11 },
-  { month: 'May', qualified: 25, unqualified: 3, consultation: 13 },
-  { month: 'Jun', qualified: 28, unqualified: 2, consultation: 15 },
-]
+  { month: "Jan", qualified: 12, unqualified: 8, consultation: 5 },
+  { month: "Feb", qualified: 15, unqualified: 6, consultation: 7 },
+  { month: "Mar", qualified: 18, unqualified: 5, consultation: 9 },
+  { month: "Apr", qualified: 22, unqualified: 4, consultation: 11 },
+  { month: "May", qualified: 25, unqualified: 3, consultation: 13 },
+  { month: "Jun", qualified: 28, unqualified: 2, consultation: 15 },
+];
 
 // Case Mix Revenue Targets
 const caseMixData = [
   {
-    name: 'Teaser',
+    name: "Teaser",
     price: 1999,
-    description: 'Basic Smile Assessment',
-    color: '#E9D5FF', // Light purple
+    description: "Basic Smile Assessment",
+    color: "#E9D5FF", // Light purple
     percentage: 15,
   },
   {
-    name: 'Full Composite',
+    name: "Full Composite",
     price: 3999,
-    description: 'Complete Smile Makeover',
-    color: '#C4B5FD', // Medium purple
+    description: "Complete Smile Makeover",
+    color: "#C4B5FD", // Medium purple
     percentage: 35,
   },
   {
-    name: 'Porcelain',
+    name: "Porcelain",
     price: 15600,
-    description: 'Premium Porcelain Veneers',
-    color: '#8B5CF6', // Deep purple
+    description: "Premium Porcelain Veneers",
+    color: "#8B5CF6", // Deep purple
     percentage: 50,
   },
-]
+];
 
 // AI Employee Activity Feed
 const aiActivityFeed = [
   {
     id: 1,
-    action: 'Patient Follow-up',
-    patient: 'Sarah Mitchell',
-    timestamp: '2 hours ago',
-    status: 'completed',
-    type: 'reminder',
+    action: "Patient Follow-up",
+    patient: "Sarah Mitchell",
+    timestamp: "2 hours ago",
+    status: "completed",
+    type: "reminder",
   },
   {
     id: 2,
-    action: 'Case Recommendation',
-    patient: 'John Davis',
-    timestamp: '1 hour ago',
-    status: 'pending',
-    type: 'recommendation',
+    action: "Case Recommendation",
+    patient: "John Davis",
+    timestamp: "1 hour ago",
+    status: "pending",
+    type: "recommendation",
   },
   {
     id: 3,
-    action: 'Appointment Confirmed',
-    patient: 'Emma Wilson',
-    timestamp: '30 mins ago',
-    status: 'completed',
-    type: 'confirmation',
+    action: "Appointment Confirmed",
+    patient: "Emma Wilson",
+    timestamp: "30 mins ago",
+    status: "completed",
+    type: "confirmation",
   },
   {
     id: 4,
-    action: 'Payment Reminder',
-    patient: 'Michael Chen',
-    timestamp: 'Just now',
-    status: 'pending',
-    type: 'payment',
+    action: "Payment Reminder",
+    patient: "Michael Chen",
+    timestamp: "Just now",
+    status: "pending",
+    type: "payment",
   },
-]
+];
 
 // Qualification metrics
 const qualificationMetrics = [
   {
-    label: 'This Month',
+    label: "This Month",
     value: 28,
-    subtext: 'Qualified Patients',
+    subtext: "Qualified Patients",
     icon: Users,
-    color: 'bg-purple-100 text-purple-700',
+    color: "bg-purple-100 text-purple-700",
   },
   {
-    label: 'Qualification Rate',
-    value: '88%',
-    subtext: 'vs. 75% last month',
+    label: "Qualification Rate",
+    value: "88%",
+    subtext: "vs. 75% last month",
     icon: Target,
-    color: 'bg-purple-50 text-purple-600',
+    color: "bg-purple-50 text-purple-600",
   },
   {
-    label: 'Avg Case Value',
-    value: '$6,866',
-    subtext: 'Based on mix',
+    label: "Avg Case Value",
+    value: "$6,866",
+    subtext: "Based on mix",
     icon: TrendingUp,
-    color: 'bg-purple-100 text-purple-700',
+    color: "bg-purple-100 text-purple-700",
   },
   {
-    label: 'Pending Consults',
+    label: "Pending Consults",
     value: 15,
-    subtext: 'Awaiting follow-up',
+    subtext: "Awaiting follow-up",
     icon: Clock,
-    color: 'bg-purple-50 text-purple-600',
+    color: "bg-purple-50 text-purple-600",
   },
-]
+];
 
-export default function SmilePage({ userId, assessmentCount }: SmileDashboardProps) {
-  const [copied, setCopied] = useState(false)
+export default function SmilePage({
+  userId,
+  assessmentCount,
+}: SmileDashboardProps) {
+  const [copied, setCopied] = useState(false);
 
   const handleCopyLink = async () => {
-    const link = `${window.location.origin}/smile/assessment?dentistId=${userId}`
-    await navigator.clipboard.writeText(link)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
+    const link = `${window.location.origin}/smile/assessment?dentistId=${userId}`;
+    await navigator.clipboard.writeText(link);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   // Dynamic qualification metrics
   const qualificationMetrics = [
     {
-      label: 'Total Assessments',
+      label: "Total Assessments",
       value: assessmentCount,
-      subtext: 'Patient submissions',
+      subtext: "Patient submissions",
       icon: Users,
-      color: 'bg-purple-100 text-purple-700',
+      color: "bg-purple-100 text-purple-700",
     },
     {
-      label: 'Qualification Rate',
-      value: '88%',
-      subtext: 'vs. 75% last month',
+      label: "Qualification Rate",
+      value: "88%",
+      subtext: "vs. 75% last month",
       icon: Target,
-      color: 'bg-purple-50 text-purple-600',
+      color: "bg-purple-50 text-purple-600",
     },
     {
-      label: 'Avg Case Value',
-      value: '$6,866',
-      subtext: 'Based on mix',
+      label: "Avg Case Value",
+      value: "$6,866",
+      subtext: "Based on mix",
       icon: TrendingUp,
-      color: 'bg-purple-100 text-purple-700',
+      color: "bg-purple-100 text-purple-700",
     },
     {
-      label: 'Pending Consults',
+      label: "Pending Consults",
       value: 15,
-      subtext: 'Awaiting follow-up',
+      subtext: "Awaiting follow-up",
       icon: Clock,
-      color: 'bg-purple-50 text-purple-600',
+      color: "bg-purple-50 text-purple-600",
     },
-  ]
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-25">
@@ -182,11 +201,13 @@ export default function SmilePage({ userId, assessmentCount }: SmileDashboardPro
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <IndustryLogo industry="smile" height={48} priority />
-              <p className="text-sm text-purple-600 font-medium">Dentist Dashboard</p>
-              </div>
-              <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-200">
-                Premium Plan
-              </Badge>
+              <p className="text-sm text-purple-600 font-medium">
+                Dentist Dashboard
+              </p>
+            </div>
+            <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-200">
+              Premium Plan
+            </Badge>
           </div>
         </div>
       </div>
@@ -204,8 +225,12 @@ export default function SmilePage({ userId, assessmentCount }: SmileDashboardPro
                       <Plus className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-white">New Patient Assessment</h3>
-                      <p className="text-sm text-purple-100">Start a comprehensive intake form</p>
+                      <h3 className="text-lg font-semibold text-white">
+                        New Patient Assessment
+                      </h3>
+                      <p className="text-sm text-purple-100">
+                        Start a comprehensive intake form
+                      </p>
                     </div>
                   </div>
                   <Button
@@ -224,7 +249,9 @@ export default function SmilePage({ userId, assessmentCount }: SmileDashboardPro
             <CardContent className="p-6">
               <div className="flex flex-col h-full justify-between">
                 <div className="mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">Share Patient Link</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                    Share Patient Link
+                  </h3>
                   <p className="text-sm text-gray-600">
                     Copy this link to send to patients for assessments
                   </p>
@@ -254,9 +281,12 @@ export default function SmilePage({ userId, assessmentCount }: SmileDashboardPro
         {/* Top Metrics */}
         <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {qualificationMetrics.map((metric) => {
-            const Icon = metric.icon
+            const Icon = metric.icon;
             return (
-              <Card key={metric.label} className="border-purple-100 bg-white hover:shadow-lg transition-shadow">
+              <Card
+                key={metric.label}
+                className="border-purple-100 bg-white hover:shadow-lg transition-shadow"
+              >
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center justify-between text-sm font-medium text-gray-600">
                     {metric.label}
@@ -266,11 +296,13 @@ export default function SmilePage({ userId, assessmentCount }: SmileDashboardPro
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-gray-900">{metric.value}</div>
+                  <div className="text-2xl font-bold text-gray-900">
+                    {metric.value}
+                  </div>
                   <p className="text-xs text-gray-500 mt-1">{metric.subtext}</p>
                 </CardContent>
               </Card>
-            )
+            );
           })}
         </div>
 
@@ -294,9 +326,9 @@ export default function SmilePage({ userId, assessmentCount }: SmileDashboardPro
                   <YAxis stroke="#6B7280" />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#FFF',
-                      border: '1px solid #E9D5FF',
-                      borderRadius: '8px',
+                      backgroundColor: "#FFF",
+                      border: "1px solid #E9D5FF",
+                      borderRadius: "8px",
                     }}
                   />
                   <Legend />
@@ -305,7 +337,7 @@ export default function SmilePage({ userId, assessmentCount }: SmileDashboardPro
                     dataKey="qualified"
                     stroke="#8B5CF6"
                     strokeWidth={3}
-                    dot={{ fill: '#8B5CF6', r: 5 }}
+                    dot={{ fill: "#8B5CF6", r: 5 }}
                     name="Qualified"
                   />
                   <Line
@@ -313,7 +345,7 @@ export default function SmilePage({ userId, assessmentCount }: SmileDashboardPro
                     dataKey="consultation"
                     stroke="#C4B5FD"
                     strokeWidth={2}
-                    dot={{ fill: '#C4B5FD', r: 4 }}
+                    dot={{ fill: "#C4B5FD", r: 4 }}
                     name="In Consultation"
                   />
                 </LineChart>
@@ -369,7 +401,7 @@ export default function SmilePage({ userId, assessmentCount }: SmileDashboardPro
                     className="text-xs font-semibold"
                     style={{
                       backgroundColor: caseType.color,
-                      color: '#6B21A8',
+                      color: "#6B21A8",
                     }}
                   >
                     {caseType.percentage}%
@@ -421,16 +453,16 @@ export default function SmilePage({ userId, assessmentCount }: SmileDashboardPro
                   className="flex items-start gap-4 rounded-lg border border-purple-100 bg-purple-50 p-4"
                 >
                   <div className="mt-1">
-                    {activity.type === 'reminder' && (
+                    {activity.type === "reminder" && (
                       <Clock className="h-5 w-5 text-purple-600" />
                     )}
-                    {activity.type === 'recommendation' && (
+                    {activity.type === "recommendation" && (
                       <AlertCircle className="h-5 w-5 text-purple-600" />
                     )}
-                    {activity.type === 'confirmation' && (
+                    {activity.type === "confirmation" && (
                       <Sparkles className="h-5 w-5 text-purple-600" />
                     )}
-                    {activity.type === 'payment' && (
+                    {activity.type === "payment" && (
                       <TrendingUp className="h-5 w-5 text-purple-600" />
                     )}
                   </div>
@@ -442,16 +474,18 @@ export default function SmilePage({ userId, assessmentCount }: SmileDashboardPro
                       <Badge
                         variant="outline"
                         className={
-                          activity.status === 'completed'
-                            ? 'bg-green-50 text-green-700 border-green-200'
-                            : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                          activity.status === "completed"
+                            ? "bg-green-50 text-green-700 border-green-200"
+                            : "bg-yellow-50 text-yellow-700 border-yellow-200"
                         }
                       >
                         {activity.status}
                       </Badge>
                     </div>
                     <p className="text-sm text-gray-600">{activity.patient}</p>
-                    <p className="text-xs text-gray-500 mt-1">{activity.timestamp}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {activity.timestamp}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -468,8 +502,9 @@ export default function SmilePage({ userId, assessmentCount }: SmileDashboardPro
                 AI-Powered Patient Qualification Assistant
               </h3>
               <p className="text-sm text-gray-600 mt-1">
-                Smile streamlines patient intake with intelligent assessments and automated qualification. 
-                Share your unique patient link to collect comprehensive smile assessments, track conversion rates, 
+                Smile streamlines patient intake with intelligent assessments
+                and automated qualification. Share your unique patient link to
+                collect comprehensive smile assessments, track conversion rates,
                 and optimize your case mix for maximum revenue potential.
               </p>
             </div>
@@ -477,5 +512,5 @@ export default function SmilePage({ userId, assessmentCount }: SmileDashboardPro
         </div>
       </div>
     </div>
-  )
+  );
 }

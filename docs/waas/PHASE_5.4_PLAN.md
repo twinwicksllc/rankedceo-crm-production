@@ -20,6 +20,7 @@ In `app/admin/dashboard/[tenantId]/ai-variants-panel.tsx`:
   and writes to `sections_json` in Supabase.
 
 **Problems with current approach:**
+
 - Number input allows nonsense values (0, negative, duplicate orders).
 - Up/Down buttons are slow for large reorders (e.g. moving section 1 to 7).
 - No visual affordance — hard to understand current order at a glance.
@@ -37,16 +38,18 @@ app/admin/dashboard/[tenantId]/section-reorder-panel.tsx
 ```
 
 **Props:**
+
 ```ts
 interface SectionReorderPanelProps {
-  variantIndex:  number          // 1 | 2 | 3
-  sections:      SectionConfig[] // current ordered list
-  disabled?:     boolean         // true when locked / saving
-  onChange:      (reordered: SectionConfig[]) => void  // called with new order
+  variantIndex: number; // 1 | 2 | 3
+  sections: SectionConfig[]; // current ordered list
+  disabled?: boolean; // true when locked / saving
+  onChange: (reordered: SectionConfig[]) => void; // called with new order
 }
 ```
 
 **Behaviour:**
+
 - Uses `@dnd-kit/core` `DndContext` + `@dnd-kit/sortable` `SortableContext`
   with `verticalListSortingStrategy`.
 - Each row is a `useSortable` item keyed by `section.section` (the SectionId
@@ -67,6 +70,7 @@ interface SectionReorderPanelProps {
 
 Replace the section header row (name + checkbox + order input + Up/Down
 buttons) with:
+
 1. The section **enabled toggle** stays inline in the content area header (no
    change to its handler).
 2. A new **"Reorder sections ⠿"** collapsible button above the sections list
@@ -86,6 +90,7 @@ lib/waas/actions/admin.ts  (append)
 ```
 
 A thin, intent-specific wrapper around `updateSiteVariant` that:
+
 - Accepts `(tenantId, variantIndex, orderedSectionIds: SectionId[])`.
 - Reconstructs the `SectionConfig[]` in the given order (preserving all other
   fields — enabled, config, content).
@@ -99,11 +104,11 @@ over the wire — only the ordered array of `SectionId` strings.
 
 ## 3. Files
 
-| File | Status | Description |
-|------|--------|-------------|
-| `app/admin/dashboard/[tenantId]/section-reorder-panel.tsx` | **NEW** | DnD sortable list component |
-| `app/admin/dashboard/[tenantId]/ai-variants-panel.tsx` | **MODIFY** | Wire SectionReorderPanel, remove Up/Down/order-input |
-| `lib/waas/actions/admin.ts` | **MODIFY** | Append `reorderVariantSections` action |
+| File                                                       | Status     | Description                                          |
+| ---------------------------------------------------------- | ---------- | ---------------------------------------------------- |
+| `app/admin/dashboard/[tenantId]/section-reorder-panel.tsx` | **NEW**    | DnD sortable list component                          |
+| `app/admin/dashboard/[tenantId]/ai-variants-panel.tsx`     | **MODIFY** | Wire SectionReorderPanel, remove Up/Down/order-input |
+| `lib/waas/actions/admin.ts`                                | **MODIFY** | Append `reorderVariantSections` action               |
 
 ---
 

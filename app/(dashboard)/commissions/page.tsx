@@ -1,21 +1,23 @@
-import { createClient } from '@/lib/supabase/server';
-import { CommissionService } from '@/lib/services/commission-service';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { formatCurrency } from '@/lib/utils';
+import { createClient } from "@/lib/supabase/server";
+import { CommissionService } from "@/lib/services/commission-service";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { formatCurrency } from "@/lib/utils";
 
 export default async function CommissionsPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
     return <div>Not authenticated</div>;
   }
 
   const commissionService = new CommissionService();
-  
+
   let commissions: any[] = [];
   let stats: any = {
     total_pending: 0,
@@ -27,28 +29,28 @@ export default async function CommissionsPage() {
     paid_amount: 0,
     total_commissions: 0,
   };
-  
+
   try {
     [commissions, stats] = await Promise.all([
       commissionService.getCommissions(),
       commissionService.getCommissionStats(),
     ]);
   } catch (error) {
-    console.error('Error fetching commissions:', error);
+    console.error("Error fetching commissions:", error);
   }
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'approved':
-        return 'bg-blue-100 text-blue-800';
-      case 'paid':
-        return 'bg-green-100 text-green-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "approved":
+        return "bg-blue-100 text-blue-800";
+      case "paid":
+        return "bg-green-100 text-green-800";
+      case "cancelled":
+        return "bg-red-100 text-red-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -57,7 +59,9 @@ export default async function CommissionsPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Commissions</h1>
-          <p className="text-muted-foreground">Track and manage sales commissions</p>
+          <p className="text-muted-foreground">
+            Track and manage sales commissions
+          </p>
         </div>
         <div className="flex gap-2">
           <Button asChild variant="outline">
@@ -75,7 +79,9 @@ export default async function CommissionsPage() {
             <CardTitle className="text-sm font-medium">Pending</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.pending_amount)}</div>
+            <div className="text-2xl font-bold">
+              {formatCurrency(stats.pending_amount)}
+            </div>
             <p className="text-xs text-muted-foreground">
               {stats.total_pending} commissions
             </p>
@@ -87,7 +93,9 @@ export default async function CommissionsPage() {
             <CardTitle className="text-sm font-medium">Approved</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.approved_amount)}</div>
+            <div className="text-2xl font-bold">
+              {formatCurrency(stats.approved_amount)}
+            </div>
             <p className="text-xs text-muted-foreground">
               {stats.total_approved} commissions
             </p>
@@ -99,7 +107,9 @@ export default async function CommissionsPage() {
             <CardTitle className="text-sm font-medium">Paid</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.paid_amount)}</div>
+            <div className="text-2xl font-bold">
+              {formatCurrency(stats.paid_amount)}
+            </div>
             <p className="text-xs text-muted-foreground">
               {stats.total_paid} commissions
             </p>
@@ -112,7 +122,11 @@ export default async function CommissionsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(stats.pending_amount + stats.approved_amount + stats.paid_amount)}
+              {formatCurrency(
+                stats.pending_amount +
+                  stats.approved_amount +
+                  stats.paid_amount,
+              )}
             </div>
             <p className="text-xs text-muted-foreground">
               {stats.total_commissions} total
@@ -142,14 +156,14 @@ export default async function CommissionsPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold">
-                          {commission.deal?.title || 'Unknown Deal'}
+                          {commission.deal?.title || "Unknown Deal"}
                         </h3>
                         <Badge className={getStatusColor(commission.status)}>
                           {commission.status}
                         </Badge>
                       </div>
                       <div className="text-sm text-muted-foreground mt-1">
-                        {commission.user?.name || 'Unknown User'}
+                        {commission.user?.name || "Unknown User"}
                       </div>
                     </div>
                     <div className="text-right">

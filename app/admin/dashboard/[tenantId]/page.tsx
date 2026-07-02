@@ -1,60 +1,86 @@
-import { buildAuditReportPath } from '@/lib/waas/utils/audit-report-url'
+import { buildAuditReportPath } from "@/lib/waas/utils/audit-report-url";
 // =============================================================================
 // RankedCEO CRM — Tenant Detail View (Server Component)
 // Brand Sheet, Audit Results, Domain Requests, Deploy Site, Live Preview
 // =============================================================================
 
-import React          from 'react'
-import Link           from 'next/link'
-import { notFound }   from 'next/navigation'
-import { ensureClientReviewToken, getDeployReadiness, getSiteVariants, getTenantDetail } from '@/lib/waas/actions/admin'
-import { DeploySiteButton }    from './deploy-site-button'
-import { DomainStatusManager } from './domain-status-manager'
-import { PreviewTab }          from './preview-tab'
-import { SiteSettingsForm }    from './site-settings-form'
-import { VersionRollbackButton } from './version-rollback-button'
-import { AIVariantsPanel } from './ai-variants-panel'
-import { ChangePlanForm }  from './change-plan-form'
-import { ReadinessChips, ReadinessScore, getTenantReadiness, getReadinessScore } from '@/components/waas/admin/ReadinessChips'
-import type { AdminTenantListItem } from '@/lib/waas/actions/admin'
-import type { WaasDomainRequest, WaasPackageTier } from '@/lib/waas/types'
+import React from "react";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import {
+  ensureClientReviewToken,
+  getDeployReadiness,
+  getSiteVariants,
+  getTenantDetail,
+} from "@/lib/waas/actions/admin";
+import { DeploySiteButton } from "./deploy-site-button";
+import { DomainStatusManager } from "./domain-status-manager";
+import { PreviewTab } from "./preview-tab";
+import { SiteSettingsForm } from "./site-settings-form";
+import { VersionRollbackButton } from "./version-rollback-button";
+import { AIVariantsPanel } from "./ai-variants-panel";
+import { ChangePlanForm } from "./change-plan-form";
+import {
+  ReadinessChips,
+  ReadinessScore,
+  getTenantReadiness,
+  getReadinessScore,
+} from "@/components/waas/admin/ReadinessChips";
+import type { AdminTenantListItem } from "@/lib/waas/actions/admin";
+import type { WaasDomainRequest, WaasPackageTier } from "@/lib/waas/types";
 
 interface PageProps {
-  params:      { tenantId: string }
-  searchParams: { tab?: string }
+  params: { tenantId: string };
+  searchParams: { tab?: string };
 }
 
-export default async function TenantDetailPage({ params, searchParams }: PageProps) {
-  const result = await getTenantDetail(params.tenantId)
-  if (!result.success || !result.data) notFound()
+export default async function TenantDetailPage({
+  params,
+  searchParams,
+}: PageProps) {
+  const result = await getTenantDetail(params.tenantId);
+  if (!result.success || !result.data) notFound();
 
-  const { tenant, domainRequests, audit, versions, deployments } = result.data
-  const siteConfig = result.data.siteConfig
-  const brand   = tenant.brand_config
-  const colors  = brand?.colors
-  const activeTab = searchParams?.tab ?? 'overview'
-  const tokenResult = await ensureClientReviewToken(tenant.id)
-  const readinessResult = await getDeployReadiness(tenant.id)
-  const variantsResult = await getSiteVariants(tenant.id)
-  const variants = variantsResult.success && variantsResult.data ? variantsResult.data : []
-  const deployReadiness = readinessResult.success ? readinessResult.data ?? null : null
-  const reviewToken = tokenResult.data ?? tenant.id
+  const { tenant, domainRequests, audit, versions, deployments } = result.data;
+  const siteConfig = result.data.siteConfig;
+  const brand = tenant.brand_config;
+  const colors = brand?.colors;
+  const activeTab = searchParams?.tab ?? "overview";
+  const tokenResult = await ensureClientReviewToken(tenant.id);
+  const readinessResult = await getDeployReadiness(tenant.id);
+  const variantsResult = await getSiteVariants(tenant.id);
+  const variants =
+    variantsResult.success && variantsResult.data ? variantsResult.data : [];
+  const deployReadiness = readinessResult.success
+    ? (readinessResult.data ?? null)
+    : null;
+  const reviewToken = tokenResult.data ?? tenant.id;
 
   // Build an AdminTenantListItem-compatible object by enriching tenant with the
   // selected template slug from siteConfig so ReadinessChips can show it.
   const tenantWithHealth: AdminTenantListItem = {
     ...tenant,
     client_selected_template_slug: siteConfig?.site_templates?.slug ?? null,
-  }
-  const healthChecks = getTenantReadiness(tenantWithHealth)
-  const { score: healthScore, total: healthTotal } = getReadinessScore(healthChecks)
+  };
+  const healthChecks = getTenantReadiness(tenantWithHealth);
+  const { score: healthScore, total: healthTotal } =
+    getReadinessScore(healthChecks);
 
   return (
     <div>
       {/* Back */}
-      <Link href="/admin/dashboard" className="inline-flex items-center gap-2 text-white/40 hover:text-white/70 text-sm mb-6 transition-colors">
+      <Link
+        href="/admin/dashboard"
+        className="inline-flex items-center gap-2 text-white/40 hover:text-white/70 text-sm mb-6 transition-colors"
+      >
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+          <path
+            d="M10 3L5 8l5 5"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
         Back to Dashboard
       </Link>
@@ -63,26 +89,33 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
       <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
         <div
           className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-xl font-bold shrink-0 shadow-lg"
-          style={{ background: `linear-gradient(135deg, ${colors?.primary ?? '#2563EB'}, ${colors?.secondary ?? '#1E40AF'})` }}
+          style={{
+            background: `linear-gradient(135deg, ${colors?.primary ?? "#2563EB"}, ${colors?.secondary ?? "#1E40AF"})`,
+          }}
         >
-          {(brand?.business_name ?? tenant.legal_name ?? '?')[0].toUpperCase()}
+          {(brand?.business_name ?? tenant.legal_name ?? "?")[0].toUpperCase()}
         </div>
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-white">
-            {brand?.business_name ?? tenant.legal_name ?? 'Unnamed Business'}
+            {brand?.business_name ?? tenant.legal_name ?? "Unnamed Business"}
           </h1>
           <p className="text-white/40 text-sm mt-0.5">
-            {tenant.primary_trade ?? '—'} &bull; {tenant.city ? `${tenant.city}, ${tenant.state}` : '—'} &bull; {tenant.package_tier} plan
+            {tenant.primary_trade ?? "—"} &bull;{" "}
+            {tenant.city ? `${tenant.city}, ${tenant.state}` : "—"} &bull;{" "}
+            {tenant.package_tier} plan
           </p>
         </div>
         {/* Deploy Site */}
-        {(tenant.status === 'pending_review' || tenant.status === 'onboarding') && (
+        {(tenant.status === "pending_review" ||
+          tenant.status === "onboarding") && (
           <DeploySiteButton
             tenantId={tenant.id}
-            businessName={brand?.business_name ?? tenant.legal_name ?? 'this business'}
+            businessName={
+              brand?.business_name ?? tenant.legal_name ?? "this business"
+            }
           />
         )}
-        {tenant.status === 'active' && (
+        {tenant.status === "active" && (
           <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-emerald-400 text-sm font-semibold">Live</span>
@@ -93,7 +126,9 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
       {/* Launch Readiness Health Bar */}
       <div className="mb-8 rounded-xl bg-white/5 border border-white/10 px-5 py-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-white/70">Launch Readiness</h2>
+          <h2 className="text-sm font-semibold text-white/70">
+            Launch Readiness
+          </h2>
           <ReadinessScore tenant={tenantWithHealth} />
         </div>
         <ReadinessChips tenant={tenantWithHealth} expanded />
@@ -104,7 +139,9 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
         )}
         {healthScore < healthTotal && (
           <p className="mt-3 text-xs text-white/30">
-            {healthTotal - healthScore} check{healthTotal - healthScore === 1 ? '' : 's'} remaining before this tenant can launch.
+            {healthTotal - healthScore} check
+            {healthTotal - healthScore === 1 ? "" : "s"} remaining before this
+            tenant can launch.
           </p>
         )}
       </div>
@@ -112,17 +149,17 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
       {/* Tab Navigation */}
       <div className="flex gap-1 mb-8 p-1 rounded-xl bg-white/5 border border-white/10 w-fit">
         {[
-          { key: 'overview', label: '📋 Overview' },
-          { key: 'preview',  label: '🌐 Live Preview' },
-          { key: 'ai-variants', label: '✨ AI Variants' },
-        ].map(tab => (
+          { key: "overview", label: "📋 Overview" },
+          { key: "preview", label: "🌐 Live Preview" },
+          { key: "ai-variants", label: "✨ AI Variants" },
+        ].map((tab) => (
           <Link
             key={tab.key}
             href={`/admin/dashboard/${params.tenantId}?tab=${tab.key}`}
             className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
               activeTab === tab.key
-                ? 'bg-white/10 text-white shadow-sm'
-                : 'text-white/40 hover:text-white/70'
+                ? "bg-white/10 text-white shadow-sm"
+                : "text-white/40 hover:text-white/70"
             }`}
           >
             {tab.label}
@@ -131,56 +168,73 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
       </div>
 
       {/* Tab: Overview */}
-      {activeTab === 'overview' && (
+      {activeTab === "overview" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
           {/* Left column: Brand Sheet + Contact */}
           <div className="lg:col-span-1 space-y-6">
-
             {/* Brand Sheet */}
             <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
               <div className="px-5 py-4 border-b border-white/10">
-                <h2 className="text-white font-semibold text-sm">Brand Sheet</h2>
+                <h2 className="text-white font-semibold text-sm">
+                  Brand Sheet
+                </h2>
               </div>
               <div className="p-5 space-y-5">
                 {/* Logo */}
                 <div>
-                  <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Logo</p>
+                  <p className="text-white/40 text-xs uppercase tracking-wider mb-2">
+                    Logo
+                  </p>
                   {brand?.logo_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={brand.logo_url} alt="Logo" className="max-h-12 max-w-full object-contain" />
+                    <img
+                      src={brand.logo_url}
+                      alt="Logo"
+                      className="max-h-12 max-w-full object-contain"
+                    />
                   ) : (
                     <div
                       className="h-10 w-28 rounded-lg flex items-center justify-center text-white text-sm font-bold"
-                      style={{ background: `linear-gradient(135deg, ${colors?.primary ?? '#2563EB'}, ${colors?.secondary ?? '#1E40AF'})` }}
+                      style={{
+                        background: `linear-gradient(135deg, ${colors?.primary ?? "#2563EB"}, ${colors?.secondary ?? "#1E40AF"})`,
+                      }}
                     >
-                      {(brand?.business_name ?? '')[0]}
+                      {(brand?.business_name ?? "")[0]}
                     </div>
                   )}
                 </div>
 
                 {/* Colors */}
                 <div>
-                  <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Color Palette</p>
+                  <p className="text-white/40 text-xs uppercase tracking-wider mb-2">
+                    Color Palette
+                  </p>
                   <div className="flex gap-2">
-                    {colors && Object.entries(colors).map(([key, val]) => val ? (
-                      <div key={key} className="group relative">
-                        <div
-                          className="w-8 h-8 rounded-lg border border-white/10 cursor-pointer"
-                          style={{ backgroundColor: val as string }}
-                          title={`${key}: ${val}`}
-                        />
-                      </div>
-                    ) : null)}
+                    {colors &&
+                      Object.entries(colors).map(([key, val]) =>
+                        val ? (
+                          <div key={key} className="group relative">
+                            <div
+                              className="w-8 h-8 rounded-lg border border-white/10 cursor-pointer"
+                              style={{ backgroundColor: val as string }}
+                              title={`${key}: ${val}`}
+                            />
+                          </div>
+                        ) : null,
+                      )}
                   </div>
                   <div className="mt-2 flex gap-3 flex-wrap">
                     <div>
                       <p className="text-white/25 text-[10px]">PRIMARY</p>
-                      <p className="text-white font-mono text-xs">{colors?.primary ?? '—'}</p>
+                      <p className="text-white font-mono text-xs">
+                        {colors?.primary ?? "—"}
+                      </p>
                     </div>
                     <div>
                       <p className="text-white/25 text-[10px]">SECONDARY</p>
-                      <p className="text-white font-mono text-xs">{colors?.secondary ?? '—'}</p>
+                      <p className="text-white font-mono text-xs">
+                        {colors?.secondary ?? "—"}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -188,8 +242,12 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
                 {/* USP */}
                 {tenant.usp && (
                   <div>
-                    <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Unique Selling Proposition</p>
-                    <p className="text-white/70 text-sm leading-relaxed">{tenant.usp}</p>
+                    <p className="text-white/40 text-xs uppercase tracking-wider mb-2">
+                      Unique Selling Proposition
+                    </p>
+                    <p className="text-white/70 text-sm leading-relaxed">
+                      {tenant.usp}
+                    </p>
                   </div>
                 )}
               </div>
@@ -198,62 +256,89 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
             {/* Contact Details */}
             <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
               <div className="px-5 py-4 border-b border-white/10">
-                <h2 className="text-white font-semibold text-sm">Contact Details</h2>
+                <h2 className="text-white font-semibold text-sm">
+                  Contact Details
+                </h2>
               </div>
               <div className="p-5 space-y-3">
                 {[
-                  { label: 'Email',    value: tenant.submitted_by_email },
-                  { label: 'Address',  value: tenant.physical_address },
-                  { label: 'City',     value: tenant.city && tenant.state ? `${tenant.city}, ${tenant.state} ${tenant.zip ?? ''}` : null },
-                  { label: 'Trade',    value: tenant.primary_trade },
-                  { label: 'Calendly', value: tenant.calendly_url },
-                  { label: 'Financing',value: tenant.financing_enabled ? 'Enabled' : 'Disabled' },
-                ].map(row => row.value ? (
-                  <div key={row.label} className="flex gap-3">
-                    <span className="text-white/30 text-xs w-16 shrink-0 pt-0.5">{row.label}</span>
-                    <span className="text-white/70 text-xs break-all">{row.value}</span>
-                  </div>
-                ) : null)}
+                  { label: "Email", value: tenant.submitted_by_email },
+                  { label: "Address", value: tenant.physical_address },
+                  {
+                    label: "City",
+                    value:
+                      tenant.city && tenant.state
+                        ? `${tenant.city}, ${tenant.state} ${tenant.zip ?? ""}`
+                        : null,
+                  },
+                  { label: "Trade", value: tenant.primary_trade },
+                  { label: "Calendly", value: tenant.calendly_url },
+                  {
+                    label: "Financing",
+                    value: tenant.financing_enabled ? "Enabled" : "Disabled",
+                  },
+                ].map((row) =>
+                  row.value ? (
+                    <div key={row.label} className="flex gap-3">
+                      <span className="text-white/30 text-xs w-16 shrink-0 pt-0.5">
+                        {row.label}
+                      </span>
+                      <span className="text-white/70 text-xs break-all">
+                        {row.value}
+                      </span>
+                    </div>
+                  ) : null,
+                )}
               </div>
             </div>
           </div>
 
           {/* Right column: Domains + Audit */}
           <div className="lg:col-span-2 space-y-6">
-
             {/* Domain Requests */}
             <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
               <div className="px-5 py-4 border-b border-white/10">
-                <h2 className="text-white font-semibold text-sm">Domain Requests</h2>
+                <h2 className="text-white font-semibold text-sm">
+                  Domain Requests
+                </h2>
               </div>
               <div className="p-5">
                 {domainRequests.length === 0 ? (
-                  <p className="text-white/30 text-sm">No domain requests submitted.</p>
+                  <p className="text-white/30 text-sm">
+                    No domain requests submitted.
+                  </p>
                 ) : (
                   <div className="space-y-3">
                     {domainRequests.map((req: WaasDomainRequest) => {
-                      const isWishlistFallback = req.id.startsWith('wishlist-')
+                      const isWishlistFallback = req.id.startsWith("wishlist-");
 
                       if (isWishlistFallback) {
                         return (
-                          <div key={req.id} className="rounded-xl bg-white/5 border border-white/10 p-4">
+                          <div
+                            key={req.id}
+                            className="rounded-xl bg-white/5 border border-white/10 p-4"
+                          >
                             <div className="flex items-center justify-between gap-3">
                               <div>
                                 <p className="text-white text-sm font-semibold">
                                   {req.domain_name}
-                                  <span className="text-blue-400 ml-1">{req.extension}</span>
+                                  <span className="text-blue-400 ml-1">
+                                    {req.extension}
+                                  </span>
                                 </p>
-                                <p className="text-white/35 text-[11px] mt-1">Imported from onboarding wishlist</p>
+                                <p className="text-white/35 text-[11px] mt-1">
+                                  Imported from onboarding wishlist
+                                </p>
                               </div>
                               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-amber-500/10 text-amber-300 border-amber-400/20">
                                 Requested
                               </span>
                             </div>
                           </div>
-                        )
+                        );
                       }
 
-                      return <DomainStatusManager key={req.id} request={req} />
+                      return <DomainStatusManager key={req.id} request={req} />;
                     })}
                   </div>
                 )}
@@ -263,13 +348,21 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
             {/* Audit Results */}
             <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
               <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
-                <h2 className="text-white font-semibold text-sm">Original Audit</h2>
+                <h2 className="text-white font-semibold text-sm">
+                  Original Audit
+                </h2>
                 {audit && (
                   <Link
                     href={buildAuditReportPath((audit as { id: string }).id, {
-                      requestorCompany: (audit as { requestor_company?: string | null }).requestor_company ?? null,
-                      requestorName: (audit as { requestor_name?: string | null }).requestor_name ?? null,
-                      targetUrl: (audit as { target_url?: string | null }).target_url ?? null,
+                      requestorCompany:
+                        (audit as { requestor_company?: string | null })
+                          .requestor_company ?? null,
+                      requestorName:
+                        (audit as { requestor_name?: string | null })
+                          .requestor_name ?? null,
+                      targetUrl:
+                        (audit as { target_url?: string | null }).target_url ??
+                        null,
                     })}
                     className="text-blue-400 hover:text-blue-300 text-xs font-medium transition-colors"
                     target="_blank"
@@ -280,7 +373,9 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
               </div>
               <div className="p-5">
                 {!audit ? (
-                  <p className="text-white/30 text-sm">No linked audit report.</p>
+                  <p className="text-white/30 text-sm">
+                    No linked audit report.
+                  </p>
                 ) : (
                   <AuditSummaryCard audit={audit} />
                 )}
@@ -289,7 +384,9 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
 
             <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
               <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
-                <h2 className="text-white font-semibold text-sm">Client Review Status</h2>
+                <h2 className="text-white font-semibold text-sm">
+                  Client Review Status
+                </h2>
                 <a
                   href={`/review/${reviewToken}`}
                   className="text-cyan-300 hover:text-cyan-200 text-xs font-medium transition-colors"
@@ -302,43 +399,66 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
               <div className="p-5 text-sm">
                 {siteConfig?.client_selected_template_slug ? (
                   <div className="space-y-2">
-                    <p className="text-emerald-300 font-semibold">Client has selected a direction.</p>
+                    <p className="text-emerald-300 font-semibold">
+                      Client has selected a direction.
+                    </p>
                     <p className="text-white/70 text-xs">
                       Template: {siteConfig.client_selected_template_slug}
-                      {siteConfig.client_selected_at ? ` • ${new Date(siteConfig.client_selected_at).toLocaleString()}` : ''}
+                      {siteConfig.client_selected_at
+                        ? ` • ${new Date(siteConfig.client_selected_at).toLocaleString()}`
+                        : ""}
                     </p>
-                    {Array.isArray(siteConfig.client_mix_source_templates) && siteConfig.client_mix_source_templates.length > 0 && (
-                      <p className="text-violet-200/90 text-xs">
-                        Mixed with: {siteConfig.client_mix_source_templates.join(', ')}
-                        {siteConfig.client_mix_submitted_at ? ` • ${new Date(siteConfig.client_mix_submitted_at).toLocaleString()}` : ''}
-                      </p>
-                    )}
+                    {Array.isArray(siteConfig.client_mix_source_templates) &&
+                      siteConfig.client_mix_source_templates.length > 0 && (
+                        <p className="text-violet-200/90 text-xs">
+                          Mixed with:{" "}
+                          {siteConfig.client_mix_source_templates.join(", ")}
+                          {siteConfig.client_mix_submitted_at
+                            ? ` • ${new Date(siteConfig.client_mix_submitted_at).toLocaleString()}`
+                            : ""}
+                        </p>
+                      )}
                   </div>
                 ) : (
-                  <p className="text-white/50 text-xs">Waiting for client selection.</p>
+                  <p className="text-white/50 text-xs">
+                    Waiting for client selection.
+                  </p>
                 )}
 
                 <div className="mt-5 border-t border-white/10 pt-4">
-                  <p className="text-white/50 text-[11px] uppercase tracking-wide mb-3">Recent Version History</p>
+                  <p className="text-white/50 text-[11px] uppercase tracking-wide mb-3">
+                    Recent Version History
+                  </p>
                   {versions.length === 0 ? (
-                    <p className="text-white/40 text-xs">No snapshots yet. They will appear as templates and feedback change.</p>
+                    <p className="text-white/40 text-xs">
+                      No snapshots yet. They will appear as templates and
+                      feedback change.
+                    </p>
                   ) : (
                     <div className="space-y-2">
                       {versions.map((version) => (
-                        <div key={version.id} className="flex items-start justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                        <div
+                          key={version.id}
+                          className="flex items-start justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2"
+                        >
                           <div>
                             <p className="text-white/80 text-xs font-medium">
-                              {version.template_slug ? `Template: ${version.template_slug}` : 'Template snapshot'}
+                              {version.template_slug
+                                ? `Template: ${version.template_slug}`
+                                : "Template snapshot"}
                             </p>
                             <p className="text-white/45 text-[11px]">
-                              {version.change_source.replace(/_/g, ' ')}
-                              {version.summary ? ` • ${version.summary}` : ''}
+                              {version.change_source.replace(/_/g, " ")}
+                              {version.summary ? ` • ${version.summary}` : ""}
                             </p>
                             <p className="text-white/35 text-[10px] mt-0.5">
                               {new Date(version.created_at).toLocaleString()}
                             </p>
                           </div>
-                          <VersionRollbackButton tenantId={tenant.id} versionId={version.id} />
+                          <VersionRollbackButton
+                            tenantId={tenant.id}
+                            versionId={version.id}
+                          />
                         </div>
                       ))}
                     </div>
@@ -349,60 +469,114 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
 
             <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
               <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
-                <h2 className="text-white font-semibold text-sm">Deployment Package</h2>
+                <h2 className="text-white font-semibold text-sm">
+                  Deployment Package
+                </h2>
                 {deployReadiness ? (
-                  <span className={`text-[11px] px-2 py-1 rounded-full border ${deployReadiness.ready ? 'text-emerald-300 border-emerald-500/40 bg-emerald-500/10' : 'text-amber-300 border-amber-500/40 bg-amber-500/10'}`}>
-                    {deployReadiness.ready ? 'Ready to Deploy' : 'Needs Fixes'}
+                  <span
+                    className={`text-[11px] px-2 py-1 rounded-full border ${deployReadiness.ready ? "text-emerald-300 border-emerald-500/40 bg-emerald-500/10" : "text-amber-300 border-amber-500/40 bg-amber-500/10"}`}
+                  >
+                    {deployReadiness.ready ? "Ready to Deploy" : "Needs Fixes"}
                   </span>
                 ) : (
-                  <span className="text-[11px] px-2 py-1 rounded-full border border-white/15 text-white/50">Unavailable</span>
+                  <span className="text-[11px] px-2 py-1 rounded-full border border-white/15 text-white/50">
+                    Unavailable
+                  </span>
                 )}
               </div>
               <div className="p-5 space-y-4">
                 {!deployReadiness ? (
-                  <p className="text-white/40 text-xs">Readiness report is unavailable for this tenant.</p>
+                  <p className="text-white/40 text-xs">
+                    Readiness report is unavailable for this tenant.
+                  </p>
                 ) : (
                   <>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5">
-                        <p className="text-white/35 text-[10px] uppercase tracking-wide">Selected Template</p>
-                        <p className="text-white/80 text-xs mt-1">{deployReadiness.packageSummary.selectedTemplateSlug ?? 'Not selected'}</p>
+                        <p className="text-white/35 text-[10px] uppercase tracking-wide">
+                          Selected Template
+                        </p>
+                        <p className="text-white/80 text-xs mt-1">
+                          {deployReadiness.packageSummary
+                            .selectedTemplateSlug ?? "Not selected"}
+                        </p>
                       </div>
                       <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5">
-                        <p className="text-white/35 text-[10px] uppercase tracking-wide">Enabled Sections</p>
-                        <p className="text-white/80 text-xs mt-1">{deployReadiness.packageSummary.sectionCount}</p>
+                        <p className="text-white/35 text-[10px] uppercase tracking-wide">
+                          Enabled Sections
+                        </p>
+                        <p className="text-white/80 text-xs mt-1">
+                          {deployReadiness.packageSummary.sectionCount}
+                        </p>
                       </div>
                     </div>
 
                     <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5">
-                      <p className="text-white/35 text-[10px] uppercase tracking-wide mb-1">Section List</p>
-                      {deployReadiness.packageSummary.enabledSections.length === 0 ? (
-                        <p className="text-white/50 text-xs">No enabled sections detected.</p>
+                      <p className="text-white/35 text-[10px] uppercase tracking-wide mb-1">
+                        Section List
+                      </p>
+                      {deployReadiness.packageSummary.enabledSections.length ===
+                      0 ? (
+                        <p className="text-white/50 text-xs">
+                          No enabled sections detected.
+                        </p>
                       ) : (
                         <p className="text-white/80 text-xs">
-                          {deployReadiness.packageSummary.enabledSections.join(', ')}
+                          {deployReadiness.packageSummary.enabledSections.join(
+                            ", ",
+                          )}
                         </p>
                       )}
                     </div>
 
                     <div className="space-y-1.5">
-                      <p className="text-white/35 text-[10px] uppercase tracking-wide">Metadata</p>
-                      <p className="text-white/70 text-xs">Title: {deployReadiness.packageSummary.metaTitle ?? 'Missing'}</p>
-                      <p className="text-white/70 text-xs">Description: {deployReadiness.packageSummary.metaDescription ?? 'Missing'}</p>
-                      <p className="text-white/70 text-xs">OG Image: {deployReadiness.packageSummary.ogImageUrl ?? 'Missing'}</p>
+                      <p className="text-white/35 text-[10px] uppercase tracking-wide">
+                        Metadata
+                      </p>
+                      <p className="text-white/70 text-xs">
+                        Title:{" "}
+                        {deployReadiness.packageSummary.metaTitle ?? "Missing"}
+                      </p>
+                      <p className="text-white/70 text-xs">
+                        Description:{" "}
+                        {deployReadiness.packageSummary.metaDescription ??
+                          "Missing"}
+                      </p>
+                      <p className="text-white/70 text-xs">
+                        OG Image:{" "}
+                        {deployReadiness.packageSummary.ogImageUrl ?? "Missing"}
+                      </p>
                     </div>
 
                     <div className="space-y-1.5">
-                      <p className="text-white/35 text-[10px] uppercase tracking-wide">Contact Hooks</p>
+                      <p className="text-white/35 text-[10px] uppercase tracking-wide">
+                        Contact Hooks
+                      </p>
                       <p className="text-white/70 text-xs">
-                        Calendly: {deployReadiness.packageSummary.contactHooks.hasCalendly ? 'Yes' : 'No'} • Phone: {deployReadiness.packageSummary.contactHooks.hasPhone ? 'Yes' : 'No'} • Email: {deployReadiness.packageSummary.contactHooks.hasEmail ? 'Yes' : 'No'}
+                        Calendly:{" "}
+                        {deployReadiness.packageSummary.contactHooks.hasCalendly
+                          ? "Yes"
+                          : "No"}{" "}
+                        • Phone:{" "}
+                        {deployReadiness.packageSummary.contactHooks.hasPhone
+                          ? "Yes"
+                          : "No"}{" "}
+                        • Email:{" "}
+                        {deployReadiness.packageSummary.contactHooks.hasEmail
+                          ? "Yes"
+                          : "No"}
                       </p>
                     </div>
 
                     <div className="space-y-1.5 pt-1.5 border-t border-white/10">
-                      <p className="text-white/35 text-[10px] uppercase tracking-wide">Readiness Checks</p>
+                      <p className="text-white/35 text-[10px] uppercase tracking-wide">
+                        Readiness Checks
+                      </p>
                       {deployReadiness.checks.map((check) => (
-                        <p key={check.id} className={`text-[11px] ${check.status === 'pass' ? 'text-emerald-300' : check.status === 'warn' ? 'text-amber-300' : 'text-red-300'}`}>
+                        <p
+                          key={check.id}
+                          className={`text-[11px] ${check.status === "pass" ? "text-emerald-300" : check.status === "warn" ? "text-amber-300" : "text-red-300"}`}
+                        >
                           {check.status.toUpperCase()} • {check.label}
                         </p>
                       ))}
@@ -414,18 +588,28 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
 
             <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
               <div className="px-5 py-4 border-b border-white/10">
-                <h2 className="text-white font-semibold text-sm">Site Settings</h2>
+                <h2 className="text-white font-semibold text-sm">
+                  Site Settings
+                </h2>
               </div>
               <div className="p-5">
                 <SiteSettingsForm
                   tenantId={tenant.id}
-                  initialMetaTitle={siteConfig?.meta_title ?? ''}
-                  initialMetaDescription={siteConfig?.meta_description ?? ''}
-                  initialOgImageUrl={siteConfig?.og_image_url ?? ''}
-                  initialCustomCss={siteConfig?.custom_css ?? ''}
-                  initialHeroImageUrl={(brand?.hero_image_url as string | null | undefined) ?? ''}
-                  initialSeoKeywords={Array.isArray(siteConfig?.seo_keywords) ? (siteConfig.seo_keywords as string[]) : []}
-                  seoKeywordsProvider={siteConfig?.seo_keywords_provider ?? null}
+                  initialMetaTitle={siteConfig?.meta_title ?? ""}
+                  initialMetaDescription={siteConfig?.meta_description ?? ""}
+                  initialOgImageUrl={siteConfig?.og_image_url ?? ""}
+                  initialCustomCss={siteConfig?.custom_css ?? ""}
+                  initialHeroImageUrl={
+                    (brand?.hero_image_url as string | null | undefined) ?? ""
+                  }
+                  initialSeoKeywords={
+                    Array.isArray(siteConfig?.seo_keywords)
+                      ? (siteConfig.seo_keywords as string[])
+                      : []
+                  }
+                  seoKeywordsProvider={
+                    siteConfig?.seo_keywords_provider ?? null
+                  }
                   seoLastGeneratedAt={siteConfig?.seo_last_generated_at ?? null}
                 />
               </div>
@@ -434,7 +618,9 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
             {/* Billing & Plan — Phase 7.4 */}
             <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
               <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
-                <h2 className="text-white font-semibold text-sm">Billing &amp; Plan</h2>
+                <h2 className="text-white font-semibold text-sm">
+                  Billing &amp; Plan
+                </h2>
                 <span className="rounded-full bg-blue-500/15 border border-blue-500/20 px-2 py-0.5 text-[10px] font-semibold text-blue-300 uppercase tracking-wide">
                   {tenant.package_tier}
                 </span>
@@ -442,37 +628,59 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
               <div className="p-5">
                 <ChangePlanForm
                   tenantId={tenant.id}
-                  currentTier={(tenant.package_tier ?? 'hosting') as WaasPackageTier}
-                  currentInterval={(tenant.plan_interval as 'month' | 'year' | null) ?? null}
+                  currentTier={
+                    (tenant.package_tier ?? "hosting") as WaasPackageTier
+                  }
+                  currentInterval={
+                    (tenant.plan_interval as "month" | "year" | null) ?? null
+                  }
                 />
               </div>
             </div>
 
             <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden">
               <div className="px-5 py-4 border-b border-white/10">
-                <h2 className="text-white font-semibold text-sm">Deployment Audit Trail</h2>
+                <h2 className="text-white font-semibold text-sm">
+                  Deployment Audit Trail
+                </h2>
               </div>
               <div className="p-5">
                 {deployments.length === 0 ? (
-                  <p className="text-white/40 text-xs">No deployment snapshots recorded yet.</p>
+                  <p className="text-white/40 text-xs">
+                    No deployment snapshots recorded yet.
+                  </p>
                 ) : (
                   <div className="space-y-2">
                     {deployments.map((deployment) => {
-                      const payload = deployment.deployment_payload_json ?? {}
-                      const templateSlug = typeof payload.selectedTemplateSlug === 'string' ? payload.selectedTemplateSlug : null
-                      const sectionCount = typeof payload.sectionCount === 'number' ? payload.sectionCount : null
+                      const payload = deployment.deployment_payload_json ?? {};
+                      const templateSlug =
+                        typeof payload.selectedTemplateSlug === "string"
+                          ? payload.selectedTemplateSlug
+                          : null;
+                      const sectionCount =
+                        typeof payload.sectionCount === "number"
+                          ? payload.sectionCount
+                          : null;
 
                       return (
-                        <div key={deployment.id} className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                        <div
+                          key={deployment.id}
+                          className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5"
+                        >
                           <p className="text-white/85 text-xs font-medium">
-                            {templateSlug ? `Template: ${templateSlug}` : 'Deployment snapshot'}
+                            {templateSlug
+                              ? `Template: ${templateSlug}`
+                              : "Deployment snapshot"}
                           </p>
                           <p className="text-white/50 text-[11px] mt-0.5">
-                            By {deployment.deployed_by} • {new Date(deployment.created_at).toLocaleString()}
-                            {sectionCount !== null ? ` • ${sectionCount} sections` : ''}
+                            By {deployment.deployed_by} •{" "}
+                            {new Date(deployment.created_at).toLocaleString()}
+                            {sectionCount !== null
+                              ? ` • ${sectionCount} sections`
+                              : ""}
                           </p>
                         </div>
-                      )
+                      );
                     })}
                   </div>
                 )}
@@ -482,23 +690,25 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
         </div>
       )}
 
-      {activeTab === 'ai-variants' && (
+      {activeTab === "ai-variants" && (
         <AIVariantsPanel tenantId={tenant.id} initialVariants={variants} />
       )}
 
       {/* Tab: Live Preview */}
-      {activeTab === 'preview' && (
+      {activeTab === "preview" && (
         <PreviewTab
           tenantId={tenant.id}
           slug={tenant.slug}
           currentTheme={siteConfig?.site_templates?.slug ?? null}
           reviewToken={reviewToken}
-          clientSelectedTemplate={siteConfig?.client_selected_template_slug ?? null}
+          clientSelectedTemplate={
+            siteConfig?.client_selected_template_slug ?? null
+          }
           clientSelectedAt={siteConfig?.client_selected_at ?? null}
         />
       )}
     </div>
-  )
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -506,24 +716,32 @@ export default async function TenantDetailPage({ params, searchParams }: PagePro
 // ---------------------------------------------------------------------------
 
 function AuditSummaryCard({ audit }: { audit: Record<string, unknown> }) {
-  const report  = audit.report_data as Record<string, unknown> | null
-  const summary = report?.summary as Record<string, number> | null
+  const report = audit.report_data as Record<string, unknown> | null;
+  const summary = report?.summary as Record<string, number> | null;
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Overall', value: summary?.overall_score   },
-          { label: 'SEO',     value: summary?.seo_score       },
-          { label: 'Perf.',   value: summary?.performance_score },
-          { label: 'Mobile',  value: summary?.mobile_score    },
-        ].map(m => (
-          <div key={m.label} className="rounded-xl bg-white/5 border border-white/10 p-3 text-center">
-            <div className={`text-2xl font-bold ${
-              (m.value ?? 0) >= 70 ? 'text-emerald-400' :
-              (m.value ?? 0) >= 50 ? 'text-amber-400' : 'text-red-400'
-            }`}>
-              {m.value !== undefined ? m.value : '—'}
+          { label: "Overall", value: summary?.overall_score },
+          { label: "SEO", value: summary?.seo_score },
+          { label: "Perf.", value: summary?.performance_score },
+          { label: "Mobile", value: summary?.mobile_score },
+        ].map((m) => (
+          <div
+            key={m.label}
+            className="rounded-xl bg-white/5 border border-white/10 p-3 text-center"
+          >
+            <div
+              className={`text-2xl font-bold ${
+                (m.value ?? 0) >= 70
+                  ? "text-emerald-400"
+                  : (m.value ?? 0) >= 50
+                    ? "text-amber-400"
+                    : "text-red-400"
+              }`}
+            >
+              {m.value !== undefined ? m.value : "—"}
             </div>
             <div className="text-white/40 text-xs mt-0.5">{m.label}</div>
           </div>
@@ -532,13 +750,17 @@ function AuditSummaryCard({ audit }: { audit: Record<string, unknown> }) {
       <div className="flex gap-4 text-sm">
         <div>
           <span className="text-white/30 text-xs">Target URL</span>
-          <p className="text-white/60 text-xs truncate max-w-[250px]">{String(audit.target_url ?? '—')}</p>
+          <p className="text-white/60 text-xs truncate max-w-[250px]">
+            {String(audit.target_url ?? "—")}
+          </p>
         </div>
         <div>
           <span className="text-white/30 text-xs">Status</span>
-          <p className="text-white/60 text-xs capitalize">{String(audit.status ?? '—')}</p>
+          <p className="text-white/60 text-xs capitalize">
+            {String(audit.status ?? "—")}
+          </p>
         </div>
       </div>
     </div>
-  )
+  );
 }

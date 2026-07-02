@@ -5,25 +5,25 @@
 // Public endpoint (no auth required) — rate limiting via Supabase RLS.
 // =============================================================================
 
-import { NextRequest, NextResponse } from 'next/server'
-import { createAuditRecord, updateAuditRecord } from '@/lib/waas/supabase'
-import type { WaasAuditInsert, WaasAuditUpdate } from '@/lib/waas/supabase'
-import type { AuditSeoProvider } from '@/lib/waas/types'
-import { runFullAudit } from '@/lib/waas/services/audit-engine'
-import { extractDomain } from '@/lib/waas/services/serper'
-import { buildAuditReportPath } from '@/lib/waas/utils/audit-report-url'
-import { sendAuditReportReadyEmail } from '@/lib/waas/services/notifications'
+import { NextRequest, NextResponse } from "next/server";
+import { createAuditRecord, updateAuditRecord } from "@/lib/waas/supabase";
+import type { WaasAuditInsert, WaasAuditUpdate } from "@/lib/waas/supabase";
+import type { AuditSeoProvider } from "@/lib/waas/types";
+import { runFullAudit } from "@/lib/waas/services/audit-engine";
+import { extractDomain } from "@/lib/waas/services/serper";
+import { buildAuditReportPath } from "@/lib/waas/utils/audit-report-url";
+import { sendAuditReportReadyEmail } from "@/lib/waas/services/notifications";
 
-const AUDIT_EXPIRY_DAYS = 30
+const AUDIT_EXPIRY_DAYS = 30;
 
 // ---------------------------------------------------------------------------
 // POST /api/audit/run
 // ---------------------------------------------------------------------------
 export async function POST(req: NextRequest) {
-  const startTime = Date.now()
+  const startTime = Date.now();
 
   try {
-    const body = await req.json()
+    const body = await req.json();
     const {
       target_url,
       competitor_urls,
@@ -34,181 +34,224 @@ export async function POST(req: NextRequest) {
       requestor_phone,
       requestor_company,
       audit_id,
-    } = body
+    } = body;
 
     // ── Validate inputs ──────────────────────────────────────────────────────
     if (!target_url?.trim()) {
-      return NextResponse.json({ error: 'target_url is required' }, { status: 400 })
+      return NextResponse.json(
+        { error: "target_url is required" },
+        { status: 400 },
+      );
     }
 
     const normalizeUrl = (url: string) =>
-      url.trim().startsWith('http') ? url.trim() : `https://${url.trim()}`
+      url.trim().startsWith("http") ? url.trim() : `https://${url.trim()}`;
 
-    const normalizedTarget      = normalizeUrl(String(target_url))
+    const normalizedTarget = normalizeUrl(String(target_url));
     const normalizedCompetitors = ((competitor_urls ?? []) as unknown[])
       .filter(Boolean)
       .slice(0, 3)
-      .map((u) => normalizeUrl(String(u)))
+      .map((u) => normalizeUrl(String(u)));
 
-    try { new URL(normalizedTarget) } catch {
-      return NextResponse.json({ error: 'target_url must be a valid URL' }, { status: 400 })
+    try {
+      new URL(normalizedTarget);
+    } catch {
+      return NextResponse.json(
+        { error: "target_url must be a valid URL" },
+        { status: 400 },
+      );
     }
 
     if (normalizedCompetitors.length === 0) {
       return NextResponse.json(
-        { error: 'At least one competitor_url is required' },
-        { status: 400 }
-      )
+        { error: "At least one competitor_url is required" },
+        { status: 400 },
+      );
     }
 
     // ── Create or update audit record (status: running) ──────────────────────
-    let auditId: string | null = audit_id ? String(audit_id) : null
+    let auditId: string | null = audit_id ? String(audit_id) : null;
 
     if (auditId) {
       await updateAuditRecord(auditId, {
-        status:     'running',
+        status: "running",
         started_at: new Date().toISOString(),
-      })
+      });
     } else {
       const insert: WaasAuditInsert = {
-        audit_type:        'prospect',
-        status:            'running',
-        target_url:        normalizedTarget,
-        competitor_urls:   normalizedCompetitors,
-        requestor_name:    requestor_name    ? String(requestor_name)    : null,
-        requestor_email:   requestor_email   ? String(requestor_email)   : null,
-        requestor_phone:   requestor_phone   ? String(requestor_phone)   : null,
+        audit_type: "prospect",
+        status: "running",
+        target_url: normalizedTarget,
+        competitor_urls: normalizedCompetitors,
+        requestor_name: requestor_name ? String(requestor_name) : null,
+        requestor_email: requestor_email ? String(requestor_email) : null,
+        requestor_phone: requestor_phone ? String(requestor_phone) : null,
         requestor_company: requestor_company ? String(requestor_company) : null,
-        started_at:        new Date().toISOString(),
-        expires_at:        new Date(Date.now() + AUDIT_EXPIRY_DAYS * 24 * 60 * 60 * 1000).toISOString(),
-        seo_provider:      (process.env.WAAS_SEO_PROVIDER ?? 'mock') as AuditSeoProvider,
-      }
+        started_at: new Date().toISOString(),
+        expires_at: new Date(
+          Date.now() + AUDIT_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
+        ).toISOString(),
+        seo_provider: (process.env.WAAS_SEO_PROVIDER ??
+          "mock") as AuditSeoProvider,
+      };
 
-      auditId = await createAuditRecord(insert)
+      auditId = await createAuditRecord(insert);
 
       if (!auditId) {
         return NextResponse.json(
-          { error: 'Failed to initialize audit record' },
-          { status: 500 }
-        )
+          { error: "Failed to initialize audit record" },
+          { status: 500 },
+        );
       }
     }
 
     // ── Run the audit engine ─────────────────────────────────────────────────
-    let engineResult
+    let engineResult;
     try {
       engineResult = await runFullAudit(
         normalizedTarget,
         normalizedCompetitors,
         industry ? String(industry) : null,
-        location ? String(location) : null
-      )
+        location ? String(location) : null,
+      );
     } catch (engineErr) {
-      console.error('[/api/audit/run] Engine error:', engineErr)
+      console.error("[/api/audit/run] Engine error:", engineErr);
 
       await updateAuditRecord(auditId, {
-        status:             'failed',
-        error_message:      String(engineErr).slice(0, 500),
-        manual_review:      true,
+        status: "failed",
+        error_message: String(engineErr).slice(0, 500),
+        manual_review: true,
         manual_review_note: `Engine exception: ${String(engineErr).slice(0, 300)}`,
-      })
+      });
 
-      notifyAdmin(auditId, normalizedTarget, String(engineErr)).catch(console.error)
+      notifyAdmin(auditId, normalizedTarget, String(engineErr)).catch(
+        console.error,
+      );
 
       return NextResponse.json(
         {
-          audit_id:      auditId,
-          status:        'failed',
+          audit_id: auditId,
+          status: "failed",
           manual_review: true,
-          message:       'Audit could not be completed automatically. Our team has been notified and will review your site within 24 hours.',
-          poll_url:      `/api/waas/audits/${auditId}/status`,
+          message:
+            "Audit could not be completed automatically. Our team has been notified and will review your site within 24 hours.",
+          poll_url: `/api/waas/audits/${auditId}/status`,
         },
-        { status: 202 }
-      )
+        { status: 202 },
+      );
     }
 
     // ── Save results to Supabase ─────────────────────────────────────────────
     const updatePayload: WaasAuditUpdate = {
-      status:             engineResult.manualReview ? 'failed' : 'completed',
-      report_data:        engineResult.reportData,
-      completed_at:       engineResult.manualReview ? null : new Date().toISOString(),
-      seo_provider:       engineResult.provider,
-      keywords_used:      engineResult.keywordsUsed,
-      location_detected:  engineResult.locationDetected,
-      manual_review:      engineResult.manualReview,
+      status: engineResult.manualReview ? "failed" : "completed",
+      report_data: engineResult.reportData,
+      completed_at: engineResult.manualReview ? null : new Date().toISOString(),
+      seo_provider: engineResult.provider,
+      keywords_used: engineResult.keywordsUsed,
+      location_detected: engineResult.locationDetected,
+      manual_review: engineResult.manualReview,
       manual_review_note: engineResult.manualReviewNote,
-    }
+    };
 
-    if (requestor_email)   updatePayload.requestor_email   = String(requestor_email)
-    if (requestor_name)    updatePayload.requestor_name    = String(requestor_name)
-    if (requestor_phone)   updatePayload.requestor_phone   = String(requestor_phone)
-    if (requestor_company) updatePayload.requestor_company = String(requestor_company)
+    if (requestor_email)
+      updatePayload.requestor_email = String(requestor_email);
+    if (requestor_name) updatePayload.requestor_name = String(requestor_name);
+    if (requestor_phone)
+      updatePayload.requestor_phone = String(requestor_phone);
+    if (requestor_company)
+      updatePayload.requestor_company = String(requestor_company);
 
-    await updateAuditRecord(auditId, updatePayload)
+    await updateAuditRecord(auditId, updatePayload);
 
     if (engineResult.manualReview) {
-      notifyAdmin(auditId, normalizedTarget, engineResult.manualReviewNote ?? 'Unknown').catch(console.error)
+      notifyAdmin(
+        auditId,
+        normalizedTarget,
+        engineResult.manualReviewNote ?? "Unknown",
+      ).catch(console.error);
     }
 
     // Task 9: Fire-and-forget "audit ready" email to requestor
     if (!engineResult.manualReview && requestor_email) {
       const reportPath = buildAuditReportPath(auditId, {
         requestorCompany: requestor_company ? String(requestor_company) : null,
-        requestorName:    requestor_name    ? String(requestor_name)    : null,
-        targetUrl:        normalizedTarget,
-      })
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL_PROD ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://crm.rankedceo.com'
-      const fullReportUrl = `${baseUrl}${reportPath}`
-      const fullPdfUrl    = `${baseUrl}/api/audit/${auditId}/pdf`
+        requestorName: requestor_name ? String(requestor_name) : null,
+        targetUrl: normalizedTarget,
+      });
+      const baseUrl =
+        process.env.NEXT_PUBLIC_APP_URL_PROD ??
+        process.env.NEXT_PUBLIC_APP_URL ??
+        "https://crm.rankedceo.com";
+      const fullReportUrl = `${baseUrl}${reportPath}`;
+      const fullPdfUrl = `${baseUrl}/api/audit/${auditId}/pdf`;
 
-      const summary   = engineResult.reportData.summary
-      const score     = summary
-        ? Math.round((summary.performance_score * 0.40) + (summary.seo_score * 0.30) + (summary.mobile_score * 0.20) + (summary.accessibility_score * 0.10))
-        : 0
-      const grade      = (engineResult.reportData as Record<string, unknown>).grade as string ?? 'F'
-      const opps       = (engineResult.reportData.opportunities ?? []).slice(0, 3).map((o: { title?: string; description?: string }) => o.title ?? o.description ?? '')
-      const targetDom  = extractDomain(normalizedTarget)
+      const summary = engineResult.reportData.summary;
+      const score = summary
+        ? Math.round(
+            summary.performance_score * 0.4 +
+              summary.seo_score * 0.3 +
+              summary.mobile_score * 0.2 +
+              summary.accessibility_score * 0.1,
+          )
+        : 0;
+      const grade =
+        ((engineResult.reportData as Record<string, unknown>)
+          .grade as string) ?? "F";
+      const opps = (engineResult.reportData.opportunities ?? [])
+        .slice(0, 3)
+        .map(
+          (o: { title?: string; description?: string }) =>
+            o.title ?? o.description ?? "",
+        );
+      const targetDom = extractDomain(normalizedTarget);
 
       sendAuditReportReadyEmail({
         recipientEmail: String(requestor_email),
-        recipientName:  requestor_name ? String(requestor_name) : null,
+        recipientName: requestor_name ? String(requestor_name) : null,
         auditId,
-        targetDomain:   targetDom,
+        targetDomain: targetDom,
         score,
         grade,
-        opportunities:  opps,
-        auditUrl:       fullReportUrl,
-        pdfUrl:         fullPdfUrl,
-      }).catch(err => console.error('[/api/audit/run] audit_report_ready email failed:', err))
+        opportunities: opps,
+        auditUrl: fullReportUrl,
+        pdfUrl: fullPdfUrl,
+      }).catch((err) =>
+        console.error("[/api/audit/run] audit_report_ready email failed:", err),
+      );
     }
 
-    const elapsed = Date.now() - startTime
+    const elapsed = Date.now() - startTime;
 
     return NextResponse.json({
-      audit_id:          auditId,
-      status:            engineResult.manualReview ? 'failed' : 'completed',
-      manual_review:     engineResult.manualReview,
-      elapsed_ms:        elapsed,
-      report_url:        buildAuditReportPath(auditId, {
+      audit_id: auditId,
+      status: engineResult.manualReview ? "failed" : "completed",
+      manual_review: engineResult.manualReview,
+      elapsed_ms: elapsed,
+      report_url: buildAuditReportPath(auditId, {
         requestorCompany: requestor_company ? String(requestor_company) : null,
         requestorName: requestor_name ? String(requestor_name) : null,
         targetUrl: normalizedTarget,
       }),
-      poll_url:          `/api/waas/audits/${auditId}/status`,
+      poll_url: `/api/waas/audits/${auditId}/status`,
       summary: {
-        overall_score:   engineResult.reportData.summary?.overall_score ?? 0,
-        grade:           (engineResult.reportData as Record<string, unknown>)?.grade ?? 'F',
+        overall_score: engineResult.reportData.summary?.overall_score ?? 0,
+        grade:
+          (engineResult.reportData as Record<string, unknown>)?.grade ?? "F",
         keywords_tested: engineResult.keywordsUsed.length,
-        location:        engineResult.locationDetected,
-        top_search_result: engineResult.reportData.summary?.top_search_result ?? null,
-        bottom_search_result: engineResult.reportData.summary?.bottom_search_result ?? null,
+        location: engineResult.locationDetected,
+        top_search_result:
+          engineResult.reportData.summary?.top_search_result ?? null,
+        bottom_search_result:
+          engineResult.reportData.summary?.bottom_search_result ?? null,
         mean_position: engineResult.reportData.summary?.mean_position ?? null,
       },
-    })
-
+    });
   } catch (err) {
-    console.error('[/api/audit/run] Unhandled exception:', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error("[/api/audit/run] Unhandled exception:", err);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }
 
@@ -216,45 +259,50 @@ export async function POST(req: NextRequest) {
 // Notify admin of manual review needed (async — fire and forget)
 // ---------------------------------------------------------------------------
 async function notifyAdmin(
-  auditId:   string,
+  auditId: string,
   targetUrl: string,
-  reason:    string
+  reason: string,
 ): Promise<void> {
   try {
     await updateAuditRecord(auditId, {
-      admin_notified:    true,
+      admin_notified: true,
       admin_notified_at: new Date().toISOString(),
-    })
+    });
 
-    const sendgridKey = process.env.SENDGRID_API_KEY
-    const adminEmail  = process.env.WAAS_ADMIN_EMAIL ?? 'darrick@rankedceo.com'
+    const sendgridKey = process.env.SENDGRID_API_KEY;
+    const adminEmail = process.env.WAAS_ADMIN_EMAIL ?? "darrick@rankedceo.com";
 
     if (!sendgridKey) {
-      console.log(`[Admin Notify] SendGrid not configured. Manual review needed for audit ${auditId}: ${targetUrl}`)
-      return
+      console.log(
+        `[Admin Notify] SendGrid not configured. Manual review needed for audit ${auditId}: ${targetUrl}`,
+      );
+      return;
     }
 
-    const domain   = extractDomain(targetUrl)
-    const auditUrl = `${process.env.NEXT_PUBLIC_APP_URL_PROD ?? 'https://crm.rankedceo.com'}/waas/audits/${auditId}`
+    const domain = extractDomain(targetUrl);
+    const auditUrl = `${process.env.NEXT_PUBLIC_APP_URL_PROD ?? "https://crm.rankedceo.com"}/waas/audits/${auditId}`;
 
-    await fetch('https://api.sendgrid.com/v3/mail/send', {
-      method:  'POST',
+    await fetch("https://api.sendgrid.com/v3/mail/send", {
+      method: "POST",
       headers: {
-        Authorization:  `Bearer ${sendgridKey}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${sendgridKey}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        personalizations: [{
-          to: [{ email: adminEmail, name: 'Darrick' }],
-          subject: `⚠️ Manual Audit Required: ${domain}`,
-        }],
+        personalizations: [
+          {
+            to: [{ email: adminEmail, name: "Darrick" }],
+            subject: `⚠️ Manual Audit Required: ${domain}`,
+          },
+        ],
         from: {
-          email: process.env.SENDGRID_FROM_EMAIL ?? 'noreply@rankedceo.com',
-          name:  'RankedCEO Audit System',
+          email: process.env.SENDGRID_FROM_EMAIL ?? "noreply@rankedceo.com",
+          name: "RankedCEO Audit System",
         },
-        content: [{
-          type:  'text/html',
-          value: `
+        content: [
+          {
+            type: "text/html",
+            value: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <h2 style="color: #DC2626;">⚠️ Manual Audit Required</h2>
               <p>An audit could not be completed automatically and requires your review.</p>
@@ -269,12 +317,15 @@ async function notifyAdmin(
               </a>
             </div>
           `,
-        }],
+          },
+        ],
       }),
-    })
+    });
 
-    console.log(`[Admin Notify] Email sent to ${adminEmail} for audit ${auditId}`)
+    console.log(
+      `[Admin Notify] Email sent to ${adminEmail} for audit ${auditId}`,
+    );
   } catch (err) {
-    console.error('[Admin Notify] Failed to notify admin:', err)
+    console.error("[Admin Notify] Failed to notify admin:", err);
   }
 }

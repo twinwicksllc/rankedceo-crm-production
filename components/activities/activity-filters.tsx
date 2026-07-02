@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { useRouter, useSearchParams } from "next/navigation";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 export function ActivityFilters() {
   const router = useRouter();
@@ -12,35 +12,35 @@ export function ActivityFilters() {
   const handleSearch = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
     if (value) {
-      params.set('search', value);
+      params.set("search", value);
     } else {
-      params.delete('search');
+      params.delete("search");
     }
     router.push(`?${params.toString()}`);
   };
 
   const handleTypeFilter = (type: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (type === 'all') {
-      params.delete('type');
+    if (type === "all") {
+      params.delete("type");
     } else {
-      params.set('type', type);
+      params.set("type", type);
     }
     router.push(`?${params.toString()}`);
   };
 
   const handleStatusFilter = (status: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (status === 'all') {
-      params.delete('status');
+    if (status === "all") {
+      params.delete("status");
     } else {
-      params.set('status', status);
+      params.set("status", status);
     }
     router.push(`?${params.toString()}`);
   };
 
-  const activeType = searchParams.get('type') || 'all';
-  const activeStatus = searchParams.get('status') || 'all';
+  const activeType = searchParams.get("type") || "all";
+  const activeStatus = searchParams.get("status") || "all";
 
   return (
     <Card className="p-4">
@@ -50,7 +50,7 @@ export function ActivityFilters() {
           <Input
             type="search"
             placeholder="Search activities..."
-            defaultValue={searchParams.get('search') || ''}
+            defaultValue={searchParams.get("search") || ""}
             onChange={(e) => handleSearch(e.target.value)}
             className="w-full"
           />
@@ -59,44 +59,44 @@ export function ActivityFilters() {
         {/* Type Filter */}
         <div className="flex gap-2">
           <Button
-            variant={activeType === 'all' ? 'default' : 'outline'}
+            variant={activeType === "all" ? "default" : "outline"}
             size="sm"
-            onClick={() => handleTypeFilter('all')}
+            onClick={() => handleTypeFilter("all")}
           >
             All Types
           </Button>
           <Button
-            variant={activeType === 'call' ? 'default' : 'outline'}
+            variant={activeType === "call" ? "default" : "outline"}
             size="sm"
-            onClick={() => handleTypeFilter('call')}
+            onClick={() => handleTypeFilter("call")}
           >
             📞 Calls
           </Button>
           <Button
-            variant={activeType === 'meeting' ? 'default' : 'outline'}
+            variant={activeType === "meeting" ? "default" : "outline"}
             size="sm"
-            onClick={() => handleTypeFilter('meeting')}
+            onClick={() => handleTypeFilter("meeting")}
           >
             📅 Meetings
           </Button>
           <Button
-            variant={activeType === 'email' ? 'default' : 'outline'}
+            variant={activeType === "email" ? "default" : "outline"}
             size="sm"
-            onClick={() => handleTypeFilter('email')}
+            onClick={() => handleTypeFilter("email")}
           >
             📧 Emails
           </Button>
           <Button
-            variant={activeType === 'note' ? 'default' : 'outline'}
+            variant={activeType === "note" ? "default" : "outline"}
             size="sm"
-            onClick={() => handleTypeFilter('note')}
+            onClick={() => handleTypeFilter("note")}
           >
             📝 Notes
           </Button>
           <Button
-            variant={activeType === 'task' ? 'default' : 'outline'}
+            variant={activeType === "task" ? "default" : "outline"}
             size="sm"
-            onClick={() => handleTypeFilter('task')}
+            onClick={() => handleTypeFilter("task")}
           >
             ✅ Tasks
           </Button>
@@ -105,23 +105,23 @@ export function ActivityFilters() {
         {/* Status Filter */}
         <div className="flex gap-2">
           <Button
-            variant={activeStatus === 'all' ? 'default' : 'outline'}
+            variant={activeStatus === "all" ? "default" : "outline"}
             size="sm"
-            onClick={() => handleStatusFilter('all')}
+            onClick={() => handleStatusFilter("all")}
           >
             All Status
           </Button>
           <Button
-            variant={activeStatus === 'pending' ? 'default' : 'outline'}
+            variant={activeStatus === "pending" ? "default" : "outline"}
             size="sm"
-            onClick={() => handleStatusFilter('pending')}
+            onClick={() => handleStatusFilter("pending")}
           >
             Pending
           </Button>
           <Button
-            variant={activeStatus === 'completed' ? 'default' : 'outline'}
+            variant={activeStatus === "completed" ? "default" : "outline"}
             size="sm"
-            onClick={() => handleStatusFilter('completed')}
+            onClick={() => handleStatusFilter("completed")}
           >
             Completed
           </Button>

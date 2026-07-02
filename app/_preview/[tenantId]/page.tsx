@@ -1,41 +1,51 @@
-import { notFound } from 'next/navigation'
-import { createClient } from '@supabase/supabase-js'
-import { SectionRenderer } from '@/components/waas/SectionRenderer'
-import { getTemplate, resolveSections } from '@/lib/waas/templates/registry'
-import type { ResolvedTenant, BrandConfig, TenantSiteConfig, SectionConfig } from '@/lib/waas/templates/types'
+import { notFound } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
+import { SectionRenderer } from "@/components/waas/SectionRenderer";
+import { getTemplate, resolveSections } from "@/lib/waas/templates/registry";
+import type {
+  ResolvedTenant,
+  BrandConfig,
+  TenantSiteConfig,
+  SectionConfig,
+} from "@/lib/waas/templates/types";
 
-async function getPreviewPage(tenantId: string, templateSlug?: string): Promise<{
-  tenant: ResolvedTenant
-  sections: SectionConfig[]
-  siteConfig: TenantSiteConfig | null
+async function getPreviewPage(
+  tenantId: string,
+  templateSlug?: string,
+): Promise<{
+  tenant: ResolvedTenant;
+  sections: SectionConfig[];
+  siteConfig: TenantSiteConfig | null;
 } | null> {
-  const url = process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL
-  const key = process.env.WAAS_SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) return null
+  const url = process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL;
+  const key = process.env.WAAS_SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
 
-  const client = createClient(url, key)
+  const client = createClient(url, key);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: tenantRow, error } = await (client as any)
-    .from('tenants')
-    .select(`
+    .from("tenants")
+    .select(
+      `
       id, slug, subdomain, domain, brand_config, package_tier, status,
       target_industry, target_location, legal_name, primary_trade,
       usp, calendly_url, financing_enabled, source_audit_id
-    `)
-    .eq('id', tenantId)
-    .single()
+    `,
+    )
+    .eq("id", tenantId)
+    .single();
 
-  if (error || !tenantRow) return null
+  if (error || !tenantRow) return null;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: siteConfigRow } = await (client as any)
-    .from('tenant_site_config')
-    .select('*, site_templates(slug)')
-    .eq('tenant_id', tenantRow.id)
-    .single()
+    .from("tenant_site_config")
+    .select("*, site_templates(slug)")
+    .eq("tenant_id", tenantRow.id)
+    .single();
 
-  const row = tenantRow as Record<string, unknown>
+  const row = tenantRow as Record<string, unknown>;
 
   const tenant: ResolvedTenant = {
     id: row.id as string,
@@ -53,56 +63,72 @@ async function getPreviewPage(tenantId: string, templateSlug?: string): Promise<
     calendly_url: row.calendly_url as string | null,
     financing_enabled: (row.financing_enabled as boolean) ?? false,
     source_audit_id: row.source_audit_id as string | null,
-  }
+  };
 
-  const configRow = siteConfigRow as (TenantSiteConfig & { site_templates?: { slug: string } }) | null
-  const resolvedTemplateSlug = templateSlug?.trim() || configRow?.site_templates?.slug || 'modern'
-  const template = getTemplate(resolvedTemplateSlug)
+  const configRow = siteConfigRow as
+    (TenantSiteConfig & { site_templates?: { slug: string } }) | null;
+  const resolvedTemplateSlug =
+    templateSlug?.trim() || configRow?.site_templates?.slug || "modern";
+  const template = getTemplate(resolvedTemplateSlug);
 
-  const tenantOverrides: SectionConfig[] = configRow?.active_sections_json ?? []
-  const sections = resolveSections(template.default_layout_json, tenantOverrides)
+  const tenantOverrides: SectionConfig[] =
+    configRow?.active_sections_json ?? [];
+  const sections = resolveSections(
+    template.default_layout_json,
+    tenantOverrides,
+  );
 
-  return { tenant, sections, siteConfig: configRow }
+  return { tenant, sections, siteConfig: configRow };
 }
 
-async function getVariantSections(tenantId: string, variantIndex: number): Promise<SectionConfig[] | null> {
-  const url = process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL
-  const key = process.env.WAAS_SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) return null
+async function getVariantSections(
+  tenantId: string,
+  variantIndex: number,
+): Promise<SectionConfig[] | null> {
+  const url = process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL;
+  const key = process.env.WAAS_SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
 
-  const client = createClient(url, key)
+  const client = createClient(url, key);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (client as any)
-    .from('tenant_site_variants')
-    .select('sections_json')
-    .eq('tenant_id', tenantId)
-    .eq('variant_index', variantIndex)
-    .single()
+    .from("tenant_site_variants")
+    .select("sections_json")
+    .eq("tenant_id", tenantId)
+    .eq("variant_index", variantIndex)
+    .single();
 
-  if (error || !data) return null
+  if (error || !data) return null;
 
-  const sections = (data as { sections_json?: unknown[] }).sections_json
-  if (!Array.isArray(sections)) return null
-  return sections as SectionConfig[]
+  const sections = (data as { sections_json?: unknown[] }).sections_json;
+  if (!Array.isArray(sections)) return null;
+  return sections as SectionConfig[];
 }
 
 export default async function PreviewTenantPage({
   params,
   searchParams,
 }: {
-  params: { tenantId: string }
-  searchParams?: { template?: string; variant?: string }
+  params: { tenantId: string };
+  searchParams?: { template?: string; variant?: string };
 }) {
-  const result = await getPreviewPage(params.tenantId, searchParams?.template)
-  if (!result) notFound()
+  const result = await getPreviewPage(params.tenantId, searchParams?.template);
+  if (!result) notFound();
 
-  let sections = result.sections
-  const variantIndex = Number(searchParams?.variant ?? '')
-  if (Number.isInteger(variantIndex) && variantIndex >= 1 && variantIndex <= 3) {
-    const variantSections = await getVariantSections(params.tenantId, variantIndex)
+  let sections = result.sections;
+  const variantIndex = Number(searchParams?.variant ?? "");
+  if (
+    Number.isInteger(variantIndex) &&
+    variantIndex >= 1 &&
+    variantIndex <= 3
+  ) {
+    const variantSections = await getVariantSections(
+      params.tenantId,
+      variantIndex,
+    );
     if (variantSections && variantSections.length > 0) {
-      sections = variantSections
+      sections = variantSections;
     }
   }
 
@@ -112,7 +138,7 @@ export default async function PreviewTenantPage({
       sections={sections}
       siteConfig={result.siteConfig}
     />
-  )
+  );
 }
 
-export const revalidate = 30
+export const revalidate = 30;

@@ -9,21 +9,24 @@ Your previous Gemini API key was exposed in the GitHub repository because it was
 ## 🚫 What NOT to Do
 
 1. **NEVER hardcode API keys** in any file:
+
    ```typescript
    // ❌ BAD - Key is in the file
-   const API_KEY = "AIza...NEVER_COMMIT_KEYS"
+   const API_KEY = "AIza...NEVER_COMMIT_KEYS";
    ```
 
 2. **NEVER pass API keys** as command line arguments:
+
    ```bash
    # ❌ BAD - Key appears in process list
    ./scripts/consult-gemini.sh "AIza...YOUR_KEY" "question"
    ```
 
 3. **NEVER log API keys** to console or files:
+
    ```typescript
    // ❌ BAD - Key appears in logs
-   console.log("Using API key:", API_KEY)
+   console.log("Using API key:", API_KEY);
    ```
 
 4. **NEVER commit** files containing API keys to git
@@ -38,10 +41,10 @@ Store API keys in environment variables, never in code:
 
 ```typescript
 // ✅ GOOD - Key is in environment
-const API_KEY = process.env.GEMINI_API_KEY
+const API_KEY = process.env.GEMINI_API_KEY;
 
 if (!API_KEY) {
-  throw new Error('GEMINI_API_KEY not set')
+  throw new Error("GEMINI_API_KEY not set");
 }
 ```
 
@@ -51,18 +54,18 @@ Always validate that keys exist and have proper format:
 
 ```typescript
 export function getGeminiApiKey(): string | null {
-  const key = process.env.GEMINI_API_KEY
+  const key = process.env.GEMINI_API_KEY;
   if (!key) {
-    console.error('[Security] GEMINI_API_KEY not found')
-    return null
+    console.error("[Security] GEMINI_API_KEY not found");
+    return null;
   }
-  
+
   if (key.length < 10) {
-    console.error('[Security] GEMINI_API_KEY appears invalid')
-    return null
+    console.error("[Security] GEMINI_API_KEY appears invalid");
+    return null;
   }
-  
-  return key
+
+  return key;
 }
 ```
 
@@ -115,6 +118,7 @@ cat .gitignore | grep ".env.local"
 ```
 
 You should see:
+
 ```
 # See https://help.github.com/articles/ignoring-files/
 .env*.local

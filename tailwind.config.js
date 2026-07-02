@@ -2,10 +2,10 @@
 module.exports = {
   darkMode: ["class"],
   content: [
-    './pages/**/*.{ts,tsx}',
-    './components/**/*.{ts,tsx}',
-    './app/**/*.{ts,tsx}',
-    './src/**/*.{ts,tsx}',
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
   ],
   theme: {
     container: {
@@ -52,15 +52,15 @@ module.exports = {
         },
         // WaaS Brand CSS Variables — injected per-tenant by ThemeProvider
         // Usage: bg-brand-primary, text-brand-secondary, border-brand-accent, etc.
-        "brand-primary":    "rgb(var(--brand-primary-rgb) / <alpha-value>)",
-        "brand-secondary":  "rgb(var(--brand-secondary-rgb) / <alpha-value>)",
-        "brand-accent":     "rgb(var(--brand-accent-rgb) / <alpha-value>)",
+        "brand-primary": "rgb(var(--brand-primary-rgb) / <alpha-value>)",
+        "brand-secondary": "rgb(var(--brand-secondary-rgb) / <alpha-value>)",
+        "brand-accent": "rgb(var(--brand-accent-rgb) / <alpha-value>)",
         "brand-background": "rgb(var(--brand-background-rgb) / <alpha-value>)",
-        "brand-text":       "rgb(var(--brand-text-rgb) / <alpha-value>)",
+        "brand-text": "rgb(var(--brand-text-rgb) / <alpha-value>)",
       },
       fontFamily: {
         "brand-heading": "var(--brand-font-heading)",
-        "brand-body":    "var(--brand-font-body)",
+        "brand-body": "var(--brand-font-body)",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -84,4 +84,4 @@ module.exports = {
     },
   },
   plugins: [require("tailwindcss-animate")],
-}
+};

@@ -63,6 +63,7 @@ export default function RootLayout({
 ```
 
 **Why this is better:**
+
 - ✅ Next.js optimizes script loading
 - ✅ `strategy="afterInteractive"` loads after page is interactive
 - ✅ Automatic error handling
@@ -76,88 +77,93 @@ export default function RootLayout({
 **File: `lib/hooks/use-recaptcha.ts`**
 
 ```typescript
-'use client'
+"use client";
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from "react";
 
 declare global {
   interface Window {
     grecaptcha?: {
-      ready: (callback: () => void) => void
-      execute: (siteKey: string, options: { action: string }) => Promise<string>
-    }
+      ready: (callback: () => void) => void;
+      execute: (
+        siteKey: string,
+        options: { action: string },
+      ) => Promise<string>;
+    };
   }
 }
 
 export function useRecaptcha() {
-  const [isReady, setIsReady] = useState(false)
-  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+  const [isReady, setIsReady] = useState(false);
+  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
 
   useEffect(() => {
     if (!siteKey) {
-      console.error('[useRecaptcha] No site key configured')
-      return
+      console.error("[useRecaptcha] No site key configured");
+      return;
     }
 
     // Check if grecaptcha is already loaded
     if (window.grecaptcha) {
       window.grecaptcha.ready(() => {
-        setIsReady(true)
-      })
-      return
+        setIsReady(true);
+      });
+      return;
     }
 
     // Poll for grecaptcha availability
     const checkInterval = setInterval(() => {
       if (window.grecaptcha) {
         window.grecaptcha.ready(() => {
-          setIsReady(true)
-          clearInterval(checkInterval)
-        })
+          setIsReady(true);
+          clearInterval(checkInterval);
+        });
       }
-    }, 100)
+    }, 100);
 
     // Cleanup after 10 seconds
     const timeout = setTimeout(() => {
-      clearInterval(checkInterval)
+      clearInterval(checkInterval);
       if (!isReady) {
-        console.error('[useRecaptcha] Failed to load reCAPTCHA after 10 seconds')
+        console.error(
+          "[useRecaptcha] Failed to load reCAPTCHA after 10 seconds",
+        );
       }
-    }, 10000)
+    }, 10000);
 
     return () => {
-      clearInterval(checkInterval)
-      clearTimeout(timeout)
-    }
-  }, [siteKey, isReady])
+      clearInterval(checkInterval);
+      clearTimeout(timeout);
+    };
+  }, [siteKey, isReady]);
 
   const executeRecaptcha = useCallback(
     async (action: string): Promise<string | null> => {
       if (!siteKey) {
-        console.error('[useRecaptcha] No site key configured')
-        return null
+        console.error("[useRecaptcha] No site key configured");
+        return null;
       }
 
       if (!isReady || !window.grecaptcha) {
-        console.error('[useRecaptcha] reCAPTCHA not ready')
-        return null
+        console.error("[useRecaptcha] reCAPTCHA not ready");
+        return null;
       }
 
       try {
-        const token = await window.grecaptcha.execute(siteKey, { action })
-        return token
+        const token = await window.grecaptcha.execute(siteKey, { action });
+        return token;
       } catch (error) {
-        console.error('[useRecaptcha] Execute failed:', error)
-        return null
+        console.error("[useRecaptcha] Execute failed:", error);
+        return null;
       }
     },
-    [siteKey, isReady]
-  )
+    [siteKey, isReady],
+  );
 
   return {
     isReady,
     executeRecaptcha,
-  }
+  };
 }
 ```
 
@@ -315,30 +321,35 @@ Apply the same pattern to `app/(auth)/signup/page.tsx` using the `useRecaptcha` 
 ## Why This Solution is Production-Grade
 
 ### 1. **Uses Next.js Best Practices**
+
 - ✅ `next/script` component for optimal loading
 - ✅ `strategy="afterInteractive"` for performance
 - ✅ Proper TypeScript types
 - ✅ Custom hooks for reusability
 
 ### 2. **Robust Error Handling**
+
 - ✅ Checks for script availability
 - ✅ Polling with timeout
 - ✅ Clear error messages
 - ✅ Loading states for UX
 
 ### 3. **Performance Optimized**
+
 - ✅ Script loads after page is interactive
 - ✅ No blocking operations
 - ✅ Efficient polling mechanism
 - ✅ Proper cleanup
 
 ### 4. **Maintainable**
+
 - ✅ Separation of concerns (hook vs component)
 - ✅ Reusable across login/signup
 - ✅ Easy to test
 - ✅ Clear documentation
 
 ### 5. **Security**
+
 - ✅ Environment variables for keys
 - ✅ Server-side verification
 - ✅ Action-based scoring

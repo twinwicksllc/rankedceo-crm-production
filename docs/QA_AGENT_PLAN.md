@@ -24,14 +24,14 @@ The output is a **single HTML report per run**, delivered to the admin, containi
 
 ## 2. Guiding Principles
 
-| Principle | Implication |
-|---|---|
-| **Determinism first, intelligence later** | All v1 behaviour is scripted. LLM hooks exist as stubs we can fill in later. |
-| **Persona-aware from the core** | Every step declares its persona. The runtime maintains two independent browser contexts (one per persona) and hot-swaps between them by switching the active context, not by logging out. |
-| **Fail-soft by default, fail-hard when asked** | Every assertion has a `severity` field. Only `critical` stops the run. |
-| **Report to admin, not to console** | The final deliverable is the HTML report attached via admin dashboard link. Raw logs are secondary. |
-| **Idempotent & cleanup-safe** | Every run creates tenants with a traceable prefix (`qa_agent_YYYYMMDD_HHMMSS_`) so they can be archived after the run. |
-| **Zero human input mid-run** | If a step would need human input (e.g. real Stripe card, real domain purchase), it must have a pre-configured test adapter. Otherwise the step is marked `skipped_no_adapter` and continues. |
+| Principle                                      | Implication                                                                                                                                                                                  |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Determinism first, intelligence later**      | All v1 behaviour is scripted. LLM hooks exist as stubs we can fill in later.                                                                                                                 |
+| **Persona-aware from the core**                | Every step declares its persona. The runtime maintains two independent browser contexts (one per persona) and hot-swaps between them by switching the active context, not by logging out.    |
+| **Fail-soft by default, fail-hard when asked** | Every assertion has a `severity` field. Only `critical` stops the run.                                                                                                                       |
+| **Report to admin, not to console**            | The final deliverable is the HTML report attached via admin dashboard link. Raw logs are secondary.                                                                                          |
+| **Idempotent & cleanup-safe**                  | Every run creates tenants with a traceable prefix (`qa_agent_YYYYMMDD_HHMMSS_`) so they can be archived after the run.                                                                       |
+| **Zero human input mid-run**                   | If a step would need human input (e.g. real Stripe card, real domain purchase), it must have a pre-configured test adapter. Otherwise the step is marked `skipped_no_adapter` and continues. |
 
 ---
 
@@ -97,31 +97,31 @@ Playwright's **`browser.newContext()`** gives you fully isolated cookies/storage
 
 ```typescript
 interface Persona {
-  name: 'client' | 'admin'
-  contextKey: string                   // Playwright browser context key
-  baseUrl: string                      // e.g. https://qa.rankedceo.com
-  authStrategy: AuthStrategy           // how to establish identity
-  stateMarkers: string[]               // DOM selectors that prove we're in this persona
-  allowedRoutes: RegExp[]              // routes this persona can navigate
-  forbiddenRoutes: RegExp[]            // if we end up here, it's a critical error
+  name: "client" | "admin";
+  contextKey: string; // Playwright browser context key
+  baseUrl: string; // e.g. https://qa.rankedceo.com
+  authStrategy: AuthStrategy; // how to establish identity
+  stateMarkers: string[]; // DOM selectors that prove we're in this persona
+  allowedRoutes: RegExp[]; // routes this persona can navigate
+  forbiddenRoutes: RegExp[]; // if we end up here, it's a critical error
 }
 
 type AuthStrategy =
-  | { type: 'review_token'; token: string }          // client
-  | { type: 'supabase_session'; email: string; password: string }  // admin
+  | { type: "review_token"; token: string } // client
+  | { type: "supabase_session"; email: string; password: string }; // admin
 ```
 
 ### 4.2 The persona switch
 
 ```typescript
 // Pseudocode
-async function switchPersona(to: 'client' | 'admin') {
-  if (currentPersona === to) return
-  logger.persona_switch(currentPersona, to)
-  currentContext = contextMap[to]
-  currentPage = await currentContext.newPage()  // or reuse existing
-  await verifyPersonaMarker(currentPage, to)    // DOM assertion
-  currentPersona = to
+async function switchPersona(to: "client" | "admin") {
+  if (currentPersona === to) return;
+  logger.persona_switch(currentPersona, to);
+  currentContext = contextMap[to];
+  currentPage = await currentContext.newPage(); // or reuse existing
+  await verifyPersonaMarker(currentPage, to); // DOM assertion
+  currentPersona = to;
 }
 ```
 
@@ -138,13 +138,13 @@ Every scenario step declares its persona:
 
 These are the interesting moments — when one persona's action produces output the other persona needs:
 
-| Handoff | Producer | Consumer | Mechanism |
-|---|---|---|---|
-| Tenant submitted to review | Client | Admin | Admin polls `/admin/dashboard` until tenant appears |
-| Variants ready for review | Admin | Client | Client polls `/review/[tenantId]` until variants are visible |
-| Client approves variant | Client | Admin | Admin refreshes tenant detail page, asserts `client_approval_at` is set |
-| Admin deploys site | Admin | Client | Client navigates to tenant's published URL, asserts 200 |
-| Stripe checkout completes | Client | Admin | Admin opens `RevenueWidget`, asserts subscription count incremented |
+| Handoff                    | Producer | Consumer | Mechanism                                                               |
+| -------------------------- | -------- | -------- | ----------------------------------------------------------------------- |
+| Tenant submitted to review | Client   | Admin    | Admin polls `/admin/dashboard` until tenant appears                     |
+| Variants ready for review  | Admin    | Client   | Client polls `/review/[tenantId]` until variants are visible            |
+| Client approves variant    | Client   | Admin    | Admin refreshes tenant detail page, asserts `client_approval_at` is set |
+| Admin deploys site         | Admin    | Client   | Client navigates to tenant's published URL, asserts 200                 |
+| Stripe checkout completes  | Client   | Admin    | Admin opens `RevenueWidget`, asserts subscription count incremented     |
 
 Each handoff is its own `handoff` YAML block with a `producer_persona`, `consumer_persona`, `polling_strategy`, and `timeout_ms`.
 
@@ -164,7 +164,7 @@ metadata:
   tags: [smoke, full-lifecycle, critical-path]
 
 globals:
-  run_id: "{{ generate_run_id() }}"          # e.g. qa_20260512_103045
+  run_id: "{{ generate_run_id() }}" # e.g. qa_20260512_103045
   business_name: "{{ run_id }}_Test Plumbing"
   email: "qa-{{ run_id }}@rankedceo.test"
 
@@ -201,26 +201,26 @@ postconditions:
   - name: Archive test tenant
     type: sql_action
     query: "UPDATE tenants SET status='cancelled', deleted_at=NOW() WHERE legal_name LIKE '{{ run_id }}%'"
-    severity: warning   # cleanup failure is not critical
+    severity: warning # cleanup failure is not critical
 ```
 
 ### 5.2 Step types
 
-| Type | Purpose | Example |
-|---|---|---|
-| `navigate` | Open a URL | `url: /get-started` |
-| `click` | Click element (selector or accessible name) | `target: button:has-text("Continue")` |
-| `fill` | Fill form field | `target: input[name=business_name]`, `value: "{{ business_name }}"` |
-| `select` | Dropdown selection | `target: select[name=industry]`, `value: plumbing` |
-| `upload` | Upload file | `target: input[type=file][name=logo]`, `file: fixtures/logo.png` |
-| `wait_for` | Wait for selector/URL/response | `selector: text=Variants ready` |
-| `assert_dom` | DOM assertion | `selector: h1`, `contains: Welcome` |
-| `assert_url` | URL assertion | `matches: /review/[a-f0-9-]+` |
-| `assert_sql` | DB state assertion | `query: ...`, `expect: row_count_gte`, `value: 1` |
-| `assert_network` | Network response assertion | `url: /api/waas/*`, `status: 200` |
-| `screenshot` | Named screenshot | `name: client_billing_tab_loaded` |
-| `stripe_test_pay` | Drive Stripe Checkout with test card | `card: 4242...` |
-| `handoff` | Cross-persona sync point | (see above) |
+| Type              | Purpose                                     | Example                                                             |
+| ----------------- | ------------------------------------------- | ------------------------------------------------------------------- |
+| `navigate`        | Open a URL                                  | `url: /get-started`                                                 |
+| `click`           | Click element (selector or accessible name) | `target: button:has-text("Continue")`                               |
+| `fill`            | Fill form field                             | `target: input[name=business_name]`, `value: "{{ business_name }}"` |
+| `select`          | Dropdown selection                          | `target: select[name=industry]`, `value: plumbing`                  |
+| `upload`          | Upload file                                 | `target: input[type=file][name=logo]`, `file: fixtures/logo.png`    |
+| `wait_for`        | Wait for selector/URL/response              | `selector: text=Variants ready`                                     |
+| `assert_dom`      | DOM assertion                               | `selector: h1`, `contains: Welcome`                                 |
+| `assert_url`      | URL assertion                               | `matches: /review/[a-f0-9-]+`                                       |
+| `assert_sql`      | DB state assertion                          | `query: ...`, `expect: row_count_gte`, `value: 1`                   |
+| `assert_network`  | Network response assertion                  | `url: /api/waas/*`, `status: 200`                                   |
+| `screenshot`      | Named screenshot                            | `name: client_billing_tab_loaded`                                   |
+| `stripe_test_pay` | Drive Stripe Checkout with test card        | `card: 4242...`                                                     |
+| `handoff`         | Cross-persona sync point                    | (see above)                                                         |
 
 ### 5.3 Severity on every assertion
 
@@ -228,7 +228,7 @@ postconditions:
 - type: assert_dom
   selector: div[data-testid=error-banner]
   contains: "Something went wrong"
-  severity: warning          # ← THE KEY FIELD
+  severity: warning # ← THE KEY FIELD
   # Severity levels:
   #   info      — informational, never affects pass/fail
   #   warning   — recorded in report, run continues
@@ -244,12 +244,12 @@ This is your top requirement. Here's the exact model:
 
 ### 6.1 Severity taxonomy
 
-| Severity | Count in pass/fail | Scene continues? | Next scene runs? | Run result |
-|---|---|---|---|---|
-| `info` | No | Yes | Yes | pass |
-| `warning` | No | Yes | Yes | pass-with-warnings |
-| `error` | Yes | **No** (scene marked fail) | **Yes** (next scene starts) | completed-with-failures |
-| `critical` | Yes | **No** | **No — halt immediately** | halted-critical |
+| Severity   | Count in pass/fail | Scene continues?           | Next scene runs?            | Run result              |
+| ---------- | ------------------ | -------------------------- | --------------------------- | ----------------------- |
+| `info`     | No                 | Yes                        | Yes                         | pass                    |
+| `warning`  | No                 | Yes                        | Yes                         | pass-with-warnings      |
+| `error`    | Yes                | **No** (scene marked fail) | **Yes** (next scene starts) | completed-with-failures |
+| `critical` | Yes                | **No**                     | **No — halt immediately**   | halted-critical         |
 
 ### 6.2 Auto-escalation rules
 
@@ -259,24 +259,29 @@ Some conditions always escalate regardless of declared severity:
 // lib/escalation.ts
 const ESCALATION_RULES = [
   // If Supabase is unreachable, nothing else matters
-  (evt) => evt.type === 'sql_check_failure' &&
-           evt.error.includes('ECONNREFUSED')
-           ? 'critical' : null,
+  (evt) =>
+    evt.type === "sql_check_failure" && evt.error.includes("ECONNREFUSED")
+      ? "critical"
+      : null,
 
   // If auth breaks mid-run, we can't trust subsequent steps
-  (evt) => evt.type === 'auth_state_lost' ? 'critical' : null,
+  (evt) => (evt.type === "auth_state_lost" ? "critical" : null),
 
   // If Playwright itself crashes
-  (evt) => evt.type === 'browser_crash' ? 'critical' : null,
+  (evt) => (evt.type === "browser_crash" ? "critical" : null),
 
   // If we land on an unexpected URL (e.g. client ended up on /admin/*)
-  (evt) => evt.type === 'forbidden_route_entered' ? 'critical' : null,
+  (evt) => (evt.type === "forbidden_route_entered" ? "critical" : null),
 
   // If a server 500 happens on any navigation (suggests the app is broken,
   // not just the test)
-  (evt) => evt.type === 'http_response' && evt.status >= 500 &&
-           evt.url.startsWith(env.BASE_URL) ? 'critical' : null,
-]
+  (evt) =>
+    evt.type === "http_response" &&
+    evt.status >= 500 &&
+    evt.url.startsWith(env.BASE_URL)
+      ? "critical"
+      : null,
+];
 ```
 
 ### 6.3 The "refuse to resume until instructed" lock
@@ -300,6 +305,7 @@ qa-agent run scenarios/full_lifecycle.yaml
 ```
 
 Admin can then either:
+
 - `--acknowledge-halt <run_id>` — archive the halted run and start a new one
 - `--fresh` — same, shorthand
 - Investigate, fix, then run again (which still requires the acknowledgement)
@@ -312,26 +318,26 @@ This guarantees **no automatic retry after a critical error**, per your spec.
 
 ### 7.1 Scenarios
 
-| ID | Name | Personas | ~Steps | Critical Path? |
-|---|---|---|---|---|
-| `smoke_01` | Homepage + marketing pages load | — | 8 | Yes |
-| `client_01` | Full client onboarding | client | 35 | Yes |
-| `client_02` | Client picks variant on review page | client | 12 | Yes |
-| `client_03` | Client uses editor (all tabs) | client | 45 | Yes |
-| `client_04` | Client upgrades via Stripe test card | client | 20 | Yes |
-| `client_05` | Client views billing tab post-upgrade | client | 10 | Yes |
-| `client_06` | Client views audit history | client | 8 | No |
-| `admin_01` | Admin sees new tenant in queue | admin | 10 | Yes |
-| `admin_02` | Admin triggers AI variant generation | admin | 15 | Yes |
-| `admin_03` | Admin reviews + approves variants | admin | 20 | Yes |
-| `admin_04` | Admin deploys site | admin | 15 | Yes |
-| `admin_05` | Admin checks revenue dashboard reflects upgrade | admin | 8 | Yes |
-| `admin_06` | Admin archives + restores tenant | admin | 10 | No |
-| `full_lifecycle` | Composition of all above with handoffs | client+admin | ~220 | Yes |
-| `edge_01` | Invalid review token | client | 5 | No |
-| `edge_02` | Expired/used reviewToken | client | 5 | No |
-| `edge_03` | Tenant site with missing brand_config | client | 5 | No |
-| `edge_04` | Billing portal with no active sub | client | 5 | No |
+| ID               | Name                                            | Personas     | ~Steps | Critical Path? |
+| ---------------- | ----------------------------------------------- | ------------ | ------ | -------------- |
+| `smoke_01`       | Homepage + marketing pages load                 | —            | 8      | Yes            |
+| `client_01`      | Full client onboarding                          | client       | 35     | Yes            |
+| `client_02`      | Client picks variant on review page             | client       | 12     | Yes            |
+| `client_03`      | Client uses editor (all tabs)                   | client       | 45     | Yes            |
+| `client_04`      | Client upgrades via Stripe test card            | client       | 20     | Yes            |
+| `client_05`      | Client views billing tab post-upgrade           | client       | 10     | Yes            |
+| `client_06`      | Client views audit history                      | client       | 8      | No             |
+| `admin_01`       | Admin sees new tenant in queue                  | admin        | 10     | Yes            |
+| `admin_02`       | Admin triggers AI variant generation            | admin        | 15     | Yes            |
+| `admin_03`       | Admin reviews + approves variants               | admin        | 20     | Yes            |
+| `admin_04`       | Admin deploys site                              | admin        | 15     | Yes            |
+| `admin_05`       | Admin checks revenue dashboard reflects upgrade | admin        | 8      | Yes            |
+| `admin_06`       | Admin archives + restores tenant                | admin        | 10     | No             |
+| `full_lifecycle` | Composition of all above with handoffs          | client+admin | ~220   | Yes            |
+| `edge_01`        | Invalid review token                            | client       | 5      | No             |
+| `edge_02`        | Expired/used reviewToken                        | client       | 5      | No             |
+| `edge_03`        | Tenant site with missing brand_config           | client       | 5      | No             |
+| `edge_04`        | Billing portal with no active sub               | client       | 5      | No             |
 
 ### 7.2 Full lifecycle scene list
 
@@ -366,11 +372,11 @@ full_lifecycle.yaml
 
 We recommend **three tiers**:
 
-| Tier | Purpose | Persistence | Stripe mode |
-|---|---|---|---|
-| **Local** | Dev loop for writing scenarios | Reset per run | Test mode |
-| **QA (staging)** | CI smoke (every PR) + full lifecycle (weekly Monday) | Cleaned via admin purge action | Test mode |
-| **Prod Canary** | Read-only smoke tests (no mutations) | n/a | — |
+| Tier             | Purpose                                              | Persistence                    | Stripe mode |
+| ---------------- | ---------------------------------------------------- | ------------------------------ | ----------- |
+| **Local**        | Dev loop for writing scenarios                       | Reset per run                  | Test mode   |
+| **QA (staging)** | CI smoke (every PR) + full lifecycle (weekly Monday) | Cleaned via admin purge action | Test mode   |
+| **Prod Canary**  | Read-only smoke tests (no mutations)                 | n/a                            | —           |
 
 Prod canary scenarios are a small subset (homepage, login, pricing page) — **never** run mutating tests against prod.
 
@@ -400,14 +406,14 @@ QA_OUTPUT_DIR                = ./qa-runs
 
 ### 8.4 Adapters for external systems
 
-| External | v1 strategy | Later |
-|---|---|---|
-| **Stripe** | Use test mode + test cards. Drive checkout form in iframe. | Stripe CLI webhook forward for local |
-| **SendGrid** | Route to Mailhog SMTP sink in QA env | Inspect emails via Mailhog API |
-| **Google OAuth** | **Skip** — use password login for admin persona | Later: Playwright service-account flow |
-| **Namecheap / Route53** | **Stub** — intercept the API call, return mock response | Later: real sandbox accounts |
-| **Vercel Deploy** | Hit `/api/waas/admin/deploy` and assert DB status transitions. Don't wait for real build. | Later: poll Vercel API |
-| **reCAPTCHA v3** | Use Google's [test keys](https://developers.google.com/recaptcha/docs/faq#id-like-to-run-automated-tests-with-recaptcha) — always returns success | — |
+| External                | v1 strategy                                                                                                                                       | Later                                  |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| **Stripe**              | Use test mode + test cards. Drive checkout form in iframe.                                                                                        | Stripe CLI webhook forward for local   |
+| **SendGrid**            | Route to Mailhog SMTP sink in QA env                                                                                                              | Inspect emails via Mailhog API         |
+| **Google OAuth**        | **Skip** — use password login for admin persona                                                                                                   | Later: Playwright service-account flow |
+| **Namecheap / Route53** | **Stub** — intercept the API call, return mock response                                                                                           | Later: real sandbox accounts           |
+| **Vercel Deploy**       | Hit `/api/waas/admin/deploy` and assert DB status transitions. Don't wait for real build.                                                         | Later: poll Vercel API                 |
+| **reCAPTCHA v3**        | Use Google's [test keys](https://developers.google.com/recaptcha/docs/faq#id-like-to-run-automated-tests-with-recaptcha) — always returns success | —                                      |
 
 ---
 
@@ -418,21 +424,25 @@ QA_OUTPUT_DIR                = ./qa-runs
 At `/admin/qa/runs/[runId]`:
 
 **Page 1 — Executive Summary**
+
 - Run ID, timestamp, duration, triggered-by
 - Overall result badge: ✅ Pass / ⚠️ Pass-with-warnings / ❌ Failures / 🚨 Halted-critical
 - Counts: scenarios run, pass, fail, warnings, skipped
 - Top 3 most severe findings (linked to detail)
 
 **Page 2 — Persona Timeline**
+
 - Two swimlanes (client / admin) with colored blocks per scene
 - Handoff arrows between swimlanes
 - Click a block → jump to its detail
 
 **Page 3 — Findings**
+
 - Filtered/sortable list: severity, persona, scene, timestamp
 - Each finding has: screenshot thumbnail, DOM snapshot link, SQL state link, console log excerpt
 
 **Page 4 — Evidence Vault**
+
 - All screenshots, videos (if recorded), HAR files, full DOM snapshots
 - Downloadable as a single ZIP
 
@@ -504,14 +514,14 @@ Even though we don't build the LLM layer in v1, we plant the hooks:
 ```typescript
 // In each assertion:
 interface Step {
-  selector?: string
+  selector?: string;
   selectorIntent?: {
-    role?: string            // e.g. "button"
-    accessibleName?: string  // e.g. "Billing tab"
-    nearText?: string        // e.g. "Manage billing"
+    role?: string; // e.g. "button"
+    accessibleName?: string; // e.g. "Billing tab"
+    nearText?: string; // e.g. "Manage billing"
     // ...
-  }
-  onSelectorMiss?: 'fail' | 'self_heal'  // v1: always 'fail'
+  };
+  onSelectorMiss?: "fail" | "self_heal"; // v1: always 'fail'
 }
 ```
 
@@ -539,7 +549,7 @@ name: QA Agent
 on:
   push: { branches: [main] }
   schedule:
-    - cron: '0 6 * * 1'          # 06:00 UTC every Monday (weekly full run)
+    - cron: "0 6 * * 1" # 06:00 UTC every Monday (weekly full run)
   workflow_dispatch:
     inputs:
       scenario:
@@ -563,13 +573,13 @@ jobs:
 
 ### 11.2 Run tiers
 
-| Trigger | Scenarios | Env | Expected runtime |
-|---|---|---|---|
-| Push to PR | `smoke` | ephemeral Vercel preview | ~3 min |
-| Merge to main | `smoke + critical_path` | QA | ~8 min |
-| Nightly cron | `full_lifecycle + edge_cases` | QA | ~25 min |
-| Manual dispatch | any | any | variable |
-| Prod canary (hourly) | `smoke_readonly` | prod | ~90s |
+| Trigger              | Scenarios                     | Env                      | Expected runtime |
+| -------------------- | ----------------------------- | ------------------------ | ---------------- |
+| Push to PR           | `smoke`                       | ephemeral Vercel preview | ~3 min           |
+| Merge to main        | `smoke + critical_path`       | QA                       | ~8 min           |
+| Nightly cron         | `full_lifecycle + edge_cases` | QA                       | ~25 min          |
+| Manual dispatch      | any                           | any                      | variable         |
+| Prod canary (hourly) | `smoke_readonly`              | prod                     | ~90s             |
 
 ---
 
@@ -637,6 +647,7 @@ qa-agent/                         # New package (can live in same monorepo)
 ## 13. Sprint Plan (2.5 weeks total)
 
 ### Sprint 1 — Foundation (3 days)
+
 - Monorepo scaffolding: `qa-agent/` package at repo root
 - Playwright setup, 2-context persona router (client + admin)
 - Supabase `qa` schema setup + query adapter + admin auth helper
@@ -649,6 +660,7 @@ qa-agent/                         # New package (can live in same monorepo)
 **Deliverable:** `npm run qa-agent -- --scenario smoke` runs against Vercel preview and produces a report.
 
 ### Sprint 2 — Critical Path (4 days)
+
 - Step types: navigate / click / fill / wait_for / assert_*
 - Handoff manager (polling + timeout + failure paths)
 - Escalation engine with severity taxonomy
@@ -661,6 +673,7 @@ qa-agent/                         # New package (can live in same monorepo)
 **Deliverable:** `full_lifecycle.yaml` runs end-to-end against `qa.rankedceo.com` and produces a report.
 
 ### Sprint 3 — Reporting & Admin UI (3 days)
+
 - Findings aggregator
 - HTML report generator (standalone, viewable offline)
 - Timeline view (swimlanes per persona)
@@ -674,6 +687,7 @@ qa-agent/                         # New package (can live in same monorepo)
 **Deliverable:** Admin can open `/admin/qa-reports`, see run history, and manage scenarios via `/admin/qa-scenarios`.
 
 ### Sprint 4 — Edge Cases & Hardening (2 days)
+
 - Edge case scenarios (`edge_01` through `edge_04`)
 - Cleanup tooling: admin action to purge all `qa_agent_*` records from `qa` schema
 - Prod canary scenarios (read-only smoke against prod)
@@ -682,6 +696,7 @@ qa-agent/                         # New package (can live in same monorepo)
 **Deliverable:** Full v1 done, CI running weekly.
 
 ### Sprint 5 — Self-healing Prep (1 day)
+
 - Add `intent:` blocks to existing scenarios (LLM not wired yet)
 - Stub `llm-relocate.ts` with a clear interface and TODO
 - Document how the GitHub Issue halt gate feeds directly into LLM self-healing (Issue = context payload)
@@ -693,16 +708,16 @@ qa-agent/                         # New package (can live in same monorepo)
 
 ## 14. Risks & Mitigations
 
-| Risk | Impact | Mitigation |
-|---|---|---|
-| QA env drifts from prod | Tests pass in QA, fail in prod | Weekly schema diff check between `qa` schema and `public` schema |
-| Stripe test webhooks arrive late → handoff times out | False critical halt | Longer `handoff_timeout_ms` (60s) + `pre_flush_webhooks` step |
-| Brittle CSS selectors | Everything breaks on minor UI change | `data-testid` attributes added to all key elements in Sprint 1 |
-| reCAPTCHA blocks agent | Blocks all form submits | Use Google's test keys in QA env only |
-| QA tenant bloat | DB clutter | Admin-UI purge action + clear `qa_agent_YYYYMMDD_` tagging |
-| Two personas race on same tenant | False failures | Handoffs have explicit barrier points. No persona acts until handoff resolves. |
-| GitHub Issue gate misconfigured | Agent runs despite open critical issue | Label check is strict: `qa-critical-halt` + `open` state. Tested in Sprint 2. |
-| Self-healing hides real bugs | v1.5 masks regressions | `pass_with_self_heal` always reported distinctly; regression dashboard flags increasing heal rate. |
+| Risk                                                 | Impact                                 | Mitigation                                                                                         |
+| ---------------------------------------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| QA env drifts from prod                              | Tests pass in QA, fail in prod         | Weekly schema diff check between `qa` schema and `public` schema                                   |
+| Stripe test webhooks arrive late → handoff times out | False critical halt                    | Longer `handoff_timeout_ms` (60s) + `pre_flush_webhooks` step                                      |
+| Brittle CSS selectors                                | Everything breaks on minor UI change   | `data-testid` attributes added to all key elements in Sprint 1                                     |
+| reCAPTCHA blocks agent                               | Blocks all form submits                | Use Google's test keys in QA env only                                                              |
+| QA tenant bloat                                      | DB clutter                             | Admin-UI purge action + clear `qa_agent_YYYYMMDD_` tagging                                         |
+| Two personas race on same tenant                     | False failures                         | Handoffs have explicit barrier points. No persona acts until handoff resolves.                     |
+| GitHub Issue gate misconfigured                      | Agent runs despite open critical issue | Label check is strict: `qa-critical-halt` + `open` state. Tested in Sprint 2.                      |
+| Self-healing hides real bugs                         | v1.5 masks regressions                 | `pass_with_self_heal` always reported distinctly; regression dashboard flags increasing heal rate. |
 
 ---
 
@@ -710,15 +725,15 @@ qa-agent/                         # New package (can live in same monorepo)
 
 All 7 pre-development decisions answered and locked.
 
-| # | Question | Decision |
-|---|----------|----------|
-| 1 | **QA Environment** | Hybrid — Vercel preview URLs for PR smoke tests; `qa.rankedceo.com` for **weekly** full lifecycle runs |
-| 2 | **Database** | Same Supabase project, `qa` schema. All agent records prefixed `qa_agent_YYYYMMDD_HHMMSS_` for easy identification and purge. Real clients are never mixed with agent runs. |
-| 3 | **Stripe / Billing** | Mocked on PR smoke tests (fast, no webhook). Real Stripe test mode (`4242 4242 4242 4242`) on weekly full run — real checkout, real webhook to `qa.rankedceo.com`, DB verified. |
-| 4 | **Email Testing** | Skip email verification on smoke tests. Resend test mode on weekly full run — agent verifies delivery via Resend logs API. |
-| 5 | **Report Delivery** | All three channels — `/admin/qa-reports` dashboard widget (persistent), email to admin via Resend (immediate), GitHub Actions workflow summary (CI traceability). One HTML report, three push targets. |
-| 6 | **Critical Halt** | Email (immediate, via Resend) + auto-created GitHub Issue with label `qa-critical-halt`, full error context, stack trace, screenshot attached. Issue is the restart gate — agent checks for open `qa-critical-halt` issue before running. **v1.5 self-healing hook**: LLM reads the Issue, attempts fix, closes Issue, agent resumes. |
-| 7 | **Scenario Authoring** | Admin UI in dashboard (form-based, no code required). Scenarios stored in `qa` schema. Dev can still seed via YAML CLI import for bulk loads. |
+| #   | Question               | Decision                                                                                                                                                                                                                                                                                                                              |
+| --- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **QA Environment**     | Hybrid — Vercel preview URLs for PR smoke tests; `qa.rankedceo.com` for **weekly** full lifecycle runs                                                                                                                                                                                                                                |
+| 2   | **Database**           | Same Supabase project, `qa` schema. All agent records prefixed `qa_agent_YYYYMMDD_HHMMSS_` for easy identification and purge. Real clients are never mixed with agent runs.                                                                                                                                                           |
+| 3   | **Stripe / Billing**   | Mocked on PR smoke tests (fast, no webhook). Real Stripe test mode (`4242 4242 4242 4242`) on weekly full run — real checkout, real webhook to `qa.rankedceo.com`, DB verified.                                                                                                                                                       |
+| 4   | **Email Testing**      | Skip email verification on smoke tests. Resend test mode on weekly full run — agent verifies delivery via Resend logs API.                                                                                                                                                                                                            |
+| 5   | **Report Delivery**    | All three channels — `/admin/qa-reports` dashboard widget (persistent), email to admin via Resend (immediate), GitHub Actions workflow summary (CI traceability). One HTML report, three push targets.                                                                                                                                |
+| 6   | **Critical Halt**      | Email (immediate, via Resend) + auto-created GitHub Issue with label `qa-critical-halt`, full error context, stack trace, screenshot attached. Issue is the restart gate — agent checks for open `qa-critical-halt` issue before running. **v1.5 self-healing hook**: LLM reads the Issue, attempts fix, closes Issue, agent resumes. |
+| 7   | **Scenario Authoring** | Admin UI in dashboard (form-based, no code required). Scenarios stored in `qa` schema. Dev can still seed via YAML CLI import for bulk loads.                                                                                                                                                                                         |
 
 ---
 

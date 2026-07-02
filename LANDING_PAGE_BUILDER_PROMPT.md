@@ -1,14 +1,17 @@
 # Landing Page Builder Prompt for RankedCEO CRM
 
 ## Project Overview
+
 Create a modern, professional landing page for RankedCEO CRM - an AI-powered, multi-tenant Customer Relationship Management platform designed for service-based businesses (HVAC, plumbing, electrical contractors, and similar industries).
 
 ## Product Description
 
 ### What RankedCEO CRM Is
+
 RankedCEO CRM is a comprehensive, cloud-based CRM solution that combines traditional contact and deal management with cutting-edge AI capabilities to help service businesses generate, nurture, and convert leads more effectively.
 
 ### Current Features (Phases 1-7 Complete - 46.7%)
+
 1. **Authentication System**
    - Secure email/password authentication via Supabase
    - reCAPTCHA v3 protection against bots
@@ -123,18 +126,21 @@ RankedCEO CRM is a comprehensive, cloud-based CRM solution that combines traditi
 ## Technical Stack
 
 ### Frontend
+
 - **Framework**: Next.js 14 (React 18)
 - **Styling**: Tailwind CSS
 - **UI Components**: Custom component library with shadcn/ui patterns
 - **TypeScript**: Full type safety throughout
 
 ### Backend
+
 - **Database**: Supabase (PostgreSQL)
 - **Authentication**: Supabase Auth
 - **API**: Next.js API Routes
 - **Real-time**: Supabase Realtime subscriptions
 
 ### AI & Integrations
+
 - **AI Lead Scoring**: Google Gemini Pro API
 - **AI Research**: Perplexity AI API
 - **Email**: SendGrid/Twilio
@@ -142,6 +148,7 @@ RankedCEO CRM is a comprehensive, cloud-based CRM solution that combines traditi
 - **Hosting**: Vercel
 
 ### Security Features
+
 - Row Level Security (RLS) policies
 - Multi-tenant data isolation
 - Encrypted data at rest and in transit
@@ -151,6 +158,7 @@ RankedCEO CRM is a comprehensive, cloud-based CRM solution that combines traditi
 ## Design Requirements
 
 ### Visual Style
+
 - **Modern & Professional**: Clean, minimalist design that conveys trust and reliability
 - **Color Scheme**: Match the existing CRM application
   - Primary: Blue tones (professional, trustworthy)
@@ -159,6 +167,7 @@ RankedCEO CRM is a comprehensive, cloud-based CRM solution that combines traditi
   - Use the same Tailwind CSS color palette as the app
 
 ### Typography
+
 - **Headings**: Bold, clear hierarchy
 - **Body Text**: Readable, professional font (Inter, system fonts)
 - **Code/Technical**: Monospace for technical details
@@ -166,14 +175,16 @@ RankedCEO CRM is a comprehensive, cloud-based CRM solution that combines traditi
 ### Layout Sections
 
 #### 1. Hero Section
+
 - **Headline**: "AI-Powered CRM for Service Businesses"
 - **Subheadline**: "Generate more leads, close more deals, and grow your business with intelligent automation"
-- **CTA Buttons**: 
+- **CTA Buttons**:
   - Primary: "Start Free Trial" (links to /signup)
   - Secondary: "Watch Demo" (video modal or demo page)
 - **Hero Image/Animation**: Dashboard preview or animated feature showcase
 
 #### 2. Problem Statement
+
 - Address pain points of service businesses:
   - "Losing leads in spreadsheets and sticky notes?"
   - "Spending hours on manual data entry?"
@@ -181,14 +192,17 @@ RankedCEO CRM is a comprehensive, cloud-based CRM solution that combines traditi
   - "Can't predict which leads will convert?"
 
 #### 3. Solution Overview
+
 - Brief explanation of how RankedCEO CRM solves these problems
 - Focus on AI-powered automation and intelligence
 - Highlight time savings and revenue growth
 
 #### 4. Key Features (Current + Coming Soon)
+
 Display features in a grid or card layout:
 
 **Current Features:**
+
 - 📊 **Smart Dashboard** - Real-time insights at a glance
 - 👥 **Contact Management** - Never lose track of a lead
 - 🏢 **Company Profiles** - Complete business intelligence
@@ -197,6 +211,7 @@ Display features in a grid or card layout:
 - 🎯 **Custom Pipelines** - Adapt to your workflow
 
 **Coming Soon:**
+
 - 🤖 **AI Lead Scoring** - Know which leads to prioritize
 - 📧 **Email Campaigns** - Automated outreach at scale
 - 📝 **Form Builder** - Capture leads from your website
@@ -205,12 +220,15 @@ Display features in a grid or card layout:
 - ⚡ **Smart BCC** - Capture emails automatically
 
 #### 5. AI Features Spotlight
+
 Dedicated section highlighting AI capabilities:
+
 - **Gemini AI Lead Scoring**: Visual explanation with example scores
 - **Perplexity AI Research**: Show how it gathers company intelligence
 - **Smart Recommendations**: Examples of AI-suggested actions
 
 #### 6. Use Cases / Industries
+
 - HVAC Contractors
 - Plumbing Services
 - Electrical Contractors
@@ -219,15 +237,18 @@ Dedicated section highlighting AI capabilities:
 - Consulting Firms
 
 #### 7. Pricing (Future)
+
 - Placeholder for pricing tiers
 - "Contact for Pricing" or "Coming Soon"
 - Emphasize value and ROI
 
 #### 8. Testimonials (Future)
+
 - Placeholder for customer testimonials
 - Social proof section
 
 #### 9. Security & Trust
+
 - Highlight security features:
   - Enterprise-grade encryption
   - Multi-tenant isolation
@@ -236,11 +257,13 @@ Dedicated section highlighting AI capabilities:
   - GDPR compliant (if applicable)
 
 #### 10. Call to Action
+
 - Final CTA section before footer
 - "Ready to Transform Your Sales Process?"
 - Buttons: "Start Free Trial" and "Schedule Demo"
 
 #### 11. Footer
+
 - Links to:
   - About Us
   - Features
@@ -254,6 +277,7 @@ Dedicated section highlighting AI capabilities:
 ### Integration with Existing App
 
 #### Navigation
+
 - **Landing Page Header**:
   - Logo (left)
   - Navigation: Features, Pricing, About, Contact
@@ -263,7 +287,9 @@ Dedicated section highlighting AI capabilities:
 - **Sign Up Button**: Links to `/signup` (existing page)
 
 #### Consistent Styling
+
 The landing page should use the same design system as the CRM:
+
 - Same Tailwind CSS configuration
 - Same color palette
 - Same typography
@@ -272,6 +298,7 @@ The landing page should use the same design system as the CRM:
 - Same card/container styles
 
 #### Responsive Design
+
 - Mobile-first approach
 - Breakpoints: sm (640px), md (768px), lg (1024px), xl (1280px)
 - Touch-friendly on mobile
@@ -280,6 +307,7 @@ The landing page should use the same design system as the CRM:
 ### Technical Implementation
 
 #### File Structure
+
 ```
 app/
 ├── page.tsx                 # Landing page (root)
@@ -304,6 +332,7 @@ components/
 ```
 
 #### Performance Requirements
+
 - **Lighthouse Score**: 90+ on all metrics
 - **First Contentful Paint**: < 1.5s
 - **Time to Interactive**: < 3.5s
@@ -311,6 +340,7 @@ components/
 - **Code Splitting**: Lazy load non-critical components
 
 #### SEO Requirements
+
 - **Meta Tags**: Title, description, keywords
 - **Open Graph**: For social sharing
 - **Schema Markup**: Organization, Product, SoftwareApplication
@@ -320,12 +350,14 @@ components/
 ### Content Guidelines
 
 #### Tone & Voice
+
 - **Professional but Approachable**: Not too corporate, not too casual
 - **Benefit-Focused**: Emphasize outcomes, not just features
 - **Action-Oriented**: Use strong CTAs and active language
 - **Trustworthy**: Back claims with specifics and data
 
 #### Copywriting Tips
+
 - Use short, punchy sentences
 - Lead with benefits, follow with features
 - Include specific numbers and metrics where possible
@@ -333,6 +365,7 @@ components/
 - Use social proof (when available)
 
 #### Example Headlines
+
 - "Stop Losing Leads. Start Closing Deals."
 - "The CRM That Works As Hard As You Do"
 - "AI-Powered Sales Intelligence for Service Businesses"
@@ -341,6 +374,7 @@ components/
 ### Assets Needed
 
 #### Images
+
 - Dashboard screenshots (from actual app)
 - Feature demonstrations (animated GIFs or videos)
 - Use cases / industry images
@@ -348,17 +382,20 @@ components/
 - Logo in various formats
 
 #### Icons
+
 - Feature icons (consistent style)
 - Industry icons
 - Social media icons
 - UI icons (from existing component library)
 
 #### Videos (Optional)
+
 - Product demo (2-3 minutes)
 - Feature walkthroughs
 - Customer testimonials
 
 ### Accessibility Requirements
+
 - **WCAG 2.1 Level AA Compliance**
 - Semantic HTML
 - ARIA labels where needed
@@ -368,6 +405,7 @@ components/
 - Focus indicators on interactive elements
 
 ### Browser Support
+
 - Chrome (last 2 versions)
 - Firefox (last 2 versions)
 - Safari (last 2 versions)
@@ -377,33 +415,39 @@ components/
 ## Development Instructions
 
 ### Step 1: Review Existing Code
+
 - Examine `app/(auth)/login/page.tsx` and `app/(auth)/signup/page.tsx`
 - Review `components/ui/` for existing components
 - Check `tailwind.config.js` for color scheme and styling
 - Review `app/layout.tsx` for global styles
 
 ### Step 2: Create Landing Page Structure
+
 - Create `app/page.tsx` as the new landing page
 - Build reusable components in `components/landing/`
 - Ensure consistent styling with existing app
 
 ### Step 3: Implement Sections
+
 - Build each section as a separate component
 - Use existing UI components where possible
 - Ensure responsive design at all breakpoints
 
 ### Step 4: Integrate Authentication
+
 - Link "Log In" button to `/login`
 - Link "Sign Up" buttons to `/signup`
 - Ensure smooth navigation between landing and auth pages
 
 ### Step 5: Optimize Performance
+
 - Optimize images with Next.js Image
 - Implement lazy loading for below-fold content
 - Minimize JavaScript bundle size
 - Add loading states for dynamic content
 
 ### Step 6: Test Thoroughly
+
 - Test on multiple devices and browsers
 - Verify all links work correctly
 - Check form submissions
@@ -411,6 +455,7 @@ components/
 - Validate accessibility
 
 ### Step 7: SEO & Meta Tags
+
 - Add comprehensive meta tags
 - Implement Open Graph tags
 - Add schema markup
@@ -420,18 +465,21 @@ components/
 ## Success Metrics
 
 ### User Engagement
+
 - Time on page > 2 minutes
 - Scroll depth > 75%
 - CTA click-through rate > 5%
 - Signup conversion rate > 2%
 
 ### Technical Performance
+
 - Lighthouse Performance > 90
 - Lighthouse Accessibility > 95
 - Lighthouse Best Practices > 95
 - Lighthouse SEO > 95
 
 ### Business Goals
+
 - Increase signups by 50%
 - Reduce bounce rate to < 40%
 - Increase demo requests
@@ -440,13 +488,16 @@ components/
 ## Additional Notes
 
 ### Brand Voice
+
 RankedCEO CRM is positioned as:
+
 - **Intelligent**: AI-powered, data-driven
 - **Efficient**: Saves time, automates tasks
 - **Reliable**: Enterprise-grade, secure
 - **Growth-Focused**: Helps businesses scale
 
 ### Competitive Advantages
+
 - AI-powered lead scoring (unique differentiator)
 - Built specifically for service businesses
 - Modern tech stack (Next.js, Supabase)
@@ -454,6 +505,7 @@ RankedCEO CRM is positioned as:
 - Easy to use, quick to implement
 
 ### Future Considerations
+
 - Multi-language support
 - White-label options
 - API access for integrations

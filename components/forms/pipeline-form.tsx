@@ -1,91 +1,92 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Alert } from '@/components/ui/alert'
-import { createClient } from '@/lib/supabase/client'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert } from "@/components/ui/alert";
+import { createClient } from "@/lib/supabase/client";
 
 interface PipelineFormProps {
-  accountId: string
+  accountId: string;
   pipeline?: {
-    id: string
-    name: string
-    description?: string
-  }
+    id: string;
+    name: string;
+    description?: string;
+  };
 }
 
-export default function PipelineForm({ accountId, pipeline }: PipelineFormProps) {
-  const router = useRouter()
-  const supabase = createClient()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+export default function PipelineForm({
+  accountId,
+  pipeline,
+}: PipelineFormProps) {
+  const router = useRouter();
+  const supabase = createClient();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
-    name: pipeline?.name || '',
-    description: pipeline?.description || '',
-  })
+    name: pipeline?.name || "",
+    description: pipeline?.description || "",
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
     try {
       if (pipeline?.id) {
         // Update existing pipeline
         const { error: updateError } = await supabase
-          .from('pipelines')
+          .from("pipelines")
           .update({
             ...formData,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', pipeline.id)
+          .eq("id", pipeline.id);
 
-        if (updateError) throw updateError
+        if (updateError) throw updateError;
 
-        router.push(`/pipelines/${pipeline.id}`)
+        router.push(`/pipelines/${pipeline.id}`);
       } else {
         // Create new pipeline
         const { data, error: insertError } = await supabase
-          .from('pipelines')
+          .from("pipelines")
           .insert({
             ...formData,
             account_id: accountId,
           })
           .select()
-          .single()
+          .single();
 
-        if (insertError) throw insertError
+        if (insertError) throw insertError;
 
-        router.push('/pipelines')
+        router.push("/pipelines");
       }
-      
-      router.refresh()
-    } catch (err: any) {
-      console.error('Error saving pipeline:', err)
-      setError(err.message || 'Failed to save pipeline')
-    } finally {
-      setLoading(false)
-    }
-  }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData(prev => ({
+      router.refresh();
+    } catch (err: any) {
+      console.error("Error saving pipeline:", err);
+      setError(err.message || "Failed to save pipeline");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
+    setFormData((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value
-    }))
-  }
+      [e.target.name]: e.target.value,
+    }));
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {error && (
-        <Alert variant="destructive">
-          {error}
-        </Alert>
-      )}
+      {error && <Alert variant="destructive">{error}</Alert>}
 
       <div className="space-y-4">
         <div className="space-y-2">
@@ -116,7 +117,11 @@ export default function PipelineForm({ accountId, pipeline }: PipelineFormProps)
 
       <div className="flex gap-4">
         <Button type="submit" disabled={loading}>
-          {loading ? 'Saving...' : pipeline ? 'Update Pipeline' : 'Create Pipeline'}
+          {loading
+            ? "Saving..."
+            : pipeline
+              ? "Update Pipeline"
+              : "Create Pipeline"}
         </Button>
         <Button
           type="button"
@@ -128,5 +133,5 @@ export default function PipelineForm({ accountId, pipeline }: PipelineFormProps)
         </Button>
       </div>
     </form>
-  )
+  );
 }

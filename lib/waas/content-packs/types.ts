@@ -18,11 +18,11 @@
 
 export interface ServiceItem {
   /** Short label shown as the card/tile title */
-  title: string
+  title: string;
   /** One-sentence description (personalised by the generator at build time) */
-  description: string
+  description: string;
   /** Optional emoji icon (displayed in card if template supports it) */
-  icon?: string
+  icon?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -30,8 +30,8 @@ export interface ServiceItem {
 // ---------------------------------------------------------------------------
 
 export interface FaqItem {
-  question: string
-  answer:   string
+  question: string;
+  answer: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -43,25 +43,25 @@ export interface FaqItem {
 // ---------------------------------------------------------------------------
 
 export type SeoStrategy =
-  | 'emergency'
-  | 'consultative'
-  | 'portfolio'
-  | 'informational'
-  | 'conversion'
-  | 'standard'
+  | "emergency"
+  | "consultative"
+  | "portfolio"
+  | "informational"
+  | "conversion"
+  | "standard";
 
 export interface HeroCopyVariant {
   /** Short badge above the headline, e.g. "24/7 Emergency Plumber" */
-  eyebrow: string
+  eyebrow: string;
   /** 4–8 word USP-style headline */
-  headline: string
+  headline: string;
   /** Supporting sub-headline (1–2 sentences) */
-  subheadline: string
+  subheadline: string;
   /** Primary CTA button label */
-  ctaLabel: string
+  ctaLabel: string;
 }
 
-export type HeroCopyPatterns = Partial<Record<SeoStrategy, HeroCopyVariant>>
+export type HeroCopyPatterns = Partial<Record<SeoStrategy, HeroCopyVariant>>;
 
 // ---------------------------------------------------------------------------
 // SeoKeywordCluster — keyword sets used for meta, alt text, and Tier 2 prompt
@@ -69,22 +69,22 @@ export type HeroCopyPatterns = Partial<Record<SeoStrategy, HeroCopyVariant>>
 
 export interface SeoKeywordCluster {
   /** 3–5 broad head terms, e.g. ["plumber", "plumbing services"] */
-  headTerms: string[]
+  headTerms: string[];
   /**
    * 4–8 mid-tail phrases, e.g. ["emergency plumber near me",
    * "licensed plumber for hire"]
    */
-  midTail: string[]
+  midTail: string[];
   /**
    * 4–8 long-tail/conversion phrases, e.g.
    * ["burst pipe repair same day", "water heater replacement cost"]
    */
-  longTail: string[]
+  longTail: string[];
   /**
    * Local-intent modifiers appended to head terms during Tier 2 prompt
    * construction, e.g. ["near me", "in [city]", "local"]
    */
-  localModifiers: string[]
+  localModifiers: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -93,43 +93,43 @@ export interface SeoKeywordCluster {
 
 export interface IndustryContentPack {
   /** Canonical trade identifier matching WaasTenant.primary_trade */
-  trade: string
+  trade: string;
 
   /**
    * Human-readable display label used in UI, e.g. "Plumbing Services".
    * Also used as the Services section headline when no custom headline exists.
    */
-  displayName: string
+  displayName: string;
 
   /**
    * Default services list (6–10 items).
    * Used when tenant.brand_config.intake_profile.services_offered is empty.
    * The generator may trim to the first 6.
    */
-  defaultServices: ServiceItem[]
+  defaultServices: ServiceItem[];
 
   /**
    * Default FAQ items (4–6 items).
    * Merged with the generated FAQ — pack items are appended after
    * strategy-specific items, deduplicated by question text.
    */
-  defaultFaqs: FaqItem[]
+  defaultFaqs: FaqItem[];
 
   /** Strategy-keyed hero copy patterns */
-  heroCopyPatterns: HeroCopyPatterns
+  heroCopyPatterns: HeroCopyPatterns;
 
   /** SEO keyword clusters for meta enrichment and Tier 2 prompting */
-  seoKeywords: SeoKeywordCluster
+  seoKeywords: SeoKeywordCluster;
 
   /**
    * Short trust-bar copy snippets (2–4 items) shown in the trust/stats section.
    * E.g. ["Licensed & Insured", "Same-Day Service", "5-Star Rated"]
    */
-  trustSignals: string[]
+  trustSignals: string[];
 
   /**
    * Suggested Unsplash search queries for hero background images.
    * Used by the future hero-image feature and Tier 2 image search prompts.
    */
-  heroImageQueries: string[]
+  heroImageQueries: string[];
 }

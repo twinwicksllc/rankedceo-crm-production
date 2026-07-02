@@ -18,31 +18,34 @@
  * JSON payload that the LLM can read to attempt a fix.
  */
 
-import type { Finding, Severity, RunConfig } from '../types.js'
-import { relocate } from '../self-healing/llm-relocate.js'
+import type { Finding, Severity, RunConfig } from "../types.js";
+import { relocate } from "../self-healing/llm-relocate.js";
 
 export class CriticalHaltError extends Error {
   constructor(
     public readonly finding: Finding,
     public readonly runId: string,
   ) {
-    super(`[CRITICAL HALT] ${finding.message}`)
-    this.name = 'CriticalHaltError'
+    super(`[CRITICAL HALT] ${finding.message}`);
+    this.name = "CriticalHaltError";
   }
 }
 
 export class RestartGateError extends Error {
-  constructor(public readonly issueNumber: number, public readonly issueUrl: string) {
+  constructor(
+    public readonly issueNumber: number,
+    public readonly issueUrl: string,
+  ) {
     super(
       `QA agent blocked: open critical-halt issue #${issueNumber} must be closed before running.\n` +
         `Issue: ${issueUrl}`,
-    )
-    this.name = 'RestartGateError'
+    );
+    this.name = "RestartGateError";
   }
 }
 
 export class EscalationEngine {
-  private findings: Finding[] = []
+  private findings: Finding[] = [];
 
   constructor(
     private readonly config: RunConfig,
@@ -54,43 +57,61 @@ export class EscalationEngine {
    * Must be called before the run starts.
    */
   async checkRestartGate(): Promise<void> {
-    const restartGateEnv = process.env.QA_RESTART_GATE?.trim().toLowerCase()
+    const restartGateEnv = process.env.QA_RESTART_GATE?.trim().toLowerCase();
     const restartGateOverride =
-      restartGateEnv === 'true' ? true : restartGateEnv === 'false' ? false : undefined
+      restartGateEnv === "true"
+        ? true
+        : restartGateEnv === "false"
+          ? false
+          : undefined;
 
     if (restartGateEnv && restartGateOverride === undefined) {
       console.warn(
         `[EscalationEngine] QA_RESTART_GATE=${process.env.QA_RESTART_GATE} is invalid; expected "true" or "false". Falling back to mode default.`,
-      )
+      );
     }
 
     // Default behavior: enforce restart gate for full runs, skip for smoke runs.
-    const shouldCheckRestartGate = restartGateOverride ?? this.config.mode === 'full'
+    const shouldCheckRestartGate =
+      restartGateOverride ?? this.config.mode === "full";
     if (!shouldCheckRestartGate) {
-      console.log('[EscalationEngine] Restart gate disabled for smoke run.')
-      return
+      console.log("[EscalationEngine] Restart gate disabled for smoke run.");
+      return;
     }
 
-    const token = process.env.GITHUB_TOKEN
-    const repo = process.env.GITHUB_REPO ?? 'twinwicksllc/rankedceo-crm-production'
+    const token = process.env.GITHUB_TOKEN;
+    const repo =
+      process.env.GITHUB_REPO ?? "twinwicksllc/rankedceo-crm-production";
     if (!token) {
-      console.warn('[EscalationEngine] GITHUB_TOKEN not set — skipping restart gate check')
-      return
+      console.warn(
+        "[EscalationEngine] GITHUB_TOKEN not set — skipping restart gate check",
+      );
+      return;
     }
 
     const res = await fetch(
       `https://api.github.com/repos/${repo}/issues?labels=qa-critical-halt&state=open`,
-      { headers: { Authorization: `Bearer ${token}`, 'X-GitHub-Api-Version': '2022-11-28' } },
-    )
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
+      },
+    );
 
     if (!res.ok) {
-      console.warn(`[EscalationEngine] GitHub API returned ${res.status} — skipping gate check`)
-      return
+      console.warn(
+        `[EscalationEngine] GitHub API returned ${res.status} — skipping gate check`,
+      );
+      return;
     }
 
-    const issues = (await res.json()) as Array<{ number: number; html_url: string }>
+    const issues = (await res.json()) as Array<{
+      number: number;
+      html_url: string;
+    }>;
     if (issues.length > 0) {
-      throw new RestartGateError(issues[0].number, issues[0].html_url)
+      throw new RestartGateError(issues[0].number, issues[0].html_url);
     }
   }
 
@@ -98,103 +119,132 @@ export class EscalationEngine {
    * Record a finding. If critical, fires notifications and throws CriticalHaltError.
    */
   async record(finding: Finding): Promise<void> {
-    this.findings.push(finding)
+    this.findings.push(finding);
 
-    const prefix = this.severityPrefix(finding.severity)
-    console.log(`${prefix} [${finding.persona}] ${finding.stepId}: ${finding.message}`)
+    const prefix = this.severityPrefix(finding.severity);
+    console.log(
+      `${prefix} [${finding.persona}] ${finding.stepId}: ${finding.message}`,
+    );
 
-    if (finding.severity === 'critical') {
-      await this.fireCriticalNotifications(finding)
-      throw new CriticalHaltError(finding, this.config.runId)
+    if (finding.severity === "critical") {
+      await this.fireCriticalNotifications(finding);
+      throw new CriticalHaltError(finding, this.config.runId);
     }
   }
 
   getFindings(): Finding[] {
-    return [...this.findings]
+    return [...this.findings];
   }
 
   // ─── Private ──────────────────────────────────────────────────────────────
 
   private severityPrefix(severity: Severity): string {
     switch (severity) {
-      case 'info':    return '  ℹ️ '
-      case 'warning': return '  ⚠️ '
-      case 'error':   return '  ❌'
-      case 'critical':return '  🚨'
+      case "info":
+        return "  ℹ️ ";
+      case "warning":
+        return "  ⚠️ ";
+      case "error":
+        return "  ❌";
+      case "critical":
+        return "  🚨";
     }
   }
 
   private async fireCriticalNotifications(finding: Finding): Promise<void> {
-    console.error('🚨 CRITICAL HALT — firing notifications...')
+    console.error("🚨 CRITICAL HALT — firing notifications...");
     const [, issueResult] = await Promise.allSettled([
       this.sendCriticalEmail(finding),
       this.createGitHubIssue(finding),
-    ])
+    ]);
 
     // v1.5 self-healing hook — log prompt in v1, call LLM in v1.5
     // The GitHub Issue body contains the selfHealPayload JSON block.
     // In v1: relocate() logs the prompt and returns null.
     // In v1.5: set SELF_HEAL_PROVIDER=openai|anthropic + API key to activate.
-    if (issueResult.status === 'fulfilled' && typeof issueResult.value === 'string') {
-      const issueBody = issueResult.value
+    if (
+      issueResult.status === "fulfilled" &&
+      typeof issueResult.value === "string"
+    ) {
+      const issueBody = issueResult.value;
       try {
-        const provider = (process.env.SELF_HEAL_PROVIDER ?? 'stub') as 'stub' | 'openai' | 'anthropic'
+        const provider = (process.env.SELF_HEAL_PROVIDER ?? "stub") as
+          "stub" | "openai" | "anthropic";
         const proposal = await relocate(issueBody, {
           provider,
           model: process.env.SELF_HEAL_MODEL,
-          apiKey: provider === 'openai' ? process.env.OPENAI_API_KEY : process.env.ANTHROPIC_API_KEY,
-          minConfidence: parseFloat(process.env.SELF_HEAL_MIN_CONFIDENCE ?? '0.7'),
-        })
+          apiKey:
+            provider === "openai"
+              ? process.env.OPENAI_API_KEY
+              : process.env.ANTHROPIC_API_KEY,
+          minConfidence: parseFloat(
+            process.env.SELF_HEAL_MIN_CONFIDENCE ?? "0.7",
+          ),
+        });
         if (proposal?.canFix) {
-          console.log(`[EscalationEngine] 🔧 Self-heal proposal (confidence: ${proposal.confidence}):`)
-          console.log(`  Proposed selector: ${proposal.proposedSelector ?? proposal.proposedPattern}`)
-          console.log(`  Reasoning: ${proposal.reasoning}`)
+          console.log(
+            `[EscalationEngine] 🔧 Self-heal proposal (confidence: ${proposal.confidence}):`,
+          );
+          console.log(
+            `  Proposed selector: ${proposal.proposedSelector ?? proposal.proposedPattern}`,
+          );
+          console.log(`  Reasoning: ${proposal.reasoning}`);
         }
       } catch (err) {
-        console.warn('[EscalationEngine] Self-healing hook error (non-fatal):', err)
+        console.warn(
+          "[EscalationEngine] Self-healing hook error (non-fatal):",
+          err,
+        );
       }
     } else {
-      console.log('[EscalationEngine] v1.5 self-healing hook ready — see qa-agent/src/self-healing/llm-relocate.ts')
+      console.log(
+        "[EscalationEngine] v1.5 self-healing hook ready — see qa-agent/src/self-healing/llm-relocate.ts",
+      );
     }
   }
 
   private async sendCriticalEmail(finding: Finding): Promise<void> {
-    const resendKey = process.env.RESEND_API_KEY
-    const adminEmail = process.env.QA_ADMIN_EMAIL
+    const resendKey = process.env.RESEND_API_KEY;
+    const adminEmail = process.env.QA_ADMIN_EMAIL;
     if (!resendKey || !adminEmail) {
-      console.warn('[EscalationEngine] RESEND_API_KEY or QA_ADMIN_EMAIL not set — skipping email')
-      return
+      console.warn(
+        "[EscalationEngine] RESEND_API_KEY or QA_ADMIN_EMAIL not set — skipping email",
+      );
+      return;
     }
 
     const body = {
-      from: 'qa-agent@rankedceo.com',
+      from: "qa-agent@rankedceo.com",
       to: adminEmail,
       subject: `🚨 QA Agent Critical Halt — Run ${this.config.runId}`,
       html: this.buildCriticalEmailHtml(finding),
-    }
+    };
 
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
       headers: {
         Authorization: `Bearer ${resendKey}`,
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
-    })
+    });
 
     if (!res.ok) {
-      console.error(`[EscalationEngine] Resend API error: ${res.status}`)
+      console.error(`[EscalationEngine] Resend API error: ${res.status}`);
     } else {
-      console.log('[EscalationEngine] Critical halt email sent.')
+      console.log("[EscalationEngine] Critical halt email sent.");
     }
   }
 
   private async createGitHubIssue(finding: Finding): Promise<string | null> {
-    const token = process.env.GITHUB_TOKEN
-    const repo = process.env.GITHUB_REPO ?? 'twinwicksllc/rankedceo-crm-production'
+    const token = process.env.GITHUB_TOKEN;
+    const repo =
+      process.env.GITHUB_REPO ?? "twinwicksllc/rankedceo-crm-production";
     if (!token) {
-      console.warn('[EscalationEngine] GITHUB_TOKEN not set — skipping GitHub Issue creation')
-      return null
+      console.warn(
+        "[EscalationEngine] GITHUB_TOKEN not set — skipping GitHub Issue creation",
+      );
+      return null;
     }
 
     /**
@@ -207,15 +257,15 @@ export class EscalationEngine {
       scenario: this.config.scenarioPath,
       stepId: finding.stepId,
       persona: finding.persona,
-      stepType: finding.stepType ?? 'unknown',
+      stepType: finding.stepType ?? "unknown",
       failedSelector: finding.failedSelector,
       failedPattern: finding.failedPattern,
-      intent: finding.intent ?? '(intent missing)',
+      intent: finding.intent ?? "(intent missing)",
       errorMessage: finding.message,
       failedAt: finding.timestamp,
       screenshotPath: finding.screenshotPath ?? null,
       domSnippet: finding.domSnippet ?? null,
-    }
+    };
 
     const issueBody = `
 ## 🚨 QA Agent Critical Halt
@@ -232,7 +282,7 @@ export class EscalationEngine {
 ${finding.message}
 \`\`\`
 
-${finding.stack ? `### Stack Trace\n\`\`\`\n${finding.stack}\n\`\`\`\n` : ''}
+${finding.stack ? `### Stack Trace\n\`\`\`\n${finding.stack}\n\`\`\`\n` : ""}
 
 ### What to do
 1. Review the error above and the screenshot in the evidence vault
@@ -251,30 +301,34 @@ ${finding.stack ? `### Stack Trace\n\`\`\`\n${finding.stack}\n\`\`\`\n` : ''}
 ${JSON.stringify(selfHealPayload, null, 2)}
 \`\`\`
 <!-- SELF_HEAL_PAYLOAD_END -->
-`.trim()
+`.trim();
 
     const res = await fetch(`https://api.github.com/repos/${repo}/issues`, {
-      method: 'POST',
+      method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'X-GitHub-Api-Version': '2022-11-28',
+        "Content-Type": "application/json",
+        "X-GitHub-Api-Version": "2022-11-28",
       },
       body: JSON.stringify({
         title: `🚨 QA Critical Halt — ${finding.stepId} (run ${this.config.runId})`,
         body: issueBody,
-        labels: ['qa-critical-halt'],
+        labels: ["qa-critical-halt"],
       }),
-    })
+    });
 
     if (!res.ok) {
-      console.error(`[EscalationEngine] GitHub issue creation failed: ${res.status}`)
-      return null
+      console.error(
+        `[EscalationEngine] GitHub issue creation failed: ${res.status}`,
+      );
+      return null;
     } else {
-      const issue = (await res.json()) as { number: number; html_url: string }
-      console.log(`[EscalationEngine] GitHub Issue #${issue.number} created: ${issue.html_url}`)
+      const issue = (await res.json()) as { number: number; html_url: string };
+      console.log(
+        `[EscalationEngine] GitHub Issue #${issue.number} created: ${issue.html_url}`,
+      );
       // Return the issue body so the self-healing hook can extract the payload
-      return issueBody
+      return issueBody;
     }
   }
 
@@ -293,13 +347,13 @@ ${JSON.stringify(selfHealPayload, null, 2)}
   </table>
   <h3>Error</h3>
   <pre style="background: #fef2f2; border: 1px solid #fecaca; padding: 12px; border-radius: 4px;">${finding.message}</pre>
-  ${finding.stack ? `<h3>Stack</h3><pre style="background: #f8f8f8; padding: 12px; border-radius: 4px; font-size: 12px;">${finding.stack}</pre>` : ''}
+  ${finding.stack ? `<h3>Stack</h3><pre style="background: #f8f8f8; padding: 12px; border-radius: 4px; font-size: 12px;">${finding.stack}</pre>` : ""}
   <p style="margin-top: 24px; color: #6b7280; font-size: 14px;">
     The QA agent will not run again until the corresponding GitHub Issue is closed.<br/>
     Check <code>/admin/qa-reports</code> for the full run report.
   </p>
 </body>
 </html>
-    `.trim()
+    `.trim();
   }
 }

@@ -1,4 +1,4 @@
-'use server'
+"use server";
 
 // =============================================================================
 // lib/waas/actions/billing.ts
@@ -14,20 +14,23 @@
 //   adminUpdateTenantPlan        — admin override: set plan_interval + tier
 // =============================================================================
 
-import { createClient } from '@supabase/supabase-js'
-import { revalidatePath }        from 'next/cache'
-import Stripe from 'stripe'
-import type { WaasPackageTier } from '@/lib/waas/types'
-import { WAAS_PLAN_DISPLAY, type WaasPlanDisplay } from '@/lib/waas/billing-config'
+import { createClient } from "@supabase/supabase-js";
+import { revalidatePath } from "next/cache";
+import Stripe from "stripe";
+import type { WaasPackageTier } from "@/lib/waas/types";
+import {
+  WAAS_PLAN_DISPLAY,
+  type WaasPlanDisplay,
+} from "@/lib/waas/billing-config";
 
 // ---------------------------------------------------------------------------
 // Stripe client (shared STRIPE_SECRET_KEY, same account as CRM billing)
 // ---------------------------------------------------------------------------
 
 function getStripe(): Stripe {
-  const key = process.env.STRIPE_SECRET_KEY
-  if (!key) throw new Error('STRIPE_SECRET_KEY env var is not set')
-  return new Stripe(key, { apiVersion: '2026-02-25.clover', typescript: true })
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) throw new Error("STRIPE_SECRET_KEY env var is not set");
+  return new Stripe(key, { apiVersion: "2026-02-25.clover", typescript: true });
 }
 
 // ---------------------------------------------------------------------------
@@ -36,33 +39,36 @@ function getStripe(): Stripe {
 
 // NOTE: Not exported — "use server" files may only export async functions.
 // This constant is used only internally within this module.
-const WAAS_PLAN_PRICES: Record<WaasPackageTier, { monthly: string; yearly: string } | { yearly: string } | null> = {
+const WAAS_PLAN_PRICES: Record<
+  WaasPackageTier,
+  { monthly: string; yearly: string } | { yearly: string } | null
+> = {
   hosting_only: {
     // Annual only — no monthly price
-    yearly: process.env.WAAS_STRIPE_PRICE_HOSTING_ONLY ?? '',
+    yearly: process.env.WAAS_STRIPE_PRICE_HOSTING_ONLY ?? "",
   },
-  hosting:  null,  // free tier — no Stripe price
+  hosting: null, // free tier — no Stripe price
   standard: {
-    monthly: process.env.WAAS_STRIPE_PRICE_STANDARD_MONTHLY ?? '',
-    yearly:  process.env.WAAS_STRIPE_PRICE_STANDARD_YEARLY  ?? '',
+    monthly: process.env.WAAS_STRIPE_PRICE_STANDARD_MONTHLY ?? "",
+    yearly: process.env.WAAS_STRIPE_PRICE_STANDARD_YEARLY ?? "",
   },
   premium: {
-    monthly: process.env.WAAS_STRIPE_PRICE_PREMIUM_MONTHLY ?? '',
-    yearly:  process.env.WAAS_STRIPE_PRICE_PREMIUM_YEARLY  ?? '',
+    monthly: process.env.WAAS_STRIPE_PRICE_PREMIUM_MONTHLY ?? "",
+    yearly: process.env.WAAS_STRIPE_PRICE_PREMIUM_YEARLY ?? "",
   },
-}
+};
 
 // ---------------------------------------------------------------------------
 // Admin client (service-role, bypasses RLS)
 // ---------------------------------------------------------------------------
 
 function getAdminClient() {
-  const url = process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL
-  const key = process.env.WAAS_SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('WaaS Supabase admin env vars not set')
+  const url = process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL;
+  const key = process.env.WAAS_SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error("WaaS Supabase admin env vars not set");
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
-  })
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -70,9 +76,9 @@ function getAdminClient() {
 // ---------------------------------------------------------------------------
 
 export interface ActionResult<T = null> {
-  success: boolean
-  data?:   T
-  error?:  string
+  success: boolean;
+  data?: T;
+  error?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -82,54 +88,57 @@ export interface ActionResult<T = null> {
 // ---------------------------------------------------------------------------
 
 export interface TenantBillingStatus {
-  packageTier:           WaasPackageTier
-  planInterval:          'month' | 'year' | null
-  stripeCustomerId:      string | null
-  stripeSubscriptionId:  string | null
-  hasActiveSubscription: boolean
-  planDisplay:           WaasPlanDisplay
+  packageTier: WaasPackageTier;
+  planInterval: "month" | "year" | null;
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
+  hasActiveSubscription: boolean;
+  planDisplay: WaasPlanDisplay;
 }
 
 export async function getTenantBillingStatus(
   tenantId: string,
 ): Promise<ActionResult<TenantBillingStatus>> {
   try {
-    const supabase = getAdminClient()
+    const supabase = getAdminClient();
     const { data: row, error } = await supabase
-      .from('tenants')
-      .select('package_tier, plan_interval, stripe_customer_id, stripe_subscription_id')
-      .eq('id', tenantId)
-      .single()
+      .from("tenants")
+      .select(
+        "package_tier, plan_interval, stripe_customer_id, stripe_subscription_id",
+      )
+      .eq("id", tenantId)
+      .single();
 
     if (error || !row) {
-      return { success: false, error: 'Tenant not found' }
+      return { success: false, error: "Tenant not found" };
     }
 
     const t = row as {
-      package_tier:           string
-      plan_interval:          string | null
-      stripe_customer_id:     string | null
-      stripe_subscription_id: string | null
-    }
+      package_tier: string;
+      plan_interval: string | null;
+      stripe_customer_id: string | null;
+      stripe_subscription_id: string | null;
+    };
 
-    const tier = (t.package_tier ?? 'hosting') as WaasPackageTier
+    const tier = (t.package_tier ?? "hosting") as WaasPackageTier;
 
     return {
       success: true,
       data: {
-        packageTier:           tier,
-        planInterval:          (t.plan_interval as 'month' | 'year' | null) ?? null,
-        stripeCustomerId:      t.stripe_customer_id      ?? null,
-        stripeSubscriptionId:  t.stripe_subscription_id  ?? null,
-        hasActiveSubscription: !!t.stripe_subscription_id && tier !== 'hosting',
-        planDisplay:           WAAS_PLAN_DISPLAY[tier],
+        packageTier: tier,
+        planInterval: (t.plan_interval as "month" | "year" | null) ?? null,
+        stripeCustomerId: t.stripe_customer_id ?? null,
+        stripeSubscriptionId: t.stripe_subscription_id ?? null,
+        hasActiveSubscription: !!t.stripe_subscription_id && tier !== "hosting",
+        planDisplay: WAAS_PLAN_DISPLAY[tier],
       },
-    }
+    };
   } catch (err) {
     return {
       success: false,
-      error: err instanceof Error ? err.message : 'Failed to fetch billing status',
-    }
+      error:
+        err instanceof Error ? err.message : "Failed to fetch billing status",
+    };
   }
 }
 
@@ -143,46 +152,52 @@ export async function getTenantBillingStatus(
 // ---------------------------------------------------------------------------
 
 export interface BillingPortalArgs {
-  tenantId:    string
-  returnUrl:   string  // URL to redirect back to after portal session ends
+  tenantId: string;
+  returnUrl: string; // URL to redirect back to after portal session ends
 }
 
 export async function createBillingPortalSession(
   args: BillingPortalArgs,
 ): Promise<ActionResult<{ url: string }>> {
-  const { tenantId, returnUrl } = args
+  const { tenantId, returnUrl } = args;
 
   try {
-    const supabase  = getAdminClient()
+    const supabase = getAdminClient();
     const { data: row, error } = await supabase
-      .from('tenants')
-      .select('stripe_customer_id, package_tier')
-      .eq('id', tenantId)
-      .single()
+      .from("tenants")
+      .select("stripe_customer_id, package_tier")
+      .eq("id", tenantId)
+      .single();
 
-    if (error || !row) return { success: false, error: 'Tenant not found' }
+    if (error || !row) return { success: false, error: "Tenant not found" };
 
-    const t = row as { stripe_customer_id: string | null; package_tier: string }
+    const t = row as {
+      stripe_customer_id: string | null;
+      package_tier: string;
+    };
 
     if (!t.stripe_customer_id) {
       return {
         success: false,
-        error: 'No billing account found. Please subscribe to a plan first.',
-      }
+        error: "No billing account found. Please subscribe to a plan first.",
+      };
     }
 
-    const stripe = getStripe()
+    const stripe = getStripe();
     const session = await stripe.billingPortal.sessions.create({
-      customer:   t.stripe_customer_id,
+      customer: t.stripe_customer_id,
       return_url: returnUrl,
-    })
+    });
 
-    return { success: true, data: { url: session.url } }
+    return { success: true, data: { url: session.url } };
   } catch (err) {
     return {
       success: false,
-      error: err instanceof Error ? err.message : 'Failed to create billing portal session',
-    }
+      error:
+        err instanceof Error
+          ? err.message
+          : "Failed to create billing portal session",
+    };
   }
 }
 
@@ -194,110 +209,132 @@ export async function createBillingPortalSession(
 // ---------------------------------------------------------------------------
 
 export interface CheckoutArgs {
-  tenantId:       string
-  packageTier:    Exclude<WaasPackageTier, 'hosting'>  // 'hosting_only' | 'standard' | 'premium'
-  interval:       'month' | 'year'
-  successUrl:     string
-  cancelUrl:      string
-  customerEmail?: string
+  tenantId: string;
+  packageTier: Exclude<WaasPackageTier, "hosting">; // 'hosting_only' | 'standard' | 'premium'
+  interval: "month" | "year";
+  successUrl: string;
+  cancelUrl: string;
+  customerEmail?: string;
 }
 
 export async function createCheckoutSession(
   args: CheckoutArgs,
 ): Promise<ActionResult<{ url: string }>> {
-  const { tenantId, packageTier, interval, successUrl, cancelUrl, customerEmail } = args
+  const {
+    tenantId,
+    packageTier,
+    interval,
+    successUrl,
+    cancelUrl,
+    customerEmail,
+  } = args;
 
   // hosting_only is annual-only — reject monthly requests
-  if (packageTier === 'hosting_only' && interval === 'month') {
-    return { success: false, error: 'Hosting Only plan is available on annual billing only.' }
+  if (packageTier === "hosting_only" && interval === "month") {
+    return {
+      success: false,
+      error: "Hosting Only plan is available on annual billing only.",
+    };
   }
 
   // Validate price exists
-  const prices = WAAS_PLAN_PRICES[packageTier]
+  const prices = WAAS_PLAN_PRICES[packageTier];
   if (!prices) {
-    return { success: false, error: `No price configured for tier: ${packageTier}` }
+    return {
+      success: false,
+      error: `No price configured for tier: ${packageTier}`,
+    };
   }
-  const priceId = interval === 'month'
-    ? ('monthly' in prices ? prices.monthly : null)
-    : prices.yearly
+  const priceId =
+    interval === "month"
+      ? "monthly" in prices
+        ? prices.monthly
+        : null
+      : prices.yearly;
   if (!priceId) {
-    return { success: false, error: `No Stripe price ID set for ${packageTier}/${interval}` }
+    return {
+      success: false,
+      error: `No Stripe price ID set for ${packageTier}/${interval}`,
+    };
   }
 
   try {
-    const supabase = getAdminClient()
+    const supabase = getAdminClient();
     const { data: row, error } = await supabase
-      .from('tenants')
-      .select('stripe_customer_id, brand_config, slug')
-      .eq('id', tenantId)
-      .single()
+      .from("tenants")
+      .select("stripe_customer_id, brand_config, slug")
+      .eq("id", tenantId)
+      .single();
 
-    if (error || !row) return { success: false, error: 'Tenant not found' }
+    if (error || !row) return { success: false, error: "Tenant not found" };
 
     const t = row as {
-      stripe_customer_id: string | null
-      brand_config:       Record<string, unknown>
-      slug:               string
-    }
+      stripe_customer_id: string | null;
+      brand_config: Record<string, unknown>;
+      slug: string;
+    };
 
-    const stripe = getStripe()
+    const stripe = getStripe();
 
     // Re-use existing Stripe customer if available
-    let customerId = t.stripe_customer_id
+    let customerId = t.stripe_customer_id;
 
     if (!customerId) {
       const businessName =
-        typeof t.brand_config?.business_name === 'string'
+        typeof t.brand_config?.business_name === "string"
           ? t.brand_config.business_name
-          : t.slug
+          : t.slug;
 
       const customer = await stripe.customers.create({
-        email:    customerEmail,
-        name:     businessName,
+        email: customerEmail,
+        name: businessName,
         metadata: {
-          waas_tenant_id:   tenantId,
+          waas_tenant_id: tenantId,
           waas_tenant_slug: t.slug,
         },
-      })
-      customerId = customer.id
+      });
+      customerId = customer.id;
 
       // Persist immediately so concurrent requests don't create duplicates
       await supabase
-        .from('tenants')
+        .from("tenants")
         .update({ stripe_customer_id: customerId })
-        .eq('id', tenantId)
+        .eq("id", tenantId);
     }
 
     const session = await stripe.checkout.sessions.create({
-      mode:               'subscription',
-      customer:           customerId,
-      line_items:         [{ price: priceId, quantity: 1 }],
-      success_url:        `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url:         cancelUrl,
+      mode: "subscription",
+      customer: customerId,
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: cancelUrl,
       metadata: {
         waas_tenant_id: tenantId,
-        package_tier:   packageTier,
-        plan_interval:  interval,
+        package_tier: packageTier,
+        plan_interval: interval,
       },
       subscription_data: {
         metadata: {
           waas_tenant_id: tenantId,
-          package_tier:   packageTier,
-          plan_interval:  interval,
+          package_tier: packageTier,
+          plan_interval: interval,
         },
       },
-    })
+    });
 
     if (!session.url) {
-      return { success: false, error: 'Stripe did not return a checkout URL' }
+      return { success: false, error: "Stripe did not return a checkout URL" };
     }
 
-    return { success: true, data: { url: session.url } }
+    return { success: true, data: { url: session.url } };
   } catch (err) {
     return {
       success: false,
-      error: err instanceof Error ? err.message : 'Failed to create checkout session',
-    }
+      error:
+        err instanceof Error
+          ? err.message
+          : "Failed to create checkout session",
+    };
   }
 }
 
@@ -309,37 +346,38 @@ export async function createCheckoutSession(
 // ---------------------------------------------------------------------------
 
 export interface AdminUpdatePlanArgs {
-  tenantId:    string
-  packageTier: WaasPackageTier
-  interval:    'month' | 'year' | null
+  tenantId: string;
+  packageTier: WaasPackageTier;
+  interval: "month" | "year" | null;
 }
 
 export async function adminUpdateTenantPlan(
   args: AdminUpdatePlanArgs,
 ): Promise<ActionResult> {
-  const { tenantId, packageTier, interval } = args
+  const { tenantId, packageTier, interval } = args;
 
   try {
-    const supabase = getAdminClient()
+    const supabase = getAdminClient();
     const { error } = await supabase
-      .from('tenants')
+      .from("tenants")
       .update({
-        package_tier:  packageTier,
+        package_tier: packageTier,
         plan_interval: interval,
-        updated_at:    new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       })
-      .eq('id', tenantId)
+      .eq("id", tenantId);
 
-    if (error) throw error
+    if (error) throw error;
 
-    revalidatePath(`/admin/dashboard/${tenantId}`)
-    revalidatePath(`/admin/dashboard`)
+    revalidatePath(`/admin/dashboard/${tenantId}`);
+    revalidatePath(`/admin/dashboard`);
 
-    return { success: true }
+    return { success: true };
   } catch (err) {
     return {
       success: false,
-      error: err instanceof Error ? err.message : 'Failed to update tenant plan',
-    }
+      error:
+        err instanceof Error ? err.message : "Failed to update tenant plan",
+    };
   }
 }

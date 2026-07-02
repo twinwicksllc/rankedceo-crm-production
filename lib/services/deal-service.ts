@@ -1,6 +1,6 @@
-import { createClient } from '@/lib/supabase/server';
-import { Deal, CreateDealInput, UpdateDealInput } from '@/lib/types/deal';
-import { createDealSchema, updateDealSchema } from '@/lib/validations/deal';
+import { createClient } from "@/lib/supabase/server";
+import { Deal, CreateDealInput, UpdateDealInput } from "@/lib/types/deal";
+import { createDealSchema, updateDealSchema } from "@/lib/validations/deal";
 
 export class DealService {
   private supabase;
@@ -21,24 +21,26 @@ export class DealService {
     const validatedInput = createDealSchema.parse(input);
 
     const client = await this.getClient();
-    
-    const { data: { user } } = await client.auth.getUser();
+
+    const {
+      data: { user },
+    } = await client.auth.getUser();
     if (!user) {
-      throw new Error('User not authenticated');
+      throw new Error("User not authenticated");
     }
 
     const { data: accountData, error: accountError } = await client
-      .from('accounts')
-      .select('id')
-      .eq('user_id', user.id)
+      .from("accounts")
+      .select("id")
+      .eq("user_id", user.id)
       .single();
 
     if (accountError || !accountData) {
-      throw new Error('Account not found');
+      throw new Error("Account not found");
     }
 
     const { data, error } = await client
-      .from('deals')
+      .from("deals")
       .insert({
         account_id: accountData.id,
         user_id: user.id,
@@ -56,22 +58,24 @@ export class DealService {
 
   async getDeals(filters: any = {}): Promise<Deal[]> {
     const client = await this.getClient();
-    
+
     let query = client
-      .from('deals')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .from("deals")
+      .select("*")
+      .order("created_at", { ascending: false });
 
     if (filters.search) {
-      query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+      query = query.or(
+        `title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`,
+      );
     }
 
     if (filters.pipeline_id) {
-      query = query.eq('pipeline_id', filters.pipeline_id);
+      query = query.eq("pipeline_id", filters.pipeline_id);
     }
 
     if (filters.stage) {
-      query = query.eq('stage', filters.stage);
+      query = query.eq("stage", filters.stage);
     }
 
     const { data, error } = await query;
@@ -85,15 +89,15 @@ export class DealService {
 
   async getDealById(id: string): Promise<Deal | null> {
     const client = await this.getClient();
-    
+
     const { data, error } = await client
-      .from('deals')
-      .select('*')
-      .eq('id', id)
+      .from("deals")
+      .select("*")
+      .eq("id", id)
       .single();
 
     if (error) {
-      if (error.code === 'PGRST116') {
+      if (error.code === "PGRST116") {
         return null;
       }
       throw new Error(`Failed to fetch deal: ${error.message}`);
@@ -107,9 +111,9 @@ export class DealService {
     const client = await this.getClient();
 
     const { data, error } = await client
-      .from('deals')
+      .from("deals")
       .update(validatedInput)
-      .eq('id', id)
+      .eq("id", id)
       .select()
       .single();
 
@@ -122,11 +126,8 @@ export class DealService {
 
   async deleteDeal(id: string): Promise<void> {
     const client = await this.getClient();
-    
-    const { error } = await client
-      .from('deals')
-      .delete()
-      .eq('id', id);
+
+    const { error } = await client.from("deals").delete().eq("id", id);
 
     if (error) {
       throw new Error(`Failed to delete deal: ${error.message}`);
@@ -135,10 +136,8 @@ export class DealService {
 
   async getDealStats() {
     const client = await this.getClient();
-    
-    const { data, error } = await client
-      .from('deals')
-      .select('*');
+
+    const { data, error } = await client.from("deals").select("*");
 
     if (error) {
       throw new Error(`Failed to fetch deal stats: ${error.message}`);
@@ -155,11 +154,11 @@ export class DealService {
 
     data?.forEach((deal: any) => {
       stats.totalValue += deal.value || 0;
-      
-      if (deal.stage === 'Won') {
+
+      if (deal.stage === "Won") {
         stats.wonCount++;
         stats.wonValue += deal.value || 0;
-      } else if (deal.stage === 'Lost') {
+      } else if (deal.stage === "Lost") {
         stats.lostCount++;
       } else {
         stats.activeCount++;

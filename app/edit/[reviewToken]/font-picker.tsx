@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 // =============================================================================
 // app/edit/[reviewToken]/font-picker.tsx
@@ -13,69 +13,76 @@
 // Phase 7.1
 // =============================================================================
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState } from "react";
 import {
   FONT_OPTIONS,
   buildGoogleFontsUrl,
   DEFAULT_HEADING_FONT,
   type FontOption,
-} from '@/lib/waas/client-edit/font-options'
+} from "@/lib/waas/client-edit/font-options";
 
 interface FontPickerProps {
-  value:    string          // current slug, e.g. 'Inter'
-  label:    string          // 'Heading Font' | 'Body Font'
-  onSelect: (slug: string) => void
-  disabled?: boolean
+  value: string; // current slug, e.g. 'Inter'
+  label: string; // 'Heading Font' | 'Body Font'
+  onSelect: (slug: string) => void;
+  disabled?: boolean;
 }
 
 // Group font options by category for the <select> optgroup
-const CATEGORY_LABELS: Record<FontOption['category'], string> = {
-  'sans-serif': 'Sans-Serif',
-  'serif':      'Serif',
-  'display':    'Display',
-}
+const CATEGORY_LABELS: Record<FontOption["category"], string> = {
+  "sans-serif": "Sans-Serif",
+  serif: "Serif",
+  display: "Display",
+};
 
-const CATEGORIES: FontOption['category'][] = ['sans-serif', 'display', 'serif']
+const CATEGORIES: FontOption["category"][] = ["sans-serif", "display", "serif"];
 
-export function FontPicker({ value, label, onSelect, disabled }: FontPickerProps) {
-  const currentSlug = value || DEFAULT_HEADING_FONT
-  const [preview, setPreview] = useState(currentSlug)
+export function FontPicker({
+  value,
+  label,
+  onSelect,
+  disabled,
+}: FontPickerProps) {
+  const currentSlug = value || DEFAULT_HEADING_FONT;
+  const [preview, setPreview] = useState(currentSlug);
 
   // Load Google Fonts for all options at once (for previews in the picker)
   useEffect(() => {
-    const url = buildGoogleFontsUrl(FONT_OPTIONS.map((f) => f.slug))
-    if (!url) return
+    const url = buildGoogleFontsUrl(FONT_OPTIONS.map((f) => f.slug));
+    if (!url) return;
 
-    const existing = document.getElementById('waas-font-picker-gf')
-    if (existing) return  // already loaded
+    const existing = document.getElementById("waas-font-picker-gf");
+    if (existing) return; // already loaded
 
-    const link = document.createElement('link')
-    link.id   = 'waas-font-picker-gf'
-    link.rel  = 'stylesheet'
-    link.href = url
-    document.head.appendChild(link)
-  }, [])
+    const link = document.createElement("link");
+    link.id = "waas-font-picker-gf";
+    link.rel = "stylesheet";
+    link.href = url;
+    document.head.appendChild(link);
+  }, []);
 
   return (
     <div className="space-y-3">
       {/* Label */}
-      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
+      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+        {label}
+      </p>
 
       {/* Dropdown */}
       <select
         value={currentSlug}
         disabled={disabled}
         onChange={(e) => {
-          const slug = e.target.value
-          setPreview(slug)
-          onSelect(slug)
+          const slug = e.target.value;
+          setPreview(slug);
+          onSelect(slug);
         }}
         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:opacity-50"
         aria-label={`Select ${label}`}
       >
         {CATEGORIES.map((cat) => {
-          const opts = FONT_OPTIONS.filter((f) => f.category === cat)
-          if (opts.length === 0) return null
+          const opts = FONT_OPTIONS.filter((f) => f.category === cat);
+          if (opts.length === 0) return null;
           return (
             <optgroup key={cat} label={CATEGORY_LABELS[cat]}>
               {opts.map((f) => (
@@ -84,7 +91,7 @@ export function FontPicker({ value, label, onSelect, disabled }: FontPickerProps
                 </option>
               ))}
             </optgroup>
-          )
+          );
         })}
       </select>
 
@@ -107,11 +114,11 @@ export function FontPicker({ value, label, onSelect, disabled }: FontPickerProps
         </p>
         <p
           className="mt-2 text-[11px] text-slate-400"
-          style={{ fontFamily: 'Inter, sans-serif' }}
+          style={{ fontFamily: "Inter, sans-serif" }}
         >
           {preview}
         </p>
       </div>
     </div>
-  )
+  );
 }

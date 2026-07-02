@@ -3,93 +3,110 @@
 // Protected route — checks for admin session
 // =============================================================================
 
-import type { Metadata } from 'next'
-import { redirect } from 'next/navigation'
-import { AdvantagePointHeader } from '@/components/advantagepoint/header'
-import { AdvantagePointFooter } from '@/components/advantagepoint/footer'
-import { createClient } from '@/lib/supabase/server'
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { AdvantagePointHeader } from "@/components/advantagepoint/header";
+import { AdvantagePointFooter } from "@/components/advantagepoint/footer";
+import { createClient } from "@/lib/supabase/server";
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: 'Command Center | RankedCEO',
-  description: 'RankedCEO Admin Dashboard',
-  robots: 'noindex, nofollow',
-}
+  title: "Command Center | RankedCEO",
+  description: "RankedCEO Admin Dashboard",
+  robots: "noindex, nofollow",
+};
 
 function parseAdminAllowlist(): string[] {
-  const raw = process.env.WAAS_ADMIN_EMAILS ?? process.env.WAAS_ADMIN_EMAIL ?? ''
+  const raw =
+    process.env.WAAS_ADMIN_EMAILS ?? process.env.WAAS_ADMIN_EMAIL ?? "";
   return raw
-    .split(',')
+    .split(",")
     .map((email) => email.trim().toLowerCase())
-    .filter(Boolean)
+    .filter(Boolean);
 }
 
-type SessionType = Awaited<ReturnType<Awaited<ReturnType<typeof createClient>>['auth']['getSession']>>['data']['session']
+type SessionType = Awaited<
+  ReturnType<Awaited<ReturnType<typeof createClient>>["auth"]["getSession"]>
+>["data"]["session"];
 
 async function isAdminSession(
   supabase: Awaited<ReturnType<typeof createClient>>,
   session: SessionType,
 ): Promise<boolean> {
-  const user = session?.user
-  if (!user) return false
+  const user = session?.user;
+  if (!user) return false;
 
-  const email = user.email?.toLowerCase() ?? ''
-  const allowlist = parseAdminAllowlist()
+  const email = user.email?.toLowerCase() ?? "";
+  const allowlist = parseAdminAllowlist();
 
-  const hasAllowlistedEmail = allowlist.length > 0 && allowlist.includes(email)
-  const hasAdminRoleFlag = user.app_metadata?.role === 'waas_admin' || user.app_metadata?.waas_admin === true || user.app_metadata?.waas_admin === 'true'
+  const hasAllowlistedEmail = allowlist.length > 0 && allowlist.includes(email);
+  const hasAdminRoleFlag =
+    user.app_metadata?.role === "waas_admin" ||
+    user.app_metadata?.waas_admin === true ||
+    user.app_metadata?.waas_admin === "true";
 
   // DEBUG: Log admin auth checks
-  console.log('[Admin Auth Debug]', {
+  console.log("[Admin Auth Debug]", {
     email,
     allowlist,
     hasAllowlistedEmail,
     hasAdminRoleFlag,
     appMetadata: user.app_metadata,
-  })
+  });
 
   if (hasAllowlistedEmail || hasAdminRoleFlag) {
-    console.log('[Admin Auth Success] Email or flag matched')
-    return true
+    console.log("[Admin Auth Success] Email or flag matched");
+    return true;
   }
 
   const { data: dbUser } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .maybeSingle()
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
 
-  const dbRole = typeof dbUser?.role === 'string' ? dbUser.role.toLowerCase() : ''
-  const allowedDbRoles = new Set(['admin', 'super_admin', 'owner'])
-  const hasDbAdminRole = allowedDbRoles.has(dbRole)
+  const dbRole =
+    typeof dbUser?.role === "string" ? dbUser.role.toLowerCase() : "";
+  const allowedDbRoles = new Set(["admin", "super_admin", "owner"]);
+  const hasDbAdminRole = allowedDbRoles.has(dbRole);
 
-  console.log('[Admin Auth DB Check]', {
+  console.log("[Admin Auth DB Check]", {
     dbRole,
     hasDbAdminRole,
-  })
+  });
 
-  return hasDbAdminRole
+  return hasDbAdminRole;
 }
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   // Auth check via CRM Supabase (same auth as the main CRM dashboard)
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/login?next=/admin/dashboard&adminOnly=1')
+    redirect("/login?next=/admin/dashboard&adminOnly=1");
   }
 
-  const { data: { session } } = await supabase.auth.getSession()
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
   if (!session) {
-    redirect('/login?next=/admin/dashboard&adminOnly=1')
+    redirect("/login?next=/admin/dashboard&adminOnly=1");
   }
 
-  const hasAdminAccess = await isAdminSession(supabase, session)
+  const hasAdminAccess = await isAdminSession(supabase, session);
   if (!hasAdminAccess) {
-    redirect('/login?error=Admin%20access%20required&next=/admin/dashboard&adminOnly=1')
+    redirect(
+      "/login?error=Admin%20access%20required&next=/admin/dashboard&adminOnly=1",
+    );
   }
 
   return (
@@ -103,7 +120,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           style={{
             backgroundImage: `linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px),
                               linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)`,
-            backgroundSize: '60px 60px',
+            backgroundSize: "60px 60px",
           }}
         />
       </div>
@@ -116,5 +133,5 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
       <AdvantagePointFooter />
     </div>
-  )
+  );
 }

@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 // =============================================================================
 // RankedCEO Website Builder — Multi-Step Onboarding Flow (Client Component)
@@ -12,18 +12,18 @@
 // Step 6: Website Builder     (customer edits pre-filled section content)
 // =============================================================================
 
-import React, { useState, useCallback, useEffect, useRef } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { AdvantagePointHeader }      from '@/components/advantagepoint/header'
-import { StepBusinessIdentity }      from './steps/step-business-identity'
-import { StepDomainWishlist }        from './steps/step-domain-wishlist'
-import { StepBrandIdentity }         from './steps/step-brand-identity'
-import { StepTemplateSelection }     from './steps/step-template-selection'
-import { StepIntegrations }          from './steps/step-integrations'
-import { StepWebsiteBuilder }        from './steps/step-website-builder'
-import { OnboardingSuccess }         from './onboarding-success'
+import React, { useState, useCallback, useEffect, useRef } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { AdvantagePointHeader } from "@/components/advantagepoint/header";
+import { StepBusinessIdentity } from "./steps/step-business-identity";
+import { StepDomainWishlist } from "./steps/step-domain-wishlist";
+import { StepBrandIdentity } from "./steps/step-brand-identity";
+import { StepTemplateSelection } from "./steps/step-template-selection";
+import { StepIntegrations } from "./steps/step-integrations";
+import { StepWebsiteBuilder } from "./steps/step-website-builder";
+import { OnboardingSuccess } from "./onboarding-success";
 import {
   saveOnboardingStep1,
   saveOnboardingStep2,
@@ -31,273 +31,376 @@ import {
   saveOnboardingStepTemplate,
   saveOnboardingStep4,
   saveOnboardingStepBuilder,
-} from '@/lib/waas/actions/onboarding'
-import type { Block } from '@/lib/waas/website-builder/blocks'
-import type {
-  DomainWishlistItem,
-  WaasPackageTier,
-} from '@/lib/waas/types'
-import { getRecommendedTemplateSlugs } from '@/lib/waas/templates/registry'
-import { getAuditFunnelProperties }    from '@/lib/analytics/audit-funnel'
-import { trackEvent }                  from '@/lib/analytics/track-event'
+} from "@/lib/waas/actions/onboarding";
+import type { Block } from "@/lib/waas/website-builder/blocks";
+import type { DomainWishlistItem, WaasPackageTier } from "@/lib/waas/types";
+import { getRecommendedTemplateSlugs } from "@/lib/waas/templates/registry";
+import { getAuditFunnelProperties } from "@/lib/analytics/audit-funnel";
+import { trackEvent } from "@/lib/analytics/track-event";
 
 // ---------------------------------------------------------------------------
 // Zod Schemas
 // ---------------------------------------------------------------------------
 
-export const step1Schema = z.object({
-  legal_name:       z.string().min(2, 'Business name must be at least 2 characters'),
-  physical_address: z.string().min(5, 'Please enter a valid address'),
-  city:             z.string().min(2, 'City is required'),
-  state:            z.string().min(2, 'State is required'),
-  zip:              z.string().regex(/^\d{5}(-\d{4})?$/, 'Enter a valid ZIP code'),
-  primary_trade:    z.string().min(2, 'Please select your primary trade'),
-  primary_trade_other: z.string().max(80, 'Keep it under 80 characters').optional().or(z.literal('')),
-  email:            z.string().email('Please enter a valid email address'),
-  // Optional fields — can be filled later in the client portal
-  tagline:          z.string().max(120, 'Keep it under 120 characters').optional().or(z.literal('')),
-  business_type:    z.string().max(100, 'Keep it under 100 characters').optional().or(z.literal('')),
-  phone:            z.string().max(25, 'Keep it under 25 characters').optional().or(z.literal('')),
-  services_offered: z.string().max(500, 'Keep it under 500 characters').optional().or(z.literal('')),
-  business_hours:   z.string().max(300, 'Keep it under 300 characters').optional().or(z.literal('')),
-  target_audience:  z.string().max(300, 'Keep it under 300 characters').optional().or(z.literal('')),
-}).superRefine((data, ctx) => {
-  if (data.primary_trade === 'Other' && !(data.primary_trade_other ?? '').trim()) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'Please enter your industry type.',
-      path: ['primary_trade_other'],
-    })
-  }
-})
+export const step1Schema = z
+  .object({
+    legal_name: z
+      .string()
+      .min(2, "Business name must be at least 2 characters"),
+    physical_address: z.string().min(5, "Please enter a valid address"),
+    city: z.string().min(2, "City is required"),
+    state: z.string().min(2, "State is required"),
+    zip: z.string().regex(/^\d{5}(-\d{4})?$/, "Enter a valid ZIP code"),
+    primary_trade: z.string().min(2, "Please select your primary trade"),
+    primary_trade_other: z
+      .string()
+      .max(80, "Keep it under 80 characters")
+      .optional()
+      .or(z.literal("")),
+    email: z.string().email("Please enter a valid email address"),
+    // Optional fields — can be filled later in the client portal
+    tagline: z
+      .string()
+      .max(120, "Keep it under 120 characters")
+      .optional()
+      .or(z.literal("")),
+    business_type: z
+      .string()
+      .max(100, "Keep it under 100 characters")
+      .optional()
+      .or(z.literal("")),
+    phone: z
+      .string()
+      .max(25, "Keep it under 25 characters")
+      .optional()
+      .or(z.literal("")),
+    services_offered: z
+      .string()
+      .max(500, "Keep it under 500 characters")
+      .optional()
+      .or(z.literal("")),
+    business_hours: z
+      .string()
+      .max(300, "Keep it under 300 characters")
+      .optional()
+      .or(z.literal("")),
+    target_audience: z
+      .string()
+      .max(300, "Keep it under 300 characters")
+      .optional()
+      .or(z.literal("")),
+  })
+  .superRefine((data, ctx) => {
+    if (
+      data.primary_trade === "Other" &&
+      !(data.primary_trade_other ?? "").trim()
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Please enter your industry type.",
+        path: ["primary_trade_other"],
+      });
+    }
+  });
 
 export const step5Schema = z.object({
-  calendly_url:      z.string().url('Please enter a valid URL').or(z.literal('')),
+  calendly_url: z.string().url("Please enter a valid URL").or(z.literal("")),
   financing_enabled: z.boolean(),
-  usp:               z.string().min(10, 'Please describe what makes your business unique (min 10 characters)').max(500, 'Keep it under 500 characters'),
-  value_propositions: z.string().max(800, 'Keep it under 800 characters').optional().or(z.literal('')),
-  about_narrative:    z.string().max(1200, 'Keep it under 1200 characters').optional().or(z.literal('')),
-  primary_cta:        z.string().max(120, 'Keep it under 120 characters').optional().or(z.literal('')),
-  target_keywords:    z.string().max(500, 'Keep it under 500 characters').optional().or(z.literal('')),
-  service_area:       z.string().max(300, 'Keep it under 300 characters').optional().or(z.literal('')),
-  tone:               z.string().max(80, 'Keep it under 80 characters').optional().or(z.literal('')),
-  font_preference:    z.string().max(80, 'Keep it under 80 characters').optional().or(z.literal('')),
-  hero_image_preference: z.string().max(80, 'Keep it under 80 characters').optional().or(z.literal('')),
-  inspiration_urls:   z.string().max(1000, 'Keep it under 1000 characters').optional().or(z.literal('')),
-  key_phrases:        z.string().max(500, 'Keep it under 500 characters').optional().or(z.literal('')),
+  usp: z
+    .string()
+    .min(
+      10,
+      "Please describe what makes your business unique (min 10 characters)",
+    )
+    .max(500, "Keep it under 500 characters"),
+  value_propositions: z
+    .string()
+    .max(800, "Keep it under 800 characters")
+    .optional()
+    .or(z.literal("")),
+  about_narrative: z
+    .string()
+    .max(1200, "Keep it under 1200 characters")
+    .optional()
+    .or(z.literal("")),
+  primary_cta: z
+    .string()
+    .max(120, "Keep it under 120 characters")
+    .optional()
+    .or(z.literal("")),
+  target_keywords: z
+    .string()
+    .max(500, "Keep it under 500 characters")
+    .optional()
+    .or(z.literal("")),
+  service_area: z
+    .string()
+    .max(300, "Keep it under 300 characters")
+    .optional()
+    .or(z.literal("")),
+  tone: z
+    .string()
+    .max(80, "Keep it under 80 characters")
+    .optional()
+    .or(z.literal("")),
+  font_preference: z
+    .string()
+    .max(80, "Keep it under 80 characters")
+    .optional()
+    .or(z.literal("")),
+  hero_image_preference: z
+    .string()
+    .max(80, "Keep it under 80 characters")
+    .optional()
+    .or(z.literal("")),
+  inspiration_urls: z
+    .string()
+    .max(1000, "Keep it under 1000 characters")
+    .optional()
+    .or(z.literal("")),
+  key_phrases: z
+    .string()
+    .max(500, "Keep it under 500 characters")
+    .optional()
+    .or(z.literal("")),
   functionality_contact_form: z.boolean(),
-  functionality_booking:      z.boolean(),
-  functionality_gallery:      z.boolean(),
-  functionality_ecommerce:    z.boolean(),
-  functionality_blog:         z.boolean(),
-})
+  functionality_booking: z.boolean(),
+  functionality_gallery: z.boolean(),
+  functionality_ecommerce: z.boolean(),
+  functionality_blog: z.boolean(),
+});
 
-export type Step1FormData = z.infer<typeof step1Schema>
+export type Step1FormData = z.infer<typeof step1Schema>;
 // Step 5 schema mirrors what was previously called step4Schema for backwards compat
-export type Step4FormData = z.infer<typeof step5Schema>
+export type Step4FormData = z.infer<typeof step5Schema>;
 
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
 
 interface OnboardingFlowProps {
-  auditId?:     string | null
-  initialTier?: WaasPackageTier
+  auditId?: string | null;
+  initialTier?: WaasPackageTier;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function OnboardingFlow({ auditId, initialTier = 'standard' }: OnboardingFlowProps) {
-  const [currentStep, setCurrentStep]   = useState(1)
-  const [tenantId,    setTenantId]      = useState<string | null>(null)
-  const [isLoading,   setIsLoading]     = useState(false)
-  const [error,       setError]         = useState<string | null>(null)
-  const [completed,   setCompleted]     = useState(false)
-  const [reviewToken, setReviewToken]   = useState<string | null>(null)
+export function OnboardingFlow({
+  auditId,
+  initialTier = "standard",
+}: OnboardingFlowProps) {
+  const [currentStep, setCurrentStep] = useState(1);
+  const [tenantId, setTenantId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [completed, setCompleted] = useState(false);
+  const [reviewToken, setReviewToken] = useState<string | null>(null);
 
   // Step 2 state (managed outside RHF — complex array)
-  const [domains, setDomains] = useState<DomainWishlistItem[]>([])
+  const [domains, setDomains] = useState<DomainWishlistItem[]>([]);
 
   // Step 3 state (logo + colors)
-  const [primaryColor,   setPrimaryColor]   = useState('#2563EB')
-  const [secondaryColor, setSecondaryColor] = useState('#1E40AF')
-  const [logoUrl,        setLogoUrl]        = useState<string | null>(null)
-  const [businessName,   setBusinessName]   = useState('')
+  const [primaryColor, setPrimaryColor] = useState("#2563EB");
+  const [secondaryColor, setSecondaryColor] = useState("#1E40AF");
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [businessName, setBusinessName] = useState("");
 
   // Step 4 state (PR #94 — template selection)
-  const [selectedTemplateSlug, setSelectedTemplateSlug] = useState<string | null>(null)
+  const [selectedTemplateSlug, setSelectedTemplateSlug] = useState<
+    string | null
+  >(null);
   // primaryTrade captured from Step 1 for use in Step 4 recommendations
-  const [primaryTrade, setPrimaryTrade] = useState<string | null>(null)
+  const [primaryTrade, setPrimaryTrade] = useState<string | null>(null);
 
-  const trackedSteps    = useRef<Set<number>>(new Set())
-  const trackingContext = useRef<Record<string, string | number | boolean | null | undefined>>({})
+  const trackedSteps = useRef<Set<number>>(new Set());
+  const trackingContext = useRef<
+    Record<string, string | number | boolean | null | undefined>
+  >({});
 
-  const TOTAL_STEPS = 6
+  const TOTAL_STEPS = 6;
 
   // Step 5 captured data — needed to pass pre-fill context into Step 6
-  const [step5Data, setStep5Data] = useState<Step4FormData | null>(null)
+  const [step5Data, setStep5Data] = useState<Step4FormData | null>(null);
 
   useEffect(() => {
     trackingContext.current = getAuditFunnelProperties(
       new URLSearchParams(window.location.search),
       auditId,
-    )
+    );
 
-    trackEvent('audit_onboarding_started', {
+    trackEvent("audit_onboarding_started", {
       ...trackingContext.current,
       tier: initialTier,
       hasAuditId: Boolean(auditId),
-    })
-  }, [auditId, initialTier])
+    });
+  }, [auditId, initialTier]);
 
   useEffect(() => {
-    if (trackedSteps.current.has(currentStep)) return
-    trackedSteps.current.add(currentStep)
-    trackEvent('audit_onboarding_step_viewed', {
+    if (trackedSteps.current.has(currentStep)) return;
+    trackedSteps.current.add(currentStep);
+    trackEvent("audit_onboarding_step_viewed", {
       ...trackingContext.current,
       step: currentStep,
-      stepName: ['business', 'domains', 'brand', 'template', 'integrations'][currentStep - 1],
+      stepName: ["business", "domains", "brand", "template", "integrations"][
+        currentStep - 1
+      ],
       tier: initialTier,
       hasAuditId: Boolean(auditId),
-    })
-  }, [auditId, currentStep, initialTier])
+    });
+  }, [auditId, currentStep, initialTier]);
 
   // Step 1 form
   const step1Form = useForm<Step1FormData>({
     resolver: zodResolver(step1Schema),
     defaultValues: {
-      legal_name:       '',
-      physical_address: '',
-      city:             '',
-      state:            '',
-      zip:              '',
-      primary_trade:    '',
-      primary_trade_other: '',
-      email:            '',
-      tagline:          '',
-      business_type:    '',
-      phone:            '',
-      services_offered: '',
-      business_hours:   '',
-      target_audience:  '',
+      legal_name: "",
+      physical_address: "",
+      city: "",
+      state: "",
+      zip: "",
+      primary_trade: "",
+      primary_trade_other: "",
+      email: "",
+      tagline: "",
+      business_type: "",
+      phone: "",
+      services_offered: "",
+      business_hours: "",
+      target_audience: "",
     },
-  })
+  });
 
   // Step 5 form (previously step4Form — named step4Form for internal compat)
   const step4Form = useForm<Step4FormData>({
     resolver: zodResolver(step5Schema),
     defaultValues: {
-      calendly_url:      '',
+      calendly_url: "",
       financing_enabled: false,
-      usp:               '',
-      value_propositions: '',
-      about_narrative:    '',
-      primary_cta:        'Book My Free Strategy Call',
-      target_keywords:    '',
-      service_area:       '',
-      tone:               'Professional',
-      font_preference:    'Modern',
-      hero_image_preference: 'Generate for me',
-      inspiration_urls:   '',
-      key_phrases:        '',
+      usp: "",
+      value_propositions: "",
+      about_narrative: "",
+      primary_cta: "Book My Free Strategy Call",
+      target_keywords: "",
+      service_area: "",
+      tone: "Professional",
+      font_preference: "Modern",
+      hero_image_preference: "Generate for me",
+      inspiration_urls: "",
+      key_phrases: "",
       functionality_contact_form: true,
-      functionality_booking:      true,
-      functionality_gallery:      false,
-      functionality_ecommerce:    false,
-      functionality_blog:         false,
+      functionality_booking: true,
+      functionality_gallery: false,
+      functionality_ecommerce: false,
+      functionality_blog: false,
     },
-  })
+  });
 
-  const handleError = useCallback((msg: string) => {
-    trackEvent('audit_onboarding_error', {
-      ...trackingContext.current,
-      step: currentStep,
-      message: msg,
-    })
-    setError(msg)
-    setIsLoading(false)
-  }, [currentStep])
+  const handleError = useCallback(
+    (msg: string) => {
+      trackEvent("audit_onboarding_error", {
+        ...trackingContext.current,
+        step: currentStep,
+        message: msg,
+      });
+      setError(msg);
+      setIsLoading(false);
+    },
+    [currentStep],
+  );
 
   // ---------------------------------------------------------------------------
   // Step handlers
   // ---------------------------------------------------------------------------
 
   const handleStep1Submit = async (data: Step1FormData) => {
-    setIsLoading(true)
-    setError(null)
-    setBusinessName(data.legal_name)
+    setIsLoading(true);
+    setError(null);
+    setBusinessName(data.legal_name);
 
-    const resolvedPrimaryTrade = data.primary_trade === 'Other'
-      ? (data.primary_trade_other ?? '').trim()
-      : data.primary_trade
+    const resolvedPrimaryTrade =
+      data.primary_trade === "Other"
+        ? (data.primary_trade_other ?? "").trim()
+        : data.primary_trade;
 
     // Capture trade for Step 4 template recommendations
-    setPrimaryTrade(resolvedPrimaryTrade || null)
+    setPrimaryTrade(resolvedPrimaryTrade || null);
 
     const result = await saveOnboardingStep1(
       tenantId,
       {
-        legal_name:       data.legal_name,
+        legal_name: data.legal_name,
         physical_address: data.physical_address,
-        city:             data.city,
-        state:            data.state,
-        zip:              data.zip,
-        primary_trade:    resolvedPrimaryTrade,
-        tagline:          data.tagline,
-        business_type:    data.business_type,
-        phone:            data.phone,
+        city: data.city,
+        state: data.state,
+        zip: data.zip,
+        primary_trade: resolvedPrimaryTrade,
+        tagline: data.tagline,
+        business_type: data.business_type,
+        phone: data.phone,
         services_offered: data.services_offered,
-        business_hours:   data.business_hours,
-        target_audience:  data.target_audience,
+        business_hours: data.business_hours,
+        target_audience: data.target_audience,
       },
       auditId,
       data.email,
-    )
+    );
 
     if (!result.success || !result.data) {
-      handleError(result.error ?? 'Failed to save. Please try again.')
-      return
+      handleError(result.error ?? "Failed to save. Please try again.");
+      return;
     }
 
-    setTenantId(result.data.tenantId)
-    setIsLoading(false)
-    trackEvent('audit_onboarding_step_completed', {
+    setTenantId(result.data.tenantId);
+    setIsLoading(false);
+    trackEvent("audit_onboarding_step_completed", {
       ...trackingContext.current,
       step: 1,
-      stepName: 'business',
+      stepName: "business",
       tenantCreated: true,
       hasAuditId: Boolean(auditId),
       tier: initialTier,
-    })
-    setCurrentStep(2)
-  }
+    });
+    setCurrentStep(2);
+  };
 
   const handleStep2Next = async () => {
-    if (!tenantId) { handleError('Session expired. Please refresh.'); return }
-    if (domains.length === 0) { setError('Please add at least one domain preference.'); return }
-    setIsLoading(true)
-    setError(null)
+    if (!tenantId) {
+      handleError("Session expired. Please refresh.");
+      return;
+    }
+    if (domains.length === 0) {
+      setError("Please add at least one domain preference.");
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
 
-    const result = await saveOnboardingStep2(tenantId, { domains })
-    if (!result.success) { handleError(result.error ?? 'Failed to save domains.'); return }
+    const result = await saveOnboardingStep2(tenantId, { domains });
+    if (!result.success) {
+      handleError(result.error ?? "Failed to save domains.");
+      return;
+    }
 
-    setIsLoading(false)
-    trackEvent('audit_onboarding_step_completed', {
+    setIsLoading(false);
+    trackEvent("audit_onboarding_step_completed", {
       ...trackingContext.current,
       step: 2,
-      stepName: 'domains',
+      stepName: "domains",
       domainCount: domains.length,
       tier: initialTier,
-    })
-    setCurrentStep(3)
-  }
+    });
+    setCurrentStep(3);
+  };
 
   const handleStep3Next = async () => {
-    if (!tenantId) { handleError('Session expired. Please refresh.'); return }
-    setIsLoading(true)
-    setError(null)
+    if (!tenantId) {
+      handleError("Session expired. Please refresh.");
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
 
     const result = await saveOnboardingStep3(
       tenantId,
@@ -305,134 +408,174 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
       secondaryColor,
       logoUrl,
       businessName,
-    )
-    if (!result.success) { handleError(result.error ?? 'Failed to save brand.'); return }
+    );
+    if (!result.success) {
+      handleError(result.error ?? "Failed to save brand.");
+      return;
+    }
 
-    setIsLoading(false)
-    trackEvent('audit_onboarding_step_completed', {
+    setIsLoading(false);
+    trackEvent("audit_onboarding_step_completed", {
       ...trackingContext.current,
       step: 3,
-      stepName: 'brand',
+      stepName: "brand",
       hasLogo: Boolean(logoUrl),
       tier: initialTier,
-    })
-    setCurrentStep(4)
-  }
+    });
+    setCurrentStep(4);
+  };
 
   // PR #94 — Step 4: Template selection
   const handleStep4Next = async () => {
-    if (!tenantId) { handleError('Session expired. Please refresh.'); return }
-    setIsLoading(true)
-    setError(null)
+    if (!tenantId) {
+      handleError("Session expired. Please refresh.");
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
 
     // Auto-select the #1 recommended template if user never explicitly picked
-    const slugToSave = selectedTemplateSlug ?? getRecommendedTemplateSlugs(primaryTrade)[0]
+    const slugToSave =
+      selectedTemplateSlug ?? getRecommendedTemplateSlugs(primaryTrade)[0];
     if (!selectedTemplateSlug) {
-      setSelectedTemplateSlug(slugToSave)
+      setSelectedTemplateSlug(slugToSave);
     }
 
     const result = await saveOnboardingStepTemplate(tenantId, {
       selected_template_slug: slugToSave,
-    })
+    });
 
     // Non-blocking: if schema not yet migrated, still advance
     if (!result.success) {
-      console.warn('[Onboarding] saveOnboardingStepTemplate error (non-blocking):', result.error)
+      console.warn(
+        "[Onboarding] saveOnboardingStepTemplate error (non-blocking):",
+        result.error,
+      );
     }
 
-    setIsLoading(false)
-    trackEvent('audit_onboarding_step_completed', {
+    setIsLoading(false);
+    trackEvent("audit_onboarding_step_completed", {
       ...trackingContext.current,
       step: 4,
-      stepName: 'template',
+      stepName: "template",
       templateSlug: slugToSave,
       wasAutoSelected: !selectedTemplateSlug,
       tier: initialTier,
-    })
-    setCurrentStep(5)
-  }
+    });
+    setCurrentStep(5);
+  };
 
   // Step 5: Save integrations, advance to Step 6 (website builder)
   const handleStep5Submit = async (data: Step4FormData) => {
-    if (!tenantId) { handleError('Session expired. Please refresh.'); return }
-    setIsLoading(true)
-    setError(null)
+    if (!tenantId) {
+      handleError("Session expired. Please refresh.");
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
 
     // Save integrations data but don't finalise yet — Step 6 does the final submit
-    const result = await saveOnboardingStep4(tenantId, data, initialTier)
-    if (!result.success) { handleError(result.error ?? 'Failed to save integrations.'); return }
+    const result = await saveOnboardingStep4(tenantId, data, initialTier);
+    if (!result.success) {
+      handleError(result.error ?? "Failed to save integrations.");
+      return;
+    }
 
     // Stash reviewToken and step5 data; stay in the flow for Step 6
-    setReviewToken(result.data?.reviewToken ?? null)
-    setStep5Data(data)
-    setIsLoading(false)
-    trackEvent('audit_onboarding_step_completed', {
+    setReviewToken(result.data?.reviewToken ?? null);
+    setStep5Data(data);
+    setIsLoading(false);
+    trackEvent("audit_onboarding_step_completed", {
       ...trackingContext.current,
       step: 5,
-      stepName: 'integrations',
+      stepName: "integrations",
       calendlyConnected: Boolean(data.calendly_url),
       financingEnabled: data.financing_enabled,
       templateSlug: selectedTemplateSlug,
       tier: initialTier,
-    })
-    setCurrentStep(6)
-  }
+    });
+    setCurrentStep(6);
+  };
 
   // Step 6: Save website builder content then mark onboarding complete
   const handleStep6Submit = async (blocks: Block[]) => {
-    if (!tenantId) { handleError('Session expired. Please refresh.'); return }
-    setIsLoading(true)
-    setError(null)
+    if (!tenantId) {
+      handleError("Session expired. Please refresh.");
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
 
     // Save the customer-edited blocks (non-blocking on schema gap)
-    await saveOnboardingStepBuilder(tenantId, blocks, businessName || undefined)
+    await saveOnboardingStepBuilder(
+      tenantId,
+      blocks,
+      businessName || undefined,
+    );
 
-    setIsLoading(false)
-    trackEvent('audit_onboarding_step_completed', {
+    setIsLoading(false);
+    trackEvent("audit_onboarding_step_completed", {
       ...trackingContext.current,
       step: 6,
-      stepName: 'website_builder',
+      stepName: "website_builder",
       templateSlug: selectedTemplateSlug,
       tier: initialTier,
-    })
-    trackEvent('audit_onboarding_completed', {
+    });
+    trackEvent("audit_onboarding_completed", {
       ...trackingContext.current,
       tier: initialTier,
       hasAuditId: Boolean(auditId),
       tenantId,
       templateSlug: selectedTemplateSlug,
-    })
-    setCompleted(true)
-  }
+    });
+    setCompleted(true);
+  };
 
   const goBack = () => {
-    setError(null)
-    trackEvent('audit_onboarding_back_clicked', {
+    setError(null);
+    trackEvent("audit_onboarding_back_clicked", {
       ...trackingContext.current,
       fromStep: currentStep,
       toStep: Math.max(1, currentStep - 1),
       tier: initialTier,
-    })
-    setCurrentStep(s => Math.max(1, s - 1))
-  }
+    });
+    setCurrentStep((s) => Math.max(1, s - 1));
+  };
 
   // ---------------------------------------------------------------------------
   // Success state
   // ---------------------------------------------------------------------------
 
   if (completed) {
-    return <OnboardingSuccess businessName={businessName} tier={initialTier} reviewToken={reviewToken} />
+    return (
+      <OnboardingSuccess
+        businessName={businessName}
+        tier={initialTier}
+        reviewToken={reviewToken}
+      />
+    );
   }
 
   // ---------------------------------------------------------------------------
   // Step labels for progress indicator
   // ---------------------------------------------------------------------------
 
-  const stepLabels = ['Business', 'Domains', 'Brand', 'Template', 'Integrations', 'Website']
+  const stepLabels = [
+    "Business",
+    "Domains",
+    "Brand",
+    "Template",
+    "Integrations",
+    "Website",
+  ];
 
   return (
     <div className="flex flex-col flex-1">
-      <AdvantagePointHeader variant="onboarding" step={currentStep} totalSteps={TOTAL_STEPS} />
+      <AdvantagePointHeader
+        variant="onboarding"
+        step={currentStep}
+        totalSteps={TOTAL_STEPS}
+      />
 
       {/* Mobile step label */}
       <div className="sm:hidden flex items-center gap-2 px-4 pt-4">
@@ -447,33 +590,57 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
       {/* Main content area */}
       <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-8 sm:py-12">
         <div className="w-full max-w-2xl">
-
           {/* Step progress dots (desktop) */}
           <div className="hidden sm:flex items-center gap-3 mb-8">
             {stepLabels.map((label, i) => (
               <React.Fragment key={label}>
                 <div className="flex items-center gap-2">
-                  <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold transition-all duration-300 ${
-                    i + 1 < currentStep
-                      ? 'bg-blue-500 text-white'
-                      : i + 1 === currentStep
-                      ? 'bg-gradient-to-br from-blue-500 to-violet-600 text-white shadow-lg shadow-blue-500/30'
-                      : 'bg-slate-200 dark:bg-white/10 text-slate-400 dark:text-white/30'
-                  }`}>
+                  <div
+                    className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold transition-all duration-300 ${
+                      i + 1 < currentStep
+                        ? "bg-blue-500 text-white"
+                        : i + 1 === currentStep
+                          ? "bg-gradient-to-br from-blue-500 to-violet-600 text-white shadow-lg shadow-blue-500/30"
+                          : "bg-slate-200 dark:bg-white/10 text-slate-400 dark:text-white/30"
+                    }`}
+                  >
                     {i + 1 < currentStep ? (
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                        <path d="M2 7l3.5 3.5L12 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 14 14"
+                        fill="none"
+                      >
+                        <path
+                          d="M2 7l3.5 3.5L12 3"
+                          stroke="white"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
                       </svg>
-                    ) : i + 1}
+                    ) : (
+                      i + 1
+                    )}
                   </div>
-                  <span className={`text-sm font-medium transition-colors ${
-                    i + 1 === currentStep ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-white/30'
-                  }`}>{label}</span>
+                  <span
+                    className={`text-sm font-medium transition-colors ${
+                      i + 1 === currentStep
+                        ? "text-slate-900 dark:text-white"
+                        : "text-slate-500 dark:text-white/30"
+                    }`}
+                  >
+                    {label}
+                  </span>
                 </div>
                 {i < stepLabels.length - 1 && (
-                  <div className={`flex-1 h-px transition-all duration-500 ${
-                    i + 1 < currentStep ? 'bg-blue-500' : 'bg-slate-300 dark:bg-white/10'
-                  }`} />
+                  <div
+                    className={`flex-1 h-px transition-all duration-500 ${
+                      i + 1 < currentStep
+                        ? "bg-blue-500"
+                        : "bg-slate-300 dark:bg-white/10"
+                    }`}
+                  />
                 )}
               </React.Fragment>
             ))}
@@ -484,12 +651,34 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
             {/* Error banner */}
             {error && (
               <div className="flex items-center gap-3 px-6 py-3 bg-red-500/10 border-b border-red-500/20">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
-                  <circle cx="8" cy="8" r="7" stroke="#EF4444" strokeWidth="1.5"/>
-                  <path d="M8 5v3.5M8 10.5v.5" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round"/>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  className="shrink-0"
+                >
+                  <circle
+                    cx="8"
+                    cy="8"
+                    r="7"
+                    stroke="#EF4444"
+                    strokeWidth="1.5"
+                  />
+                  <path
+                    d="M8 5v3.5M8 10.5v.5"
+                    stroke="#EF4444"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
                 </svg>
                 <p className="text-red-400 text-sm">{error}</p>
-                <button onClick={() => setError(null)} className="ml-auto text-red-400/60 hover:text-red-400">✕</button>
+                <button
+                  onClick={() => setError(null)}
+                  className="ml-auto text-red-400/60 hover:text-red-400"
+                >
+                  ✕
+                </button>
               </div>
             )}
 
@@ -553,13 +742,13 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
                   primaryColor={primaryColor}
                   selectedTemplateSlug={selectedTemplateSlug}
                   // Step 1 fields
-                  tagline={step1Form.getValues('tagline')}
-                  servicesOffered={step1Form.getValues('services_offered')}
-                  targetAudience={step1Form.getValues('target_audience')}
-                  city={step1Form.getValues('city')}
-                  state={step1Form.getValues('state')}
+                  tagline={step1Form.getValues("tagline")}
+                  servicesOffered={step1Form.getValues("services_offered")}
+                  targetAudience={step1Form.getValues("target_audience")}
+                  city={step1Form.getValues("city")}
+                  state={step1Form.getValues("state")}
                   // Step 5 fields
-                  usp={step5Data?.usp ?? ''}
+                  usp={step5Data?.usp ?? ""}
                   valuePropositions={step5Data?.value_propositions}
                   aboutNarrative={step5Data?.about_narrative}
                   primaryCta={step5Data?.primary_cta}
@@ -575,12 +764,21 @@ export function OnboardingFlow({ auditId, initialTier = 'standard' }: Onboarding
 
           {/* Trust signals */}
           <div className="flex items-center justify-center gap-6 mt-6">
-            {['🔒 Secure & Private', '⚡ Built in 48 Hours', '🎯 Local SEO Optimized'].map(signal => (
-              <span key={signal} className="text-slate-500 dark:text-white/25 text-xs font-medium">{signal}</span>
+            {[
+              "🔒 Secure & Private",
+              "⚡ Built in 48 Hours",
+              "🎯 Local SEO Optimized",
+            ].map((signal) => (
+              <span
+                key={signal}
+                className="text-slate-500 dark:text-white/25 text-xs font-medium"
+              >
+                {signal}
+              </span>
             ))}
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }

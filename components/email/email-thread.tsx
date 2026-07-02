@@ -1,56 +1,59 @@
-'use client'
+"use client";
 
-import { EmailThreadWithMessages } from '@/lib/types/email'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { 
-  MessageSquare, 
-  Users, 
+import { EmailThreadWithMessages } from "@/lib/types/email";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  MessageSquare,
+  Users,
   Calendar,
   ChevronDown,
-  ChevronUp
-} from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
-import { useState } from 'react'
-import { EmailCard } from './email-card'
+  ChevronUp,
+} from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { useState } from "react";
+import { EmailCard } from "./email-card";
 
 interface EmailThreadProps {
-  thread: EmailThreadWithMessages
-  onEmailView?: (emailId: string) => void
-  onMarkAsRead?: (emailId: string) => void
-  expanded?: boolean
+  thread: EmailThreadWithMessages;
+  onEmailView?: (emailId: string) => void;
+  onMarkAsRead?: (emailId: string) => void;
+  expanded?: boolean;
 }
 
-export function EmailThread({ 
-  thread, 
-  onEmailView, 
+export function EmailThread({
+  thread,
+  onEmailView,
   onMarkAsRead,
-  expanded: defaultExpanded = false 
+  expanded: defaultExpanded = false,
 }: EmailThreadProps) {
-  const [isExpanded, setIsExpanded] = useState(defaultExpanded)
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   const formatDate = (dateString: string) => {
     try {
-      return formatDistanceToNow(new Date(dateString), { addSuffix: true })
+      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
     } catch {
-      return dateString
+      return dateString;
     }
-  }
+  };
 
-  const unreadCount = thread.messages?.filter((msg: any) => !msg.opened).length || 0
+  const unreadCount =
+    thread.messages?.filter((msg: any) => !msg.opened).length || 0;
 
   const getPreviewText = () => {
     if (thread.latest_message?.body_plain) {
-      const preview = thread.latest_message.body_plain.replace(/\n/g, ' ').trim()
-      return preview.length > 100 ? preview.substring(0, 100) + '...' : preview
+      const preview = thread.latest_message.body_plain
+        .replace(/\n/g, " ")
+        .trim();
+      return preview.length > 100 ? preview.substring(0, 100) + "..." : preview;
     }
-    return 'No content'
-  }
+    return "No content";
+  };
 
   return (
     <Card className="mb-4">
-      <CardHeader 
+      <CardHeader
         className="cursor-pointer hover:bg-accent/50 transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}
       >
@@ -63,7 +66,7 @@ export function EmailThread({
                 <Badge variant="default">{unreadCount} new</Badge>
               )}
             </div>
-            
+
             <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
                 <Users className="h-4 w-4" />
@@ -81,7 +84,9 @@ export function EmailThread({
 
             {thread.latest_message && (
               <p className="text-sm text-muted-foreground mt-2 italic">
-                {thread.latest_message.from_name || thread.latest_message.from_address}: {getPreviewText()}
+                {thread.latest_message.from_name ||
+                  thread.latest_message.from_address}
+                : {getPreviewText()}
               </p>
             )}
           </div>
@@ -111,5 +116,5 @@ export function EmailThread({
         </CardContent>
       )}
     </Card>
-  )
+  );
 }

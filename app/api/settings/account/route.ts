@@ -1,30 +1,32 @@
-import { createClient } from '@/lib/supabase/server';
-import { NextResponse } from 'next/server';
+import { createClient } from "@/lib/supabase/server";
+import { NextResponse } from "next/server";
 
 export async function PUT(request: Request) {
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
     const updates = await request.json();
 
     // Get user's account_id
     const { data: userData } = await supabase
-      .from('users')
-      .select('account_id')
-      .eq('id', user.id)
+      .from("users")
+      .select("account_id")
+      .eq("id", user.id)
       .single();
 
     if (!userData) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const { data, error } = await supabase
-      .from('accounts')
+      .from("accounts")
       .update({
         name: updates.name,
         company_size: updates.company_size,
@@ -33,7 +35,7 @@ export async function PUT(request: Request) {
         phone: updates.phone,
         address: updates.address,
       })
-      .eq('id', userData.account_id)
+      .eq("id", userData.account_id)
       .select()
       .single();
 
@@ -43,7 +45,10 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error('Error updating account:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error("Error updating account:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }

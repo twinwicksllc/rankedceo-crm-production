@@ -1,6 +1,6 @@
 // SendGrid Service for RankedCEO CRM
-import { MailDataRequired } from '@sendgrid/mail';
-import sgMail from '@sendgrid/mail';
+import { MailDataRequired } from "@sendgrid/mail";
+import sgMail from "@sendgrid/mail";
 
 interface SendGridEmailOptions {
   to: string;
@@ -58,7 +58,7 @@ export class SendGridService {
         to: options.to,
         from: {
           email: options.from,
-          name: options.fromName || '',
+          name: options.fromName || "",
         },
         subject: options.subject,
         html: options.html,
@@ -75,22 +75,22 @@ export class SendGridService {
       };
 
       const [response] = await sgMail.send(mailData);
-      
+
       // Extract message ID from response headers
-      const messageId = response?.headers?.['x-message-id'] || '';
+      const messageId = response?.headers?.["x-message-id"] || "";
 
       return {
         success: true,
         messageId,
       };
     } catch (error: any) {
-      console.error('[SendGrid Service] Error sending email:', error);
-      
+      console.error("[SendGrid Service] Error sending email:", error);
+
       const errors: string[] = [];
       if (error.response?.body?.errors) {
         errors.push(...error.response.body.errors.map((e: any) => e.message));
       } else {
-        errors.push(error.message || 'Unknown error sending email');
+        errors.push(error.message || "Unknown error sending email");
       }
 
       return {
@@ -105,18 +105,18 @@ export class SendGridService {
    */
   async sendBulkEmails(
     emails: SendGridEmailOptions[],
-    batchSize: number = 100
+    batchSize: number = 100,
   ): Promise<SendGridResponse[]> {
     const results: SendGridResponse[] = [];
 
     for (let i = 0; i < emails.length; i += batchSize) {
       const batch = emails.slice(i, i + batchSize);
-      
+
       // Send emails in parallel within each batch
       const batchResults = await Promise.all(
-        batch.map(email => this.sendEmail(email))
+        batch.map((email) => this.sendEmail(email)),
       );
-      
+
       results.push(...batchResults);
     }
 
@@ -132,8 +132,8 @@ export class SendGridService {
       event: event.event,
       message_id: event.message_id || event.sg_message_id,
       timestamp: event.timestamp || Date.now(),
-      campaign_id: event.campaign_id || event['campaign-id'],
-      campaign_email_id: event.campaign_email_id || event['campaign-email-id'],
+      campaign_id: event.campaign_id || event["campaign-id"],
+      campaign_email_id: event.campaign_email_id || event["campaign-email-id"],
       url: event.url,
       reason: event.reason,
       response: event.response,
@@ -153,22 +153,27 @@ export class SendGridService {
     payload: string,
     signature: string,
     timestamp: string,
-    publicKey: string
+    publicKey: string,
   ): boolean {
     try {
-      const crypto = require('crypto');
-      const decodedSignature = Buffer.from(signature, 'base64').toString('utf-8');
+      const crypto = require("crypto");
+      const decodedSignature = Buffer.from(signature, "base64").toString(
+        "utf-8",
+      );
       const expectedSignature = crypto
-        .createHmac('sha256', publicKey)
+        .createHmac("sha256", publicKey)
         .update(timestamp + payload)
-        .digest('base64');
-      
+        .digest("base64");
+
       return crypto.timingSafeEqual(
         Buffer.from(decodedSignature),
-        Buffer.from(expectedSignature)
+        Buffer.from(expectedSignature),
       );
     } catch (error) {
-      console.error('[SendGrid Service] Error validating webhook signature:', error);
+      console.error(
+        "[SendGrid Service] Error validating webhook signature:",
+        error,
+      );
       return false;
     }
   }
@@ -182,7 +187,8 @@ export class SendGridService {
   } {
     return {
       campaignId: customArgs.campaign_id || customArgs.campaignId,
-      campaignEmailId: customArgs.campaign_email_id || customArgs.campaignEmailId,
+      campaignEmailId:
+        customArgs.campaign_email_id || customArgs.campaignEmailId,
     };
   }
 
@@ -191,11 +197,11 @@ export class SendGridService {
    */
   private stripHtml(html: string): string {
     return html
-      .replace(/<[^>]*>/g, '')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&/g, '&')
-      .replace(/</g, '<')
-      .replace(/>/g, '>')
+      .replace(/<[^>]*>/g, "")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&/g, "&")
+      .replace(/</g, "<")
+      .replace(/>/g, ">")
       .replace(/"/g, '"')
       .replace(/&#39;/g, "'")
       .trim();
@@ -233,15 +239,15 @@ export class SendGridService {
    */
   static replaceTemplateVariables(
     content: string,
-    variables: Record<string, any>
+    variables: Record<string, any>,
   ): string {
     let result = content;
-    
+
     for (const [key, value] of Object.entries(variables)) {
-      const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g');
+      const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, "g");
       result = result.replace(regex, String(value));
     }
-    
+
     return result;
   }
 
@@ -251,10 +257,10 @@ export class SendGridService {
   static sanitizeHtml(html: string): string {
     // Remove dangerous tags and attributes
     return html
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
-      .replace(/on\w+="[^"]*"/gi, '')
-      .replace(/javascript:/gi, '');
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, "")
+      .replace(/on\w+="[^"]*"/gi, "")
+      .replace(/javascript:/gi, "");
   }
 
   /**
@@ -262,7 +268,7 @@ export class SendGridService {
    */
   static generateUnsubscribeLink(
     baseUrl: string,
-    campaignEmailId: string
+    campaignEmailId: string,
   ): string {
     return `${baseUrl}/api/unsubscribe?email_id=${campaignEmailId}`;
   }
@@ -273,7 +279,7 @@ export class SendGridService {
    */
   static generateTrackingPixel(
     baseUrl: string,
-    campaignEmailId: string
+    campaignEmailId: string,
   ): string {
     return `<img src="${baseUrl}/api/track/open?email_id=${campaignEmailId}" width="1" height="1" border="0" alt="">`;
   }
@@ -285,7 +291,7 @@ export class SendGridService {
   static generateClickTrackingLink(
     baseUrl: string,
     originalUrl: string,
-    campaignEmailId: string
+    campaignEmailId: string,
   ): string {
     const encodedUrl = encodeURIComponent(originalUrl);
     return `${baseUrl}/api/track/click?email_id=${campaignEmailId}&url=${encodedUrl}`;
@@ -295,10 +301,10 @@ export class SendGridService {
 // Factory function to create SendGrid service instance
 export function createSendGridService(): SendGridService {
   const apiKey = process.env.SENDGRID_API_KEY;
-  
+
   if (!apiKey) {
-    throw new Error('SENDGRID_API_KEY environment variable is not set');
+    throw new Error("SENDGRID_API_KEY environment variable is not set");
   }
-  
+
   return new SendGridService(apiKey);
 }

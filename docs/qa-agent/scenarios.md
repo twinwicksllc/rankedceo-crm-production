@@ -47,10 +47,10 @@ steps:                      # Flat list of steps (see Step Types below)
 
 ### `modes` values
 
-| Value | When it runs |
-|---|---|
-| `smoke` | Every PR (fast, no Stripe, no email) |
-| `full` | Weekly Monday cron (Stripe test mode, Resend test mode) |
+| Value   | When it runs                                            |
+| ------- | ------------------------------------------------------- |
+| `smoke` | Every PR (fast, no Stripe, no email)                    |
+| `full`  | Weekly Monday cron (Stripe test mode, Resend test mode) |
 
 A scenario with `modes: [smoke, full]` will run in both contexts. A scenario with `modes: [full]` only runs in the weekly job.
 
@@ -73,9 +73,9 @@ Navigate the specified persona's browser context to a URL.
 
 **Fields:**
 
-| Field | Required | Description |
-|---|---|---|
-| `url` | ✅ | Full URL. Use `{{ BASE_URL }}` for the run's base URL |
+| Field | Required | Description                                           |
+| ----- | -------- | ----------------------------------------------------- |
+| `url` | ✅       | Full URL. Use `{{ BASE_URL }}` for the run's base URL |
 
 ---
 
@@ -95,10 +95,10 @@ Fill a form input with a value.
 
 **Fields:**
 
-| Field | Required | Description |
-|---|---|---|
-| `selector` | ✅ | CSS selector for the input. Prefer `data-testid` attributes. |
-| `value` | ✅ | Value to type. Use template vars for sensitive values. |
+| Field      | Required | Description                                                  |
+| ---------- | -------- | ------------------------------------------------------------ |
+| `selector` | ✅       | CSS selector for the input. Prefer `data-testid` attributes. |
+| `value`    | ✅       | Value to type. Use template vars for sensitive values.       |
 
 Pass an empty string `""` to clear a field.
 
@@ -119,9 +119,9 @@ Click an element.
 
 **Fields:**
 
-| Field | Required | Description |
-|---|---|---|
-| `selector` | ✅ | CSS selector for the element to click |
+| Field      | Required | Description                           |
+| ---------- | -------- | ------------------------------------- |
+| `selector` | ✅       | CSS selector for the element to click |
 
 ---
 
@@ -141,9 +141,9 @@ Wait for a selector to appear in the DOM.
 
 **Fields:**
 
-| Field | Required | Description |
-|---|---|---|
-| `selector` | ✅ | CSS selector to wait for |
+| Field        | Required | Description                         |
+| ------------ | -------- | ----------------------------------- |
+| `selector`   | ✅       | CSS selector to wait for            |
 | `timeout_ms` | optional | How long to wait (default: 10000ms) |
 
 ---
@@ -164,11 +164,11 @@ Assert that an element contains a specific string.
 
 **Fields:**
 
-| Field | Required | Description |
-|---|---|---|
-| `selector` | ✅ | CSS selector for the element |
-| `contains` | ✅ | String that must appear in the element's text content. Pass `""` (empty string) to only assert the element exists and is non-null. |
-| `timeout_ms` | optional | How long to wait for the element before asserting (default: 10000ms) |
+| Field        | Required | Description                                                                                                                        |
+| ------------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `selector`   | ✅       | CSS selector for the element                                                                                                       |
+| `contains`   | ✅       | String that must appear in the element's text content. Pass `""` (empty string) to only assert the element exists and is non-null. |
+| `timeout_ms` | optional | How long to wait for the element before asserting (default: 10000ms)                                                               |
 
 ---
 
@@ -187,9 +187,9 @@ Assert that the current URL matches a pattern.
 
 **Fields:**
 
-| Field | Required | Description |
-|---|---|---|
-| `pattern` | ✅ | A string or regex pattern tested against the full current URL |
+| Field     | Required | Description                                                   |
+| --------- | -------- | ------------------------------------------------------------- |
+| `pattern` | ✅       | A string or regex pattern tested against the full current URL |
 
 The pattern is compiled as a `RegExp`. A plain string like `/admin/dashboard` will match any URL containing that substring.
 
@@ -214,11 +214,11 @@ Assert a row count in the Supabase `qa` schema.
 
 **Fields:**
 
-| Field | Required | Description |
-|---|---|---|
-| `table` | ✅ | Table name (without schema prefix — always runs in `qa` schema via `SupabaseAdapter`) |
-| `where` | ✅ | Key-value filter object. All conditions are ANDed. |
-| `expected_count` | ✅ | Exact number of rows expected matching the filter |
+| Field            | Required | Description                                                                           |
+| ---------------- | -------- | ------------------------------------------------------------------------------------- |
+| `table`          | ✅       | Table name (without schema prefix — always runs in `qa` schema via `SupabaseAdapter`) |
+| `where`          | ✅       | Key-value filter object. All conditions are ANDed.                                    |
+| `expected_count` | ✅       | Exact number of rows expected matching the filter                                     |
 
 > **Note:** `assert_db` queries the `qa` schema only, not the `public` schema. To check production data, you must use a `public.` prefixed table name via a custom adapter (not yet supported in v1).
 
@@ -241,11 +241,11 @@ Switch the active persona from one browser context to another.
 
 **Fields:**
 
-| Field | Required | Description |
-|---|---|---|
-| `from` | ✅ | The persona whose turn is ending |
-| `to` | ✅ | The persona who acts next |
-| `message` | ✅ | Human-readable description of the handoff context |
+| Field                | Required | Description                                                         |
+| -------------------- | -------- | ------------------------------------------------------------------- |
+| `from`               | ✅       | The persona whose turn is ending                                    |
+| `to`                 | ✅       | The persona who acts next                                           |
+| `message`            | ✅       | Human-readable description of the handoff context                   |
 | `handoff_timeout_ms` | optional | How long to wait for the new context to stabilise (default: 1000ms) |
 
 The `persona` field on a handoff step must match `from`. The next step should have `persona` set to `to`.
@@ -267,9 +267,9 @@ Wait for a fixed number of milliseconds.
 
 **Fields:**
 
-| Field | Required | Description |
-|---|---|---|
-| `duration_ms` | ✅ | Milliseconds to wait |
+| Field         | Required | Description          |
+| ------------- | -------- | -------------------- |
+| `duration_ms` | ✅       | Milliseconds to wait |
 
 Use `pause` sparingly. Prefer `wait_for` with a selector when possible. Reserve `pause` for external async events (webhooks, emails) where no DOM selector is available.
 
@@ -279,16 +279,16 @@ Use `pause` sparingly. Prefer `wait_for` with a selector when possible. Reserve 
 
 Every step type inherits these fields:
 
-| Field | Required | Description |
-|---|---|---|
-| `id` | ✅ | Unique step ID within the scenario. Convention: `{scenario_prefix}_s{nn}_{action}` |
-| `type` | ✅ | One of: `navigate`, `fill`, `click`, `wait_for`, `assert_text`, `assert_url`, `assert_db`, `handoff`, `pause` |
-| `persona` | ✅ | Which browser context executes this step: `admin` or `client` |
-| `severity` | ✅ | Governs what happens on failure: `info`, `warning`, `error`, `critical` |
-| `description` | optional | Human-readable step description. Shown in reports. |
-| `intent` | optional | v1.5 self-healing annotation. See [below](#annotating-steps-for-self-healing-v15). |
-| `retries` | optional | Number of retry attempts on failure. Default: `0`. Max recommended: `2`. |
-| `timeout_ms` | optional | Per-step timeout override in ms (used by `wait_for` and `assert_text`). Default: `10000`. |
+| Field         | Required | Description                                                                                                   |
+| ------------- | -------- | ------------------------------------------------------------------------------------------------------------- |
+| `id`          | ✅       | Unique step ID within the scenario. Convention: `{scenario_prefix}_s{nn}_{action}`                            |
+| `type`        | ✅       | One of: `navigate`, `fill`, `click`, `wait_for`, `assert_text`, `assert_url`, `assert_db`, `handoff`, `pause` |
+| `persona`     | ✅       | Which browser context executes this step: `admin` or `client`                                                 |
+| `severity`    | ✅       | Governs what happens on failure: `info`, `warning`, `error`, `critical`                                       |
+| `description` | optional | Human-readable step description. Shown in reports.                                                            |
+| `intent`      | optional | v1.5 self-healing annotation. See [below](#annotating-steps-for-self-healing-v15).                            |
+| `retries`     | optional | Number of retry attempts on failure. Default: `0`. Max recommended: `2`.                                      |
+| `timeout_ms`  | optional | Per-step timeout override in ms (used by `wait_for` and `assert_text`). Default: `10000`.                     |
 
 ---
 
@@ -382,21 +382,21 @@ All selectors should use `data-testid` attributes, which are added to components
 
 ### Naming convention for `data-testid`
 
-| Pattern | Example |
-|---|---|
-| `{page}-{element}` | `admin-dashboard-root`, `qa-reports-heading` |
-| `portal-tab-{tabId}` | `portal-tab-overview`, `portal-tab-billing`, `portal-tab-reviews` |
-| `{tab}-tab-content` | `overview-tab-content`, `billing-tab-content`, `reviews-tab-content` |
-| `upgrade-plan-card-{tier}` | `upgrade-plan-card-pro`, `upgrade-plan-card-enterprise` |
-| `upgrade-btn-{tier}` | `upgrade-btn-pro`, `upgrade-btn-enterprise` |
-| `admin-email`, `admin-password` | Login form fields |
-| `admin-login-submit` | Login submit button |
-| `waas-clients-table` | WaaS clients table container |
-| `revenue-widget` | Revenue MRR widget |
-| `qa-runs-table` | QA run history table |
-| `scenario-card-{id}` | Individual scenario card in list |
-| `new-scenario-id` | New scenario form ID field |
-| `new-scenario-submit` | New scenario form submit button |
+| Pattern                         | Example                                                              |
+| ------------------------------- | -------------------------------------------------------------------- |
+| `{page}-{element}`              | `admin-dashboard-root`, `qa-reports-heading`                         |
+| `portal-tab-{tabId}`            | `portal-tab-overview`, `portal-tab-billing`, `portal-tab-reviews`    |
+| `{tab}-tab-content`             | `overview-tab-content`, `billing-tab-content`, `reviews-tab-content` |
+| `upgrade-plan-card-{tier}`      | `upgrade-plan-card-pro`, `upgrade-plan-card-enterprise`              |
+| `upgrade-btn-{tier}`            | `upgrade-btn-pro`, `upgrade-btn-enterprise`                          |
+| `admin-email`, `admin-password` | Login form fields                                                    |
+| `admin-login-submit`            | Login submit button                                                  |
+| `waas-clients-table`            | WaaS clients table container                                         |
+| `revenue-widget`                | Revenue MRR widget                                                   |
+| `qa-runs-table`                 | QA run history table                                                 |
+| `scenario-card-{id}`            | Individual scenario card in list                                     |
+| `new-scenario-id`               | New scenario form ID field                                           |
+| `new-scenario-submit`           | New scenario form submit button                                      |
 
 When adding a new feature that QA scenarios need to test, add `data-testid` attributes to the new components at the same time as writing the scenario.
 
@@ -421,6 +421,7 @@ Every step supports an optional `intent` field. This is a plain-English descript
 ```
 
 In v1.5, when a step fails, the `intent` field will be sent to an LLM alongside the current DOM snapshot and the failing step details. The LLM will attempt to:
+
 1. Re-derive the selector based on intent
 2. Propose a patch to the YAML scenario
 3. Open a GitHub PR with the proposed fix

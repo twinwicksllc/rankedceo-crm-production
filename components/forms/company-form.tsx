@@ -1,116 +1,116 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Alert } from '@/components/ui/alert'
-import { createClient } from '@/lib/supabase/client'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert } from "@/components/ui/alert";
+import { createClient } from "@/lib/supabase/client";
 
 interface CompanyFormProps {
-  accountId: string
+  accountId: string;
   company?: {
-    id: string
-    name: string
-    website?: string
-    industry?: string
-    company_size?: string
-    phone?: string
-    address?: string
-    city?: string
-    state?: string
-    country?: string
-    postal_code?: string
-    status?: string
-    notes?: string
-  }
+    id: string;
+    name: string;
+    website?: string;
+    industry?: string;
+    company_size?: string;
+    phone?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    postal_code?: string;
+    status?: string;
+    notes?: string;
+  };
 }
 
 export default function CompanyForm({ accountId, company }: CompanyFormProps) {
-  const router = useRouter()
-  const supabase = createClient()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const router = useRouter();
+  const supabase = createClient();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
-    name: company?.name || '',
-    website: company?.website || '',
-    industry: company?.industry || '',
-    company_size: company?.company_size || '',
-    phone: company?.phone || '',
-    address: company?.address || '',
-    city: company?.city || '',
-    state: company?.state || '',
-    country: company?.country || '',
-    postal_code: company?.postal_code || '',
-    status: company?.status || 'active',
-    notes: company?.notes || '',
-  })
+    name: company?.name || "",
+    website: company?.website || "",
+    industry: company?.industry || "",
+    company_size: company?.company_size || "",
+    phone: company?.phone || "",
+    address: company?.address || "",
+    city: company?.city || "",
+    state: company?.state || "",
+    country: company?.country || "",
+    postal_code: company?.postal_code || "",
+    status: company?.status || "active",
+    notes: company?.notes || "",
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
     try {
       if (company?.id) {
         // Update existing company
         const { error: updateError } = await supabase
-          .from('companies')
+          .from("companies")
           .update({
             ...formData,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', company.id)
+          .eq("id", company.id);
 
-        if (updateError) throw updateError
+        if (updateError) throw updateError;
 
-        router.push(`/companies/${company.id}`)
+        router.push(`/companies/${company.id}`);
       } else {
         // Create new company
         const { data, error: insertError } = await supabase
-          .from('companies')
+          .from("companies")
           .insert({
             ...formData,
             account_id: accountId,
           })
           .select()
-          .single()
+          .single();
 
-        if (insertError) throw insertError
+        if (insertError) throw insertError;
 
-        router.push(`/companies/${data.id}`)
+        router.push(`/companies/${data.id}`);
       }
-      
-      router.refresh()
-    } catch (err: any) {
-      console.error('Error saving company:', err)
-      setError(err.message || 'Failed to save company')
-    } finally {
-      setLoading(false)
-    }
-  }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData(prev => ({
+      router.refresh();
+    } catch (err: any) {
+      console.error("Error saving company:", err);
+      setError(err.message || "Failed to save company");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) => {
+    setFormData((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value
-    }))
-  }
+      [e.target.name]: e.target.value,
+    }));
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {error && (
-        <Alert variant="destructive">
-          {error}
-        </Alert>
-      )}
+      {error && <Alert variant="destructive">{error}</Alert>}
 
       {/* Basic Information */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Basic Information</h3>
-        
+
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="name">Company Name *</Label>
@@ -199,7 +199,7 @@ export default function CompanyForm({ accountId, company }: CompanyFormProps) {
       {/* Address Information */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Address</h3>
-        
+
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="address">Street Address</Label>
@@ -275,7 +275,11 @@ export default function CompanyForm({ accountId, company }: CompanyFormProps) {
       {/* Actions */}
       <div className="flex gap-4">
         <Button type="submit" disabled={loading}>
-          {loading ? 'Saving...' : company ? 'Update Company' : 'Create Company'}
+          {loading
+            ? "Saving..."
+            : company
+              ? "Update Company"
+              : "Create Company"}
         </Button>
         <Button
           type="button"
@@ -287,5 +291,5 @@ export default function CompanyForm({ accountId, company }: CompanyFormProps) {
         </Button>
       </div>
     </form>
-  )
+  );
 }

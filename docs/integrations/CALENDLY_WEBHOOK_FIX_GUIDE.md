@@ -1,7 +1,9 @@
 # Calendly Webhook Fix Guide
 
 ## Problem
+
 Bookings from Calendly are failing to link to accounts because:
+
 1. No matching Calendly connection found in the database
 2. No DEFAULT_ACCOUNT_ID environment variable configured
 3. URI matching issues (trailing slashes)
@@ -14,7 +16,7 @@ Bookings from Calendly are failing to link to accounts because:
 2. Run this query to check your Calendly connections:
 
 ```sql
-SELECT 
+SELECT
   id,
   account_id,
   user_id,
@@ -65,17 +67,20 @@ Example: `123e4567-e89b-12d3-a456-426614174000`
 ## What Changed in the Code
 
 ### Improved URI Matching
+
 - Now normalizes URIs by removing trailing slashes
 - Tries exact match first, then normalized match
 - Logs all available URIs for debugging
 
 ### Better Fallback Logic
+
 1. First tries to match by `calendly_user_uri`
 2. Falls back to most recent active connection
 3. Finally uses `DEFAULT_ACCOUNT_ID` from environment
 4. Only fails if no connection AND no DEFAULT_ACCOUNT_ID
 
 ### Enhanced Logging
+
 - Shows organizer URI being searched
 - Lists all available URIs in database
 - Indicates which fallback method was used
@@ -86,6 +91,7 @@ Example: `123e4567-e89b-12d3-a456-426614174000`
 ### Issue: Still seeing "No matching Calendly connection found"
 
 **Check:**
+
 1. Is `DEFAULT_ACCOUNT_ID` set in Vercel?
 2. Did you redeploy after setting it?
 3. Check Vercel logs - does it show the DEFAULT_ACCOUNT_ID value?
@@ -93,6 +99,7 @@ Example: `123e4567-e89b-12d3-a456-426614174000`
 ### Issue: Appointment created but wrong account
 
 **Check:**
+
 1. Verify the DEFAULT_ACCOUNT_ID UUID is correct
 2. Check if there are multiple active connections
 3. The code now prefers exact URI matches over fallbacks
@@ -100,6 +107,7 @@ Example: `123e4567-e89b-12d3-a456-426614174000`
 ### Issue: URI mismatch in logs
 
 **Check:**
+
 1. Compare the organizer URI in logs with database URIs
 2. Look for trailing slashes or other formatting differences
 3. The code now handles trailing slashes automatically
@@ -116,6 +124,7 @@ DEFAULT_ACCOUNT_ID=[your account UUID]
 ## Next Steps
 
 After this fix:
+
 1. All Calendly bookings will be captured (never lost)
 2. Bookings will link to your default account if no specific connection found
 3. Better logging helps debug any future issues

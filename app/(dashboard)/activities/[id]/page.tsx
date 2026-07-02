@@ -1,11 +1,11 @@
-import { notFound } from 'next/navigation';
-import { activityService } from '@/lib/services/activity-service';
-import { ActivityTimeline } from '@/components/activities/activity-timeline';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import Link from 'next/link';
+import { notFound } from "next/navigation";
+import { activityService } from "@/lib/services/activity-service";
+import { ActivityTimeline } from "@/components/activities/activity-timeline";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export default async function ActivityDetailPage({
   params,
@@ -20,25 +20,25 @@ export default async function ActivityDetailPage({
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    return new Intl.DateTimeFormat("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     }).format(date);
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
+      case "completed":
+        return "bg-green-100 text-green-800";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "cancelled":
+        return "bg-red-100 text-red-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -47,7 +47,10 @@ export default async function ActivityDetailPage({
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <Link href="/activities" className="text-blue-600 hover:underline text-sm">
+          <Link
+            href="/activities"
+            className="text-blue-600 hover:underline text-sm"
+          >
             ← Back to Activities
           </Link>
           <h1 className="text-2xl font-bold text-gray-900 mt-2">
@@ -106,13 +109,17 @@ export default async function ActivityDetailPage({
               {activity.due_date && (
                 <div>
                   <div className="text-sm text-gray-600">Due Date</div>
-                  <div className="font-medium">{formatDate(activity.due_date)}</div>
+                  <div className="font-medium">
+                    {formatDate(activity.due_date)}
+                  </div>
                 </div>
               )}
               {activity.duration_minutes && (
                 <div>
                   <div className="text-sm text-gray-600">Duration</div>
-                  <div className="font-medium">{activity.duration_minutes} minutes</div>
+                  <div className="font-medium">
+                    {activity.duration_minutes} minutes
+                  </div>
                 </div>
               )}
               {activity.location && (
@@ -137,7 +144,8 @@ export default async function ActivityDetailPage({
                       </div>
                       <div>
                         <div className="font-medium">
-                          {activity.contact.first_name} {activity.contact.last_name}
+                          {activity.contact.first_name}{" "}
+                          {activity.contact.last_name}
                         </div>
                         <div className="text-sm text-gray-600">
                           {activity.contact.email}

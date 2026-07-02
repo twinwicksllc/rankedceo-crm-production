@@ -9,7 +9,7 @@ export interface Deal {
   pipeline_id?: string | null;
   title: string;
   description?: string | null;
-  stage: 'Lead' | 'Qualified' | 'Proposal' | 'Negotiation' | 'Won' | 'Lost';
+  stage: "Lead" | "Qualified" | "Proposal" | "Negotiation" | "Won" | "Lost";
   value: number;
   win_probability: number;
   expected_close_date?: string | null;
@@ -21,7 +21,7 @@ export interface CreateDealInput {
   contact_id?: string;
   company_id?: string;
   pipeline_id?: string;
-  stage?: 'Lead' | 'Qualified' | 'Proposal' | 'Negotiation' | 'Won' | 'Lost';
+  stage?: "Lead" | "Qualified" | "Proposal" | "Negotiation" | "Won" | "Lost";
   value: number;
   win_probability?: number;
   expected_close_date?: string;
@@ -33,7 +33,7 @@ export interface UpdateDealInput {
   contact_id?: string;
   company_id?: string;
   pipeline_id?: string;
-  stage?: 'Lead' | 'Qualified' | 'Proposal' | 'Negotiation' | 'Won' | 'Lost';
+  stage?: "Lead" | "Qualified" | "Proposal" | "Negotiation" | "Won" | "Lost";
   value?: number;
   win_probability?: number;
   expected_close_date?: string;
@@ -42,5 +42,5 @@ export interface UpdateDealInput {
 export interface DealFilters {
   search?: string;
   pipeline_id?: string;
-  stage?: 'Lead' | 'Qualified' | 'Proposal' | 'Negotiation' | 'Won' | 'Lost';
+  stage?: "Lead" | "Qualified" | "Proposal" | "Negotiation" | "Won" | "Lost";
 }

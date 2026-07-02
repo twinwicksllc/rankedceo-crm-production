@@ -1,35 +1,35 @@
-'use client'
+"use client";
 
 // =============================================================================
 // AdvantagePoint — Shared Header Component
 // Used across /onboarding and /admin routes
 // =============================================================================
 
-import React from 'react'
-import Link from 'next/link'
-import Image from 'next/image'
-import { useOnboardingTheme } from '@/app/get-started/theme-context'
+import React from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { useOnboardingTheme } from "@/app/get-started/theme-context";
 
 interface AdvantagePointHeaderProps {
-  variant?: 'onboarding' | 'admin'
-  step?:    number
-  totalSteps?: number
+  variant?: "onboarding" | "admin";
+  step?: number;
+  totalSteps?: number;
 }
 
 export function AdvantagePointHeader({
-  variant = 'onboarding',
+  variant = "onboarding",
   step,
   totalSteps,
 }: AdvantagePointHeaderProps) {
-  const { theme, toggleTheme } = useOnboardingTheme()
-  const isLightOnboarding = variant === 'onboarding' && theme === 'light'
+  const { theme, toggleTheme } = useOnboardingTheme();
+  const isLightOnboarding = variant === "onboarding" && theme === "light";
 
   return (
     <header
       className={`relative z-10 backdrop-blur-xl ${
         isLightOnboarding
-          ? 'border-b border-slate-500/40 bg-slate-700/95'
-          : 'border-b border-white/10 bg-black/20'
+          ? "border-b border-slate-500/40 bg-slate-700/95"
+          : "border-b border-white/10 bg-black/20"
       }`}
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
@@ -46,23 +46,23 @@ export function AdvantagePointHeader({
         </Link>
 
         {/* Progress indicator (onboarding only) */}
-        {variant === 'onboarding' && step && totalSteps && (
+        {variant === "onboarding" && step && totalSteps && (
           <div className="hidden sm:flex items-center gap-2">
             {Array.from({ length: totalSteps }).map((_, i) => (
               <div
                 key={i}
                 className={`h-1.5 rounded-full transition-all duration-500 ${
                   i + 1 < step
-                    ? 'w-6 bg-blue-500'
+                    ? "w-6 bg-blue-500"
                     : i + 1 === step
-                    ? 'w-8 bg-gradient-to-r from-blue-500 to-violet-500'
-                    : 'w-4 bg-white/20'
+                      ? "w-8 bg-gradient-to-r from-blue-500 to-violet-500"
+                      : "w-4 bg-white/20"
                 }`}
               />
             ))}
             <span
               className="text-white/40 text-xs ml-2 font-medium"
-              style={isLightOnboarding ? { color: '#ffffff' } : undefined}
+              style={isLightOnboarding ? { color: "#ffffff" } : undefined}
             >
               {step} of {totalSteps}
             </span>
@@ -70,21 +70,25 @@ export function AdvantagePointHeader({
         )}
 
         <div className="flex items-center gap-3">
-          {variant === 'onboarding' && (
+          {variant === "onboarding" && (
             <button
               type="button"
               onClick={toggleTheme}
               className="h-9 px-3 rounded-lg border border-white/20 text-white/70 hover:text-white transition-colors text-xs font-semibold"
-              style={isLightOnboarding ? { color: '#ffffff', borderColor: 'rgba(255,255,255,0.75)' } : undefined}
-              aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-              title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+              style={
+                isLightOnboarding
+                  ? { color: "#ffffff", borderColor: "rgba(255,255,255,0.75)" }
+                  : undefined
+              }
+              aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+              title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
             >
-              {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
+              {theme === "light" ? "Dark Mode" : "Light Mode"}
             </button>
           )}
 
           {/* Admin badge + nav */}
-          {variant === 'admin' && (
+          {variant === "admin" && (
             <div className="flex items-center gap-3">
               <Link
                 href="/admin/qa-reports"
@@ -94,11 +98,13 @@ export function AdvantagePointHeader({
                 🤖 QA
               </Link>
               <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-white/60 text-xs font-medium">Admin Mode</span>
+              <span className="text-white/60 text-xs font-medium">
+                Admin Mode
+              </span>
             </div>
           )}
         </div>
       </div>
     </header>
-  )
+  );
 }

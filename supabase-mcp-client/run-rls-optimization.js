@@ -1,28 +1,28 @@
-const https = require('https');
-const fs = require('fs');
+const https = require("https");
+const fs = require("fs");
 
-const projectRef = 'wcednzaxmxwfiijzmjmx';
-const accessToken = 'sbp_6ac5ce26e00f2d47bea8b24b253e70fc960266e9';
+const projectRef = "wcednzaxmxwfiijzmjmx";
+const accessToken = "sbp_6ac5ce26e00f2d47bea8b24b253e70fc960266e9";
 
 async function executeSQL(sql) {
   return new Promise((resolve, reject) => {
     const data = JSON.stringify({ query: sql });
 
     const options = {
-      hostname: 'api.supabase.com',
+      hostname: "api.supabase.com",
       path: `/v1/projects/${projectRef}/database/query`,
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-        'Content-Length': data.length
-      }
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        "Content-Length": data.length,
+      },
     };
 
     const req = https.request(options, (res) => {
-      let body = '';
-      res.on('data', (chunk) => body += chunk);
-      res.on('end', () => {
+      let body = "";
+      res.on("data", (chunk) => (body += chunk));
+      res.on("end", () => {
         if (res.statusCode === 201) {
           resolve({ success: true });
         } else {
@@ -31,7 +31,7 @@ async function executeSQL(sql) {
       });
     });
 
-    req.on('error', (error) => {
+    req.on("error", (error) => {
       reject(error);
     });
 
@@ -41,10 +41,10 @@ async function executeSQL(sql) {
 }
 
 async function runMigration() {
-  console.log('Starting RLS optimization migration...\n');
-  
+  console.log("Starting RLS optimization migration...\n");
+
   // Step 1: Drop all existing policies
-  console.log('Step 1: Dropping existing policies...');
+  console.log("Step 1: Dropping existing policies...");
   const dropPolicies = `
     DROP POLICY IF EXISTS "Users can view their own account" ON accounts;
     DROP POLICY IF EXISTS "Users can update their own account" ON accounts;
@@ -98,17 +98,17 @@ async function runMigration() {
     DROP POLICY IF EXISTS "Users can insert model readiness for their account" ON model_readiness;
     DROP POLICY IF EXISTS "Users can update model readiness for their account" ON model_readiness;
   `;
-  
+
   let result = await executeSQL(dropPolicies);
   if (!result.success) {
-    console.log('Failed to drop policies:', result.body);
+    console.log("Failed to drop policies:", result.body);
     return;
   }
-  console.log('✓ Policies dropped\n');
-  
+  console.log("✓ Policies dropped\n");
+
   // Step 2: Create optimized policies
-  console.log('Step 2: Creating optimized policies...');
-  
+  console.log("Step 2: Creating optimized policies...");
+
   const createPolicies = `
     -- Accounts policies
     CREATE POLICY "Users can view their own account"
@@ -237,17 +237,17 @@ async function runMigration() {
       TO authenticated
       USING (account_id IN (SELECT account_id FROM users WHERE id = (SELECT auth.uid())));
   `;
-  
+
   result = await executeSQL(createPolicies);
   if (!result.success) {
-    console.log('Failed to create policies:', result.body);
+    console.log("Failed to create policies:", result.body);
     return;
   }
-  console.log('✓ Core policies created\n');
-  
+  console.log("✓ Core policies created\n");
+
   // Step 3: Create remaining policies
-  console.log('Step 3: Creating remaining policies...');
-  
+  console.log("Step 3: Creating remaining policies...");
+
   const createRemainingPolicies = `
     -- Pipeline stages policies
     CREATE POLICY "Users can view pipeline stages in their account"
@@ -346,17 +346,17 @@ async function runMigration() {
       TO authenticated
       USING (account_id IN (SELECT account_id FROM users WHERE id = (SELECT auth.uid())));
   `;
-  
+
   result = await executeSQL(createRemainingPolicies);
   if (!result.success) {
-    console.log('Failed to create remaining policies:', result.body);
+    console.log("Failed to create remaining policies:", result.body);
     return;
   }
-  console.log('✓ Remaining policies created\n');
-  
+  console.log("✓ Remaining policies created\n");
+
   // Step 4: Create AI policies
-  console.log('Step 4: Creating AI policies...');
-  
+  console.log("Step 4: Creating AI policies...");
+
   const createAIPolicies = `
     -- Feature Importance Policies
     CREATE POLICY "Users can view feature importance for their account"
@@ -489,17 +489,17 @@ async function runMigration() {
             )
         );
   `;
-  
+
   result = await executeSQL(createAIPolicies);
   if (!result.success) {
-    console.log('Failed to create AI policies:', result.body);
+    console.log("Failed to create AI policies:", result.body);
     return;
   }
-  console.log('✓ AI policies created\n');
-  
+  console.log("✓ AI policies created\n");
+
   // Step 5: Add indexes
-  console.log('Step 5: Adding indexes for better performance...');
-  
+  console.log("Step 5: Adding indexes for better performance...");
+
   const createIndexes = `
     CREATE INDEX IF NOT EXISTS idx_contacts_account_id ON contacts(account_id);
     CREATE INDEX IF NOT EXISTS idx_companies_account_id ON companies(account_id);
@@ -511,19 +511,19 @@ async function runMigration() {
     CREATE INDEX IF NOT EXISTS idx_forms_account_id ON forms(account_id);
     CREATE INDEX IF NOT EXISTS idx_users_account_id ON users(account_id);
   `;
-  
+
   result = await executeSQL(createIndexes);
   if (!result.success) {
-    console.log('Failed to create indexes:', result.body);
+    console.log("Failed to create indexes:", result.body);
     return;
   }
-  console.log('✓ Indexes created\n');
-  
-  console.log('✅ RLS optimization migration completed successfully!');
-  console.log('\nPerformance improvements:');
-  console.log('- auth.uid() now wrapped in SELECT for initPlan optimization');
-  console.log('- Indexes added on account_id columns');
-  console.log('- Expected 10-100x performance improvement on large tables');
+  console.log("✓ Indexes created\n");
+
+  console.log("✅ RLS optimization migration completed successfully!");
+  console.log("\nPerformance improvements:");
+  console.log("- auth.uid() now wrapped in SELECT for initPlan optimization");
+  console.log("- Indexes added on account_id columns");
+  console.log("- Expected 10-100x performance improvement on large tables");
 }
 
 runMigration().catch(console.error);

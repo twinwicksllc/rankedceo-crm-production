@@ -1,41 +1,47 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { getCalendlyAuthUrl } from '@/lib/services/calendly-service'
-import { randomBytes } from 'crypto'
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { getCalendlyAuthUrl } from "@/lib/services/calendly-service";
+import { randomBytes } from "crypto";
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
-    const supabase = await createClient()
-    const { data: { user }, error } = await supabase.auth.getUser()
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? request.url
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? request.url;
 
     if (error || !user) {
-      return NextResponse.redirect(new URL('/login', appUrl))
+      return NextResponse.redirect(new URL("/login", appUrl));
     }
 
     // Generate state token to prevent CSRF
-    const state = randomBytes(32).toString('hex')
+    const state = randomBytes(32).toString("hex");
 
     // Store state in a short-lived cookie
-    const authUrl = getCalendlyAuthUrl(state)
+    const authUrl = getCalendlyAuthUrl(state);
 
-    const response = NextResponse.redirect(authUrl)
-    response.cookies.set('calendly_oauth_state', state, {
+    const response = NextResponse.redirect(authUrl);
+    response.cookies.set("calendly_oauth_state", state, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
       maxAge: 600, // 10 minutes
-      path: '/',
-    })
+      path: "/",
+    });
 
-    return response
+    return response;
   } catch (error) {
-    console.error('[Calendly Connect] Error:', error)
+    console.error("[Calendly Connect] Error:", error);
     return NextResponse.redirect(
-      new URL('/settings?error=calendly_connect_failed', process.env.NEXT_PUBLIC_APP_URL ?? request.url)
-    )
+      new URL(
+        "/settings?error=calendly_connect_failed",
+        process.env.NEXT_PUBLIC_APP_URL ?? request.url,
+      ),
+    );
   }
 }

@@ -1,26 +1,26 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { contactSchema, type ContactFormData } from '@/lib/validations/contact'
-import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { contactSchema, type ContactFormData } from "@/lib/validations/contact";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ContactFormProps {
-  contact?: any
-  accountId: string
-  userId: string
+  contact?: any;
+  accountId: string;
+  userId: string;
 }
 
 export function ContactForm({ contact, accountId, userId }: ContactFormProps) {
-  const router = useRouter()
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const {
     register,
@@ -29,22 +29,22 @@ export function ContactForm({ contact, accountId, userId }: ContactFormProps) {
   } = useForm<ContactFormData>({
     resolver: zodResolver(contactSchema),
     defaultValues: contact || {
-      first_name: '',
-      last_name: '',
-      email: '',
-      phone: '',
-      job_title: '',
-      linkedin_url: '',
-      notes: '',
+      first_name: "",
+      last_name: "",
+      email: "",
+      phone: "",
+      job_title: "",
+      linkedin_url: "",
+      notes: "",
     },
-  })
+  });
 
   const onSubmit = async (data: ContactFormData) => {
-    setError('')
-    setLoading(true)
+    setError("");
+    setLoading(true);
 
     try {
-      const supabase = createClient()
+      const supabase = createClient();
 
       const contactData = {
         ...data,
@@ -52,33 +52,31 @@ export function ContactForm({ contact, accountId, userId }: ContactFormProps) {
         owner_id: userId,
         email: data.email || null,
         phone: data.phone || null,
-      }
+      };
 
       if (contact) {
         // Update existing contact
         const { error } = await supabase
-          .from('contacts')
+          .from("contacts")
           .update(contactData)
-          .eq('id', contact.id)
+          .eq("id", contact.id);
 
-        if (error) throw error
+        if (error) throw error;
       } else {
         // Create new contact
-        const { error } = await supabase
-          .from('contacts')
-          .insert(contactData)
+        const { error } = await supabase.from("contacts").insert(contactData);
 
-        if (error) throw error
+        if (error) throw error;
       }
 
-      router.push('/contacts')
-      router.refresh()
+      router.push("/contacts");
+      router.refresh();
     } catch (err: any) {
-      setError(err.message || 'Failed to save contact')
+      setError(err.message || "Failed to save contact");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -93,7 +91,7 @@ export function ContactForm({ contact, accountId, userId }: ContactFormProps) {
           <Label htmlFor="first_name">First Name *</Label>
           <Input
             id="first_name"
-            {...register('first_name')}
+            {...register("first_name")}
             disabled={loading}
           />
           {errors.first_name && (
@@ -103,11 +101,7 @@ export function ContactForm({ contact, accountId, userId }: ContactFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="last_name">Last Name *</Label>
-          <Input
-            id="last_name"
-            {...register('last_name')}
-            disabled={loading}
-          />
+          <Input id="last_name" {...register("last_name")} disabled={loading} />
           {errors.last_name && (
             <p className="text-sm text-red-600">{errors.last_name.message}</p>
           )}
@@ -118,7 +112,7 @@ export function ContactForm({ contact, accountId, userId }: ContactFormProps) {
           <Input
             id="email"
             type="email"
-            {...register('email')}
+            {...register("email")}
             disabled={loading}
           />
           {errors.email && (
@@ -131,18 +125,14 @@ export function ContactForm({ contact, accountId, userId }: ContactFormProps) {
           <Input
             id="phone"
             type="tel"
-            {...register('phone')}
+            {...register("phone")}
             disabled={loading}
           />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="job_title">Job Title</Label>
-          <Input
-            id="job_title"
-            {...register('job_title')}
-            disabled={loading}
-          />
+          <Input id="job_title" {...register("job_title")} disabled={loading} />
         </div>
 
         <div className="space-y-2">
@@ -150,11 +140,13 @@ export function ContactForm({ contact, accountId, userId }: ContactFormProps) {
           <Input
             id="linkedin_url"
             type="url"
-            {...register('linkedin_url')}
+            {...register("linkedin_url")}
             disabled={loading}
           />
           {errors.linkedin_url && (
-            <p className="text-sm text-red-600">{errors.linkedin_url.message}</p>
+            <p className="text-sm text-red-600">
+              {errors.linkedin_url.message}
+            </p>
           )}
         </div>
       </div>
@@ -163,7 +155,7 @@ export function ContactForm({ contact, accountId, userId }: ContactFormProps) {
         <Label htmlFor="notes">Notes</Label>
         <textarea
           id="notes"
-          {...register('notes')}
+          {...register("notes")}
           disabled={loading}
           rows={4}
           className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -172,7 +164,11 @@ export function ContactForm({ contact, accountId, userId }: ContactFormProps) {
 
       <div className="flex gap-4">
         <Button type="submit" disabled={loading}>
-          {loading ? 'Saving...' : contact ? 'Update Contact' : 'Create Contact'}
+          {loading
+            ? "Saving..."
+            : contact
+              ? "Update Contact"
+              : "Create Contact"}
         </Button>
         <Button
           type="button"
@@ -184,5 +180,5 @@ export function ContactForm({ contact, accountId, userId }: ContactFormProps) {
         </Button>
       </div>
     </form>
-  )
+  );
 }

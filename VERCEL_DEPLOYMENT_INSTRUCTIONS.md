@@ -52,16 +52,19 @@
 ### Option 2: Deploy via Vercel CLI
 
 1. **Install Vercel CLI** (if not already installed)
+
    ```bash
    npm install -g vercel
    ```
 
 2. **Login to Vercel**
+
    ```bash
    vercel login
    ```
 
 3. **Deploy from Local**
+
    ```bash
    cd /path/to/RankedCEO-CRM
    vercel
@@ -74,6 +77,7 @@
    - Want to override the settings? → No
 
 5. **Add Environment Variables**
+
    ```bash
    vercel env add NEXT_PUBLIC_SUPABASE_URL
    vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -94,6 +98,7 @@
 ## Current Build Status
 
 ✅ **Phases Completed:**
+
 - Phase 1: Foundation (authentication, layout, UI components)
 - Phase 2: Authentication (login, signup, logout)
 - Phase 3: Dashboard (layout and navigation)
@@ -106,6 +111,7 @@
 ## What's Working
 
 The following features are fully functional:
+
 - ✅ User authentication (signup, login, logout)
 - ✅ Dashboard with navigation
 - ✅ Contacts management (create, read, update, delete)
@@ -118,6 +124,7 @@ The following features are fully functional:
 ## What's Next
 
 After deployment, you can continue building:
+
 - Phase 7: Activities Module
 - Phase 8: Campaigns
 - Phase 9: Smart BCC Email
@@ -131,16 +138,19 @@ After deployment, you can continue building:
 ## Troubleshooting
 
 ### Build Fails
+
 - Check that all environment variables are set correctly
 - Ensure Supabase database is accessible
 - Verify API keys are valid
 
 ### Database Connection Issues
+
 - Confirm Supabase URL and keys are correct
 - Check that RLS policies are properly configured
 - Ensure database tables exist
 
 ### API Errors
+
 - Verify all API keys (SendGrid, Gemini, Perplexity, reCAPTCHA)
 - Check API key permissions and quotas
 - Review Vercel function logs for errors
@@ -148,6 +158,7 @@ After deployment, you can continue building:
 ## Support
 
 If you encounter issues:
+
 1. Check Vercel deployment logs
 2. Review browser console for errors
 3. Verify environment variables are set

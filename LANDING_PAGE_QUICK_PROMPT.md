@@ -1,6 +1,7 @@
 # Quick Landing Page Prompt for RankedCEO CRM
 
 ## One-Paragraph Summary
+
 Create a modern, professional landing page for RankedCEO CRM - an AI-powered, multi-tenant Customer Relationship Management platform for service businesses (HVAC, plumbing, electrical). The CRM combines traditional contact/deal management with AI lead scoring (Gemini AI) and intelligent research (Perplexity AI). Currently features: authentication, dashboard, contacts, companies, deals, pipelines, and activities. Coming soon: email campaigns, smart BCC capture, form builder, advanced analytics. Use Next.js 14, Tailwind CSS, and match the existing app's blue/green color scheme. Must integrate with existing /login and /signup pages.
 
 ## Key Sections Needed
@@ -15,6 +16,7 @@ Create a modern, professional landing page for RankedCEO CRM - an AI-powered, mu
 8. **Footer**: Links, social, copyright
 
 ## Design Requirements
+
 - **Style**: Modern, clean, professional
 - **Colors**: Blue (primary), green (accent), gray (neutral) - match Tailwind defaults
 - **Typography**: Inter or system fonts
@@ -23,6 +25,7 @@ Create a modern, professional landing page for RankedCEO CRM - an AI-powered, mu
 - **Accessibility**: WCAG 2.1 AA
 
 ## Technical Stack
+
 - Next.js 14 + TypeScript
 - Tailwind CSS
 - Supabase (backend)
@@ -30,12 +33,15 @@ Create a modern, professional landing page for RankedCEO CRM - an AI-powered, mu
 - Must link to existing /login and /signup pages
 
 ## Current Features (Phase 7 Complete)
+
 ✅ Authentication, Dashboard, Contacts, Companies, Deals, Pipelines, Activities
 
 ## Coming Soon (Phases 8-15)
+
 🔜 Email Campaigns, Smart BCC, Form Builder, AI Lead Scoring, AI Research, Analytics, Settings
 
 ## Key Differentiators
+
 - AI-powered lead scoring with Gemini
 - AI company research with Perplexity
 - Built for service businesses

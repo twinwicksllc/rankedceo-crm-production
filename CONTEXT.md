@@ -18,21 +18,21 @@
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Framework | Next.js 14 (App Router) + TypeScript |
-| UI | Tailwind CSS + shadcn/ui components |
-| Database | Supabase (PostgreSQL) |
-| Auth | Supabase Auth with Row Level Security |
-| Payments | Stripe |
-| Email | Supabase Email + custom templates (`components/email/`) |
-| PDF Generation | Custom PDF route (`app/api/audit/[auditId]/pdf/route.ts`) |
-| reCAPTCHA | Google reCAPTCHA Enterprise (form protection) |
-| Scheduling | Calendly integration |
-| Analytics | Custom analytics (`lib/analytics/`, `components/analytics/`) |
-| Deployment | Vercel (multi-subdomain) |
-| CI/CD | GitHub Actions (QA workflows) |
-| Testing | Playwright (smoke, weekly, monthly enduser QA) |
+| Layer          | Technology                                                   |
+| -------------- | ------------------------------------------------------------ |
+| Framework      | Next.js 14 (App Router) + TypeScript                         |
+| UI             | Tailwind CSS + shadcn/ui components                          |
+| Database       | Supabase (PostgreSQL)                                        |
+| Auth           | Supabase Auth with Row Level Security                        |
+| Payments       | Stripe                                                       |
+| Email          | Supabase Email + custom templates (`components/email/`)      |
+| PDF Generation | Custom PDF route (`app/api/audit/[auditId]/pdf/route.ts`)    |
+| reCAPTCHA      | Google reCAPTCHA Enterprise (form protection)                |
+| Scheduling     | Calendly integration                                         |
+| Analytics      | Custom analytics (`lib/analytics/`, `components/analytics/`) |
+| Deployment     | Vercel (multi-subdomain)                                     |
+| CI/CD          | GitHub Actions (QA workflows)                                |
+| Testing        | Playwright (smoke, weekly, monthly enduser QA)               |
 
 ---
 
@@ -104,10 +104,10 @@ rankedceo-crm-production/
 
 **Critical:** The app serves two distinct subdomains from a single Next.js deployment on Vercel.
 
-| Subdomain | Purpose | Key routes |
-|-----------|---------|------------|
-| `crm.rankedceo.com` | CRM dashboard, WaaS, SMILE | `app/(dashboard)/`, `app/waas/`, `app/smile/` |
-| `audit.rankedceo.com` | SEO audit tool | `app/audit/`, `app/audit-landing/` |
+| Subdomain             | Purpose                    | Key routes                                    |
+| --------------------- | -------------------------- | --------------------------------------------- |
+| `crm.rankedceo.com`   | CRM dashboard, WaaS, SMILE | `app/(dashboard)/`, `app/waas/`, `app/smile/` |
+| `audit.rankedceo.com` | SEO audit tool             | `app/audit/`, `app/audit-landing/`            |
 
 **Routing logic:** `middleware.ts` inspects `request.headers.get('host')` and rewrites paths based on subdomain. Any changes to routing must be tested on both subdomains.
 
@@ -117,27 +117,27 @@ rankedceo-crm-production/
 
 ## Key Files and Their Roles
 
-| File/Path | Role |
-|-----------|------|
-| `middleware.ts` | Subdomain routing — touch with caution |
-| `app/api/audit/[auditId]/pdf/route.ts` | Branded PDF generation (Task 9, PR #135) |
-| `lib/supabase/server.ts` | Supabase server client (SSR/Server Actions) |
-| `lib/supabase/client.ts` | Supabase browser client |
-| `supabase/migrations/` | All DB schema migrations (sequential, named `000NNN_*`) |
-| `tsconfig.json` | TypeScript config — `ignoreDeprecations: "5.0"` is correct; do not change to any other value |
-| `WAAS_FOUNDATION.md` | WaaS product spec and current status |
-| `PRODUCT_SPRINT_ROADMAP.md` | Current sprint roadmap and priorities |
-| `CHANGELOG.md` | Running changelog (update with each PR) |
+| File/Path                              | Role                                                                                         |
+| -------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `middleware.ts`                        | Subdomain routing — touch with caution                                                       |
+| `app/api/audit/[auditId]/pdf/route.ts` | Branded PDF generation (Task 9, PR #135)                                                     |
+| `lib/supabase/server.ts`               | Supabase server client (SSR/Server Actions)                                                  |
+| `lib/supabase/client.ts`               | Supabase browser client                                                                      |
+| `supabase/migrations/`                 | All DB schema migrations (sequential, named `000NNN_*`)                                      |
+| `tsconfig.json`                        | TypeScript config — `ignoreDeprecations: "5.0"` is correct; do not change to any other value |
+| `WAAS_FOUNDATION.md`                   | WaaS product spec and current status                                                         |
+| `PRODUCT_SPRINT_ROADMAP.md`            | Current sprint roadmap and priorities                                                        |
+| `CHANGELOG.md`                         | Running changelog (update with each PR)                                                      |
 
 ---
 
 ## GitHub Actions — CI/QA Workflows
 
-| Workflow | Trigger | What it does |
-|----------|---------|---------------|
-| `qa-smoke.yml` | PR opened/updated | Smoke test the critical paths |
-| `qa-weekly.yml` | Weekly cron | Full regression suite |
-| `qa-monthly-enduser.yml` | Monthly cron | Full enduser flow (signup → audit → PDF) |
+| Workflow                 | Trigger           | What it does                             |
+| ------------------------ | ----------------- | ---------------------------------------- |
+| `qa-smoke.yml`           | PR opened/updated | Smoke test the critical paths            |
+| `qa-weekly.yml`          | Weekly cron       | Full regression suite                    |
+| `qa-monthly-enduser.yml` | Monthly cron      | Full enduser flow (signup → audit → PDF) |
 
 **Note:** There is no auto-deploy workflow — Vercel deploys automatically on push to `main`. Supabase migrations must be applied manually via the Supabase dashboard or CLI (no `SUPABASE_DB_URL` in CI).
 
@@ -148,6 +148,7 @@ rankedceo-crm-production/
 ## Environment Variables / Secrets
 
 ### Vercel (Production env)
+
 - `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase browser access
 - `SUPABASE_SERVICE_ROLE_KEY` — Server-side Supabase admin access
 - `STRIPE_SECRET_KEY` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET`
@@ -155,6 +156,7 @@ rankedceo-crm-production/
 - `NEXT_PUBLIC_SITE_URL` — Base URL (differs per subdomain deployment)
 
 ### GitHub Actions Secrets
+
 - `VERCEL_TOKEN` / `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID`
 - `SUPABASE_ACCESS_TOKEN` (for any CLI usage)
 
@@ -162,14 +164,14 @@ rankedceo-crm-production/
 
 ## Supabase Database — Key Tables
 
-| Table | Purpose |
-|-------|---------|
+| Table                | Purpose                          |
+| -------------------- | -------------------------------- |
 | `users` / `accounts` | Auth users and business accounts |
-| `form_submissions` | Lead capture form data |
-| `audits` | SEO audit records |
-| `deals` | CRM deal pipeline |
-| `smile_assessments` | SMILE dental assessment records |
-| `subscriptions` | Stripe subscription state |
+| `form_submissions`   | Lead capture form data           |
+| `audits`             | SEO audit records                |
+| `deals`              | CRM deal pipeline                |
+| `smile_assessments`  | SMILE dental assessment records  |
+| `subscriptions`      | Stripe subscription state        |
 
 **RLS Policy:** All tables have Row Level Security enabled. See `RLS_COMPLETE_COVERAGE.md`. New tables **must** include RLS policies — do not skip this step.
 
@@ -179,14 +181,14 @@ rankedceo-crm-production/
 
 ## Products Summary
 
-| Product | Status | Key docs |
-|---------|--------|----------|
-| CRM Dashboard | Live | `app/(dashboard)/` |
-| SEO Audit Tool | Live | `app/audit/`, `PHASE_14_COMPLETE.md` |
-| WaaS Builder | In development | `app/waas/`, `WAAS_FOUNDATION.md` |
-| SMILE Assessments | Live | `app/smile/`, `SMILE_HIPAA_COMPLIANCE_UPDATE.md` |
-| Industry Landing Pages | Live | `app/landing-*/`, `INDUSTRY_TEMPLATES_PLAN.md` |
-| Branded PDF Audit | Live (Task 9) | `app/api/audit/[auditId]/pdf/route.ts` |
+| Product                | Status         | Key docs                                         |
+| ---------------------- | -------------- | ------------------------------------------------ |
+| CRM Dashboard          | Live           | `app/(dashboard)/`                               |
+| SEO Audit Tool         | Live           | `app/audit/`, `PHASE_14_COMPLETE.md`             |
+| WaaS Builder           | In development | `app/waas/`, `WAAS_FOUNDATION.md`                |
+| SMILE Assessments      | Live           | `app/smile/`, `SMILE_HIPAA_COMPLIANCE_UPDATE.md` |
+| Industry Landing Pages | Live           | `app/landing-*/`, `INDUSTRY_TEMPLATES_PLAN.md`   |
+| Branded PDF Audit      | Live (Task 9)  | `app/api/audit/[auditId]/pdf/route.ts`           |
 
 ---
 

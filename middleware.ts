@@ -1,10 +1,7 @@
-import { type NextRequest, NextResponse } from 'next/server'
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
-import { resolveTenantByHostname } from '@/lib/waas/supabase'
-import {
-  WAAS_HEADERS,
-  type WaasTenantResolved,
-} from '@/lib/waas/types'
+import { type NextRequest, NextResponse } from "next/server";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { resolveTenantByHostname } from "@/lib/waas/supabase";
+import { WAAS_HEADERS, type WaasTenantResolved } from "@/lib/waas/types";
 
 // ---------------------------------------------------------------------------
 // Multi-tenant middleware — RankedCEO Unified Router
@@ -29,102 +26,114 @@ import {
 // ---------------------------------------------------------------------------
 
 // Known industry subdomains (existing feature — unchanged behaviour)
-const INDUSTRY_SUBDOMAINS = ['smile', 'hvac', 'plumbing', 'electrical'] as const
-type IndustrySubdomain = typeof INDUSTRY_SUBDOMAINS[number]
+const INDUSTRY_SUBDOMAINS = [
+  "smile",
+  "hvac",
+  "plumbing",
+  "electrical",
+] as const;
+type IndustrySubdomain = (typeof INDUSTRY_SUBDOMAINS)[number];
 
 const INDUSTRY_MAP: Record<IndustrySubdomain, string> = {
-  smile:       'smile',
-  hvac:        'hvac',
-  plumbing:    'plumbing',
-  electrical:  'electrical',
-}
+  smile: "smile",
+  hvac: "hvac",
+  plumbing: "plumbing",
+  electrical: "electrical",
+};
 
 // WaaS env flag — if WaaS Supabase vars are not set, skip WaaS lookup entirely
 const WAAS_ENABLED =
   !!process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL &&
-  !!process.env.NEXT_PUBLIC_WAAS_SUPABASE_ANON_KEY
+  !!process.env.NEXT_PUBLIC_WAAS_SUPABASE_ANON_KEY;
 
-const QA_WAAS_HOST = process.env.QA_WAAS_HOST ?? 'qa.rankedceo.com'
-const QA_WAAS_TENANT_SLUG = process.env.QA_WAAS_TENANT_SLUG ?? 'qa-test-tenant'
+const QA_WAAS_HOST = process.env.QA_WAAS_HOST ?? "qa.rankedceo.com";
+const QA_WAAS_TENANT_SLUG = process.env.QA_WAAS_TENANT_SLUG ?? "qa-test-tenant";
 
 // On the QA host, only expose WaaS routing for the public tenant site root
 // and its non-CRM sub-paths. CRM-owned routes like /edit/[reviewToken],
 // /login, /admin, /api/* must fall through to normal CRM handling.
 // (The /edit/[reviewToken] portal is served by app/edit/ directly, not _sites.)
 function isQAWaasPath(_pathname: string): boolean {
-  return false  // QA host uses CRM routing for all paths
+  return false; // QA host uses CRM routing for all paths
 }
 
-if (process.env.NODE_ENV === 'production') {
-  console.log('[Middleware Init] WAAS Config:', {
+if (process.env.NODE_ENV === "production") {
+  console.log("[Middleware Init] WAAS Config:", {
     URL_SET: !!process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL,
     KEY_SET: !!process.env.NEXT_PUBLIC_WAAS_SUPABASE_ANON_KEY,
     URL_VALUE: process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL?.substring(0, 50),
     WAAS_ENABLED,
-  })
+  });
 }
 
 // Internal subdomains that are NEVER treated as WaaS tenants
 const RESERVED_SUBDOMAINS = new Set([
   ...INDUSTRY_SUBDOMAINS,
-  'crm',
-  'audit',     // Audit tool landing page (audit.rankedceo.com → /audit-landing)
-  'www',
-  'api',
-  'admin',
-  'app',
-  'mail',
-  'smtp',
-  'ftp',
-  'staging',
-  'dev',
-  'preview',
-])
+  "crm",
+  "audit", // Audit tool landing page (audit.rankedceo.com → /audit-landing)
+  "www",
+  "api",
+  "admin",
+  "app",
+  "mail",
+  "smtp",
+  "ftp",
+  "staging",
+  "dev",
+  "preview",
+]);
 
 // CRM public paths (no auth required)
 const PUBLIC_CRM_PATHS = [
-  '/',
-  '/login',
-  '/signup',
-  '/pay',
-  '/forgot-password',
-  '/reset-password',
-  '/review',        // WaaS admin client review route (token-gated)
-  '/edit',          // WaaS client self-service editor (review-token-gated)
-  '/api/auth',
-  '/api/',
-  '/_next',
-]
+  "/",
+  "/login",
+  "/signup",
+  "/pay",
+  "/forgot-password",
+  "/reset-password",
+  "/review", // WaaS admin client review route (token-gated)
+  "/edit", // WaaS client self-service editor (review-token-gated)
+  "/api/auth",
+  "/api/",
+  "/_next",
+];
 
 // CRM protected paths (auth required)
 const PROTECTED_CRM_PATHS = [
-  '/dashboard',
-  '/contacts',
-  '/campaigns',
-  '/deals',
-  '/appointments',
-  '/settings',
-  '/billing',
-]
+  "/dashboard",
+  "/contacts",
+  "/campaigns",
+  "/deals",
+  "/appointments",
+  "/settings",
+  "/billing",
+];
 
 // Industry subdomain public paths
-const PUBLIC_INDUSTRY_PATH_SEGMENTS = ['/', '/login', '/signup', '/onboarding', '/get-started', '/api/']
+const PUBLIC_INDUSTRY_PATH_SEGMENTS = [
+  "/",
+  "/login",
+  "/signup",
+  "/onboarding",
+  "/get-started",
+  "/api/",
+];
 
 // ---------------------------------------------------------------------------
 // MAIN MIDDLEWARE
 // ---------------------------------------------------------------------------
 
 export async function middleware(request: NextRequest) {
-  const hostname = request.headers.get('host') || ''
-  const { pathname } = request.nextUrl
+  const hostname = request.headers.get("host") || "";
+  const { pathname } = request.nextUrl;
 
   // Always pass through static assets and Next.js internals immediately
   if (isStaticAsset(pathname)) {
-    return NextResponse.next()
+    return NextResponse.next();
   }
 
   // ── 1. Refresh CRM Supabase session ──────────────────────────────────────
-  let response = NextResponse.next({ request: { headers: request.headers } })
+  let response = NextResponse.next({ request: { headers: request.headers } });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -132,41 +141,56 @@ export async function middleware(request: NextRequest) {
     {
       cookies: {
         get(name: string) {
-          return request.cookies.get(name)?.value
+          return request.cookies.get(name)?.value;
         },
         set(name: string, value: string, options: CookieOptions) {
           const sharedOptions = isProductionDomain(request)
-            ? { ...options, domain: '.rankedceo.com' }
-            : options
-          request.cookies.set({ name, value, ...sharedOptions })
-          response = NextResponse.next({ request: { headers: request.headers } })
-          response.cookies.set({ name, value, ...sharedOptions })
+            ? { ...options, domain: ".rankedceo.com" }
+            : options;
+          request.cookies.set({ name, value, ...sharedOptions });
+          response = NextResponse.next({
+            request: { headers: request.headers },
+          });
+          response.cookies.set({ name, value, ...sharedOptions });
         },
         remove(name: string, options: CookieOptions) {
           const sharedOptions = isProductionDomain(request)
-            ? { ...options, domain: '.rankedceo.com' }
-            : options
-          request.cookies.set({ name, value: '', ...sharedOptions })
-          response = NextResponse.next({ request: { headers: request.headers } })
-          response.cookies.set({ name, value: '', ...sharedOptions })
+            ? { ...options, domain: ".rankedceo.com" }
+            : options;
+          request.cookies.set({ name, value: "", ...sharedOptions });
+          response = NextResponse.next({
+            request: { headers: request.headers },
+          });
+          response.cookies.set({ name, value: "", ...sharedOptions });
         },
       },
-    }
-  )
+    },
+  );
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   // ── 2. Extract subdomain ──────────────────────────────────────────────────
-  const subdomain = extractSubdomain(hostname)
+  const subdomain = extractSubdomain(hostname);
 
   // ── 3. Audit subdomain (audit.rankedceo.com → /audit-landing) ───────────────
-  if (subdomain === 'audit') {
-    return handleAuditSubdomain(request, response, user, hostname)
+  if (subdomain === "audit") {
+    return handleAuditSubdomain(request, response, user, hostname);
   }
 
   // ── 4. Industry subdomains (existing behaviour — unchanged) ───────────────
-  if (subdomain && INDUSTRY_SUBDOMAINS.includes(subdomain as IndustrySubdomain)) {
-    return handleIndustrySubdomain(request, response, subdomain as IndustrySubdomain, user, hostname)
+  if (
+    subdomain &&
+    INDUSTRY_SUBDOMAINS.includes(subdomain as IndustrySubdomain)
+  ) {
+    return handleIndustrySubdomain(
+      request,
+      response,
+      subdomain as IndustrySubdomain,
+      user,
+      hostname,
+    );
   }
 
   // ── 5. WaaS tenant resolution ─────────────────────────────────────────────
@@ -174,68 +198,82 @@ export async function middleware(request: NextRequest) {
   //   a) WaaS is not configured (env vars missing)
   //   b) This is a reserved/known subdomain
   //   c) This is the bare rankedceo.com or crm.rankedceo.com domain
-  const isCrmDomain = isKnownCrmDomain(hostname)
-  const isQaHost = hostname === QA_WAAS_HOST
-  const shouldUseWaasRouting = !isQaHost || isQAWaasPath(pathname)
+  const isCrmDomain = isKnownCrmDomain(hostname);
+  const isQaHost = hostname === QA_WAAS_HOST;
+  const shouldUseWaasRouting = !isQaHost || isQAWaasPath(pathname);
 
-  if (WAAS_ENABLED && !isCrmDomain && !isReservedSubdomain(subdomain) && shouldUseWaasRouting) {
+  if (
+    WAAS_ENABLED &&
+    !isCrmDomain &&
+    !isReservedSubdomain(subdomain) &&
+    shouldUseWaasRouting
+  ) {
     try {
-      console.log('[Middleware] Attempting WaaS tenant lookup:', {
+      console.log("[Middleware] Attempting WaaS tenant lookup:", {
         hostname,
         subdomain,
         WAAS_ENABLED,
-      })
-      const tenant = await resolveTenantByHostname(hostname)
+      });
+      const tenant = await resolveTenantByHostname(hostname);
 
       if (tenant) {
-        console.log('[Middleware] WaaS tenant resolved:', { slug: tenant.slug })
-        return handleWaasTenant(request, tenant, pathname)
+        console.log("[Middleware] WaaS tenant resolved:", {
+          slug: tenant.slug,
+        });
+        return handleWaasTenant(request, tenant, pathname);
       }
 
       // QA safety net: if tenant lookup is blocked by Supabase key/RLS drift,
       // still route qa.rankedceo.com to the known QA tenant slug.
       if (isQaHost) {
-        console.warn('[Middleware] Using QA fallback tenant slug rewrite:', QA_WAAS_TENANT_SLUG)
-        return rewriteToWaasTenantSlug(request, QA_WAAS_TENANT_SLUG, pathname)
+        console.warn(
+          "[Middleware] Using QA fallback tenant slug rewrite:",
+          QA_WAAS_TENANT_SLUG,
+        );
+        return rewriteToWaasTenantSlug(request, QA_WAAS_TENANT_SLUG, pathname);
       }
 
-      console.log('[Middleware] No tenant found for subdomain:', subdomain)
+      console.log("[Middleware] No tenant found for subdomain:", subdomain);
     } catch (err) {
       // Log WaaS lookup error but don't crash — fall through to CRM routing
-      console.error('[Middleware] WaaS tenant lookup failed:', {
+      console.error("[Middleware] WaaS tenant lookup failed:", {
         hostname,
         subdomain,
         error: err instanceof Error ? err.message : String(err),
         stack: err instanceof Error ? err.stack : undefined,
-      })
+      });
     }
   }
 
   // ── 5. CRM domain — auth protection ──────────────────────────────────────
-  if (isStaticOrApiRoute(pathname)) return response
+  if (isStaticOrApiRoute(pathname)) return response;
 
-  const isPublicRoute = PUBLIC_CRM_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))
-  if (isPublicRoute) return response
+  const isPublicRoute = PUBLIC_CRM_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(p + "/"),
+  );
+  if (isPublicRoute) return response;
 
-  const isProtectedRoute = PROTECTED_CRM_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))
+  const isProtectedRoute = PROTECTED_CRM_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(p + "/"),
+  );
   if (isProtectedRoute && !user) {
-    const loginUrl = request.nextUrl.clone()
-    loginUrl.pathname = '/login'
-    loginUrl.searchParams.set('redirectTo', pathname)
-    return NextResponse.redirect(loginUrl)
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/login";
+    loginUrl.searchParams.set("redirectTo", pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
-  return response
+  return response;
 }
 
 function rewriteToWaasTenantSlug(
   request: NextRequest,
   tenantSlug: string,
-  pathname: string
+  pathname: string,
 ): NextResponse {
-  const url = request.nextUrl.clone()
-  url.pathname = `/_sites/${tenantSlug}${pathname === '/' ? '' : pathname}`
-  return NextResponse.rewrite(url)
+  const url = request.nextUrl.clone();
+  url.pathname = `/_sites/${tenantSlug}${pathname === "/" ? "" : pathname}`;
+  return NextResponse.rewrite(url);
 }
 
 // ---------------------------------------------------------------------------
@@ -245,28 +283,31 @@ function rewriteToWaasTenantSlug(
 function handleWaasTenant(
   request: NextRequest,
   tenant: WaasTenantResolved,
-  pathname: string
+  pathname: string,
 ): NextResponse {
-  const url = request.nextUrl.clone()
+  const url = request.nextUrl.clone();
 
   // Rewrite to /_sites/[slug]/[...path]
   // e.g. client-a.com/services → /_sites/client-a/services
-  url.pathname = `/_sites/${tenant.slug}${pathname === '/' ? '' : pathname}`
+  url.pathname = `/_sites/${tenant.slug}${pathname === "/" ? "" : pathname}`;
 
-  const rewrite = NextResponse.rewrite(url)
+  const rewrite = NextResponse.rewrite(url);
 
   // Inject tenant context into request headers for downstream page components
-  rewrite.headers.set(WAAS_HEADERS.TENANT_ID,    tenant.id)
-  rewrite.headers.set(WAAS_HEADERS.TENANT_SLUG,  tenant.slug)
-  rewrite.headers.set(WAAS_HEADERS.BRAND_CONFIG, JSON.stringify(tenant.brand_config))
-  rewrite.headers.set(WAAS_HEADERS.PACKAGE_TIER, tenant.package_tier)
-  rewrite.headers.set(WAAS_HEADERS.INDUSTRY,     tenant.target_industry ?? '')
-  rewrite.headers.set(WAAS_HEADERS.LOCATION,     tenant.target_location ?? '')
+  rewrite.headers.set(WAAS_HEADERS.TENANT_ID, tenant.id);
+  rewrite.headers.set(WAAS_HEADERS.TENANT_SLUG, tenant.slug);
+  rewrite.headers.set(
+    WAAS_HEADERS.BRAND_CONFIG,
+    JSON.stringify(tenant.brand_config),
+  );
+  rewrite.headers.set(WAAS_HEADERS.PACKAGE_TIER, tenant.package_tier);
+  rewrite.headers.set(WAAS_HEADERS.INDUSTRY, tenant.target_industry ?? "");
+  rewrite.headers.set(WAAS_HEADERS.LOCATION, tenant.target_location ?? "");
 
   // Cache hint: tenant data is stable, allow CDN edge caching for 60s
-  rewrite.headers.set('x-waas-cache-hint', 'tenant-resolved')
+  rewrite.headers.set("x-waas-cache-hint", "tenant-resolved");
 
-  return rewrite
+  return rewrite;
 }
 
 // ---------------------------------------------------------------------------
@@ -278,65 +319,69 @@ function handleIndustrySubdomain(
   response: NextResponse,
   industry: IndustrySubdomain,
   user: { user_metadata?: Record<string, unknown> } | null,
-  hostname: string
+  hostname: string,
 ): NextResponse {
-  const { pathname } = request.nextUrl
+  const { pathname } = request.nextUrl;
 
   // Allow shared API and onboarding routes
-  const isSharedRoute = ['/api/auth', '/api/', '/onboarding', '/get-started', '/_next'].some(p =>
-    pathname.startsWith(p)
-  )
-  if (isSharedRoute) return response
+  const isSharedRoute = [
+    "/api/auth",
+    "/api/",
+    "/onboarding",
+    "/get-started",
+    "/_next",
+  ].some((p) => pathname.startsWith(p));
+  if (isSharedRoute) return response;
 
-  const isPublicPath = PUBLIC_INDUSTRY_PATH_SEGMENTS.some(segment =>
-    pathname.includes(segment)
-  )
+  const isPublicPath = PUBLIC_INDUSTRY_PATH_SEGMENTS.some((segment) =>
+    pathname.includes(segment),
+  );
 
   // Industry isolation for authenticated routes
   if (!isPublicPath && user) {
-    const userIndustry = user.user_metadata?.industry as string | undefined
-    const expectedIndustry = INDUSTRY_MAP[industry]
+    const userIndustry = user.user_metadata?.industry as string | undefined;
+    const expectedIndustry = INDUSTRY_MAP[industry];
 
     if (userIndustry && userIndustry !== expectedIndustry) {
-      const correctUrl = request.nextUrl.clone()
-      const host = hostname.split(':')[0]
-      const port = hostname.includes(':') ? ':' + hostname.split(':')[1] : ''
-      const baseDomain = host.split('.').slice(1).join('.')
-      correctUrl.hostname = `${userIndustry}.${baseDomain}${port}`
-      correctUrl.pathname = '/'
-      return NextResponse.redirect(correctUrl)
+      const correctUrl = request.nextUrl.clone();
+      const host = hostname.split(":")[0];
+      const port = hostname.includes(":") ? ":" + hostname.split(":")[1] : "";
+      const baseDomain = host.split(".").slice(1).join(".");
+      correctUrl.hostname = `${userIndustry}.${baseDomain}${port}`;
+      correctUrl.pathname = "/";
+      return NextResponse.redirect(correctUrl);
     }
   }
 
   // Special handling for subdomain root landing pages
   const landingRoutes: Partial<Record<IndustrySubdomain, string>> = {
-    smile:      '/landing',
-    hvac:       '/landing-hvac',
-    plumbing:   '/landing-plumbing',
-    electrical: '/landing-electrical',
-  }
+    smile: "/landing",
+    hvac: "/landing-hvac",
+    plumbing: "/landing-plumbing",
+    electrical: "/landing-electrical",
+  };
 
-  if (pathname === '/' && landingRoutes[industry]) {
-    const url = request.nextUrl.clone()
-    url.pathname = landingRoutes[industry]!
-    const rewrite = NextResponse.rewrite(url)
-    response.cookies.getAll().forEach(cookie => {
-      rewrite.cookies.set(cookie.name, cookie.value)
-    })
-    return rewrite
+  if (pathname === "/" && landingRoutes[industry]) {
+    const url = request.nextUrl.clone();
+    url.pathname = landingRoutes[industry]!;
+    const rewrite = NextResponse.rewrite(url);
+    response.cookies.getAll().forEach((cookie) => {
+      rewrite.cookies.set(cookie.name, cookie.value);
+    });
+    return rewrite;
   }
 
   // Rewrite to /{industry}/* internally
-  const url = request.nextUrl.clone()
+  const url = request.nextUrl.clone();
   if (!pathname.startsWith(`/${industry}`)) {
-    url.pathname = `/${industry}${pathname}`
+    url.pathname = `/${industry}${pathname}`;
   }
 
-  const rewrite = NextResponse.rewrite(url)
-  response.cookies.getAll().forEach(cookie => {
-    rewrite.cookies.set(cookie.name, cookie.value)
-  })
-  return rewrite
+  const rewrite = NextResponse.rewrite(url);
+  response.cookies.getAll().forEach((cookie) => {
+    rewrite.cookies.set(cookie.name, cookie.value);
+  });
+  return rewrite;
 }
 
 // ---------------------------------------------------------------------------
@@ -356,46 +401,46 @@ function handleIndustrySubdomain(
  *   client-a.localhost:3000 → 'client-a'
  */
 function extractSubdomain(hostname: string): string | null {
-  const host = hostname.split(':')[0]   // strip port
-  const parts = host.split('.')
+  const host = hostname.split(":")[0]; // strip port
+  const parts = host.split(".");
 
-  if (parts.length < 2) return null
+  if (parts.length < 2) return null;
 
   // sub.localhost → 'sub'
-  if (parts.length === 2 && parts[1] === 'localhost') {
-    return parts[0]
+  if (parts.length === 2 && parts[1] === "localhost") {
+    return parts[0];
   }
 
   // sub.rankedceo.com → 'sub'
-  const knownDomains = ['rankedceo.com']
-  const domain = parts.slice(-2).join('.')
+  const knownDomains = ["rankedceo.com"];
+  const domain = parts.slice(-2).join(".");
   if (knownDomains.includes(domain) && parts.length > 2) {
-    return parts[0]
+    return parts[0];
   }
 
   // custom-domain.com → no subdomain
-  return null
+  return null;
 }
 
 /**
  * Returns true if hostname is the main CRM domain (not a WaaS tenant site).
  */
 function isKnownCrmDomain(hostname: string): boolean {
-  const host = hostname.split(':')[0]
+  const host = hostname.split(":")[0];
   return (
-    host === 'rankedceo.com' ||
-    host === 'crm.rankedceo.com' ||
-    host === 'www.rankedceo.com' ||
-    host === 'localhost'
-  )
+    host === "rankedceo.com" ||
+    host === "crm.rankedceo.com" ||
+    host === "www.rankedceo.com" ||
+    host === "localhost"
+  );
 }
 
 /**
  * Returns true if subdomain is reserved (never a WaaS tenant).
  */
 function isReservedSubdomain(subdomain: string | null): boolean {
-  if (!subdomain) return false
-  return RESERVED_SUBDOMAINS.has(subdomain)
+  if (!subdomain) return false;
+  return RESERVED_SUBDOMAINS.has(subdomain);
 }
 
 /**
@@ -403,17 +448,19 @@ function isReservedSubdomain(subdomain: string | null): boolean {
  */
 function isStaticAsset(pathname: string): boolean {
   return (
-    pathname.startsWith('/_next/static') ||
-    pathname.startsWith('/_next/image') ||
-    pathname === '/favicon.ico'
-  )
+    pathname.startsWith("/_next/static") ||
+    pathname.startsWith("/_next/image") ||
+    pathname === "/favicon.ico"
+  );
 }
 
 /**
  * Returns true if this is a static or API route (pass through for CRM).
  */
 function isStaticOrApiRoute(pathname: string): boolean {
-  return ['/_next', '/api/', '/favicon.ico'].some(p => pathname.startsWith(p))
+  return ["/_next", "/api/", "/favicon.ico"].some((p) =>
+    pathname.startsWith(p),
+  );
 }
 
 /**
@@ -421,14 +468,13 @@ function isStaticOrApiRoute(pathname: string): boolean {
  * Used to conditionally set cross-subdomain cookies only in production.
  */
 function isProductionDomain(request: NextRequest): boolean {
-  const host = (request.headers.get('host') || '').split(':')[0]
-  return host.endsWith('.rankedceo.com') || host === 'rankedceo.com'
+  const host = (request.headers.get("host") || "").split(":")[0];
+  return host.endsWith(".rankedceo.com") || host === "rankedceo.com";
 }
 
 // ---------------------------------------------------------------------------
 // MATCHER — skip static file extensions
 // ---------------------------------------------------------------------------
-
 
 // ---------------------------------------------------------------------------
 // HANDLER: Audit Subdomain
@@ -438,51 +484,61 @@ function handleAuditSubdomain(
   request: NextRequest,
   response: NextResponse,
   user: { user_metadata?: Record<string, unknown> } | null,
-  hostname: string
+  hostname: string,
 ): NextResponse {
-  const { pathname } = request.nextUrl
+  const { pathname } = request.nextUrl;
 
   // API, Next.js internals, auth callbacks, and /audit/* routes pass through as-is
-  const isPassThrough = ['/signup', '/forgot-password', '/reset-password', '/api/auth', '/api/', '/audit', '/onboarding', '/get-started', '/_next', '/privacy', '/terms'].some(p =>
-    pathname.startsWith(p)
-  )
-  if (isPassThrough) return response
+  const isPassThrough = [
+    "/signup",
+    "/forgot-password",
+    "/reset-password",
+    "/api/auth",
+    "/api/",
+    "/audit",
+    "/onboarding",
+    "/get-started",
+    "/_next",
+    "/privacy",
+    "/terms",
+  ].some((p) => pathname.startsWith(p));
+  if (isPassThrough) return response;
 
   // Serve the audit-branded login page for /login (instead of the CRM login)
-  if (pathname === '/login') {
-    const loginUrl = request.nextUrl.clone()
-    loginUrl.pathname = '/audit/login'
-    const loginRewrite = NextResponse.rewrite(loginUrl)
-    response.cookies.getAll().forEach(cookie => {
-      loginRewrite.cookies.set(cookie.name, cookie.value)
-    })
-    return loginRewrite
+  if (pathname === "/login") {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/audit/login";
+    const loginRewrite = NextResponse.rewrite(loginUrl);
+    response.cookies.getAll().forEach((cookie) => {
+      loginRewrite.cookies.set(cookie.name, cookie.value);
+    });
+    return loginRewrite;
   }
 
   // Authenticated users hitting the root → send to audit start
-  if (pathname === '/' && user) {
-    const auditUrl = request.nextUrl.clone()
-    auditUrl.pathname = '/audit/start'
-    return NextResponse.redirect(auditUrl)
+  if (pathname === "/" && user) {
+    const auditUrl = request.nextUrl.clone();
+    auditUrl.pathname = "/audit/start";
+    return NextResponse.redirect(auditUrl);
   }
 
   // Rewrite root / to /audit-landing
-  const url = request.nextUrl.clone()
-  if (pathname === '/') {
-    url.pathname = '/audit-landing'
+  const url = request.nextUrl.clone();
+  if (pathname === "/") {
+    url.pathname = "/audit-landing";
   } else {
-    url.pathname = `/audit-landing${pathname}`
+    url.pathname = `/audit-landing${pathname}`;
   }
 
-  const rewrite = NextResponse.rewrite(url)
-  response.cookies.getAll().forEach(cookie => {
-    rewrite.cookies.set(cookie.name, cookie.value)
-  })
-  return rewrite
+  const rewrite = NextResponse.rewrite(url);
+  response.cookies.getAll().forEach((cookie) => {
+    rewrite.cookies.set(cookie.name, cookie.value);
+  });
+  return rewrite;
 }
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf|otf|eot)$).*)',
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf|otf|eot)$).*)",
   ],
-}
+};

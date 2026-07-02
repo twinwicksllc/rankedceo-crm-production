@@ -6,12 +6,12 @@ This document describes the four edge case scenarios included in the QA Agent an
 
 ## Overview
 
-| Scenario | File | Modes | Steps | What it tests |
-|---|---|---|---|---|
-| Edge 01 | `edge_01_auth_failure.yaml` | smoke + full | 19 | Wrong password, recovery, invalid token, empty email |
-| Edge 02 | `edge_02_billing_error.yaml` | full only | 18 | Declined card, portal integrity after failure |
-| Edge 03 | `edge_03_empty_state.yaml` | smoke + full | 23 | Zero-data rendering across all major pages |
-| Edge 04 | `edge_04_webhook_timeout.yaml` | full only | 21 | Stripe webhook delay, idempotency, pending state |
+| Scenario | File                           | Modes        | Steps | What it tests                                        |
+| -------- | ------------------------------ | ------------ | ----- | ---------------------------------------------------- |
+| Edge 01  | `edge_01_auth_failure.yaml`    | smoke + full | 19    | Wrong password, recovery, invalid token, empty email |
+| Edge 02  | `edge_02_billing_error.yaml`   | full only    | 18    | Declined card, portal integrity after failure        |
+| Edge 03  | `edge_03_empty_state.yaml`     | smoke + full | 23    | Zero-data rendering across all major pages           |
+| Edge 04  | `edge_04_webhook_timeout.yaml` | full only    | 21    | Stripe webhook delay, idempotency, pending state     |
 
 ---
 
@@ -26,6 +26,7 @@ Bad credentials produce visible error feedback and keep the user on the login pa
 **Step `e01_s05_assert_error_message` fails** (`contains: "Invalid"`)
 
 The login form does not display an error message after a failed authentication attempt. Check:
+
 - The Supabase `signInWithPassword` error is not being caught and displayed in the form
 - The form state (`useState` or `useFormState`) is receiving the error correctly
 - The error element is rendered conditionally and is present in the DOM (not just visually hidden)
@@ -33,12 +34,14 @@ The login form does not display an error message after a failed authentication a
 **Step `e01_s06_assert_still_on_login` fails** (`pattern: "/admin/login"`)
 
 The application redirected away from the login page after a failed auth attempt. This is a **security regression**. Check:
+
 - The Next.js server action or route handler for login is not returning a redirect on error
 - The Supabase error is not being treated as a success
 
 **Step `e01_s09_assert_dashboard` fails** (`pattern: "/admin/dashboard"`)
 
 Valid credentials did not redirect to the dashboard. This could mean:
+
 - The test environment's admin account password was rotated — update `QA_ADMIN_PASSWORD` in CI secrets
 - The Supabase auth service is experiencing an outage
 - A middleware change is intercepting the post-login redirect
@@ -46,6 +49,7 @@ Valid credentials did not redirect to the dashboard. This could mean:
 **Step `e01_s13_assert_not_blank` fails** (`contains: ""`)
 
 The client portal rendered a completely blank body when given an invalid review token. This means the SSR page for `/edit/[reviewToken]` is throwing an unhandled error rather than returning a 404. Check:
+
 - The `getReviewByToken` query is not throwing on null result
 - The page has an error boundary or try/catch around the token lookup
 
@@ -62,6 +66,7 @@ The billing flow handles a Stripe-declined card (test card `4000 0000 0000 0002`
 **Step `e02_s12_click_upgrade` fails** (upgrade button not found)
 
 The `[data-testid="upgrade-btn-pro"]` element is not present in the billing tab. Check:
+
 - The billing tab is rendering plan cards (`upgrade-plan-card-pro`)
 - The tenant's current plan is not already `pro` (upgrade button would be hidden if already subscribed)
 - The Stripe products/prices are correctly configured and the billing UI is not in a loading/error state
@@ -69,6 +74,7 @@ The `[data-testid="upgrade-btn-pro"]` element is not present in the billing tab.
 **Step `e02_s16_assert_portal_intact` fails** (portal root missing after declined checkout)
 
 The client portal is broken after a failed checkout attempt. This is a **critical** finding. Check:
+
 - The Stripe checkout redirect flow is not corrupting the session or review token
 - The `successUrl` / `cancelUrl` on the Stripe Checkout Session is set correctly
 - The portal page is not dependent on a subscription status that was incorrectly mutated by a failed checkout
@@ -76,6 +82,7 @@ The client portal is broken after a failed checkout attempt. This is a **critica
 ### Note on declined card simulation
 
 As of Sprint 4, the `StripeAdapter` does not yet have a `declined` mode that fills `4000 0000 0000 0002` automatically. Step `e02_s14_wait_post_decline` is a wait placeholder. When `StripeAdapter` is extended in a future sprint:
+
 1. Add a `declined` mode alongside `test` and `mock`
 2. Have the declined mode fill the iframe with `4000 0000 0000 0002` (same Stripe Elements iframe fill pattern as the `test` mode)
 3. Assert the Stripe error message appears in the checkout UI
@@ -94,6 +101,7 @@ All major pages render without crashing when there is no data. Revenue widget wi
 **Step `e03_s06_assert_revenue_widget` or `e03_s07_assert_clients_table` fails**
 
 A dashboard widget or table is missing when there is no data. This is almost always caused by `null` or `undefined` returned from a Supabase query being passed to a React component that expects an array. Check:
+
 - The server component or server action is returning `[]` (not `null`) when the query has no results
 - The client component is using `?? []` or similar null-coalescing when mapping over the data
 - Zod schemas used for API response parsing are treating missing fields as required (use `.optional()` or `.default([])`)
@@ -101,6 +109,7 @@ A dashboard widget or table is missing when there is no data. This is almost alw
 **Step `e03_s08_assert_no_js_crash` or `e03_s11_assert_no_crash_on_empty_runs` fails**
 
 The page is rendering a Next.js error boundary (the "Application error: a client-side exception has occurred" screen). Check the browser console for the actual error. The most common causes in empty-state scenarios are:
+
 - `Cannot read properties of null (reading 'map')` — a component mapping over null data
 - `ChunkLoadError` — a JavaScript chunk failed to load (CDN or deploy issue)
 - `Minified React error #130` — rendering a value that is not a valid React element
@@ -108,6 +117,7 @@ The page is rendering a Next.js error boundary (the "Application error: a client
 **Step `e03_s19_assert_overview_content` or `e03_s21_assert_reviews_content` fails**
 
 A client portal tab is crashing on zero data. The most common cause is a chart library (e.g. Recharts, Chart.js) receiving an empty array `[]` or `null` as data and not handling it gracefully. Check:
+
 - The chart component has a conditional render: if `data.length === 0`, show an empty state
 - The data passed to the chart is `[]` not `null`
 
@@ -118,6 +128,7 @@ A client portal tab is crashing on zero data. The most common cause is a chart l
 ### What it tests
 
 When a Stripe webhook is delayed (simulated by a 30s + 15s pause), the application:
+
 - Does not prematurely activate a subscription before the webhook fires
 - Keeps the client portal accessible during the pending state
 - Does not create duplicate subscription records when the webhook finally fires (idempotency)
@@ -131,12 +142,14 @@ These are intentional pauses (30s + 15s = 45s total). This is expected — the s
 **Step `e04_s16_assert_portal_still_works` fails** (portal root missing during webhook delay)
 
 The client portal is crashing while waiting for the webhook. This means the portal has a hard dependency on subscription status. Check:
+
 - The `BillingTab` or plan detection logic is not throwing when `subscription.status === 'incomplete'`
 - The portal page gracefully handles all subscription states: `trialing`, `active`, `incomplete`, `past_due`, `canceled`
 
 **Step `e04_s21_assert_no_duplicate_sub_page` fails with critical severity**
 
 Subscription idempotency is broken. This means the Stripe webhook handler is not checking for an existing subscription before creating a new one. Check:
+
 - The `customer.subscription.created` webhook handler uses `upsert` not `insert`
 - The Stripe event is checked for `metadata.processed` or a similar idempotency flag
 - The Stripe Dashboard shows the event was delivered only once (check "Webhooks" → "Event deliveries")

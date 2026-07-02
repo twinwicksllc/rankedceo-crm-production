@@ -1,38 +1,44 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect, notFound } from 'next/navigation'
-import CompanyForm from '@/components/forms/company-form'
-import { Card } from '@/components/ui/card'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { ArrowLeft } from 'lucide-react'
+import { createClient } from "@/lib/supabase/server";
+import { redirect, notFound } from "next/navigation";
+import CompanyForm from "@/components/forms/company-form";
+import { Card } from "@/components/ui/card";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
-export default async function EditCompanyPage({ params }: { params: { id: string } }) {
-  const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+export default async function EditCompanyPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
   // Get user's account
   const { data: userData } = await supabase
-    .from('users')
-    .select('account_id')
-    .eq('id', user.id)
-    .single()
+    .from("users")
+    .select("account_id")
+    .eq("id", user.id)
+    .single();
 
   if (!userData?.account_id) {
-    return <div>No account found</div>
+    return <div>No account found</div>;
   }
 
   // Fetch company
   const { data: company, error } = await supabase
-    .from('companies')
-    .select('*')
-    .eq('id', params.id)
-    .eq('account_id', userData.account_id)
-    .single()
+    .from("companies")
+    .select("*")
+    .eq("id", params.id)
+    .eq("account_id", userData.account_id)
+    .single();
 
   if (error || !company) {
-    notFound()
+    notFound();
   }
 
   return (
@@ -47,9 +53,7 @@ export default async function EditCompanyPage({ params }: { params: { id: string
         </Link>
         <div>
           <h1 className="text-3xl font-bold">Edit Company</h1>
-          <p className="text-muted-foreground mt-1">
-            Update {company.name}
-          </p>
+          <p className="text-muted-foreground mt-1">Update {company.name}</p>
         </div>
       </div>
 
@@ -58,5 +62,5 @@ export default async function EditCompanyPage({ params }: { params: { id: string
         <CompanyForm accountId={userData.account_id} company={company} />
       </Card>
     </div>
-  )
+  );
 }

@@ -1,54 +1,60 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Alert } from '@/components/ui/alert'
-import { createClient } from '@/lib/supabase/client'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert } from "@/components/ui/alert";
+import { createClient } from "@/lib/supabase/client";
 
 interface DealFormProps {
-  accountId: string
-  contacts: Array<{ id: string; first_name: string; last_name: string }>
-  companies: Array<{ id: string; name: string }>
-  pipelines: Array<{ id: string; name: string }>
+  accountId: string;
+  contacts: Array<{ id: string; first_name: string; last_name: string }>;
+  companies: Array<{ id: string; name: string }>;
+  pipelines: Array<{ id: string; name: string }>;
   deal?: {
-    id: string
-    name: string
-    contact_id?: string
-    company_id?: string
-    pipeline_id?: string
-    stage: string
-    value?: number
-    probability?: number
-    expected_close_date?: string
-    description?: string
-  }
+    id: string;
+    name: string;
+    contact_id?: string;
+    company_id?: string;
+    pipeline_id?: string;
+    stage: string;
+    value?: number;
+    probability?: number;
+    expected_close_date?: string;
+    description?: string;
+  };
 }
 
-export default function DealForm({ accountId, contacts, companies, pipelines, deal }: DealFormProps) {
-  const router = useRouter()
-  const supabase = createClient()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+export default function DealForm({
+  accountId,
+  contacts,
+  companies,
+  pipelines,
+  deal,
+}: DealFormProps) {
+  const router = useRouter();
+  const supabase = createClient();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
-    name: deal?.name || '',
-    contact_id: deal?.contact_id || '',
-    company_id: deal?.company_id || '',
-    pipeline_id: deal?.pipeline_id || (pipelines[0]?.id || ''),
-    stage: deal?.stage || 'lead',
-    value: deal?.value?.toString() || '',
-    probability: deal?.probability?.toString() || '50',
-    expected_close_date: deal?.expected_close_date || '',
-    description: deal?.description || '',
-  })
+    name: deal?.name || "",
+    contact_id: deal?.contact_id || "",
+    company_id: deal?.company_id || "",
+    pipeline_id: deal?.pipeline_id || pipelines[0]?.id || "",
+    stage: deal?.stage || "lead",
+    value: deal?.value?.toString() || "",
+    probability: deal?.probability?.toString() || "50",
+    expected_close_date: deal?.expected_close_date || "",
+    description: deal?.description || "",
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
     try {
       const dealData = {
@@ -58,68 +64,70 @@ export default function DealForm({ accountId, contacts, companies, pipelines, de
         pipeline_id: formData.pipeline_id || null,
         stage: formData.stage,
         value: formData.value ? parseFloat(formData.value) : null,
-        probability: formData.probability ? parseInt(formData.probability) : null,
+        probability: formData.probability
+          ? parseInt(formData.probability)
+          : null,
         expected_close_date: formData.expected_close_date || null,
         description: formData.description || null,
-      }
+      };
 
       if (deal?.id) {
         // Update existing deal
         const { error: updateError } = await supabase
-          .from('deals')
+          .from("deals")
           .update({
             ...dealData,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', deal.id)
+          .eq("id", deal.id);
 
-        if (updateError) throw updateError
+        if (updateError) throw updateError;
 
-        router.push(`/deals/${deal.id}`)
+        router.push(`/deals/${deal.id}`);
       } else {
         // Create new deal
         const { data, error: insertError } = await supabase
-          .from('deals')
+          .from("deals")
           .insert({
             ...dealData,
             account_id: accountId,
           })
           .select()
-          .single()
+          .single();
 
-        if (insertError) throw insertError
+        if (insertError) throw insertError;
 
-        router.push(`/deals/${data.id}`)
+        router.push(`/deals/${data.id}`);
       }
-      
-      router.refresh()
-    } catch (err: any) {
-      console.error('Error saving deal:', err)
-      setError(err.message || 'Failed to save deal')
-    } finally {
-      setLoading(false)
-    }
-  }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData(prev => ({
+      router.refresh();
+    } catch (err: any) {
+      console.error("Error saving deal:", err);
+      setError(err.message || "Failed to save deal");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) => {
+    setFormData((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value
-    }))
-  }
+      [e.target.name]: e.target.value,
+    }));
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {error && (
-        <Alert variant="destructive">
-          {error}
-        </Alert>
-      )}
+      {error && <Alert variant="destructive">{error}</Alert>}
 
       {/* Basic Information */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Deal Information</h3>
-        
+
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="name">Deal Name *</Label>
@@ -263,7 +271,7 @@ export default function DealForm({ accountId, contacts, companies, pipelines, de
       {/* Actions */}
       <div className="flex gap-4">
         <Button type="submit" disabled={loading}>
-          {loading ? 'Saving...' : deal ? 'Update Deal' : 'Create Deal'}
+          {loading ? "Saving..." : deal ? "Update Deal" : "Create Deal"}
         </Button>
         <Button
           type="button"
@@ -275,5 +283,5 @@ export default function DealForm({ accountId, contacts, companies, pipelines, de
         </Button>
       </div>
     </form>
-  )
+  );
 }

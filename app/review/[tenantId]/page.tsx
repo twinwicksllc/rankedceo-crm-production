@@ -1,12 +1,16 @@
-import { notFound } from 'next/navigation'
-import { getClientReviewSession } from '@/lib/waas/actions/admin'
-import { ReviewClient } from './review-client'
+import { notFound } from "next/navigation";
+import { getClientReviewSession } from "@/lib/waas/actions/admin";
+import { ReviewClient } from "./review-client";
 
-export default async function ReviewPage({ params }: { params: { tenantId: string } }) {
-  const sessionResult = await getClientReviewSession(params.tenantId)
-  if (!sessionResult.success || !sessionResult.data) notFound()
+export default async function ReviewPage({
+  params,
+}: {
+  params: { tenantId: string };
+}) {
+  const sessionResult = await getClientReviewSession(params.tenantId);
+  if (!sessionResult.success || !sessionResult.data) notFound();
 
-  const session = sessionResult.data
+  const session = sessionResult.data;
 
   return (
     <ReviewClient
@@ -20,5 +24,5 @@ export default async function ReviewPage({ params }: { params: { tenantId: strin
       versions={session.versions}
       variants={session.variants}
     />
-  )
+  );
 }

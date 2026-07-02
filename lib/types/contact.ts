@@ -10,7 +10,7 @@ export interface Contact {
   email?: string | null;
   phone?: string | null;
   job_title?: string | null;
-  status: 'active' | 'inactive' | 'prospect';
+  status: "active" | "inactive" | "prospect";
   notes?: string | null;
 }
 
@@ -21,7 +21,7 @@ export interface CreateContactInput {
   phone?: string;
   job_title?: string;
   company_id?: string;
-  status?: 'active' | 'inactive' | 'prospect';
+  status?: "active" | "inactive" | "prospect";
   notes?: string;
 }
 
@@ -32,12 +32,12 @@ export interface UpdateContactInput {
   phone?: string;
   job_title?: string;
   company_id?: string;
-  status?: 'active' | 'inactive' | 'prospect';
+  status?: "active" | "inactive" | "prospect";
   notes?: string;
 }
 
 export interface ContactFilters {
   search?: string;
   company_id?: string;
-  status?: 'active' | 'inactive' | 'prospect';
+  status?: "active" | "inactive" | "prospect";
 }

@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from "react";
 import {
   LineChart,
   Line,
@@ -12,56 +12,70 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-} from 'recharts'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { DollarSign, TrendingUp, TrendingDown } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
+} from "recharts";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { DollarSign, TrendingUp, TrendingDown } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
 interface RevenueDashboardProps {
-  accountId: string
-  dateRange?: { start: Date; end: Date }
+  accountId: string;
+  dateRange?: { start: Date; end: Date };
 }
 
-export function RevenueDashboard({ accountId, dateRange }: RevenueDashboardProps) {
-  const [loading, setLoading] = useState(true)
-  const [totalRevenue, setTotalRevenue] = useState(0)
-  const [revenueByMonth, setRevenueByMonth] = useState<any[]>([])
-  const [revenueByUser, setRevenueByUser] = useState<any[]>([])
-  const [averageDealSize, setAverageDealSize] = useState(0)
-  const [trend, setTrend] = useState<{ growthRate: number } | null>(null)
+export function RevenueDashboard({
+  accountId,
+  dateRange,
+}: RevenueDashboardProps) {
+  const [loading, setLoading] = useState(true);
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [revenueByMonth, setRevenueByMonth] = useState<any[]>([]);
+  const [revenueByUser, setRevenueByUser] = useState<any[]>([]);
+  const [averageDealSize, setAverageDealSize] = useState(0);
+  const [trend, setTrend] = useState<{ growthRate: number } | null>(null);
 
   useEffect(() => {
-    fetchRevenueData()
-  }, [accountId, dateRange])
+    fetchRevenueData();
+  }, [accountId, dateRange]);
 
   const fetchRevenueData = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const [
-        totalRes,
-        monthlyRes,
-        userRes,
-        avgDealRes,
-        trendRes,
-      ] = await Promise.all([
-        fetch(`/api/analytics/revenue/total?accountId=${accountId}`).then(r => r.json()),
-        fetch(`/api/analytics/revenue/by-month?accountId=${accountId}`).then(r => r.json()),
-        fetch(`/api/analytics/revenue/by-user?accountId=${accountId}`).then(r => r.json()),
-        fetch(`/api/analytics/revenue/average-deal-size?accountId=${accountId}`).then(r => r.json()),
-        fetch(`/api/analytics/revenue/trend?accountId=${accountId}`).then(r => r.json()),
-      ])
+      const [totalRes, monthlyRes, userRes, avgDealRes, trendRes] =
+        await Promise.all([
+          fetch(`/api/analytics/revenue/total?accountId=${accountId}`).then(
+            (r) => r.json(),
+          ),
+          fetch(`/api/analytics/revenue/by-month?accountId=${accountId}`).then(
+            (r) => r.json(),
+          ),
+          fetch(`/api/analytics/revenue/by-user?accountId=${accountId}`).then(
+            (r) => r.json(),
+          ),
+          fetch(
+            `/api/analytics/revenue/average-deal-size?accountId=${accountId}`,
+          ).then((r) => r.json()),
+          fetch(`/api/analytics/revenue/trend?accountId=${accountId}`).then(
+            (r) => r.json(),
+          ),
+        ]);
 
-      setTotalRevenue(totalRes.totalRevenue || 0)
-      setRevenueByMonth(monthlyRes.data || [])
-      setRevenueByUser(userRes.data || [])
-      setAverageDealSize(avgDealRes.averageDealSize || 0)
-      setTrend(trendRes)
+      setTotalRevenue(totalRes.totalRevenue || 0);
+      setRevenueByMonth(monthlyRes.data || []);
+      setRevenueByUser(userRes.data || []);
+      setAverageDealSize(avgDealRes.averageDealSize || 0);
+      setTrend(trendRes);
     } catch (error) {
-      console.error('[Revenue Dashboard] Error fetching data:', error)
+      console.error("[Revenue Dashboard] Error fetching data:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -77,7 +91,7 @@ export function RevenueDashboard({ accountId, dateRange }: RevenueDashboardProps
           ))}
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -90,18 +104,24 @@ export function RevenueDashboard({ accountId, dateRange }: RevenueDashboardProps
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
+            <div className="text-2xl font-bold">
+              {formatCurrency(totalRevenue)}
+            </div>
             {trend && (
               <div className="flex items-center text-xs text-muted-foreground mt-1">
                 {trend.growthRate >= 0 ? (
                   <>
                     <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
-                    <span className="text-green-500">+{trend.growthRate.toFixed(1)}%</span>
+                    <span className="text-green-500">
+                      +{trend.growthRate.toFixed(1)}%
+                    </span>
                   </>
                 ) : (
                   <>
                     <TrendingDown className="h-3 w-3 mr-1 text-red-500" />
-                    <span className="text-red-500">{trend.growthRate.toFixed(1)}%</span>
+                    <span className="text-red-500">
+                      {trend.growthRate.toFixed(1)}%
+                    </span>
                   </>
                 )}
                 <span className="ml-1">from last month</span>
@@ -116,7 +136,9 @@ export function RevenueDashboard({ accountId, dateRange }: RevenueDashboardProps
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(averageDealSize)}</div>
+            <div className="text-2xl font-bold">
+              {formatCurrency(averageDealSize)}
+            </div>
             <p className="text-xs text-muted-foreground">Per won deal</p>
           </CardContent>
         </Card>
@@ -129,8 +151,10 @@ export function RevenueDashboard({ accountId, dateRange }: RevenueDashboardProps
           <CardContent>
             <div className="text-2xl font-bold">
               {revenueByMonth.length > 0
-                ? formatCurrency(revenueByMonth[revenueByMonth.length - 1].revenue)
-                : '$0'}
+                ? formatCurrency(
+                    revenueByMonth[revenueByMonth.length - 1].revenue,
+                  )
+                : "$0"}
             </div>
             <p className="text-xs text-muted-foreground">This month</p>
           </CardContent>
@@ -143,10 +167,12 @@ export function RevenueDashboard({ accountId, dateRange }: RevenueDashboardProps
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {revenueByUser.length > 0 ? revenueByUser[0].userName : 'N/A'}
+              {revenueByUser.length > 0 ? revenueByUser[0].userName : "N/A"}
             </div>
             <p className="text-xs text-muted-foreground">
-              {revenueByUser.length > 0 ? formatCurrency(revenueByUser[0].revenue) : '$0'}
+              {revenueByUser.length > 0
+                ? formatCurrency(revenueByUser[0].revenue)
+                : "$0"}
             </p>
           </CardContent>
         </Card>
@@ -165,7 +191,10 @@ export function RevenueDashboard({ accountId, dateRange }: RevenueDashboardProps
               <XAxis dataKey="month" />
               <YAxis tickFormatter={(value) => formatCurrency(value)} />
               <Tooltip
-                formatter={(value: number) => [formatCurrency(value), 'Revenue']}
+                formatter={(value: number) => [
+                  formatCurrency(value),
+                  "Revenue",
+                ]}
               />
               <Legend />
               <Line
@@ -192,7 +221,10 @@ export function RevenueDashboard({ accountId, dateRange }: RevenueDashboardProps
               <XAxis dataKey="userName" />
               <YAxis tickFormatter={(value) => formatCurrency(value)} />
               <Tooltip
-                formatter={(value: number) => [formatCurrency(value), 'Revenue']}
+                formatter={(value: number) => [
+                  formatCurrency(value),
+                  "Revenue",
+                ]}
               />
               <Legend />
               <Bar dataKey="revenue" fill="#10b981" />
@@ -201,5 +233,5 @@ export function RevenueDashboard({ accountId, dateRange }: RevenueDashboardProps
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

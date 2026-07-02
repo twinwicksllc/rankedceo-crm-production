@@ -1,12 +1,16 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card } from '@/components/ui/card';
-import { ActivityType, ActivityStatus, CreateActivityInput } from '@/lib/types/activity';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
+import {
+  ActivityType,
+  ActivityStatus,
+  CreateActivityInput,
+} from "@/lib/types/activity";
 
 interface ActivityFormProps {
   initialData?: Partial<CreateActivityInput>;
@@ -18,17 +22,17 @@ interface ActivityFormProps {
 }
 
 const activityTypes: { value: ActivityType; label: string; icon: string }[] = [
-  { value: 'call', label: 'Phone Call', icon: '📞' },
-  { value: 'meeting', label: 'Meeting', icon: '📅' },
-  { value: 'email', label: 'Email', icon: '📧' },
-  { value: 'note', label: 'Note', icon: '📝' },
-  { value: 'task', label: 'Task', icon: '✅' },
+  { value: "call", label: "Phone Call", icon: "📞" },
+  { value: "meeting", label: "Meeting", icon: "📅" },
+  { value: "email", label: "Email", icon: "📧" },
+  { value: "note", label: "Note", icon: "📝" },
+  { value: "task", label: "Task", icon: "✅" },
 ];
 
 const activityStatuses: { value: ActivityStatus; label: string }[] = [
-  { value: 'pending', label: 'Pending' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'cancelled', label: 'Cancelled' },
+  { value: "pending", label: "Pending" },
+  { value: "completed", label: "Completed" },
+  { value: "cancelled", label: "Cancelled" },
 ];
 
 export default function ActivityForm({
@@ -44,34 +48,37 @@ export default function ActivityForm({
   const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<CreateActivityInput>({
-    type: initialData?.type || 'note',
-    title: initialData?.title || '',
-    description: initialData?.description || '',
+    type: initialData?.type || "note",
+    title: initialData?.title || "",
+    description: initialData?.description || "",
     contact_id: contactId || initialData?.contact_id,
     company_id: companyId || initialData?.company_id,
     deal_id: dealId || initialData?.deal_id,
-    status: initialData?.status || 'completed',
-    due_date: initialData?.due_date || '',
+    status: initialData?.status || "completed",
+    due_date: initialData?.due_date || "",
     duration_minutes: initialData?.duration_minutes,
-    location: initialData?.location || '',
+    location: initialData?.location || "",
     attendees: initialData?.attendees || [],
   });
 
-  const [attendeeInput, setAttendeeInput] = useState('');
+  const [attendeeInput, setAttendeeInput] = useState("");
 
   const handleChange = (field: keyof CreateActivityInput, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleAddAttendee = () => {
     if (attendeeInput && !formData.attendees?.includes(attendeeInput)) {
-      handleChange('attendees', [...(formData.attendees || []), attendeeInput]);
-      setAttendeeInput('');
+      handleChange("attendees", [...(formData.attendees || []), attendeeInput]);
+      setAttendeeInput("");
     }
   };
 
   const handleRemoveAttendee = (email: string) => {
-    handleChange('attendees', formData.attendees?.filter(a => a !== email) || []);
+    handleChange(
+      "attendees",
+      formData.attendees?.filter((a) => a !== email) || [],
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,26 +87,26 @@ export default function ActivityForm({
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/activities', {
-        method: 'POST',
+      const response = await fetch("/api/activities", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to create activity');
+        throw new Error(data.error || "Failed to create activity");
       }
-      
+
       if (onSuccess) {
         onSuccess();
       } else {
         router.back();
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to create activity');
+      setError(err.message || "Failed to create activity");
     } finally {
       setIsLoading(false);
     }
@@ -120,11 +127,11 @@ export default function ActivityForm({
           <select
             id="type"
             value={formData.type}
-            onChange={(e) => handleChange('type', e.target.value)}
+            onChange={(e) => handleChange("type", e.target.value)}
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             required
           >
-            {activityTypes.map(type => (
+            {activityTypes.map((type) => (
               <option key={type.value} value={type.value}>
                 {type.icon} {type.label}
               </option>
@@ -139,7 +146,7 @@ export default function ActivityForm({
             id="title"
             type="text"
             value={formData.title}
-            onChange={(e) => handleChange('title', e.target.value)}
+            onChange={(e) => handleChange("title", e.target.value)}
             placeholder="Enter activity title"
             required
             maxLength={200}
@@ -151,8 +158,8 @@ export default function ActivityForm({
           <Label htmlFor="description">Description</Label>
           <textarea
             id="description"
-            value={formData.description || ''}
-            onChange={(e) => handleChange('description', e.target.value)}
+            value={formData.description || ""}
+            onChange={(e) => handleChange("description", e.target.value)}
             placeholder="Enter activity description"
             rows={4}
             maxLength={2000}
@@ -194,10 +201,10 @@ export default function ActivityForm({
           <select
             id="status"
             value={formData.status}
-            onChange={(e) => handleChange('status', e.target.value)}
+            onChange={(e) => handleChange("status", e.target.value)}
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
-            {activityStatuses.map(status => (
+            {activityStatuses.map((status) => (
               <option key={status.value} value={status.value}>
                 {status.label}
               </option>
@@ -206,15 +213,17 @@ export default function ActivityForm({
         </div>
 
         {/* Conditional Fields */}
-        {(formData.type === 'call' || formData.type === 'meeting' || formData.type === 'task') && (
+        {(formData.type === "call" ||
+          formData.type === "meeting" ||
+          formData.type === "task") && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="due_date">Due Date</Label>
               <Input
                 id="due_date"
                 type="datetime-local"
-                value={formData.due_date || ''}
-                onChange={(e) => handleChange('due_date', e.target.value)}
+                value={formData.due_date || ""}
+                onChange={(e) => handleChange("due_date", e.target.value)}
               />
             </div>
             <div>
@@ -224,21 +233,26 @@ export default function ActivityForm({
                 type="number"
                 min="1"
                 max="1440"
-                value={formData.duration_minutes || ''}
-                onChange={(e) => handleChange('duration_minutes', parseInt(e.target.value) || undefined)}
+                value={formData.duration_minutes || ""}
+                onChange={(e) =>
+                  handleChange(
+                    "duration_minutes",
+                    parseInt(e.target.value) || undefined,
+                  )
+                }
               />
             </div>
           </div>
         )}
 
-        {formData.type === 'meeting' && (
+        {formData.type === "meeting" && (
           <div>
             <Label htmlFor="location">Location</Label>
             <Input
               id="location"
               type="text"
-              value={formData.location || ''}
-              onChange={(e) => handleChange('location', e.target.value)}
+              value={formData.location || ""}
+              onChange={(e) => handleChange("location", e.target.value)}
               placeholder="Enter meeting location"
               maxLength={200}
             />
@@ -255,7 +269,9 @@ export default function ActivityForm({
               value={attendeeInput}
               onChange={(e) => setAttendeeInput(e.target.value)}
               placeholder="Add attendee email"
-              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddAttendee())}
+              onKeyPress={(e) =>
+                e.key === "Enter" && (e.preventDefault(), handleAddAttendee())
+              }
             />
             <Button type="button" onClick={handleAddAttendee}>
               Add
@@ -290,7 +306,7 @@ export default function ActivityForm({
             </Button>
           )}
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? 'Creating...' : 'Create Activity'}
+            {isLoading ? "Creating..." : "Create Activity"}
           </Button>
         </div>
       </form>

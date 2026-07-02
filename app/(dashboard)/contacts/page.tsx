@@ -1,49 +1,77 @@
-import { createClient } from '@/lib/supabase/server'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Users, Mail, TrendingUp, Plus } from 'lucide-react'
-import Link from 'next/link'
+import { createClient } from "@/lib/supabase/server";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Users, Mail, TrendingUp, Plus } from "lucide-react";
+import Link from "next/link";
 
 export default async function ContactsPage() {
-  const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
 
   const { data: userData } = await supabase
-    .from('users')
-    .select('account_id')
-    .eq('id', user.id)
-    .single()
+    .from("users")
+    .select("account_id")
+    .eq("id", user.id)
+    .single();
 
-  if (!userData) return null
+  if (!userData) return null;
 
   // Get contacts with company info
   const { data: contacts } = await supabase
-    .from('contacts')
-    .select(`
+    .from("contacts")
+    .select(
+      `
       *,
       company:companies(id, name),
       owner:users(id, name)
-    `)
-    .eq('account_id', userData.account_id)
-    .order('created_at', { ascending: false })
+    `,
+    )
+    .eq("account_id", userData.account_id)
+    .order("created_at", { ascending: false });
 
   // Calculate stats
-  const totalContacts = contacts?.length || 0
-  const withEmail = contacts?.filter(c => c.email).length || 0
-  const highScore = contacts?.filter(c => (c.lead_score || 0) >= 70).length || 0
-  const avgScore = contacts?.length 
-    ? Math.round(contacts.reduce((sum, c) => sum + (c.lead_score || 0), 0) / contacts.length)
-    : 0
+  const totalContacts = contacts?.length || 0;
+  const withEmail = contacts?.filter((c) => c.email).length || 0;
+  const highScore =
+    contacts?.filter((c) => (c.lead_score || 0) >= 70).length || 0;
+  const avgScore = contacts?.length
+    ? Math.round(
+        contacts.reduce((sum, c) => sum + (c.lead_score || 0), 0) /
+          contacts.length,
+      )
+    : 0;
 
   const stats = [
-    { name: 'Total Contacts', value: totalContacts, icon: Users, color: 'text-blue-600' },
-    { name: 'With Email', value: withEmail, icon: Mail, color: 'text-green-600' },
-    { name: 'High Score (70+)', value: highScore, icon: TrendingUp, color: 'text-purple-600' },
-    { name: 'Avg Lead Score', value: avgScore, icon: TrendingUp, color: 'text-orange-600' },
-  ]
+    {
+      name: "Total Contacts",
+      value: totalContacts,
+      icon: Users,
+      color: "text-blue-600",
+    },
+    {
+      name: "With Email",
+      value: withEmail,
+      icon: Mail,
+      color: "text-green-600",
+    },
+    {
+      name: "High Score (70+)",
+      value: highScore,
+      icon: TrendingUp,
+      color: "text-purple-600",
+    },
+    {
+      name: "Avg Lead Score",
+      value: avgScore,
+      icon: TrendingUp,
+      color: "text-orange-600",
+    },
+  ];
 
   return (
     <div className="p-8">
@@ -96,7 +124,8 @@ export default async function ContactsPage() {
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                           <span className="text-sm font-medium text-primary">
-                            {contact.first_name[0]}{contact.last_name[0]}
+                            {contact.first_name[0]}
+                            {contact.last_name[0]}
                           </span>
                         </div>
                         <div>
@@ -105,10 +134,14 @@ export default async function ContactsPage() {
                           </h3>
                           <div className="flex items-center gap-2 mt-1">
                             {contact.email && (
-                              <span className="text-sm text-gray-600">{contact.email}</span>
+                              <span className="text-sm text-gray-600">
+                                {contact.email}
+                              </span>
                             )}
                             {contact.phone && (
-                              <span className="text-sm text-gray-600">• {contact.phone}</span>
+                              <span className="text-sm text-gray-600">
+                                • {contact.phone}
+                              </span>
                             )}
                           </div>
                           {contact.company && (
@@ -124,10 +157,10 @@ export default async function ContactsPage() {
                         <Badge
                           variant={
                             contact.lead_score >= 70
-                              ? 'default'
+                              ? "default"
                               : contact.lead_score >= 40
-                              ? 'secondary'
-                              : 'outline'
+                                ? "secondary"
+                                : "outline"
                           }
                         >
                           Score: {contact.lead_score}
@@ -144,8 +177,12 @@ export default async function ContactsPage() {
           ) : (
             <div className="text-center py-12">
               <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No contacts yet</h3>
-              <p className="text-gray-600 mb-4">Get started by adding your first contact</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No contacts yet
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Get started by adding your first contact
+              </p>
               <Button asChild>
                 <Link href="/contacts/new">
                   <Plus className="h-4 w-4 mr-2" />
@@ -157,5 +194,5 @@ export default async function ContactsPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

@@ -1,52 +1,55 @@
-import type { Metadata } from 'next'
-import { Inter, Poppins } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
-import './globals.css'
+import type { Metadata } from "next";
+import { Inter, Poppins } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
+import "./globals.css";
 
-const inter = Inter({ 
+const inter = Inter({
   subsets: ["latin"],
-  variable: '--font-inter'
+  variable: "--font-inter",
 });
-const poppins = Poppins({ 
+const poppins = Poppins({
   subsets: ["latin"],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-poppins'
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-poppins",
 });
 
 export const metadata: Metadata = {
-  title: 'Smile Pro by Ranked CEO - #1 Dentist CRM Solution',
-  description: 'Transform your dental practice with Smile Pro. The all-in-one CRM solution designed specifically for dentists. Manage patients, appointments, and grow your practice.',
-  generator: 'v0.app',
+  title: "Smile Pro by Ranked CEO - #1 Dentist CRM Solution",
+  description:
+    "Transform your dental practice with Smile Pro. The all-in-one CRM solution designed specifically for dentists. Manage patients, appointments, and grow your practice.",
+  generator: "v0.app",
   icons: {
     icon: [
       {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
+        url: "/icon-light-32x32.png",
+        media: "(prefers-color-scheme: light)",
       },
       {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
+        url: "/icon-dark-32x32.png",
+        media: "(prefers-color-scheme: dark)",
       },
       {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
+        url: "/icon.svg",
+        type: "image/svg+xml",
       },
     ],
-    apple: '/apple-icon.png',
+    apple: "/apple-icon.png",
   },
-}
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${poppins.variable} font-sans antialiased`}>
+      <body
+        className={`${inter.variable} ${poppins.variable} font-sans antialiased`}
+      >
         {children}
         <Analytics />
       </body>
     </html>
-  )
+  );
 }

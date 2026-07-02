@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 // =============================================================================
 // app/edit/[reviewToken]/regenerate-section-panel.tsx  (PR #102)
@@ -18,24 +18,24 @@
 //    The parent (EditorShell) saves each field via updateClientVariantContent.
 // =============================================================================
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   regenerateSection,
   type RegeneratedField,
-} from '@/lib/waas/actions/client-edit'
-import type { SectionId } from '@/lib/waas/templates/types'
+} from "@/lib/waas/actions/client-edit";
+import type { SectionId } from "@/lib/waas/templates/types";
 
-const RATE_LIMIT_MS = 8_000  // 8-second cooldown between calls
+const RATE_LIMIT_MS = 8_000; // 8-second cooldown between calls
 
 interface RegenerateSectionPanelProps {
   /** e.g. "hero", "about", "faq" */
-  sectionId:    SectionId
+  sectionId: SectionId;
   /** e.g. "1. Hero" — used in the header */
-  sectionLabel: string
-  reviewToken:  string
-  variantIndex: number
-  onApply:      (fields: RegeneratedField[]) => void
-  onClose:      () => void
+  sectionLabel: string;
+  reviewToken: string;
+  variantIndex: number;
+  onApply: (fields: RegeneratedField[]) => void;
+  onClose: () => void;
 }
 
 export function RegenerateSectionPanel({
@@ -46,34 +46,38 @@ export function RegenerateSectionPanel({
   onApply,
   onClose,
 }: RegenerateSectionPanelProps) {
-  const [hint,      setHint]      = useState('')
-  const [fields,    setFields]    = useState<RegeneratedField[]>([])
-  const [loading,   setLoading]   = useState(false)
-  const [error,     setError]     = useState<string | null>(null)
-  const [cooldown,  setCooldown]  = useState(false)
-  const hintRef    = useRef<HTMLTextAreaElement>(null)
-  const cooldownTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [hint, setHint] = useState("");
+  const [fields, setFields] = useState<RegeneratedField[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(false);
+  const hintRef = useRef<HTMLTextAreaElement>(null);
+  const cooldownTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-focus hint textarea
   useEffect(() => {
-    const t = setTimeout(() => hintRef.current?.focus(), 80)
-    return () => clearTimeout(t)
-  }, [])
+    const t = setTimeout(() => hintRef.current?.focus(), 80);
+    return () => clearTimeout(t);
+  }, []);
 
   // ESC closes panel
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.stopPropagation(); onClose() }
-    }
-    window.addEventListener('keydown', handler, { capture: true })
-    return () => window.removeEventListener('keydown', handler, { capture: true })
-  }, [onClose])
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handler, { capture: true });
+    return () =>
+      window.removeEventListener("keydown", handler, { capture: true });
+  }, [onClose]);
 
   const generate = useCallback(async () => {
-    if (loading || cooldown) return
-    setError(null)
-    setFields([])
-    setLoading(true)
+    if (loading || cooldown) return;
+    setError(null);
+    setFields([]);
+    setLoading(true);
 
     try {
       const result = await regenerateSection({
@@ -81,33 +85,36 @@ export function RegenerateSectionPanel({
         variantIndex,
         sectionId,
         hint: hint.trim() || undefined,
-      })
+      });
 
       if (!result.success || !result.data) {
-        setError(result.error ?? 'AI returned no results. Please try again.')
-        return
+        setError(result.error ?? "AI returned no results. Please try again.");
+        return;
       }
 
-      setFields(result.data.fields)
+      setFields(result.data.fields);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unexpected error.')
+      setError(err instanceof Error ? err.message : "Unexpected error.");
     } finally {
-      setLoading(false)
-      setCooldown(true)
-      if (cooldownTimer.current) clearTimeout(cooldownTimer.current)
-      cooldownTimer.current = setTimeout(() => setCooldown(false), RATE_LIMIT_MS)
+      setLoading(false);
+      setCooldown(true);
+      if (cooldownTimer.current) clearTimeout(cooldownTimer.current);
+      cooldownTimer.current = setTimeout(
+        () => setCooldown(false),
+        RATE_LIMIT_MS,
+      );
     }
-  }, [hint, loading, cooldown, reviewToken, variantIndex, sectionId])
+  }, [hint, loading, cooldown, reviewToken, variantIndex, sectionId]);
 
   // Cmd/Ctrl+Enter triggers generate
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-      e.preventDefault()
-      void generate()
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+      e.preventDefault();
+      void generate();
     }
-  }
+  };
 
-  const hasResults = fields.length > 0
+  const hasResults = fields.length > 0;
 
   // -------------------------------------------------------------------------
 
@@ -122,7 +129,9 @@ export function RegenerateSectionPanel({
       <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-gradient-to-r from-violet-50 to-indigo-50 px-5 py-3">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-lg" aria-hidden="true">✨</span>
+            <span className="text-lg" aria-hidden="true">
+              ✨
+            </span>
             <span className="text-sm font-semibold text-slate-900">
               Regenerate section with AI
             </span>
@@ -137,20 +146,30 @@ export function RegenerateSectionPanel({
           aria-label="Close regenerate panel"
           className="rounded p-1.5 text-slate-400 hover:bg-white/80 hover:text-slate-700"
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M3 3l10 10M13 3L3 13"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
           </svg>
         </button>
       </div>
 
       {/* ── Scrollable body ─────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
-
         {/* Intro copy */}
         <p className="text-[13px] text-slate-600 leading-relaxed">
-          AI will rewrite <strong>all text fields</strong> in this section — 
-          headline, subheadline, body copy, CTAs, and more. You can review
-          every change before it&apos;s applied.
+          AI will rewrite <strong>all text fields</strong> in this section —
+          headline, subheadline, body copy, CTAs, and more. You can review every
+          change before it&apos;s applied.
         </p>
 
         {/* Hint textarea */}
@@ -159,8 +178,10 @@ export function RegenerateSectionPanel({
             htmlFor="regen-hint"
             className="block text-sm font-medium text-slate-800 mb-1.5"
           >
-            Optional instruction{' '}
-            <span className="text-slate-400 font-normal">(leave blank to let AI decide)</span>
+            Optional instruction{" "}
+            <span className="text-slate-400 font-normal">
+              (leave blank to let AI decide)
+            </span>
           </label>
           <textarea
             id="regen-hint"
@@ -175,8 +196,10 @@ export function RegenerateSectionPanel({
           />
           <div className="mt-1 flex items-center justify-between text-[11px] text-slate-400">
             <span>
-              <kbd className="rounded border border-slate-200 bg-slate-50 px-1 font-mono text-[10px]">⌘↵</kbd>
-              {' '}to regenerate
+              <kbd className="rounded border border-slate-200 bg-slate-50 px-1 font-mono text-[10px]">
+                ⌘↵
+              </kbd>{" "}
+              to regenerate
             </span>
             <span>{hint.length} / 500</span>
           </div>
@@ -190,10 +213,10 @@ export function RegenerateSectionPanel({
           className="w-full rounded-md bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
         >
           {loading
-            ? 'Regenerating…'
+            ? "Regenerating…"
             : cooldown
-              ? 'Please wait…'
-              : '✨ Regenerate section'}
+              ? "Please wait…"
+              : "✨ Regenerate section"}
         </button>
 
         {/* Error */}
@@ -207,7 +230,10 @@ export function RegenerateSectionPanel({
         {loading && (
           <div className="space-y-3">
             {[1, 2, 3].map((n) => (
-              <div key={n} className="animate-pulse rounded-lg border border-slate-200 p-3 space-y-2">
+              <div
+                key={n}
+                className="animate-pulse rounded-lg border border-slate-200 p-3 space-y-2"
+              >
                 <div className="h-3 w-24 rounded bg-slate-200" />
                 <div className="h-3 w-full rounded bg-slate-100" />
                 <div className="h-3 w-4/5 rounded bg-slate-100" />
@@ -221,7 +247,8 @@ export function RegenerateSectionPanel({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                {fields.length} field{fields.length === 1 ? '' : 's'} regenerated — review changes
+                {fields.length} field{fields.length === 1 ? "" : "s"}{" "}
+                regenerated — review changes
               </div>
             </div>
 
@@ -244,10 +271,13 @@ export function RegenerateSectionPanel({
           </button>
           <button
             type="button"
-            onClick={() => { onApply(fields); onClose() }}
+            onClick={() => {
+              onApply(fields);
+              onClose();
+            }}
             className="flex-1 rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 transition-colors"
           >
-            Apply all {fields.length} change{fields.length === 1 ? '' : 's'}
+            Apply all {fields.length} change{fields.length === 1 ? "" : "s"}
           </button>
         </div>
       )}
@@ -255,12 +285,12 @@ export function RegenerateSectionPanel({
       {/* Footer note (no results yet) */}
       {!hasResults && (
         <div className="shrink-0 border-t border-slate-200 bg-slate-50 px-5 py-3 text-[11px] text-slate-500">
-          Changes are previewed before being applied. Nothing saves until you click
-          &ldquo;Apply all changes&rdquo;.
+          Changes are previewed before being applied. Nothing saves until you
+          click &ldquo;Apply all changes&rdquo;.
         </div>
       )}
     </div>
-  )
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -268,13 +298,15 @@ export function RegenerateSectionPanel({
 // ---------------------------------------------------------------------------
 
 function FieldDiffCard({ field }: { field: RegeneratedField }) {
-  const isEmpty = !field.original.trim()
+  const isEmpty = !field.original.trim();
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white overflow-hidden text-sm">
       {/* Field label */}
       <div className="bg-slate-50 border-b border-slate-200 px-3 py-1.5">
-        <span className="text-[11px] font-semibold text-slate-600">{field.label}</span>
+        <span className="text-[11px] font-semibold text-slate-600">
+          {field.label}
+        </span>
       </div>
 
       <div className="grid grid-cols-1 divide-y divide-slate-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
@@ -284,9 +316,11 @@ function FieldDiffCard({ field }: { field: RegeneratedField }) {
             Current
           </div>
           <p className="text-slate-500 leading-snug text-[12px] line-clamp-4">
-            {isEmpty
-              ? <em className="text-slate-300">Empty</em>
-              : field.original}
+            {isEmpty ? (
+              <em className="text-slate-300">Empty</em>
+            ) : (
+              field.original
+            )}
           </p>
         </div>
 
@@ -301,5 +335,5 @@ function FieldDiffCard({ field }: { field: RegeneratedField }) {
         </div>
       </div>
     </div>
-  )
+  );
 }

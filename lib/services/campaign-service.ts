@@ -1,6 +1,6 @@
 // Campaign Service for RankedCEO CRM
-import { createClient } from '@/lib/supabase/server';
-import { SendGridService } from './sendgrid-service';
+import { createClient } from "@/lib/supabase/server";
+import { SendGridService } from "./sendgrid-service";
 import type {
   Campaign,
   CampaignWithRelations,
@@ -18,7 +18,7 @@ import type {
   CampaignAnalytics,
   CampaignEmail,
   CampaignEmailWithRelations,
-} from '@/lib/types/campaign';
+} from "@/lib/types/campaign";
 import {
   createCampaignSchema,
   updateCampaignSchema,
@@ -26,14 +26,16 @@ import {
   updateEmailTemplateSchema,
   createCampaignSequenceSchema,
   updateCampaignSequenceSchema,
-} from '@/lib/validations/campaign';
+} from "@/lib/validations/campaign";
 
 export class CampaignService {
   private supabase!: any;
   private sendGridService: SendGridService;
 
   constructor() {
-      this.sendGridService = new SendGridService(process.env.SENDGRID_API_KEY || '');
+    this.sendGridService = new SendGridService(
+      process.env.SENDGRID_API_KEY || "",
+    );
     // Don't initialize client in constructor - will be lazy-loaded
     this.supabase = null as any;
   }
@@ -51,17 +53,17 @@ export class CampaignService {
   private async getUserInfo(): Promise<{ accountId: string; userId: string }> {
     const userData = await (await this.getClient()).auth.getUser();
     if (!userData.data.user) {
-      throw new Error('User not authenticated');
+      throw new Error("User not authenticated");
     }
 
     const { data: accountData, error: accountError } = await this.supabase
-      .from('users')
-      .select('account_id, id')
-      .eq('id', userData.data.user.id)
+      .from("users")
+      .select("account_id, id")
+      .eq("id", userData.data.user.id)
       .single();
 
     if (accountError || !accountData) {
-      throw new Error('Account not found');
+      throw new Error("Account not found");
     }
 
     return {
@@ -80,13 +82,13 @@ export class CampaignService {
       const { accountId } = await this.getUserInfo();
 
       let query = await this.supabase
-        .from('email_templates')
-        .select('*')
-        .eq('account_id', accountId)
-        .order('created_at', { ascending: false });
+        .from("email_templates")
+        .select("*")
+        .eq("account_id", accountId)
+        .order("created_at", { ascending: false });
 
       if (search) {
-        query = query.ilike('name', `%${search}%`);
+        query = query.ilike("name", `%${search}%`);
       }
 
       const { data, error } = await query;
@@ -94,7 +96,7 @@ export class CampaignService {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('[CampaignService] Error getting templates:', error);
+      console.error("[CampaignService] Error getting templates:", error);
       return [];
     }
   }
@@ -106,8 +108,9 @@ export class CampaignService {
     const { accountId } = await this.getUserInfo();
 
     const { data, error } = await this.supabase
-      .from('email_templates')
-      .select(`
+      .from("email_templates")
+      .select(
+        `
         *,
         created_by_user:users!email_templates_created_by_fkey (
           id,
@@ -115,9 +118,10 @@ export class CampaignService {
           first_name,
           last_name
         )
-      `)
-      .eq('id', id)
-      .eq('account_id', accountId)
+      `,
+      )
+      .eq("id", id)
+      .eq("account_id", accountId)
       .single();
 
     if (error) throw error;
@@ -127,17 +131,21 @@ export class CampaignService {
   /**
    * Create a new email template
    */
-  async createTemplate(input: CreateEmailTemplateInput): Promise<EmailTemplate> {
+  async createTemplate(
+    input: CreateEmailTemplateInput,
+  ): Promise<EmailTemplate> {
     const { accountId, userId } = await this.getUserInfo();
 
     // Validate input
     const validatedData = createEmailTemplateSchema.parse(input);
 
     // Extract variables from content
-    const variables = SendGridService.extractTemplateVariables(validatedData.subject + ' ' + validatedData.body);
+    const variables = SendGridService.extractTemplateVariables(
+      validatedData.subject + " " + validatedData.body,
+    );
 
     const { data, error } = await this.supabase
-      .from('email_templates')
+      .from("email_templates")
       .insert({
         account_id: accountId,
         created_by: userId,
@@ -154,23 +162,28 @@ export class CampaignService {
   /**
    * Update an email template
    */
-  async updateTemplate(id: string, input: UpdateEmailTemplateInput): Promise<EmailTemplate> {
+  async updateTemplate(
+    id: string,
+    input: UpdateEmailTemplateInput,
+  ): Promise<EmailTemplate> {
     const { accountId } = await this.getUserInfo();
 
     // Validate input
     const validatedData = updateEmailTemplateSchema.parse(input);
 
     // Extract variables from content
-    const variables = SendGridService.extractTemplateVariables(validatedData.subject + ' ' + validatedData.body);
+    const variables = SendGridService.extractTemplateVariables(
+      validatedData.subject + " " + validatedData.body,
+    );
 
     const { data, error } = await this.supabase
-      .from('email_templates')
+      .from("email_templates")
       .update({
         ...validatedData,
         variables,
       })
-      .eq('id', id)
-      .eq('account_id', accountId)
+      .eq("id", id)
+      .eq("account_id", accountId)
       .select()
       .single();
 
@@ -185,10 +198,10 @@ export class CampaignService {
     const { accountId } = await this.getUserInfo();
 
     const { error } = await this.supabase
-      .from('email_templates')
+      .from("email_templates")
       .delete()
-      .eq('id', id)
-      .eq('account_id', accountId);
+      .eq("id", id)
+      .eq("account_id", accountId);
 
     if (error) throw error;
   }
@@ -202,17 +215,17 @@ export class CampaignService {
     const { accountId } = await this.getUserInfo();
 
     let query = await this.supabase
-      .from('campaigns')
-      .select('*')
-      .eq('account_id', accountId)
-      .order('created_at', { ascending: false });
+      .from("campaigns")
+      .select("*")
+      .eq("account_id", accountId)
+      .order("created_at", { ascending: false });
 
     if (filters?.status) {
-      query = query.eq('status', filters.status);
+      query = query.eq("status", filters.status);
     }
 
     if (filters?.type) {
-      query = query.eq('type', filters.type);
+      query = query.eq("type", filters.type);
     }
 
     const { data, error } = await query;
@@ -228,8 +241,9 @@ export class CampaignService {
     const { accountId } = await this.getUserInfo();
 
     const { data, error } = await this.supabase
-      .from('campaigns')
-      .select(`
+      .from("campaigns")
+      .select(
+        `
         *,
         pipeline:pipelines!campaigns_pipeline_id_fkey (
           id,
@@ -241,9 +255,10 @@ export class CampaignService {
           first_name,
           last_name
         )
-      `)
-      .eq('id', id)
-      .eq('account_id', accountId)
+      `,
+      )
+      .eq("id", id)
+      .eq("account_id", accountId)
       .single();
 
     if (error) throw error;
@@ -260,7 +275,7 @@ export class CampaignService {
     const validatedData = createCampaignSchema.parse(input);
 
     const { data, error } = await this.supabase
-      .from('campaigns')
+      .from("campaigns")
       .insert({
         account_id: accountId,
         created_by: userId,
@@ -276,17 +291,20 @@ export class CampaignService {
   /**
    * Update a campaign
    */
-  async updateCampaign(id: string, input: UpdateCampaignInput): Promise<Campaign> {
+  async updateCampaign(
+    id: string,
+    input: UpdateCampaignInput,
+  ): Promise<Campaign> {
     const { accountId } = await this.getUserInfo();
 
     // Validate input
     const validatedData = updateCampaignSchema.parse(input);
 
     const { data, error } = await this.supabase
-      .from('campaigns')
+      .from("campaigns")
       .update(validatedData)
-      .eq('id', id)
-      .eq('account_id', accountId)
+      .eq("id", id)
+      .eq("account_id", accountId)
       .select()
       .single();
 
@@ -301,10 +319,10 @@ export class CampaignService {
     const { accountId } = await this.getUserInfo();
 
     const { error } = await this.supabase
-      .from('campaigns')
+      .from("campaigns")
       .delete()
-      .eq('id', id)
-      .eq('account_id', accountId);
+      .eq("id", id)
+      .eq("account_id", accountId);
 
     if (error) throw error;
   }
@@ -325,24 +343,31 @@ export class CampaignService {
 
     const [campaignsResult, emailsResult] = await Promise.all([
       this.supabase
-        .from('campaigns')
-        .select('id, status')
-        .eq('account_id', accountId),
+        .from("campaigns")
+        .select("id, status")
+        .eq("account_id", accountId),
       this.supabase
-        .from('campaign_emails')
-        .select('opens, clicks')
-        .eq('account_id', accountId),
+        .from("campaign_emails")
+        .select("opens, clicks")
+        .eq("account_id", accountId),
     ]);
 
     const campaigns = campaignsResult.data || [];
     const emails = emailsResult.data || [];
 
-    const totalOpens = emails.reduce((sum: number, email: any) => sum + (email.opens || 0), 0);
-    const totalClicks = emails.reduce((sum: number, email: any) => sum + (email.clicks || 0), 0);
+    const totalOpens = emails.reduce(
+      (sum: number, email: any) => sum + (email.opens || 0),
+      0,
+    );
+    const totalClicks = emails.reduce(
+      (sum: number, email: any) => sum + (email.clicks || 0),
+      0,
+    );
 
     return {
       totalCampaigns: campaigns.length,
-      activeCampaigns: campaigns.filter((c: any) => c.status === 'active').length,
+      activeCampaigns: campaigns.filter((c: any) => c.status === "active")
+        .length,
       totalEmailsSent: emails.length,
       totalOpens,
       totalClicks,

@@ -1,7 +1,9 @@
 # Comprehensive Test Plan: Audit Tool + Website Builder (Admin and Tenant)
 
 ## 1) Purpose
+
 This plan is designed to surface everything your app can currently do, including capabilities that are easy to miss. It covers:
+
 - Public audit experience (prospect)
 - Audit processing and reporting internals
 - WaaS onboarding and site generation flow
@@ -10,40 +12,52 @@ This plan is designed to surface everything your app can currently do, including
 - Data integrity, security, and reliability
 
 ## 2) Scope and Roles
+
 Primary products in scope:
+
 - SEO Audit tool
 - Website builder and deployment workflow
 
 Roles in scope:
+
 - Prospect (anonymous, public routes)
 - Admin (waas_admin)
 - Tenant/client reviewer (review token link)
 
 Out of scope:
+
 - Legacy CRM modules not tied to audit or WaaS site builder (unless you choose to add them)
 
 ## 3) Test Strategy at a Glance
+
 Use three layers:
+
 1. Smoke pass: 30 to 45 minutes, confirms critical path is alive
 2. Full functional pass: 4 to 6 hours, validates complete capability matrix
 3. Hardening pass: resilience, security, and edge cases
 
 Execution cadence:
+
 - Before any release: run Smoke + selected Security checks
 - Weekly: run Full functional pass
 - Sprint end: run Full + Hardening pass and keep evidence
 
 ## 4) Environment and Data Setup
+
 ## 4.1 Required environments
+
 - Production-like staging environment (recommended)
 - WaaS Supabase project with migrations through 014 applied
 - Valid API keys where applicable (Serper, PageSpeed, optional Gemini)
 
 ## 4.2 Baseline migration verification
+
 Verify these are present in order:
+
 - 000a, 000b, 004, 005, 008, 009, 010, 011, 012, 013, 014
 
 Minimum table checks:
+
 - tenants
 - audits
 - leads
@@ -54,16 +68,20 @@ Minimum table checks:
 - tenant_site_deployments
 
 ## 4.3 Test accounts
+
 Create at least:
+
 - 1 waas_admin user
 - 1 non-admin authenticated user
 - 2 prospect test identities (different emails)
 - 2 tenants with different industries
 
 ## 5) Capability Discovery Matrix (What to Validate)
+
 The list below is intentionally explicit so hidden capabilities are not missed.
 
 ### 5.1 Audit Tool Capabilities
+
 - Public audit start page accepts target + up to 3 competitor URLs
 - URL normalization and validation behavior
 - Audit run endpoint creates or updates audit records
@@ -78,6 +96,7 @@ The list below is intentionally explicit so hidden capabilities are not missed.
 - Analytics and CTA pathways from report
 
 ### 5.2 Website Builder Capabilities (Admin)
+
 - Admin tenant list and detail retrieval
 - AI template recommendations with Gemini and fallback behavior
 - Apply template to tenant config
@@ -93,6 +112,7 @@ The list below is intentionally explicit so hidden capabilities are not missed.
 - Deployment audit trail panel shows history entries
 
 ### 5.3 Website Builder Capabilities (Tenant/Client Reviewer)
+
 - Review page opens using review token
 - Compare three variants with viewport switching
 - Select final variant and persist selected timestamp
@@ -101,6 +121,7 @@ The list below is intentionally explicit so hidden capabilities are not missed.
 - Confirm iteration timeline behavior is visible and coherent
 
 ### 5.4 Rendering and Site Runtime Capabilities
+
 - Tenant site resolves by slug/domain/subdomain
 - Template section ordering and enable/disable logic
 - Section rendering for hero/services/trust/financing/booking/reviews
@@ -108,6 +129,7 @@ The list below is intentionally explicit so hidden capabilities are not missed.
 - SEO metadata population on rendered sites
 
 ### 5.5 Security and Isolation Capabilities
+
 - RLS behavior for anonymous vs authenticated vs waas_admin
 - Public endpoints expose only intended data
 - Non-admin cannot perform admin operations
@@ -115,9 +137,11 @@ The list below is intentionally explicit so hidden capabilities are not missed.
 - Soft-delete behavior and hidden records behavior
 
 ## 6) End-to-End Test Suites
+
 Use IDs so results can be logged quickly.
 
 ## Suite A: Audit Tool End-to-End
+
 A-01 Start audit with valid target and 3 competitors
 Expected: audit starts, report URL returned, status pending/running then completed
 
@@ -149,6 +173,7 @@ A-10 Download/CTA path instrumentation sanity
 Expected: CTA links still resolve and event pathways do not break UX
 
 ## Suite B: WaaS Onboarding and Setup
+
 B-01 Create tenant from onboarding step 1
 Expected: tenant record created with brand/contact seed and status onboarding
 
@@ -165,6 +190,7 @@ B-05 Re-run step updates for fallback behavior
 Expected: no data corruption when resubmitting steps
 
 ## Suite C: Admin Preview and Recommendation
+
 C-01 Open tenant detail as admin
 Expected: tenant, domains, audit summary, site config are visible
 
@@ -181,6 +207,7 @@ C-05 Verify client review link generation
 Expected: tokenized review path opens and resolves
 
 ## Suite D: Tenant Review, Selection, Iteration
+
 D-01 Open review link in private browser
 Expected: page loads without admin session
 
@@ -203,6 +230,7 @@ D-07 Verify version timeline and rollback
 Expected: versions list grows and rollback restores prior snapshot
 
 ## Suite E: Deployment Readiness and Audit Trail
+
 E-01 Readiness check with missing metadata
 Expected: fail blockers for required checks
 
@@ -222,6 +250,7 @@ E-06 UI verification of package and trail
 Expected: tenant detail shows package summary and recent deployment entries
 
 ## Suite F: Security, Auth, and Access Control
+
 F-01 Anonymous access to public audit start and status
 Expected: works only for intended public functions
 
@@ -235,6 +264,7 @@ F-04 Review token misuse tests
 Expected: invalid token rejected, no cross-tenant data leak
 
 ## Suite G: Reliability and Performance
+
 G-01 Concurrent audit submissions (5 to 10)
 Expected: no crashes, consistent record creation
 
@@ -248,13 +278,16 @@ G-04 Basic page performance checks
 Expected: key pages remain usable under normal load
 
 ## 7) Known Feature Flags, Fallbacks, and Caveats to Test Explicitly
+
 - Audit provider fallback: mock vs live provider behavior
 - Template recommendation fallback when GEMINI key absent
 - Team invitation onboarding endpoint currently logs and returns success without full invite pipeline
 - Migration compatibility behavior in onboarding write helpers should be regression-tested after schema changes
 
 ## 8) Test Data and Evidence Collection
+
 For every test case capture:
+
 - Test ID
 - Role used
 - URL/API exercised
@@ -264,51 +297,65 @@ For every test case capture:
 - Follow-up ticket reference if failed
 
 Recommended evidence folder structure:
+
 - qa-evidence/smoke/YYYY-MM-DD
 - qa-evidence/full/YYYY-MM-DD
 - qa-evidence/hardening/YYYY-MM-DD
 
 ## 9) Defect Severity Model
+
 - Sev 1: Data leak, broken deploy gate, cannot complete core flow
 - Sev 2: Wrong output or broken secondary path with workaround
 - Sev 3: UI inconsistency, non-blocking errors, copy issues
 
 Release gate recommendation:
+
 - No open Sev 1
 - Max 2 open Sev 2 with approved workarounds
 - All deploy readiness, selection, and audit completion paths passing
 
 ## 10) Suggested Automation Roadmap
+
 Phase 1 (immediate):
+
 - API integration tests for audit endpoints and readiness checks
 - Server action tests for selection, feedback, mix, deploy
 
 Phase 2:
+
 - Playwright E2E for prospect audit flow and admin deploy flow
 - Snapshot tests for template section rendering
 
 Phase 3:
+
 - Scheduled smoke runs in CI on staging
 - DB assertion scripts for migrations and critical RLS checks
 
 ## 11) One-Day Execution Plan (Practical)
+
 Hour 1:
+
 - Environment checks and migration verification
 - Run Suite A smoke subset (A-01, A-04, A-05)
 
 Hour 2 to 3:
+
 - Run Suites C and D critical paths
 
 Hour 4:
+
 - Run Suite E deploy gate and successful deploy checks
 
 Hour 5:
+
 - Run Security subset (F-01, F-02, F-04)
 
 Hour 6:
+
 - Triage defects, create issue list, assign ownership
 
 ## 12) Master Regression Checklist (Quick Run)
+
 - Audit submission works
 - Audit report renders with top/bottom/mean keyword metrics
 - Manual review fallback is user-safe
@@ -324,7 +371,9 @@ Hour 6:
 - No cross-tenant leakage observed
 
 ## 13) Where This Plan Maps in Your Codebase
+
 Primary implementation anchors:
+
 - app/api/audit/run/route.ts
 - app/api/audit/leads/route.ts
 - app/api/waas/audits/route.ts
@@ -345,6 +394,7 @@ Primary implementation anchors:
 - supabase/migrations/waas/014_waas_deploy_audit_trail.sql
 
 ## 14) Recommended Next Deliverables
+
 - Convert this plan into a test execution sheet with owners and due dates
 - Add a Playwright smoke suite for the 12-item master regression checklist
 - Add SQL verification scripts for Suite E and Suite F to standardize evidence

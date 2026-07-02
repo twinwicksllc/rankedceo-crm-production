@@ -2,7 +2,7 @@
 // Twin-Wicks Digital Solutions — Shared Footer Component
 // =============================================================================
 
-import React from 'react'
+import React from "react";
 
 export function AdvantagePointFooter() {
   return (
@@ -11,19 +11,35 @@ export function AdvantagePointFooter() {
         <div className="flex items-center gap-2">
           <div className="w-5 h-5 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
             <svg width="11" height="11" viewBox="0 0 20 20" fill="none">
-              <path d="M10 2L3 7v11h5v-6h4v6h5V7L10 2z" fill="white"/>
+              <path d="M10 2L3 7v11h5v-6h4v6h5V7L10 2z" fill="white" />
             </svg>
           </div>
           <span className="text-white/40 text-xs font-medium">
-            © {new Date().getFullYear()} Twin-Wicks Digital Solutions. All rights reserved.
+            © {new Date().getFullYear()} Twin-Wicks Digital Solutions. All
+            rights reserved.
           </span>
         </div>
         <div className="flex items-center gap-4 text-white/30 text-xs">
-          <a href="https://crm.rankedceo.com/privacy" className="hover:text-white/60 transition-colors">Privacy</a>
-          <a href="https://crm.rankedceo.com/terms" className="hover:text-white/60 transition-colors">Terms</a>
-          <a href="mailto:support@rankedceo.com" className="hover:text-white/60 transition-colors">Support</a>
+          <a
+            href="https://crm.rankedceo.com/privacy"
+            className="hover:text-white/60 transition-colors"
+          >
+            Privacy
+          </a>
+          <a
+            href="https://crm.rankedceo.com/terms"
+            className="hover:text-white/60 transition-colors"
+          >
+            Terms
+          </a>
+          <a
+            href="mailto:support@rankedceo.com"
+            className="hover:text-white/60 transition-colors"
+          >
+            Support
+          </a>
         </div>
       </div>
     </footer>
-  )
+  );
 }

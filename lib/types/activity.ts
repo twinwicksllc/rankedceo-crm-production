@@ -1,6 +1,6 @@
 // Activity type definitions
-export type ActivityType = 'call' | 'meeting' | 'email' | 'note' | 'task';
-export type ActivityStatus = 'pending' | 'completed' | 'cancelled';
+export type ActivityType = "call" | "meeting" | "email" | "note" | "task";
+export type ActivityStatus = "pending" | "completed" | "cancelled";
 
 export interface Activity {
   id: string;

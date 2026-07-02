@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 // =============================================================================
 // app/admin/dashboard/[tenantId]/section-reorder-panel.tsx
@@ -16,7 +16,7 @@
 // remains fully clickable without accidentally starting a drag.
 // =============================================================================
 
-import React, { useId } from 'react'
+import React, { useId } from "react";
 import {
   DndContext,
   KeyboardSensor,
@@ -25,35 +25,40 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
-} from '@dnd-kit/core'
+} from "@dnd-kit/core";
 import {
   SortableContext,
   arrayMove,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-import type { SectionConfig, SectionId } from '@/lib/waas/templates/types'
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import type { SectionConfig, SectionId } from "@/lib/waas/templates/types";
 
 // ---------------------------------------------------------------------------
 // Section display labels (mirrors editable-fields.ts SECTION_LABELS)
 // ---------------------------------------------------------------------------
 
 const SECTION_LABELS: Record<string, string> = {
-  hero:           'Hero',
-  services:       'Services',
-  trust:          'Trust Badges',
-  financing:      'Financing',
-  booking:        'Booking',
-  reviews:        'Reviews',
-  about:          'About',
-  faq:            'FAQ',
-  'how-it-works': 'How It Works',
-}
+  hero: "Hero",
+  "answer-first-aeo": "Answer-First AEO",
+  "bento-emergency": "Bento Emergency",
+  services: "Services",
+  trust: "Trust Badges",
+  financing: "Financing",
+  booking: "Booking",
+  reviews: "Reviews",
+  about: "About",
+  faq: "FAQ",
+  "how-it-works": "How It Works",
+};
 
 function sectionDisplayName(id: SectionId | string): string {
-  return SECTION_LABELS[id] ?? id.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  return (
+    SECTION_LABELS[id] ??
+    id.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -71,14 +76,14 @@ function GripIcon({ className }: { className?: string }) {
       fill="currentColor"
     >
       {/* 3×2 dot grid — classic drag handle */}
-      <circle cx="5"  cy="4"  r="1.4" />
-      <circle cx="11" cy="4"  r="1.4" />
-      <circle cx="5"  cy="8"  r="1.4" />
-      <circle cx="11" cy="8"  r="1.4" />
-      <circle cx="5"  cy="12" r="1.4" />
+      <circle cx="5" cy="4" r="1.4" />
+      <circle cx="11" cy="4" r="1.4" />
+      <circle cx="5" cy="8" r="1.4" />
+      <circle cx="11" cy="8" r="1.4" />
+      <circle cx="5" cy="12" r="1.4" />
       <circle cx="11" cy="12" r="1.4" />
     </svg>
-  )
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -86,10 +91,10 @@ function GripIcon({ className }: { className?: string }) {
 // ---------------------------------------------------------------------------
 
 interface SortableRowProps {
-  section:   SectionConfig
-  position:  number   // 1-based display position
-  total:     number
-  disabled:  boolean
+  section: SectionConfig;
+  position: number; // 1-based display position
+  total: number;
+  disabled: boolean;
 }
 
 function SortableRow({ section, position, total, disabled }: SortableRowProps) {
@@ -101,14 +106,14 @@ function SortableRow({ section, position, total, disabled }: SortableRowProps) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: section.section, disabled })
+  } = useSortable({ id: section.section, disabled });
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity:   isDragging ? 0.45 : 1,
-    zIndex:    isDragging ? 10 : undefined,
-  }
+    opacity: isDragging ? 0.45 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
 
   return (
     <div
@@ -116,9 +121,9 @@ function SortableRow({ section, position, total, disabled }: SortableRowProps) {
       style={style}
       className={`flex items-center gap-3 rounded-lg border px-3 py-2 select-none ${
         isDragging
-          ? 'border-blue-500/60 bg-slate-700 shadow-xl'
-          : 'border-white/10 bg-slate-800/60 hover:border-white/20'
-      } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          ? "border-blue-500/60 bg-slate-700 shadow-xl"
+          : "border-white/10 bg-slate-800/60 hover:border-white/20"
+      } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
     >
       {/* Drag handle */}
       <button
@@ -128,8 +133,8 @@ function SortableRow({ section, position, total, disabled }: SortableRowProps) {
         aria-label={`Drag to reorder ${sectionDisplayName(section.section)}, currently position ${position} of ${total}`}
         className={`shrink-0 rounded p-0.5 text-white/30 transition-colors ${
           disabled
-            ? 'cursor-not-allowed'
-            : 'cursor-grab active:cursor-grabbing hover:text-white/70 hover:bg-white/10'
+            ? "cursor-not-allowed"
+            : "cursor-grab active:cursor-grabbing hover:text-white/70 hover:bg-white/10"
         }`}
         tabIndex={disabled ? -1 : 0}
       >
@@ -150,14 +155,14 @@ function SortableRow({ section, position, total, disabled }: SortableRowProps) {
       <span
         className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
           section.enabled
-            ? 'bg-emerald-500/15 text-emerald-400'
-            : 'bg-white/5 text-white/30'
+            ? "bg-emerald-500/15 text-emerald-400"
+            : "bg-white/5 text-white/30"
         }`}
       >
-        {section.enabled ? 'on' : 'off'}
+        {section.enabled ? "on" : "off"}
       </span>
     </div>
-  )
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -165,10 +170,10 @@ function SortableRow({ section, position, total, disabled }: SortableRowProps) {
 // ---------------------------------------------------------------------------
 
 export interface SectionReorderPanelProps {
-  variantIndex: number
-  sections:     SectionConfig[]
-  disabled?:    boolean
-  onChange:     (reordered: SectionConfig[]) => void
+  variantIndex: number;
+  sections: SectionConfig[];
+  disabled?: boolean;
+  onChange: (reordered: SectionConfig[]) => void;
 }
 
 export function SectionReorderPanel({
@@ -177,9 +182,9 @@ export function SectionReorderPanel({
   disabled = false,
   onChange,
 }: SectionReorderPanelProps) {
-  const dndId   = useId()
-  const ordered = [...sections].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-  const ids     = ordered.map((s) => s.section)
+  const dndId = useId();
+  const ordered = [...sections].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const ids = ordered.map((s) => s.section);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -189,20 +194,21 @@ export function SectionReorderPanel({
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
-  )
+  );
 
   function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
 
-    const oldIndex = ordered.findIndex((s) => s.section === active.id)
-    const newIndex = ordered.findIndex((s) => s.section === over.id)
-    if (oldIndex === -1 || newIndex === -1) return
+    const oldIndex = ordered.findIndex((s) => s.section === active.id);
+    const newIndex = ordered.findIndex((s) => s.section === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
 
-    const next = arrayMove(ordered, oldIndex, newIndex)
-      .map((section, index) => ({ ...section, order: index + 1 }))
+    const next = arrayMove(ordered, oldIndex, newIndex).map(
+      (section, index) => ({ ...section, order: index + 1 }),
+    );
 
-    onChange(next)
+    onChange(next);
   }
 
   return (
@@ -246,5 +252,5 @@ export function SectionReorderPanel({
         </p>
       )}
     </div>
-  )
+  );
 }

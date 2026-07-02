@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 // =============================================================================
 // WaaS Website Builder — adapted from the v0 "Blocksmith" design
@@ -12,7 +12,7 @@
 //   • Export HTML button kept as a secondary "Preview" action for the customer
 // =============================================================================
 
-import { useMemo, useState } from "react"
+import { useMemo, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -22,127 +22,181 @@ import {
   useSensors,
   type DragEndEvent,
   type DragStartEvent,
-} from "@dnd-kit/core"
+} from "@dnd-kit/core";
 import {
   SortableContext,
   arrayMove,
   verticalListSortingStrategy,
-} from "@dnd-kit/sortable"
-import { ChevronRight, Eye, Layers, Loader2, MousePointer2, Trash2 } from "lucide-react"
-import { BlockPalette }  from "./block-palette"
-import { CanvasBlock }   from "./canvas-block"
-import { BlockRenderer } from "./block-renderer"
-import { Inspector }     from "./inspector"
-import { type Block, type BlockType, createBlock } from "@/lib/waas/website-builder/blocks"
-import { TEMPLATE_REGISTRY } from "@/lib/waas/templates/registry"
-import { cn } from "@/lib/utils"
+} from "@dnd-kit/sortable";
+import {
+  ChevronRight,
+  Eye,
+  Layers,
+  Loader2,
+  MousePointer2,
+  Trash2,
+} from "lucide-react";
+import { BlockPalette } from "./block-palette";
+import { CanvasBlock } from "./canvas-block";
+import { BlockRenderer } from "./block-renderer";
+import { Inspector } from "./inspector";
+import {
+  type Block,
+  type BlockType,
+  createBlock,
+} from "@/lib/waas/website-builder/blocks";
+import { TEMPLATE_REGISTRY } from "@/lib/waas/templates/registry";
+import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Pre-fill helper — builds initial blocks from onboarding answers
 // ---------------------------------------------------------------------------
 
 export interface OnboardingPrefill {
-  businessName:         string
-  primaryTrade:         string | null
-  selectedTemplateSlug: string | null | undefined
-  tagline:              string | undefined
-  usp:                  string
-  servicesOffered:      string | undefined
-  aboutNarrative:       string | undefined
-  primaryCta:           string | undefined
-  city:                 string | undefined
-  state:                string | undefined
+  businessName: string;
+  primaryTrade: string | null;
+  selectedTemplateSlug: string | null | undefined;
+  tagline: string | undefined;
+  usp: string;
+  servicesOffered: string | undefined;
+  aboutNarrative: string | undefined;
+  primaryCta: string | undefined;
+  city: string | undefined;
+  state: string | undefined;
 }
 
 function parseList(raw: string | undefined | null): string[] {
-  if (!raw?.trim()) return []
-  const lines = raw.split(/\n/).map(l => l.trim()).filter(Boolean)
-  return lines.length > 1 ? lines : raw.split(/,/).map(l => l.trim()).filter(Boolean)
+  if (!raw?.trim()) return [];
+  const lines = raw
+    .split(/\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  return lines.length > 1
+    ? lines
+    : raw
+        .split(/,/)
+        .map((l) => l.trim())
+        .filter(Boolean);
 }
 
 // ---------------------------------------------------------------------------
 // Per-section block builders
 // ---------------------------------------------------------------------------
 
-type HeroBlock    = Extract<Block, { type: "hero" }>
-type HeadingBlock = Extract<Block, { type: "heading" }>
-type TextBlock    = Extract<Block, { type: "text" }>
-type SpacerBlock  = Extract<Block, { type: "spacer" }>
+type HeroBlock = Extract<Block, { type: "hero" }>;
+type HeadingBlock = Extract<Block, { type: "heading" }>;
+type TextBlock = Extract<Block, { type: "text" }>;
+type SpacerBlock = Extract<Block, { type: "spacer" }>;
 
 function mkHero(overrides: Partial<HeroBlock>): HeroBlock {
-  return { ...(createBlock("hero") as HeroBlock), ...overrides }
+  return { ...(createBlock("hero") as HeroBlock), ...overrides };
 }
 function mkH2(text: string): HeadingBlock {
-  return { ...(createBlock("heading") as HeadingBlock), text, level: "h2", align: "left" }
+  return {
+    ...(createBlock("heading") as HeadingBlock),
+    text,
+    level: "h2",
+    align: "left",
+  };
 }
 function mkH3(text: string): HeadingBlock {
-  return { ...(createBlock("heading") as HeadingBlock), text, level: "h3", align: "left" }
+  return {
+    ...(createBlock("heading") as HeadingBlock),
+    text,
+    level: "h3",
+    align: "left",
+  };
 }
 function mkText(text: string): TextBlock {
-  return { ...(createBlock("text") as TextBlock), text, align: "left" }
+  return { ...(createBlock("text") as TextBlock), text, align: "left" };
 }
 function mkSpacer(size: SpacerBlock["size"] = "sm"): SpacerBlock {
-  return { ...(createBlock("spacer") as SpacerBlock), size }
+  return { ...(createBlock("spacer") as SpacerBlock), size };
 }
 
-function sectionHero(p: OnboardingPrefill, location: string, tradeLabel: string): Block[] {
-  return [mkHero({
-    eyebrow:     tradeLabel,
-    title:       p.tagline || `${p.businessName || "Your Business"} — Trusted ${p.primaryTrade || "Professionals"}`,
-    subtitle:    p.usp || `Serving ${location || "your area"} with quality and care.`,
-    buttonLabel: p.primaryCta || "Get a Free Quote",
-    align:       "center",
-  })]
+function sectionHero(
+  p: OnboardingPrefill,
+  location: string,
+  tradeLabel: string,
+): Block[] {
+  return [
+    mkHero({
+      eyebrow: tradeLabel,
+      title:
+        p.tagline ||
+        `${p.businessName || "Your Business"} — Trusted ${p.primaryTrade || "Professionals"}`,
+      subtitle:
+        p.usp || `Serving ${location || "your area"} with quality and care.`,
+      buttonLabel: p.primaryCta || "Get a Free Quote",
+      align: "center",
+    }),
+  ];
 }
 
 function sectionServices(p: OnboardingPrefill, tradeLabel: string): Block[] {
-  const services = parseList(p.servicesOffered).slice(0, 6)
-  if (services.length === 0) return []
+  const services = parseList(p.servicesOffered).slice(0, 6);
+  if (services.length === 0) return [];
   const blocks: Block[] = [
     mkH2(`Our ${tradeLabel}`),
-    ...services.map(svc => mkH3(svc)),
+    ...services.map((svc) => mkH3(svc)),
     mkSpacer("sm"),
-  ]
-  return blocks
+  ];
+  return blocks;
 }
 
 function sectionAbout(p: OnboardingPrefill): Block[] {
-  const body = p.aboutNarrative
+  const body = p.aboutNarrative;
   const blocks: Block[] = [
     mkH2(`About ${p.businessName || "Us"}`),
-    ...(body ? [mkText(body)] : [mkText(`${p.businessName || "We"} are dedicated to providing top-quality ${p.primaryTrade ? p.primaryTrade.toLowerCase() : ""} services.`)]),
+    ...(body
+      ? [mkText(body)]
+      : [
+          mkText(
+            `${p.businessName || "We"} are dedicated to providing top-quality ${p.primaryTrade ? p.primaryTrade.toLowerCase() : ""} services.`,
+          ),
+        ]),
     mkSpacer("sm"),
-  ]
-  return blocks
+  ];
+  return blocks;
 }
 
 function sectionTrust(p: OnboardingPrefill): Block[] {
   return [
     mkH2(`Why Choose ${p.businessName || "Us"}`),
-    mkText("Licensed & Insured  ·  5-Star Rated  ·  Fast Response  ·  Free Estimates"),
+    mkText(
+      "Licensed & Insured  ·  5-Star Rated  ·  Fast Response  ·  Free Estimates",
+    ),
     mkSpacer("sm"),
-  ]
+  ];
 }
 
 function sectionReviews(): Block[] {
   return [
     mkH2("What Our Customers Say"),
-    mkText("⭐⭐⭐⭐⭐  \"Exceptional service — on time, professional, and great value.\"  — Verified Customer"),
+    mkText(
+      '⭐⭐⭐⭐⭐  "Exceptional service — on time, professional, and great value."  — Verified Customer',
+    ),
     mkSpacer("sm"),
-  ]
+  ];
 }
 
 function sectionFaq(p: OnboardingPrefill, location: string): Block[] {
   return [
     mkH2("Frequently Asked Questions"),
     mkH3(`How quickly can ${p.businessName || "you"} respond?`),
-    mkText("We typically respond within 1 hour and can offer same-day service in most cases."),
+    mkText(
+      "We typically respond within 1 hour and can offer same-day service in most cases.",
+    ),
     mkH3(`What areas do you serve?`),
-    mkText(location ? `We proudly serve ${location} and surrounding areas.` : "Contact us to confirm your service area."),
+    mkText(
+      location
+        ? `We proudly serve ${location} and surrounding areas.`
+        : "Contact us to confirm your service area.",
+    ),
     mkH3("Do you offer free estimates?"),
     mkText("Yes — all estimates are free with no obligation."),
     mkSpacer("sm"),
-  ]
+  ];
 }
 
 function sectionHowItWorks(p: OnboardingPrefill): Block[] {
@@ -153,37 +207,43 @@ function sectionHowItWorks(p: OnboardingPrefill): Block[] {
     mkH3("2. Get a Free Estimate"),
     mkText("We'll assess your needs and provide a clear, upfront quote."),
     mkH3("3. We Get to Work"),
-    mkText(`${p.businessName || "Our team"} handles everything professionally and on schedule.`),
+    mkText(
+      `${p.businessName || "Our team"} handles everything professionally and on schedule.`,
+    ),
     mkSpacer("sm"),
-  ]
+  ];
 }
 
 function sectionBooking(p: OnboardingPrefill): Block[] {
   return [
     mkHero({
-      eyebrow:     "Ready to get started?",
-      title:       "Book Your Free Consultation",
-      subtitle:    `Contact ${p.businessName || "us"} today — fast response, no obligation.`,
+      eyebrow: "Ready to get started?",
+      title: "Book Your Free Consultation",
+      subtitle: `Contact ${p.businessName || "us"} today — fast response, no obligation.`,
       buttonLabel: p.primaryCta || "Book a Free Consultation",
-      align:       "center",
+      align: "center",
     }),
-  ]
+  ];
 }
 
 function sectionFinancing(p: OnboardingPrefill): Block[] {
   return [
     mkH2("Flexible Financing Available"),
-    mkText(`${p.businessName || "We"} offer 0% interest financing options to make quality ${p.primaryTrade ? p.primaryTrade.toLowerCase() : "service"} accessible for every budget.`),
+    mkText(
+      `${p.businessName || "We"} offer 0% interest financing options to make quality ${p.primaryTrade ? p.primaryTrade.toLowerCase() : "service"} accessible for every budget.`,
+    ),
     mkSpacer("sm"),
-  ]
+  ];
 }
 
 function sectionGallery(): Block[] {
   return [
     mkH2("Our Work"),
-    mkText("Browse recent projects — photos will be added by your design team during the build."),
+    mkText(
+      "Browse recent projects — photos will be added by your design team during the build.",
+    ),
     mkSpacer("sm"),
-  ]
+  ];
 }
 
 // ---------------------------------------------------------------------------
@@ -191,55 +251,83 @@ function sectionGallery(): Block[] {
 // ---------------------------------------------------------------------------
 
 function buildInitialBlocks(p: OnboardingPrefill): Block[] {
-  const location   = [p.city, p.state].filter(Boolean).join(", ")
-  const tradeLabel = p.primaryTrade ? `${p.primaryTrade} Services` : "Professional Services"
+  const location = [p.city, p.state].filter(Boolean).join(", ");
+  const tradeLabel = p.primaryTrade
+    ? `${p.primaryTrade} Services`
+    : "Professional Services";
 
   // Resolve section order from template registry (fall back to 'modern' default)
-  const slug     = p.selectedTemplateSlug ?? "modern"
-  const template = TEMPLATE_REGISTRY[slug] ?? TEMPLATE_REGISTRY["modern"]
-  const layout   = template?.default_layout_json ?? []
+  const slug = p.selectedTemplateSlug ?? "modern";
+  const template = TEMPLATE_REGISTRY[slug] ?? TEMPLATE_REGISTRY["modern"];
+  const layout = template?.default_layout_json ?? [];
 
-  const blocks: Block[] = []
+  const blocks: Block[] = [];
 
   // Map each enabled WaaS section to builder blocks, in template order
   for (const section of layout) {
-    if (!section.enabled) continue
+    if (!section.enabled) continue;
 
     // Separator before every section except the first
-    if (blocks.length > 0) blocks.push(createBlock("divider"))
+    if (blocks.length > 0) blocks.push(createBlock("divider"));
 
     switch (section.section) {
-      case "hero":         blocks.push(...sectionHero(p, location, tradeLabel)); break
-      case "services":     blocks.push(...sectionServices(p, tradeLabel));       break
-      case "about":        blocks.push(...sectionAbout(p));                      break
-      case "trust":        blocks.push(...sectionTrust(p));                      break
-      case "reviews":      blocks.push(...sectionReviews());                     break
-      case "faq":          blocks.push(...sectionFaq(p, location));              break
-      case "how-it-works": blocks.push(...sectionHowItWorks(p));                break
-      case "booking":      blocks.push(...sectionBooking(p));                   break
-      case "financing":    blocks.push(...sectionFinancing(p));                 break
-      case "gallery":      blocks.push(...sectionGallery());                    break
+      case "hero":
+        blocks.push(...sectionHero(p, location, tradeLabel));
+        break;
+      case "services":
+        blocks.push(...sectionServices(p, tradeLabel));
+        break;
+      case "about":
+        blocks.push(...sectionAbout(p));
+        break;
+      case "trust":
+        blocks.push(...sectionTrust(p));
+        break;
+      case "reviews":
+        blocks.push(...sectionReviews());
+        break;
+      case "faq":
+        blocks.push(...sectionFaq(p, location));
+        break;
+      case "how-it-works":
+        blocks.push(...sectionHowItWorks(p));
+        break;
+      case "booking":
+        blocks.push(...sectionBooking(p));
+        break;
+      case "financing":
+        blocks.push(...sectionFinancing(p));
+        break;
+      case "gallery":
+        blocks.push(...sectionGallery());
+        break;
     }
   }
 
   // Safety net: if template had no enabled sections, fall back to basics
   if (blocks.length === 0) {
-    blocks.push(...sectionHero(p, location, tradeLabel))
-    blocks.push(createBlock("divider"))
-    blocks.push(...sectionServices(p, tradeLabel))
-    blocks.push(createBlock("divider"))
-    blocks.push(...sectionBooking(p))
+    blocks.push(...sectionHero(p, location, tradeLabel));
+    blocks.push(createBlock("divider"));
+    blocks.push(...sectionServices(p, tradeLabel));
+    blocks.push(createBlock("divider"));
+    blocks.push(...sectionBooking(p));
   }
 
-  return blocks
+  return blocks;
 }
 
 // ---------------------------------------------------------------------------
 // Canvas drop zone
 // ---------------------------------------------------------------------------
 
-function CanvasDropZone({ children, isEmpty }: { children: React.ReactNode; isEmpty: boolean }) {
-  const { setNodeRef, isOver } = useDroppable({ id: "canvas-dropzone" })
+function CanvasDropZone({
+  children,
+  isEmpty,
+}: {
+  children: React.ReactNode;
+  isEmpty: boolean;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: "canvas-dropzone" });
   return (
     <div
       ref={setNodeRef}
@@ -251,7 +339,7 @@ function CanvasDropZone({ children, isEmpty }: { children: React.ReactNode; isEm
     >
       {children}
     </div>
-  )
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -259,81 +347,100 @@ function CanvasDropZone({ children, isEmpty }: { children: React.ReactNode; isEm
 // ---------------------------------------------------------------------------
 
 export interface BuilderProps {
-  prefill:    OnboardingPrefill
-  onSubmit:   (blocks: Block[]) => Promise<void>
-  onBack:     () => void
-  isLoading:  boolean
+  prefill: OnboardingPrefill;
+  onSubmit: (blocks: Block[]) => Promise<void>;
+  onBack: () => void;
+  isLoading: boolean;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function Builder({ prefill, onSubmit, onBack, isLoading }: BuilderProps) {
-  const [blocks, setBlocks]       = useState<Block[]>(() => buildInitialBlocks(prefill))
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [activeDrag, setActiveDrag] = useState<{ type: "palette" | "canvas"; blockType?: BlockType } | null>(null)
+export function Builder({
+  prefill,
+  onSubmit,
+  onBack,
+  isLoading,
+}: BuilderProps) {
+  const [blocks, setBlocks] = useState<Block[]>(() =>
+    buildInitialBlocks(prefill),
+  );
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [activeDrag, setActiveDrag] = useState<{
+    type: "palette" | "canvas";
+    blockType?: BlockType;
+  } | null>(null);
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+  );
 
   const selectedBlock = useMemo(
     () => blocks.find((b) => b.id === selectedId) ?? null,
     [blocks, selectedId],
-  )
+  );
 
   function handleDragStart(e: DragStartEvent) {
-    const data = e.active.data.current
+    const data = e.active.data.current;
     if (data?.source === "palette") {
-      setActiveDrag({ type: "palette", blockType: data.blockType })
+      setActiveDrag({ type: "palette", blockType: data.blockType });
     } else {
-      setActiveDrag({ type: "canvas" })
+      setActiveDrag({ type: "canvas" });
     }
   }
 
   function handleDragEnd(e: DragEndEvent) {
-    const { active, over } = e
-    setActiveDrag(null)
-    if (!over) return
+    const { active, over } = e;
+    setActiveDrag(null);
+    if (!over) return;
 
-    const activeData = active.data.current
+    const activeData = active.data.current;
 
     if (activeData?.source === "palette") {
-      const newBlock = createBlock(activeData.blockType as BlockType)
+      const newBlock = createBlock(activeData.blockType as BlockType);
       setBlocks((prev) => {
-        const overIndex = prev.findIndex((b) => b.id === over.id)
-        if (overIndex === -1) return [...prev, newBlock]
-        const next = [...prev]
-        next.splice(overIndex, 0, newBlock)
-        return next
-      })
-      setSelectedId(newBlock.id)
-      return
+        const overIndex = prev.findIndex((b) => b.id === over.id);
+        if (overIndex === -1) return [...prev, newBlock];
+        const next = [...prev];
+        next.splice(overIndex, 0, newBlock);
+        return next;
+      });
+      setSelectedId(newBlock.id);
+      return;
     }
 
     if (active.id !== over.id) {
       setBlocks((prev) => {
-        const oldIndex = prev.findIndex((b) => b.id === active.id)
-        const newIndex = prev.findIndex((b) => b.id === over.id)
-        if (oldIndex === -1 || newIndex === -1) return prev
-        return arrayMove(prev, oldIndex, newIndex)
-      })
+        const oldIndex = prev.findIndex((b) => b.id === active.id);
+        const newIndex = prev.findIndex((b) => b.id === over.id);
+        if (oldIndex === -1 || newIndex === -1) return prev;
+        return arrayMove(prev, oldIndex, newIndex);
+      });
     }
   }
 
   function updateBlock(patch: Partial<Block>) {
-    if (!selectedId) return
-    setBlocks((prev) => prev.map((b) => (b.id === selectedId ? ({ ...b, ...patch } as Block) : b)))
+    if (!selectedId) return;
+    setBlocks((prev) =>
+      prev.map((b) =>
+        b.id === selectedId ? ({ ...b, ...patch } as Block) : b,
+      ),
+    );
   }
 
   function deleteBlock(id: string) {
-    setBlocks((prev) => prev.filter((b) => b.id !== id))
-    if (selectedId === id) setSelectedId(null)
+    setBlocks((prev) => prev.filter((b) => b.id !== id));
+    if (selectedId === id) setSelectedId(null);
   }
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
       <div className="fixed inset-0 z-50 flex flex-col bg-background">
-
         {/* ------------------------------------------------------------------ */}
         {/* Top bar                                                             */}
         {/* ------------------------------------------------------------------ */}
@@ -351,7 +458,9 @@ export function Builder({ prefill, onSubmit, onBack, isLoading }: BuilderProps) 
             <span className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
               <Layers className="size-4" />
             </span>
-            <span className="text-sm font-semibold text-foreground">Website Builder</span>
+            <span className="text-sm font-semibold text-foreground">
+              Website Builder
+            </span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -375,9 +484,13 @@ export function Builder({ prefill, onSubmit, onBack, isLoading }: BuilderProps) 
               className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
-                <><Loader2 className="size-4 animate-spin" /> Submitting…</>
+                <>
+                  <Loader2 className="size-4 animate-spin" /> Submitting…
+                </>
               ) : (
-                <>Submit for Admin Review <ChevronRight className="size-4" /></>
+                <>
+                  Submit for Admin Review <ChevronRight className="size-4" />
+                </>
               )}
             </button>
           </div>
@@ -398,17 +511,25 @@ export function Builder({ prefill, onSubmit, onBack, isLoading }: BuilderProps) 
               className="flex-1 overflow-y-auto p-6"
               onClick={() => setSelectedId(null)}
             >
-              <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+              <SortableContext
+                items={blocks.map((b) => b.id)}
+                strategy={verticalListSortingStrategy}
+              >
                 <CanvasDropZone isEmpty={blocks.length === 0}>
                   {blocks.length === 0 ? (
                     <div className="text-center">
-                      <p className="text-sm font-medium text-foreground">Your canvas is empty</p>
+                      <p className="text-sm font-medium text-foreground">
+                        Your canvas is empty
+                      </p>
                       <p className="mt-1 text-sm text-muted-foreground">
                         Drag a block from the left panel to get started.
                       </p>
                     </div>
                   ) : (
-                    <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+                    <div
+                      className="flex flex-col gap-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {blocks.map((block) => (
                         <CanvasBlock
                           key={block.id}
@@ -437,5 +558,5 @@ export function Builder({ prefill, onSubmit, onBack, isLoading }: BuilderProps) 
         ) : null}
       </DragOverlay>
     </DndContext>
-  )
+  );
 }

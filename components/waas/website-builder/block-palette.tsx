@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useDraggable } from "@dnd-kit/core"
+import { useDraggable } from "@dnd-kit/core";
 import {
   Columns2,
   Heading,
@@ -10,27 +10,38 @@ import {
   Sparkles,
   Square,
   Type,
-} from "lucide-react"
-import { BLOCK_LIBRARY, type BlockType } from "@/lib/waas/website-builder/blocks"
-import { cn } from "@/lib/utils"
+} from "lucide-react";
+import {
+  BLOCK_LIBRARY,
+  type BlockType,
+} from "@/lib/waas/website-builder/blocks";
+import { cn } from "@/lib/utils";
 
 const ICONS: Record<BlockType, React.ComponentType<{ className?: string }>> = {
-  hero:    Sparkles,
+  hero: Sparkles,
   heading: Heading,
-  text:    Type,
-  image:   ImageIcon,
-  button:  MousePointerClick,
+  text: Type,
+  image: ImageIcon,
+  button: MousePointerClick,
   columns: Columns2,
-  spacer:  Square,
+  spacer: Square,
   divider: Minus,
-}
+};
 
-function PaletteItem({ type, label, description }: { type: BlockType; label: string; description: string }) {
-  const Icon = ICONS[type]
+function PaletteItem({
+  type,
+  label,
+  description,
+}: {
+  type: BlockType;
+  label: string;
+  description: string;
+}) {
+  const Icon = ICONS[type];
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `palette-${type}`,
     data: { source: "palette", blockType: type },
-  })
+  });
 
   return (
     <button
@@ -46,11 +57,15 @@ function PaletteItem({ type, label, description }: { type: BlockType; label: str
         <Icon className="size-4" />
       </span>
       <span className="min-w-0">
-        <span className="block text-sm font-medium text-foreground">{label}</span>
-        <span className="block truncate text-xs text-muted-foreground">{description}</span>
+        <span className="block text-sm font-medium text-foreground">
+          {label}
+        </span>
+        <span className="block truncate text-xs text-muted-foreground">
+          {description}
+        </span>
       </span>
     </button>
-  )
+  );
 }
 
 export function BlockPalette() {
@@ -58,13 +73,20 @@ export function BlockPalette() {
     <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-sidebar">
       <div className="border-b border-border px-4 py-4">
         <h2 className="text-sm font-semibold text-foreground">Blocks</h2>
-        <p className="text-xs text-muted-foreground">Drag onto the canvas to add</p>
+        <p className="text-xs text-muted-foreground">
+          Drag onto the canvas to add
+        </p>
       </div>
       <div className="flex flex-col gap-2 overflow-y-auto p-4">
         {BLOCK_LIBRARY.map((b) => (
-          <PaletteItem key={b.type} type={b.type} label={b.label} description={b.description} />
+          <PaletteItem
+            key={b.type}
+            type={b.type}
+            label={b.label}
+            description={b.description}
+          />
         ))}
       </div>
     </aside>
-  )
+  );
 }

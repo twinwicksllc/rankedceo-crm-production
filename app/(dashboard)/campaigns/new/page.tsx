@@ -1,10 +1,16 @@
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
-import { CampaignForm } from '@/components/forms/campaign-form';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import { CampaignForm } from "@/components/forms/campaign-form";
 
 export default function NewCampaignPage() {
   return (
@@ -17,9 +23,7 @@ export default function NewCampaignPage() {
         </Button>
         <div>
           <h1 className="text-3xl font-bold">New Campaign</h1>
-          <p className="text-muted-foreground">
-            Create a new email campaign
-          </p>
+          <p className="text-muted-foreground">Create a new email campaign</p>
         </div>
       </div>
 

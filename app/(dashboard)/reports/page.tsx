@@ -1,33 +1,37 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import { RevenueDashboard } from '@/components/analytics/revenue-dashboard'
-import { PipelineDashboard } from '@/components/analytics/pipeline-dashboard'
-import { ActivityDashboard } from '@/components/analytics/activity-dashboard'
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { RevenueDashboard } from "@/components/analytics/revenue-dashboard";
+import { PipelineDashboard } from "@/components/analytics/pipeline-dashboard";
+import { ActivityDashboard } from "@/components/analytics/activity-dashboard";
 
 export default async function ReportsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/login')
+    redirect("/login");
   }
 
   const { data: userData } = await supabase
-    .from('users')
-    .select('account_id')
-    .eq('id', user.id)
-    .single()
+    .from("users")
+    .select("account_id")
+    .eq("id", user.id)
+    .single();
 
   if (!userData) {
-    redirect('/login')
+    redirect("/login");
   }
 
-  const accountId = userData.account_id
+  const accountId = userData.account_id;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Reports & Analytics</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Reports & Analytics
+        </h1>
         <p className="text-muted-foreground">
           Comprehensive analytics and insights for your business
         </p>
@@ -35,5 +39,5 @@ export default async function ReportsPage() {
 
       <RevenueDashboard accountId={accountId} />
     </div>
-  )
+  );
 }
