@@ -17,10 +17,10 @@ This feature adds URL parameter support for company referrals, enabling personal
 
 ### URL Parameters
 
-| Parameter | Description | Example |
-|-----------|-------------|---------|
+| Parameter   | Description                            | Example             |
+| ----------- | -------------------------------------- | ------------------- |
 | `?company=` | Company name for personalized greeting | `?company=AcmeCorp` |
-| `?ref=` | Referral source for tracking | `?ref=google-ads` |
+| `?ref=`     | Referral source for tracking           | `?ref=google-ads`   |
 
 ### Example URLs
 
@@ -36,19 +36,22 @@ https://smile.rankedceo.com/assessment?company=DentalGroup&ref=facebook
 ## User Experience
 
 ### Without Company Parameter (Default)
+
 ```
-Hi there! 👋 I'm here to help you with your HVAC needs. To get started, 
+Hi there! 👋 I'm here to help you with your HVAC needs. To get started,
 could you please share your name, phone number, and email address?
 ```
 
 ### With Company Parameter (?company=AcmeCorp)
+
 ```
-Hi there! We're glad you're here from **AcmeCorp**! 👋 I'm here to help 
-you with your HVAC needs. To get started, could you please share your 
+Hi there! We're glad you're here from **AcmeCorp**! 👋 I'm here to help
+you with your HVAC needs. To get started, could you please share your
 name, phone number, and email address?
 ```
 
 ### Chat Header
+
 - **Without company**: Shows "AI Assistant"
 - **With company**: Shows "[CompanyName] Assistant" (e.g., "AcmeCorp Assistant")
 
@@ -57,6 +60,7 @@ name, phone number, and email address?
 ## Files Modified
 
 ### Types & Validation
+
 - **`lib/types/appointment.ts`**
   - Added `AgentConversationMetadata` interface
   - Added `metadata?: AgentConversationMetadata | null` to `AgentConversation`
@@ -68,6 +72,7 @@ name, phone number, and email address?
   - Added `referralSource: z.string().max(200).optional()` to `agentChatSchema`
 
 ### Services
+
 - **`lib/services/agent-conversation-service.ts`**
   - Updated `getOrCreateConversation()` to accept optional `metadata` parameter
   - Stores referral metadata in `agent_conversations.metadata` JSONB column on creation
@@ -78,6 +83,7 @@ name, phone number, and email address?
   - Generates personalized greeting with company name when provided
 
 ### API Route
+
 - **`app/api/agent/chat/route.ts`**
   - Destructures `companyName` and `referralSource` from validated request body
   - Builds `referralMetadata` object and passes to `getOrCreateConversation()`
@@ -85,6 +91,7 @@ name, phone number, and email address?
   - Falls back to stored metadata from existing conversation if not in current request
 
 ### Chat Widget
+
 - **`components/agent/chat-widget.tsx`**
   - Added `companyName?: string` and `referralSource?: string` to `ChatWidgetProps`
   - Updated `loadStaticGreeting()` to include company name in greeting
@@ -92,6 +99,7 @@ name, phone number, and email address?
   - Passes `companyName` and `referralSource` to API on every message send
 
 ### Lead Pages (all 4 updated)
+
 - **`app/hvac/lead/page.tsx`** - Reads `?company=` and `?ref=` params
 - **`app/plumbing/lead/page.tsx`** - Reads `?company=` and `?ref=` params
 - **`app/electrical/lead/page.tsx`** - Reads `?company=` and `?ref=` params
@@ -120,7 +128,7 @@ To analyze referral performance in Supabase:
 
 ```sql
 -- Count conversations by company referral
-SELECT 
+SELECT
   metadata->>'companyName' AS company,
   metadata->>'referralSource' AS source,
   COUNT(*) AS total_conversations,

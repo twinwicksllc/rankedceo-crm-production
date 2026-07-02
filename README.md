@@ -22,6 +22,7 @@ A modern, full-featured Customer Relationship Management (CRM) system built with
 ## 🚀 Features
 
 ### Core CRM Features
+
 - **Contact Management** - Comprehensive contact database with full CRUD, search, filtering, and activity tracking
 - **Company Management** - Track companies, relationships, and associated contacts with detailed profiles
 - **Deal Pipeline** - Visual pipeline management with customizable stages and deal tracking
@@ -29,6 +30,7 @@ A modern, full-featured Customer Relationship Management (CRM) system built with
 - **Activity Timeline** - Chronological view of all interactions with contacts, companies, and deals
 
 ### Advanced Features
+
 - **Email Campaigns** - Create and manage email campaigns with SendGrid integration
 - **Email Templates** - Pre-built templates for common business scenarios
 - **Smart BCC Email Capture** - Automatically capture emails via BCC for seamless integration
@@ -39,6 +41,7 @@ A modern, full-featured Customer Relationship Management (CRM) system built with
 - **Analytics & Reporting** - Revenue, pipeline, and activity analytics with interactive charts
 
 ### User Experience
+
 - **Multi-step Onboarding** - Guided setup for new users with welcome, company info, team setup, preferences, and completion steps
 - **Settings Module** - Comprehensive user and account management
   - Profile settings (name, phone, title)
@@ -51,6 +54,7 @@ A modern, full-featured Customer Relationship Management (CRM) system built with
 - **Accessible UI** - Built with Radix UI for accessibility
 
 ### Security & Architecture
+
 - **Multi-tenant Architecture** - Complete data isolation per account
 - **Row Level Security (RLS)** - 100% RLS coverage on all database tables
 - **Authentication** - Secure Supabase Auth with email/password
@@ -63,6 +67,7 @@ A modern, full-featured Customer Relationship Management (CRM) system built with
 ## 🛠️ Tech Stack
 
 ### Frontend
+
 - **Framework:** Next.js 14 (App Router with React 18)
 - **Language:** TypeScript (100% typed)
 - **Styling:** Tailwind CSS 3.4
@@ -73,17 +78,20 @@ A modern, full-featured Customer Relationship Management (CRM) system built with
 - **HTTP Client:** @supabase/supabase-js
 
 ### Backend & Database
+
 - **Database:** PostgreSQL via Supabase
 - **Authentication:** Supabase Auth
 - **API Routes:** Next.js API Routes with TypeScript
 - **ORM Approach:** Direct SQL with Supabase client
 
 ### External Services
+
 - **Email:** SendGrid (via Twilio) for email campaigns
 - **Bot Protection:** Google reCAPTCHA v3 Enterprise
 - **AI Ready:** Gemini (lead scoring), Perplexity (research)
 
 ### Deployment
+
 - **Hosting:** Vercel (Edge Functions, Edge Middleware)
 - **Version Control:** Git + GitHub
 - **CI/CD:** Vercel auto-deployment from GitHub
@@ -167,21 +175,21 @@ npm start
 
 ### Required Variables
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL | `https://xxxxx.supabase.co` |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key | `eyJhbGc...` |
-| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | reCAPTCHA v3 site key | `6Le7tsIp...` |
-| `RECAPTCHA_SECRET_KEY` | reCAPTCHA v3 secret key | `6Le7tsIp...` |
-| `SENDGRID_API_KEY` | SendGrid API key | `SG.xxxxx` |
+| Variable                         | Description               | Example                     |
+| -------------------------------- | ------------------------- | --------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`       | Your Supabase project URL | `https://xxxxx.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`  | Supabase anonymous key    | `eyJhbGc...`                |
+| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | reCAPTCHA v3 site key     | `6Le7tsIp...`               |
+| `RECAPTCHA_SECRET_KEY`           | reCAPTCHA v3 secret key   | `6Le7tsIp...`               |
+| `SENDGRID_API_KEY`               | SendGrid API key          | `SG.xxxxx`                  |
 
 ### Optional Variables
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `NEXT_PUBLIC_GEMINI_API_KEY` | Google Gemini API key | `AIzaSyDxxxxx` |
-| `NEXT_PUBLIC_PERPLEXITY_API_KEY` | Perplexity API key | `pplx-xxxxx` |
-| `NEXT_PUBLIC_APP_URL` | Application URL | `https://crm.rankedceo.com` |
+| Variable                         | Description           | Example                     |
+| -------------------------------- | --------------------- | --------------------------- |
+| `NEXT_PUBLIC_GEMINI_API_KEY`     | Google Gemini API key | `AIzaSyDxxxxx`              |
+| `NEXT_PUBLIC_PERPLEXITY_API_KEY` | Perplexity API key    | `pplx-xxxxx`                |
+| `NEXT_PUBLIC_APP_URL`            | Application URL       | `https://crm.rankedceo.com` |
 
 ## 📊 Project Structure
 
@@ -459,6 +467,7 @@ rankedceo-crm-production/
 The application uses **30+ PostgreSQL tables** with complete Row Level Security:
 
 ### Core Tables
+
 - **accounts** - Multi-tenant account data and settings
 - **users** - User profiles and authentication metadata
 - **contacts** - Contact management with 15+ fields
@@ -469,6 +478,7 @@ The application uses **30+ PostgreSQL tables** with complete Row Level Security:
 - **activities** - Activity tracking (calls, meetings, emails, notes, tasks)
 
 ### Feature Tables
+
 - **campaigns** - Email campaign management
 - **email_templates** - Pre-built and custom email templates
 - **email_messages** - Email message history
@@ -480,10 +490,12 @@ The application uses **30+ PostgreSQL tables** with complete Row Level Security:
 - **commission_rates** - Commission rate definitions
 
 ### Analytics Tables
+
 - **lead_sources** - Lead source tracking
 - **qualified_leads_global** - Global lead scoring
 
 ### Supporting Tables
+
 - **team_members** - Team management
 - **team_invitations** - Team invitation management
 
@@ -494,12 +506,14 @@ See `docs/DATABASE_SCHEMA.md` for complete schema documentation.
 ## 🔐 Security
 
 ### Row Level Security (RLS)
+
 - **100% Coverage** - All tables protected with RLS policies
 - **Multi-tenant Isolation** - Users can only access their account's data
 - **Service Role Functions** - SECURITY DEFINER functions for privileged operations
 - **SQL Injection Protection** - Parameterized queries throughout
 
 ### Authentication
+
 - **Supabase Auth** - Email/password authentication
 - **reCAPTCHA v3** - Bot protection on signup and login
 - **Session Management** - Secure session handling with middleware
@@ -507,6 +521,7 @@ See `docs/DATABASE_SCHEMA.md` for complete schema documentation.
 - **JWT Tokens** - Secure token-based authentication
 
 ### Data Protection
+
 - **Encrypted Passwords** - bcrypt hashing via Supabase
 - **Environment Variables** - Sensitive data in .env.local
 - **API Key Protection** - SendGrid and reCAPTCHA keys server-side only
@@ -519,9 +534,11 @@ See `docs/SECURITY.md` for complete security documentation.
 The application includes **17 API routes** for all major operations:
 
 ### Authentication
+
 - `POST /api/auth/logout` - User logout
 
 ### Resources (CRUD)
+
 - `GET/POST /api/activities` - Activities list and create
 - `GET/PUT/DELETE /api/activities/[id]` - Activity operations
 - `GET/POST /api/campaigns` - Campaigns
@@ -532,6 +549,7 @@ The application includes **17 API routes** for all major operations:
 - `GET/POST /api/pipelines` - Pipelines
 
 ### Analytics
+
 - `GET /api/analytics/revenue` - Revenue data
 - `GET /api/analytics/revenue/by-month` - Revenue by month
 - `GET /api/analytics/revenue/by-user` - Revenue by user
@@ -539,12 +557,15 @@ The application includes **17 API routes** for all major operations:
 - `GET /api/analytics/activity` - Activity metrics
 
 ### Webhooks
+
 - `POST /api/webhook/sendgrid` - SendGrid email webhook
 
 ### Public
+
 - `POST /api/forms/submit` - Public form submission
 
 All API routes include:
+
 - ✅ Authentication checks
 - ✅ Input validation with Zod
 - ✅ Error handling
@@ -558,6 +579,7 @@ See `docs/API_ROUTES.md` for detailed API documentation.
 ### Vercel Deployment (Recommended)
 
 1. **Push to GitHub**
+
 ```bash
 git push origin main
 ```
@@ -592,12 +614,14 @@ git push origin main
    - Your app is live!
 
 ### Custom Domain
+
 1. Go to "Settings" → "Domains"
 2. Add your custom domain (e.g., `crm.rankedceo.com`)
 3. Update DNS records (instructions provided by Vercel)
 4. SSL certificate auto-configured
 
 ### Database Migrations
+
 Before first deployment, run all migrations in Supabase:
 
 ```bash
@@ -613,11 +637,13 @@ See `docs/DEPLOYMENT_GUIDE.md` for detailed deployment instructions.
 ## 📖 Documentation
 
 ### Getting Started
+
 - [Installation Guide](#-installation) - Setup instructions
 - [Environment Variables](#-environment-variables) - Configuration
 - [Project Structure](#-project-structure) - File organization
 
 ### Development
+
 - `docs/DEPLOYMENT_GUIDE.md` - Production deployment steps
 - `docs/DATABASE_SCHEMA.md` - Database tables and relationships
 - `docs/API_ROUTES.md` - API endpoint documentation
@@ -625,11 +651,13 @@ See `docs/DEPLOYMENT_GUIDE.md` for detailed deployment instructions.
 - `CHANGELOG.md` - Version history and changes
 
 ### Phase Documentation
+
 - `PHASE_01_COMPLETE.md` through `PHASE_14_COMPLETE.md` - Detailed phase information
 - `FINAL_PROJECT_SUMMARY.md` - Complete project overview
 - `PHASE_7_RECAPTCHA_INTEGRATION_SUMMARY.md` - reCAPTCHA setup
 
 ### Technical Guides
+
 - `PRODUCTION_READINESS_CHECKLIST.md` - Pre-launch checklist
 - `ONBOARDING_COMPLETE_MIGRATION.sql` - Database setup
 - `ANALYTICS_API_ROUTES_COMPLETE.md` - Analytics implementation
@@ -640,17 +668,20 @@ See `docs/DEPLOYMENT_GUIDE.md` for detailed deployment instructions.
 ### Manual Testing Checklist
 
 **Authentication**
+
 - [ ] Sign up with new account
 - [ ] Login with credentials
 - [ ] Logout functionality
 - [ ] Try invalid credentials (should fail)
 
 **Onboarding**
+
 - [ ] Complete 5-step onboarding
 - [ ] Skip onboarding
 - [ ] Verify onboarding data saved
 
 **Core Modules** (Full CRUD for each)
+
 - [ ] **Contacts:** Create, read, update, delete, search, filter
 - [ ] **Companies:** Create, read, update, delete, view statistics
 - [ ] **Deals:** Create, read, update, delete, move through pipeline
@@ -658,6 +689,7 @@ See `docs/DEPLOYMENT_GUIDE.md` for detailed deployment instructions.
 - [ ] **Pipelines:** Create, view stages, customize
 
 **Advanced Features**
+
 - [ ] **Campaigns:** Create, view, manage sequences
 - [ ] **Email Templates:** View, create from template
 - [ ] **Forms:** Create form, submit publicly
@@ -666,6 +698,7 @@ See `docs/DEPLOYMENT_GUIDE.md` for detailed deployment instructions.
 - [ ] **Settings:** Update profile, account, team info
 
 **UI/UX**
+
 - [ ] Responsive design (mobile, tablet, desktop)
 - [ ] Navigation works on all pages
 - [ ] Loading states appear
@@ -673,12 +706,14 @@ See `docs/DEPLOYMENT_GUIDE.md` for detailed deployment instructions.
 - [ ] Success notifications show
 
 ### Browser Compatibility
+
 - [ ] Chrome (desktop & mobile)
 - [ ] Firefox (desktop & mobile)
 - [ ] Safari (desktop & mobile)
 - [ ] Edge (desktop)
 
 ### Performance Testing
+
 - [ ] Page load time < 2 seconds
 - [ ] API response time < 1 second
 - [ ] Form submission < 500ms
@@ -687,6 +722,7 @@ See `docs/DEPLOYMENT_GUIDE.md` for detailed deployment instructions.
 ## 📈 Performance Metrics
 
 ### Build Performance
+
 - **Build Time:** ~60 seconds
 - **Bundle Size:** 87.4 kB (shared chunks)
 - **Total Routes:** 67 (50 pages + 17 API routes)
@@ -694,12 +730,14 @@ See `docs/DEPLOYMENT_GUIDE.md` for detailed deployment instructions.
 - **TypeScript:** 0 errors, 100% coverage
 
 ### Database Performance
+
 - **Tables:** 30+
 - **Indexes:** 50+
 - **RLS Policies:** 60+
 - **Query Time:** < 100ms (optimized)
 
 ### Code Metrics
+
 - **Total Files:** 200+
 - **Components:** 40+
 - **Services:** 13+
@@ -708,9 +746,11 @@ See `docs/DEPLOYMENT_GUIDE.md` for detailed deployment instructions.
 ## 🎯 Module Overview
 
 ### Contacts Module
+
 Track leads, prospects, and customers with complete profiles.
 
 **Features:**
+
 - Contact list with advanced search and filtering
 - 15+ contact fields (name, email, phone, company, title, etc.)
 - Activity timeline per contact
@@ -720,9 +760,11 @@ Track leads, prospects, and customers with complete profiles.
 **Paths:** `/contacts`, `/contacts/[id]`, `/contacts/new`, `/contacts/[id]/edit`
 
 ### Companies Module
+
 Manage organization information and relationships.
 
 **Features:**
+
 - Company profiles with multiple fields
 - Associated contacts and deals
 - Company statistics (total deals, revenue)
@@ -732,9 +774,11 @@ Manage organization information and relationships.
 **Paths:** `/companies`, `/companies/[id]`, `/companies/new`, `/companies/[id]/edit`
 
 ### Deals Module
+
 Manage sales pipeline and opportunities.
 
 **Features:**
+
 - Full deal lifecycle management
 - Customizable pipeline stages
 - Deal value and probability tracking
@@ -745,9 +789,11 @@ Manage sales pipeline and opportunities.
 **Paths:** `/deals`, `/deals/[id]`, `/deals/new`, `/deals/[id]/edit`
 
 ### Activities Module
+
 Track all customer interactions.
 
 **Features:**
+
 - 5 activity types: Call, Meeting, Email, Note, Task
 - Activity forms with pre-filled values
 - Complete timeline view per contact/company/deal
@@ -757,9 +803,11 @@ Track all customer interactions.
 **Paths:** `/activities`, `/activities/[id]`
 
 ### Campaigns Module
+
 Create and manage email campaigns.
 
 **Features:**
+
 - Campaign creation wizard
 - Email template selection
 - Contact list management
@@ -770,9 +818,11 @@ Create and manage email campaigns.
 **Paths:** `/campaigns`, `/campaigns/new`, `/campaigns/[id]/build`
 
 ### Forms Module
+
 Build and manage custom forms.
 
 **Features:**
+
 - 17 field types (text, email, phone, select, checkbox, etc.)
 - Drag-and-drop builder
 - Public form sharing
@@ -783,9 +833,11 @@ Build and manage custom forms.
 **Paths:** `/forms`, `/forms/new`, `/forms/[id]/edit`, `/f/[id]` (public)
 
 ### Email Module
+
 Manage email communication.
 
 **Features:**
+
 - Email template library
 - Smart BCC email capture
 - Email threading
@@ -795,9 +847,11 @@ Manage email communication.
 **Paths:** `/emails`, `/email-templates`
 
 ### Commission Module
+
 Track commission and manage payouts.
 
 **Features:**
+
 - Commission rate management
 - Automatic calculation (when deal status = "won")
 - Commission tracking and reporting
@@ -807,9 +861,11 @@ Track commission and manage payouts.
 **Paths:** `/commissions`, `/commissions/rates`, `/commissions/reports`
 
 ### Analytics Module
+
 Comprehensive business intelligence.
 
 **Features:**
+
 - Revenue analytics (total, by month, by user)
 - Pipeline analytics (by stage, win rate, cycle time)
 - Activity analytics (by type, leaderboard)
@@ -819,9 +875,11 @@ Comprehensive business intelligence.
 **Paths:** `/reports`, `/reports/revenue`, `/reports/pipeline`, `/reports/activity`
 
 ### Settings Module
+
 User and account management.
 
 **Features:**
+
 - Profile settings (name, phone, title)
 - Account settings (company info, plan)
 - Team management (view members, roles)
@@ -831,9 +889,11 @@ User and account management.
 **Paths:** `/settings`, `/settings/profile`, `/settings/team`, `/settings/billing`
 
 ### Onboarding Module
+
 Guided setup for new users.
 
 **Features:**
+
 - 5-step onboarding wizard
 - Welcome step
 - Company info collection
@@ -855,6 +915,7 @@ Guided setup for new users.
 ## 📝 Development Workflow
 
 ### Local Development
+
 ```bash
 # Start dev server
 npm run dev
@@ -870,6 +931,7 @@ npm run lint
 ```
 
 ### Creating New Features
+
 1. Create TypeScript types in `lib/types/`
 2. Create Zod validation in `lib/validations/`
 3. Create service in `lib/services/`
@@ -880,6 +942,7 @@ npm run lint
 8. Commit with descriptive message
 
 ### Database Changes
+
 1. Create migration file in `supabase/migrations/`
 2. Test in local Supabase instance
 3. Apply to production via Supabase dashboard
@@ -899,12 +962,14 @@ See `PRODUCTION_READINESS_CHECKLIST.md` for complete list.
 ## 🔜 Future Roadmap
 
 ### Immediate (v1.1)
+
 - [ ] Proper TypeScript typing throughout
 - [ ] Unit and integration tests
 - [ ] Email verification for signups
 - [ ] 2FA implementation
 
 ### Short-term (v1.2)
+
 - [ ] AI Lead Scoring (Gemini)
 - [ ] AI Research Assistant (Perplexity)
 - [ ] Advanced reporting and dashboards
@@ -912,6 +977,7 @@ See `PRODUCTION_READINESS_CHECKLIST.md` for complete list.
 - [ ] Performance optimization
 
 ### Medium-term (v1.3+)
+
 - [ ] Mobile app (React Native)
 - [ ] Workflow automation
 - [ ] Calendar integration
@@ -923,15 +989,18 @@ See `PRODUCTION_READINESS_CHECKLIST.md` for complete list.
 ## 🆘 Support & Help
 
 ### Documentation
+
 - Check relevant phase documentation for detailed information
 - Review API routes documentation for integrations
 - See security documentation for architecture details
 
 ### Issues & Bugs
+
 - GitHub Issues (private repository)
 - Check existing documentation for solutions
 
 ### Technical Support
+
 - **Email:** support@twinwicksllc.com
 - **Business:** info@twinwicksllc.com
 
@@ -946,6 +1015,7 @@ This is a proprietary application built for TwinWicks LLC. Unauthorized copying,
 **Built by:** TwinWicks LLC Development Team
 
 **Key Technologies:**
+
 - [Next.js](https://nextjs.org/) - React framework
 - [Supabase](https://supabase.com/) - PostgreSQL database
 - [Tailwind CSS](https://tailwindcss.com/) - Styling

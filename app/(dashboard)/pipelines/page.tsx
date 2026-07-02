@@ -1,40 +1,44 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Plus, Workflow } from 'lucide-react'
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Plus, Workflow } from "lucide-react";
 
 export default async function PipelinesPage() {
-  const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
   // Get user's account
   const { data: userData } = await supabase
-    .from('users')
-    .select('account_id')
-    .eq('id', user.id)
-    .single()
+    .from("users")
+    .select("account_id")
+    .eq("id", user.id)
+    .single();
 
   if (!userData?.account_id) {
-    return <div>No account found</div>
+    return <div>No account found</div>;
   }
 
   // Fetch pipelines with deal count
   const { data: pipelines, error } = await supabase
-    .from('pipelines')
-    .select(`
+    .from("pipelines")
+    .select(
+      `
       *,
       deals:deals(count)
-    `)
-    .eq('account_id', userData.account_id)
-    .order('created_at', { ascending: false })
+    `,
+    )
+    .eq("account_id", userData.account_id)
+    .order("created_at", { ascending: false });
 
   if (error) {
-    console.error('Error fetching pipelines:', error)
-    return <div>Error loading pipelines</div>
+    console.error("Error fetching pipelines:", error);
+    return <div>Error loading pipelines</div>;
   }
 
   return (
@@ -59,7 +63,7 @@ export default async function PipelinesPage() {
       <Card>
         <div className="p-6">
           <h2 className="text-xl font-semibold mb-4">All Pipelines</h2>
-          
+
           {!pipelines || pipelines.length === 0 ? (
             <div className="text-center py-12">
               <Workflow className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -77,7 +81,10 @@ export default async function PipelinesPage() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {pipelines.map((pipeline) => (
-                <Card key={pipeline.id} className="p-6 hover:shadow-lg transition-shadow">
+                <Card
+                  key={pipeline.id}
+                  className="p-6 hover:shadow-lg transition-shadow"
+                >
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <h3 className="text-lg font-semibold">{pipeline.name}</h3>
@@ -89,19 +96,25 @@ export default async function PipelinesPage() {
                     </div>
                     <Workflow className="h-5 w-5 text-muted-foreground" />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">
                       {pipeline.deals?.[0]?.count || 0} deals
                     </p>
-                    
+
                     <div className="flex gap-2">
-                      <Link href={`/pipelines/${pipeline.id}`} className="flex-1">
+                      <Link
+                        href={`/pipelines/${pipeline.id}`}
+                        className="flex-1"
+                      >
                         <Button variant="outline" size="sm" className="w-full">
                           View
                         </Button>
                       </Link>
-                      <Link href={`/pipelines/${pipeline.id}/edit`} className="flex-1">
+                      <Link
+                        href={`/pipelines/${pipeline.id}/edit`}
+                        className="flex-1"
+                      >
                         <Button variant="outline" size="sm" className="w-full">
                           Edit
                         </Button>
@@ -115,5 +128,5 @@ export default async function PipelinesPage() {
         </div>
       </Card>
     </div>
-  )
+  );
 }

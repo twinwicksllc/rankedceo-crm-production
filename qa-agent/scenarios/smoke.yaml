@@ -79,7 +79,7 @@ steps:
     severity: critical
     description: Fill admin email
     selector: '[data-testid="admin-email"], input#email, input[type="email"]'
-    value: '${QA_ADMIN_EMAIL}'
+    value: "${QA_ADMIN_EMAIL}"
     intent: Enter the admin email address into the login form
 
   - id: admin_fill_password
@@ -88,7 +88,7 @@ steps:
     severity: critical
     description: Fill admin password
     selector: '[data-testid="admin-password"], input#password, input[type="password"]'
-    value: '${QA_ADMIN_PASSWORD}'
+    value: "${QA_ADMIN_PASSWORD}"
     intent: Enter the admin password into the login form
 
   - id: admin_submit_login
@@ -248,7 +248,7 @@ steps:
     type: wait_for
     persona: client
     severity: warning
-    description: "Task 7 — Status strip (\"Your Launch Journey\") renders on overview tab"
+    description: 'Task 7 — Status strip ("Your Launch Journey") renders on overview tab'
     # StatusStrip renders inside overview-tab-content with role=list aria-label="Website launch progress"
     # The heading h2 reads "Your Launch Journey"
     selector: '[aria-label="Website launch progress"], [data-testid="overview-tab-content"] h2'

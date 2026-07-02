@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 // =============================================================================
 // Step 4: Template Selection  —  PR #94
@@ -23,47 +23,47 @@
 //   .ap-onboarding.ap-theme-light CSS overrides handle light mode.
 // =============================================================================
 
-import React, { useState, useCallback, useMemo } from 'react'
+import React, { useState, useCallback, useMemo } from "react";
 import {
   TemplatePreviewCard,
   TemplateLibraryModal,
-} from '@/components/waas/template-picker'
+} from "@/components/waas/template-picker";
 import {
   getRecommendedTemplates,
   getRecommendedTemplateSlugs,
   ACTIVE_TEMPLATES,
-} from '@/lib/waas/templates/registry'
+} from "@/lib/waas/templates/registry";
 
 // ---------------------------------------------------------------------------
 // SEO strategy → one-sentence rationale shown below the selection
 // ---------------------------------------------------------------------------
 
 const SEO_RATIONALE: Record<string, string> = {
-  'local-service':
+  "local-service":
     'This template front-loads your location + trade keywords in the H1 and NAP block, helping you rank in the local map pack for "[City] + [Trade]" searches.',
-  'trust-authority':
-    'Built around E-E-A-T signals — licences, certifications, and review schema — this layout tells Google your business is the authoritative choice in your area.',
-  'visual-portfolio':
+  "trust-authority":
+    "Built around E-E-A-T signals — licences, certifications, and review schema — this layout tells Google your business is the authoritative choice in your area.",
+  "visual-portfolio":
     'Gallery-first design lets you load up keyword-rich alt-text and project schema markup, driving traffic from portfolio and "before/after" searches.',
-  'emergency':
+  emergency:
     'Urgency signals ("24/7", "Same-Day", "Fast Response") are baked into the hero and schema, targeting high-intent emergency service queries.',
-  'consultative':
-    'Deep FAQ and How-It-Works sections earn featured snippets and long-tail traffic — ideal for trades where customers research before calling.',
-  'conversion':
-    'High CTA density with booking schema and offer keywords converts searchers directly into phone calls and booked appointments.',
-}
+  consultative:
+    "Deep FAQ and How-It-Works sections earn featured snippets and long-tail traffic — ideal for trades where customers research before calling.",
+  conversion:
+    "High CTA density with booking schema and offer keywords converts searchers directly into phone calls and booked appointments.",
+};
 
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
 
 interface Props {
-  primaryTrade:        string | null
-  selectedSlug:        string | null
-  setSelectedSlug:     (slug: string) => void
-  onNext:              () => void
-  onBack:              () => void
-  isLoading:           boolean
+  primaryTrade: string | null;
+  selectedSlug: string | null;
+  setSelectedSlug: (slug: string) => void;
+  onNext: () => void;
+  onBack: () => void;
+  isLoading: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -78,42 +78,42 @@ export function StepTemplateSelection({
   onBack,
   isLoading,
 }: Props) {
-  const [modalOpen, setModalOpen] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false);
 
   // Top-3 recommended templates for this trade
   const recommended = useMemo(
     () => getRecommendedTemplates(primaryTrade),
     [primaryTrade],
-  )
+  );
 
   // Fallback: if nothing selected yet, highlight the rank-1 template
   const defaultSlug = useMemo(
     () => getRecommendedTemplateSlugs(primaryTrade)[0],
     [primaryTrade],
-  )
+  );
 
-  const effectiveSlug = selectedSlug ?? null
+  const effectiveSlug = selectedSlug ?? null;
 
   // The fully resolved selected template object
   const selectedTemplate = useMemo(
-    () => ACTIVE_TEMPLATES.find(t => t.slug === effectiveSlug) ?? null,
+    () => ACTIVE_TEMPLATES.find((t) => t.slug === effectiveSlug) ?? null,
     [effectiveSlug],
-  )
+  );
 
   // Handle "Continue" — auto-select rank-1 if user never picked
   const handleContinue = useCallback(() => {
     if (!selectedSlug) {
-      setSelectedSlug(defaultSlug)
+      setSelectedSlug(defaultSlug);
     }
-    onNext()
-  }, [selectedSlug, defaultSlug, setSelectedSlug, onNext])
+    onNext();
+  }, [selectedSlug, defaultSlug, setSelectedSlug, onNext]);
 
   const handleModalConfirm = useCallback(() => {
-    setModalOpen(false)
-    onNext()
-  }, [onNext])
+    setModalOpen(false);
+    onNext();
+  }, [onNext]);
 
-  const stepNumber = 4  // this step's display number (out of 5)
+  const stepNumber = 4; // this step's display number (out of 5)
 
   return (
     <div>
@@ -121,7 +121,7 @@ export function StepTemplateSelection({
       <div className="mb-8">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/20 mb-4">
           <span className="text-violet-400 text-xs font-semibold uppercase tracking-wider">
-            Step {stepNumber} of 5  ·  Website Template
+            Step {stepNumber} of 5 · Website Template
           </span>
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white leading-tight">
@@ -136,7 +136,6 @@ export function StepTemplateSelection({
 
       {/* ── Recommended cards ── */}
       <div className="space-y-5">
-
         {/* Section label */}
         {primaryTrade && (
           <div className="flex items-center gap-2">
@@ -167,11 +166,17 @@ export function StepTemplateSelection({
             onClick={() => setModalOpen(true)}
             className="inline-flex items-center gap-1.5 text-sm text-slate-500 dark:text-white/40 hover:text-violet-600 dark:hover:text-violet-400 transition-colors font-medium group"
           >
-            <svg className="w-4 h-4 transition-transform group-hover:scale-110" fill="none" viewBox="0 0 16 16" strokeWidth={1.75} stroke="currentColor">
-              <rect x="1" y="1" width="5.5" height="5.5" rx="1.5"/>
-              <rect x="9.5" y="1" width="5.5" height="5.5" rx="1.5"/>
-              <rect x="1" y="9.5" width="5.5" height="5.5" rx="1.5"/>
-              <rect x="9.5" y="9.5" width="5.5" height="5.5" rx="1.5"/>
+            <svg
+              className="w-4 h-4 transition-transform group-hover:scale-110"
+              fill="none"
+              viewBox="0 0 16 16"
+              strokeWidth={1.75}
+              stroke="currentColor"
+            >
+              <rect x="1" y="1" width="5.5" height="5.5" rx="1.5" />
+              <rect x="9.5" y="1" width="5.5" height="5.5" rx="1.5" />
+              <rect x="1" y="9.5" width="5.5" height="5.5" rx="1.5" />
+              <rect x="9.5" y="9.5" width="5.5" height="5.5" rx="1.5" />
             </svg>
             Browse all 10 templates
           </button>
@@ -191,16 +196,32 @@ export function StepTemplateSelection({
               <div className="flex items-center gap-2.5 min-w-0">
                 {/* Palette mini-swatch */}
                 <div className="flex shrink-0 h-4 w-12 rounded-full overflow-hidden gap-px">
-                  <div className="flex-1" style={{ backgroundColor: selectedTemplate.preview_palette.primary }} />
-                  <div className="flex-1" style={{ backgroundColor: selectedTemplate.preview_palette.secondary }} />
-                  <div className="flex-1" style={{ backgroundColor: selectedTemplate.preview_palette.accent }} />
+                  <div
+                    className="flex-1"
+                    style={{
+                      backgroundColor: selectedTemplate.preview_palette.primary,
+                    }}
+                  />
+                  <div
+                    className="flex-1"
+                    style={{
+                      backgroundColor:
+                        selectedTemplate.preview_palette.secondary,
+                    }}
+                  />
+                  <div
+                    className="flex-1"
+                    style={{
+                      backgroundColor: selectedTemplate.preview_palette.accent,
+                    }}
+                  />
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
                     {selectedTemplate.name}
                   </p>
                   <p className="text-[11px] text-slate-500 dark:text-white/40 truncate">
-                    {selectedTemplate.mood}  ·  {selectedTemplate.tagline}
+                    {selectedTemplate.mood} · {selectedTemplate.tagline}
                   </p>
                 </div>
               </div>
@@ -216,14 +237,27 @@ export function StepTemplateSelection({
             {/* SEO rationale */}
             <div className="flex gap-2.5">
               <div className="shrink-0 mt-0.5 w-4 h-4 rounded-full bg-violet-500/15 flex items-center justify-center">
-                <svg className="w-2.5 h-2.5 text-violet-400" fill="none" viewBox="0 0 10 10" strokeWidth={2} stroke="currentColor">
-                  <circle cx="5" cy="5" r="4"/>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 3.5v2L6.5 7"/>
+                <svg
+                  className="w-2.5 h-2.5 text-violet-400"
+                  fill="none"
+                  viewBox="0 0 10 10"
+                  strokeWidth={2}
+                  stroke="currentColor"
+                >
+                  <circle cx="5" cy="5" r="4" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5 3.5v2L6.5 7"
+                  />
                 </svg>
               </div>
               <p className="text-[11px] text-slate-600 dark:text-white/40 leading-relaxed">
-                <span className="font-semibold text-slate-700 dark:text-white/60">SEO advantage: </span>
-                {SEO_RATIONALE[selectedTemplate.seo_strategy] ?? selectedTemplate.description}
+                <span className="font-semibold text-slate-700 dark:text-white/60">
+                  SEO advantage:{" "}
+                </span>
+                {SEO_RATIONALE[selectedTemplate.seo_strategy] ??
+                  selectedTemplate.description}
               </p>
             </div>
 
@@ -252,7 +286,6 @@ export function StepTemplateSelection({
             </p>
           </div>
         )}
-
       </div>
 
       {/* ── Footer buttons ── */}
@@ -273,17 +306,44 @@ export function StepTemplateSelection({
         >
           {isLoading ? (
             <>
-              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              <svg
+                className="w-5 h-5 animate-spin"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                />
               </svg>
               Saving…
             </>
           ) : (
             <>
-              {selectedSlug ? 'Continue with this template' : 'Use top recommendation & continue'}
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 20 20" strokeWidth={2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 10h12M10 4l6 6-6 6"/>
+              {selectedSlug
+                ? "Continue with this template"
+                : "Use top recommendation & continue"}
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 20 20"
+                strokeWidth={2}
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M4 10h12M10 4l6 6-6 6"
+                />
               </svg>
             </>
           )}
@@ -300,7 +360,7 @@ export function StepTemplateSelection({
         onConfirm={handleModalConfirm}
       />
     </div>
-  )
+  );
 }
 
-export default StepTemplateSelection
+export default StepTemplateSelection;

@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import { createBrowserClient } from '@supabase/ssr'
-import { type SupabaseClient } from '@supabase/supabase-js'
+import { createBrowserClient } from "@supabase/ssr";
+import { type SupabaseClient } from "@supabase/supabase-js";
 
 // ---------------------------------------------------------------------------
 // Audit-specific Supabase browser client
@@ -17,7 +17,7 @@ import { type SupabaseClient } from '@supabase/supabase-js'
 // The server client reads the same cookie name, so they must match.
 // ---------------------------------------------------------------------------
 
-let _auditClient: SupabaseClient | null = null
+let _auditClient: SupabaseClient | null = null;
 
 export function createAuditClient(): SupabaseClient {
   if (!_auditClient) {
@@ -26,7 +26,7 @@ export function createAuditClient(): SupabaseClient {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         auth: {
-          flowType: 'implicit',
+          flowType: "implicit",
           // Do NOT set detectSessionInUrl:true on the login page client.
           // When true, the Supabase browser client calls history.replaceState()
           // to strip tokens from the URL on mount.  In Next.js App Router that
@@ -38,8 +38,8 @@ export function createAuditClient(): SupabaseClient {
           autoRefreshToken: true,
           // No custom storageKey — must match what the server client reads
         },
-      }
-    )
+      },
+    );
   }
-  return _auditClient
+  return _auditClient;
 }

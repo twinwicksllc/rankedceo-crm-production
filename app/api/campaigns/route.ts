@@ -1,35 +1,36 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { CampaignService } from '@/lib/services/campaign-service';
-import { createCampaignSchema } from '@/lib/validations/campaign';
-import { createClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from "next/server";
+import { CampaignService } from "@/lib/services/campaign-service";
+import { createCampaignSchema } from "@/lib/validations/campaign";
+import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
     const userData = await supabase.auth.getUser();
-    
+
     if (!userData.data.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const searchParams = request.nextUrl.searchParams;
-    const type = searchParams.get('type');
-    const status = searchParams.get('status');
-    const search = searchParams.get('search');
+    const type = searchParams.get("type");
+    const status = searchParams.get("status");
+    const search = searchParams.get("search");
 
     const campaignService = new CampaignService();
     const campaigns = await campaignService.getCampaigns({
-      type: type as import('@/lib/types/campaign').CampaignType | undefined,
-      status: status as import('@/lib/types/campaign').CampaignStatus | undefined,
+      type: type as import("@/lib/types/campaign").CampaignType | undefined,
+      status: status as
+        import("@/lib/types/campaign").CampaignStatus | undefined,
       search: search || undefined,
     });
 
     return NextResponse.json({ campaigns });
   } catch (error: any) {
-    console.error('Error fetching campaigns:', error);
+    console.error("Error fetching campaigns:", error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch campaigns' },
-      { status: 500 }
+      { error: error.message || "Failed to fetch campaigns" },
+      { status: 500 },
     );
   }
 }
@@ -38,9 +39,9 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
     const userData = await supabase.auth.getUser();
-    
+
     if (!userData.data.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
@@ -53,10 +54,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ campaign }, { status: 201 });
   } catch (error: any) {
-    console.error('Error creating campaign:', error);
+    console.error("Error creating campaign:", error);
     return NextResponse.json(
-      { error: error.message || 'Failed to create campaign' },
-      { status: 500 }
+      { error: error.message || "Failed to create campaign" },
+      { status: 500 },
     );
   }
 }

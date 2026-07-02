@@ -1,70 +1,79 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { IndustryLogo } from '@/components/ui/industry-logo'
-import { createClient } from '@/lib/supabase/client'
-import { useRecaptcha } from '@/lib/hooks/use-recaptcha'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { IndustryLogo } from "@/components/ui/industry-logo";
+import { createClient } from "@/lib/supabase/client";
+import { useRecaptcha } from "@/lib/hooks/use-recaptcha";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function SmileLoginPage() {
-  const router = useRouter()
-  const { isReady, executeRecaptcha } = useRecaptcha()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const router = useRouter();
+  const { isReady, executeRecaptcha } = useRecaptcha();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+    e.preventDefault();
+    setError("");
+    setLoading(true);
 
     try {
-      if (!isReady) throw new Error('reCAPTCHA not loaded. Please refresh the page.')
+      if (!isReady)
+        throw new Error("reCAPTCHA not loaded. Please refresh the page.");
 
-      const token = await executeRecaptcha('smile_login')
-      if (!token) throw new Error('reCAPTCHA verification failed')
+      const token = await executeRecaptcha("smile_login");
+      if (!token) throw new Error("reCAPTCHA verification failed");
 
-      const verifyResponse = await fetch('/api/auth/verify-recaptcha', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, action: 'smile_login' }),
-      })
-      const verifyData = await verifyResponse.json()
+      const verifyResponse = await fetch("/api/auth/verify-recaptcha", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, action: "smile_login" }),
+      });
+      const verifyData = await verifyResponse.json();
       if (!verifyResponse.ok || !verifyData.valid) {
-        throw new Error(verifyData.error || 'reCAPTCHA verification failed')
+        throw new Error(verifyData.error || "reCAPTCHA verification failed");
       }
 
-      const supabase = createClient()
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+      const supabase = createClient();
+      const { data, error: signInError } =
+        await supabase.auth.signInWithPassword({ email, password });
 
-      if (signInError) throw signInError
+      if (signInError) throw signInError;
 
       // Industry isolation check — ensure this user belongs to Smile
-      const userIndustry = data.user?.user_metadata?.industry
-      if (userIndustry && userIndustry !== 'smile') {
-        await supabase.auth.signOut()
+      const userIndustry = data.user?.user_metadata?.industry;
+      if (userIndustry && userIndustry !== "smile") {
+        await supabase.auth.signOut();
         setError(
-          `This account is registered for ${userIndustry.charAt(0).toUpperCase() + userIndustry.slice(1)} Pro. Please visit the correct portal.`
-        )
-        return
+          `This account is registered for ${userIndustry.charAt(0).toUpperCase() + userIndustry.slice(1)} Pro. Please visit the correct portal.`,
+        );
+        return;
       }
 
-      router.push('/')
-      router.refresh()
+      router.push("/");
+      router.refresh();
     } catch (err: any) {
-      console.error('[SmileLogin] Error:', err.message)
-      setError(err.message || 'Failed to sign in')
+      console.error("[SmileLogin] Error:", err.message);
+      setError(err.message || "Failed to sign in");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-purple-100 p-4">
@@ -93,7 +102,7 @@ export default function SmileLoginPage() {
                 id="email"
                 type="email"
                 value={email}
-                onChange={e => setEmail(e.target.value)}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@practice.com"
                 required
                 className="border-purple-200 focus:ring-purple-500"
@@ -105,7 +114,7 @@ export default function SmileLoginPage() {
                 id="password"
                 type="password"
                 value={password}
-                onChange={e => setPassword(e.target.value)}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="Your password"
                 required
                 className="border-purple-200 focus:ring-purple-500"
@@ -117,31 +126,47 @@ export default function SmileLoginPage() {
               disabled={loading || !isReady}
               className="w-full bg-purple-600 hover:bg-purple-700 text-white"
             >
-              {loading ? 'Signing in...' : 'Sign In to Smile MakeOver'}
+              {loading ? "Signing in..." : "Sign In to Smile MakeOver"}
             </Button>
           </form>
         </CardContent>
 
         <CardFooter className="flex flex-col gap-2 text-center text-sm text-gray-500">
           <p>
-            Don&apos;t have an account?{' '}
-            <Link href="/signup" className="font-medium text-purple-600 hover:underline">
+            Don&apos;t have an account?{" "}
+            <Link
+              href="/signup"
+              className="font-medium text-purple-600 hover:underline"
+            >
               Create one
             </Link>
           </p>
+          <p className="text-xs text-gray-400">Smile MakeOver dentists only.</p>
           <p className="text-xs text-gray-400">
-            Smile MakeOver dentists only.
-          </p>
-          <p className="text-xs text-gray-400">
-            Wrong portal?{' '}
-            <a href="https://hvac.rankedceo.com" className="text-blue-500 hover:underline">HVAC</a>
-            {' · '}
-            <a href="https://plumbing.rankedceo.com" className="text-teal-500 hover:underline">Plumbing</a>
-            {' · '}
-            <a href="https://electrical.rankedceo.com" className="text-amber-500 hover:underline">Electrical</a>
+            Wrong portal?{" "}
+            <a
+              href="https://hvac.rankedceo.com"
+              className="text-blue-500 hover:underline"
+            >
+              HVAC
+            </a>
+            {" · "}
+            <a
+              href="https://plumbing.rankedceo.com"
+              className="text-teal-500 hover:underline"
+            >
+              Plumbing
+            </a>
+            {" · "}
+            <a
+              href="https://electrical.rankedceo.com"
+              className="text-amber-500 hover:underline"
+            >
+              Electrical
+            </a>
           </p>
         </CardFooter>
       </Card>
     </div>
-  )
+  );
 }

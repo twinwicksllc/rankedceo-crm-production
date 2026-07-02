@@ -1,6 +1,7 @@
 # Smile Assessment Debugging Guide
 
 ## Current Status
+
 ✅ Table exists
 ✅ account_id column exists
 ✅ Pool Account exists
@@ -10,8 +11,9 @@
 ### 1. Check Server Logs for Specific Error
 
 When you submit the form, check the server logs for the detailed error message. The updated code now logs:
+
 ```typescript
-console.error('[Smile Assessment] Submission failed:', {
+console.error("[Smile Assessment] Submission failed:", {
   code: insertError.code,
   message: insertError.message,
   details: insertError.details,
@@ -45,6 +47,7 @@ If you see an error code, here's what it means:
 Open browser DevTools (F12) → Network tab → Submit form → Look at the request payload
 
 **Check if these fields are being sent:**
+
 - patient_name ✓ (required)
 - patient_email ✓ (required)
 - patient_phone ✓ (required)
@@ -64,13 +67,15 @@ Open browser DevTools (F12) → Network tab → Submit form → Look at the requ
 ### 4. Verify Pool Account is Accessible
 
 Run this query in Supabase:
+
 ```sql
-SELECT id, name, slug, status 
-FROM accounts 
+SELECT id, name, slug, status
+FROM accounts
 WHERE id = '00000000-0000-4000-a000-000000000004';
 ```
 
 Expected result:
+
 - id: 00000000-0000-4000-a000-000000000004
 - name: Smile Pool Account
 - slug: smile-pool
@@ -128,14 +133,16 @@ INSERT INTO smile_assessments (
 ### 6. Check RLS Policies
 
 Run this to verify policies are correct:
+
 ```sql
 SELECT policyname, cmd, qual, with_check
-FROM pg_policies 
+FROM pg_policies
 WHERE tablename = 'smile_assessments'
 ORDER BY cmd;
 ```
 
 Expected policies:
+
 1. `Users can view account assessments` - SELECT
 2. `Users can update account assessments` - UPDATE
 3. `Users can delete account assessments` - DELETE
@@ -148,13 +155,13 @@ Verify the form is sending all required fields. Check `components/smile/assessme
 
 ```typescript
 // Make sure these are in the form:
-- patient_name (required)
-- patient_email (required)
-- patient_phone (required)
-- patient_dob (required)
-- dentist_name (required)
-- last_dental_visit (required)
-- dental_insurance (required)
+-patient_name(required) -
+  patient_email(required) -
+  patient_phone(required) -
+  patient_dob(required) -
+  dentist_name(required) -
+  last_dental_visit(required) -
+  dental_insurance(required);
 ```
 
 ### 8. Check the Form Submission Handler
@@ -180,6 +187,7 @@ The form should be calling the server action with all fields. Check if any field
 ## Next Steps
 
 **Please provide:**
+
 1. The exact error code from browser console or Vercel logs
 2. The form data being sent (from Network tab)
 3. Whether the direct insert in Supabase worked

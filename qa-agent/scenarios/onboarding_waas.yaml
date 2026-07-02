@@ -23,7 +23,6 @@ requires_stripe: false
 requires_email: false
 
 steps:
-
   # ═══════════════════════════════════════════════════════════════════════════
   # SCENE 1: Navigate to /get-started and verify Step 1 renders
   # ═══════════════════════════════════════════════════════════════════════════
@@ -70,7 +69,7 @@ steps:
     severity: critical
     description: Fill business name (legal_name)
     selector: 'input[name="legal_name"], input[placeholder*="Business name"], input[placeholder*="business name"]'
-    value: '${QA_ONBOARDING_BUSINESS_NAME}'
+    value: "${QA_ONBOARDING_BUSINESS_NAME}"
     intent: Enter the test business name into the legal_name field
 
   - id: ob2_fill_address
@@ -79,7 +78,7 @@ steps:
     severity: critical
     description: Fill physical address
     selector: 'input[name="physical_address"], input[placeholder*="address"], input[placeholder*="Address"]'
-    value: '123 Test Street'
+    value: "123 Test Street"
     intent: Enter a test street address
 
   - id: ob2_fill_city
@@ -88,7 +87,7 @@ steps:
     severity: critical
     description: Fill city
     selector: 'input[name="city"], input[placeholder*="City"]'
-    value: 'Denver'
+    value: "Denver"
     intent: Enter a test city
 
   - id: ob2_fill_state
@@ -97,7 +96,7 @@ steps:
     severity: critical
     description: Fill state
     selector: 'input[name="state"], input[placeholder*="State"]'
-    value: 'CO'
+    value: "CO"
     intent: Enter a test state abbreviation
 
   - id: ob2_fill_zip
@@ -106,7 +105,7 @@ steps:
     severity: critical
     description: Fill ZIP code
     selector: 'input[name="zip"], input[placeholder*="ZIP"], input[placeholder*="zip"]'
-    value: '80202'
+    value: "80202"
     intent: Enter a test ZIP code
 
   - id: ob2_fill_email
@@ -115,7 +114,7 @@ steps:
     severity: critical
     description: Fill customer email
     selector: 'input[name="email"], input[type="email"]'
-    value: '${QA_ONBOARDING_EMAIL}'
+    value: "${QA_ONBOARDING_EMAIL}"
     intent: Enter the test customer email address
 
   - id: ob2_select_trade
@@ -136,7 +135,7 @@ steps:
     severity: error
     description: Fill USP / about (optional field if visible)
     selector: 'input[name="usp"], textarea[name="usp"]'
-    value: 'Family-owned HVAC service with 15 years of experience in the Denver metro area.'
+    value: "Family-owned HVAC service with 15 years of experience in the Denver metro area."
     intent: >
       USP is an optional field in Step 1 (extended section). If the field is
       hidden behind "Show more options" it may not be visible — error severity
@@ -175,7 +174,7 @@ steps:
     severity: error
     description: Type a domain name into the domain input
     selector: 'input[placeholder*="acme"], input[placeholder*="domain"], input[aria-label*="domain"]'
-    value: 'qatest-hvac-denver'
+    value: "qatest-hvac-denver"
     intent: Enter a test domain name (without extension) into the domain input field
 
   - id: ob3_click_add_domain
@@ -289,7 +288,7 @@ steps:
     severity: critical
     description: Fill the USP field (required for Step 5 submission)
     selector: 'textarea[name="usp"], input[name="usp"]'
-    value: 'Denver HVAC experts — 15 years experience, same-day service, licensed & insured.'
+    value: "Denver HVAC experts — 15 years experience, same-day service, licensed & insured."
     intent: >
       The usp field has a minimum length of 10 characters and is required.
       Without it, handleSubmit will not fire and the step cannot advance.
@@ -300,7 +299,7 @@ steps:
     severity: warning
     description: Fill Calendly booking URL (optional)
     selector: 'input[name="calendly_url"], input[type="url"][placeholder*="calendly"]'
-    value: 'https://calendly.com/qa-test-hvac'
+    value: "https://calendly.com/qa-test-hvac"
     intent: >
       calendly_url is optional (can be empty string). Filling it tests the URL
       validation path (must be a valid URL or empty).

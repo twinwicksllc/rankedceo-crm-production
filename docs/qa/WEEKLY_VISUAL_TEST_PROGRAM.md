@@ -5,6 +5,7 @@ Use this script for a non-technical visual pass of Audit + WaaS.
 If you need the full end-to-end completion path, use [WAAS_AUDIT_CUSTOMER_ADMIN_WALKTHROUGH.md](WAAS_AUDIT_CUSTOMER_ADMIN_WALKTHROUGH.md).
 
 ## Fill In Before You Start
+
 - Base URL: ____________________
 - Review Token: ____________________
 - Audit ID: ____________________
@@ -13,6 +14,7 @@ If you need the full end-to-end completion path, use [WAAS_AUDIT_CUSTOMER_ADMIN_
 - Browser/Device: ____________________
 
 ## Direct Entry Links
+
 - Login: <BASE_URL>/login
 - Admin Dashboard: <BASE_URL>/admin/dashboard
 - Audit Start: <BASE_URL>/audit/start
@@ -29,6 +31,7 @@ If you need the full end-to-end completion path, use [WAAS_AUDIT_CUSTOMER_ADMIN_
   - <BASE_URL>/waas/audits
 
 ## 25-Minute Weekly Script
+
 1. Open Login and sign in.
 2. Open Admin Dashboard and confirm queue/table loads.
 3. Open Audit Start and submit one valid URL.
@@ -42,27 +45,30 @@ If you need the full end-to-end completion path, use [WAAS_AUDIT_CUSTOMER_ADMIN_
 11. Open the 3 redirect URLs and confirm each lands on Admin Dashboard.
 
 ## Visual Scorecard
+
 Mark each item: Pass, Minor Issue, Fail, or N/A.
 
-| Area | Link Used | Result | Notes |
-|---|---|---|---|
-| Login and session | /login |  |  |
-| Admin dashboard readability | /admin/dashboard |  |  |
-| Audit start clarity | /audit/start |  |  |
-| Audit result readability | /audit/<AUDIT_ID> |  |  |
-| PDF quality and branding | /api/audit/<AUDIT_ID>/pdf |  |  |
-| Client review clarity | /review/<REVIEW_TOKEN> |  |  |
-| Editor usability | /edit/<REVIEW_TOKEN>?tab=edit |  |  |
-| Approval UX clarity | /edit/<REVIEW_TOKEN>?tab=edit&approve=1 |  |  |
-| Preview visual quality | /edit/<REVIEW_TOKEN>/preview |  |  |
-| Admin domain requests | /admin/dashboard/domain-requests |  |  |
-| Redirect behavior | /waas, /waas/tenants, /waas/audits |  |  |
+| Area                        | Link Used                               | Result | Notes |
+| --------------------------- | --------------------------------------- | ------ | ----- |
+| Login and session           | /login                                  |        |       |
+| Admin dashboard readability | /admin/dashboard                        |        |       |
+| Audit start clarity         | /audit/start                            |        |       |
+| Audit result readability    | /audit/<AUDIT_ID>                       |        |       |
+| PDF quality and branding    | /api/audit/<AUDIT_ID>/pdf               |        |       |
+| Client review clarity       | /review/<REVIEW_TOKEN>                  |        |       |
+| Editor usability            | /edit/<REVIEW_TOKEN>?tab=edit           |        |       |
+| Approval UX clarity         | /edit/<REVIEW_TOKEN>?tab=edit&approve=1 |        |       |
+| Preview visual quality      | /edit/<REVIEW_TOKEN>/preview            |        |       |
+| Admin domain requests       | /admin/dashboard/domain-requests        |        |       |
+| Redirect behavior           | /waas, /waas/tenants, /waas/audits      |        |       |
 
 ## Pass Rule
+
 - Pass: No Fail rows and no more than 2 Minor Issue rows.
 - Needs Follow-up: Any Fail, or 3+ Minor Issue rows.
 
 ## Defect Capture
+
 - Link/route:
 - Expected:
 - Actual:
@@ -77,11 +83,13 @@ Use this version for client/external users. No admin-only pages.
 For the full completion path, start with [WAAS_AUDIT_CUSTOMER_ADMIN_WALKTHROUGH.md](WAAS_AUDIT_CUSTOMER_ADMIN_WALKTHROUGH.md).
 
 ## Fill In Before You Start
+
 - Base URL: ____________________
 - Review Token: ____________________
 - Audit ID: ____________________
 
 ## Client-Safe Entry Links
+
 - Login: <BASE_URL>/login
 - Audit Start: <BASE_URL>/audit/start
 - Audit Result: <BASE_URL>/audit/<AUDIT_ID>
@@ -92,6 +100,7 @@ For the full completion path, start with [WAAS_AUDIT_CUSTOMER_ADMIN_WALKTHROUGH.
 - Client Preview: <BASE_URL>/edit/<REVIEW_TOKEN>/preview
 
 ## 15-Minute Client UAT Script
+
 1. Open Login and sign in.
 2. Open Audit Start and confirm instructions are easy to understand.
 3. Submit one audit and wait for completion.
@@ -103,19 +112,21 @@ For the full completion path, start with [WAAS_AUDIT_CUSTOMER_ADMIN_WALKTHROUGH.
 9. Open Client Preview and check mobile and desktop readability.
 
 ## Client UAT Scorecard
+
 Mark each item: Pass, Minor Issue, Fail, or N/A.
 
-| Area | Link Used | Result | Notes |
-|---|---|---|---|
-| Login and session | /login |  |  |
-| Audit start clarity | /audit/start |  |  |
-| Audit result readability | /audit/<AUDIT_ID> |  |  |
-| PDF quality and branding | /api/audit/<AUDIT_ID>/pdf |  |  |
-| Client review clarity | /review/<REVIEW_TOKEN> |  |  |
-| Editor usability | /edit/<REVIEW_TOKEN>?tab=edit |  |  |
-| Approval UX clarity | /edit/<REVIEW_TOKEN>?tab=edit&approve=1 |  |  |
-| Preview visual quality | /edit/<REVIEW_TOKEN>/preview |  |  |
+| Area                     | Link Used                               | Result | Notes |
+| ------------------------ | --------------------------------------- | ------ | ----- |
+| Login and session        | /login                                  |        |       |
+| Audit start clarity      | /audit/start                            |        |       |
+| Audit result readability | /audit/<AUDIT_ID>                       |        |       |
+| PDF quality and branding | /api/audit/<AUDIT_ID>/pdf               |        |       |
+| Client review clarity    | /review/<REVIEW_TOKEN>                  |        |       |
+| Editor usability         | /edit/<REVIEW_TOKEN>?tab=edit           |        |       |
+| Approval UX clarity      | /edit/<REVIEW_TOKEN>?tab=edit&approve=1 |        |       |
+| Preview visual quality   | /edit/<REVIEW_TOKEN>/preview            |        |       |
 
 ## Client UAT Pass Rule
+
 - Pass: No Fail rows and no more than 2 Minor Issue rows.
 - Needs Follow-up: Any Fail, or 3+ Minor Issue rows.

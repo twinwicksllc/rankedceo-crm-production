@@ -18,18 +18,18 @@
 
 ## Recently Merged (last 5 PRs)
 
-| PR | Title | Merged |
-|----|-------|--------|
-| #137 | chore(deps): bump axios from 1.15.2 to 1.16.1 (Dependabot) | 2026-06-04 |
+| PR   | Title                                                                     | Merged     |
+| ---- | ------------------------------------------------------------------------- | ---------- |
+| #137 | chore(deps): bump axios from 1.15.2 to 1.16.1 (Dependabot)                | 2026-06-04 |
 | #136 | chore(qa): extend smoke, full-lifecycle & enduser scenarios for Tasks 7-9 | 2026-05-27 |
-| #135 | feat: branded PDF audit + deep link email (Task 9) | 2026-05-27 |
+| #135 | feat: branded PDF audit + deep link email (Task 9)                        | 2026-05-27 |
 
 ---
 
 ## Open Pull Requests
 
-| PR | Title | Notes |
-|----|-------|-------|
+| PR   | Title                                                          | Notes                                                                  |
+| ---- | -------------------------------------------------------------- | ---------------------------------------------------------------------- |
 | #139 | fix(tsconfig): correct ignoreDeprecations "6.0" → "5.0" + docs | **Merge this** — fixes Vercel build failures + adds STATE/CONTEXT docs |
 
 > **Note:** PR #138 (docs-only branch) is superseded by #139 and should be closed without merging.
@@ -39,16 +39,19 @@
 ## In Progress / Planned
 
 ### 1. Terms & Policies Site Integration
+
 - [ ] Integrate a terms and policies site into `crm.rankedceo.com` domain
 - [ ] Determine approach: subdirectory vs. subdomain vs. embedded page
 - [ ] Note: no direct access to WordPress parent site at `rankedceo.com` — integrations must be API/embed-based
 
 ### 2. WaaS (Website as a Service) Expansion
+
 - [ ] WaaS foundation is in place (`app/waas/`, `app/waas-plans/`, `lib/waas/`, `components/waas/`)
 - [ ] Review `WAAS_FOUNDATION.md` for current feature spec
 - [ ] Continue from `PRODUCT_SPRINT_ROADMAP.md`
 
 ### 3. Industry Templates
+
 - [ ] See `INDUSTRY_TEMPLATES_PLAN.md` for spec
 - [ ] Affects: `components/industry/`, `app/landing-electrical/`, `app/landing-hvac/`, `app/landing-plumbing/`
 

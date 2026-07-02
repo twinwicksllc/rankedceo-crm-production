@@ -23,6 +23,7 @@ Into the SQL Editor and click **Run**.
 ### Step 3: Verify the Migration
 
 After running the migration, check the results:
+
 - You should see messages like: "Created account and user record for: your@email.com"
 - No error messages should appear
 
@@ -32,9 +33,9 @@ Run this query to verify:
 
 ```sql
 -- Check if tables exist
-SELECT table_name 
-FROM information_schema.tables 
-WHERE table_schema = 'public' 
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
 AND table_name IN ('users', 'accounts');
 
 -- Check if your user has an account
@@ -47,6 +48,7 @@ WHERE u.id = auth.uid();
 ### Step 5: Test the Application
 
 After the migration:
+
 1. Go to: https://crm.rankedceo.com
 2. Refresh the page
 3. You should now see:
@@ -65,10 +67,13 @@ After the migration:
 ## If You Encounter Errors
 
 ### Error: "relation 'users' already exists"
+
 This means the tables were already created. You can skip the migration or delete the tables first.
 
 ### Error: "function handle_new_user() already exists"
+
 Run these commands first:
+
 ```sql
 DROP FUNCTION IF EXISTS handle_new_user() CASCADE;
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
@@ -77,6 +82,7 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 Then run the migration again.
 
 ### Error: "permission denied"
+
 Make sure you're running this as the project owner in Supabase.
 
 ---
@@ -84,6 +90,7 @@ Make sure you're running this as the project owner in Supabase.
 ## Need Help?
 
 If you have any issues:
+
 1. Copy the error message
 2. Share it with me
 3. I'll help you resolve it

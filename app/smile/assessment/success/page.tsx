@@ -1,11 +1,11 @@
-import Image from 'next/image'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { CheckCircle } from 'lucide-react'
-import { ChatWidget } from '@/components/agent/chat-widget'
+import Image from "next/image";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { CheckCircle } from "lucide-react";
+import { ChatWidget } from "@/components/agent/chat-widget";
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default function AssessmentSuccessPage() {
   return (
@@ -34,7 +34,9 @@ export default function AssessmentSuccessPage() {
           </h1>
 
           <p className="text-gray-600 mb-6">
-            Thank you for completing your smile assessment. Your dentist will review your information and contact you shortly to discuss your smile transformation options.
+            Thank you for completing your smile assessment. Your dentist will
+            review your information and contact you shortly to discuss your
+            smile transformation options.
           </p>
 
           <div className="rounded-lg bg-purple-50 border border-purple-200 p-4 mb-6">
@@ -42,7 +44,8 @@ export default function AssessmentSuccessPage() {
               <strong>What's Next?</strong>
             </p>
             <p className="text-sm text-gray-600 mt-2">
-              Your dentist will review your assessment and reach out within 1-2 business days to schedule a consultation.
+              Your dentist will review your assessment and reach out within 1-2
+              business days to schedule a consultation.
             </p>
           </div>
 
@@ -60,5 +63,5 @@ export default function AssessmentSuccessPage() {
         position="bottom-right"
       />
     </div>
-  )
+  );
 }

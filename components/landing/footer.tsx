@@ -1,4 +1,12 @@
-import { Phone, Mail, MapPin, Users, Stethoscope, Shield, FileText } from "lucide-react"
+import {
+  Phone,
+  Mail,
+  MapPin,
+  Users,
+  Stethoscope,
+  Shield,
+  FileText,
+} from "lucide-react";
 
 const footerLinks: Record<string, { label: string; href: string }[]> = {
   Product: [
@@ -27,7 +35,7 @@ const footerLinks: Record<string, { label: string; href: string }[]> = {
     { label: "HIPAA Compliance", href: "#" },
     { label: "BAA", href: "#" },
   ],
-}
+};
 
 export function Footer() {
   return (
@@ -66,7 +74,11 @@ export function Footer() {
           <div className="col-span-2">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 rounded-full bg-[#5a67d8] flex items-center justify-center">
-                <svg viewBox="0 0 24 24" className="w-7 h-7 text-white" fill="currentColor">
+                <svg
+                  viewBox="0 0 24 24"
+                  className="w-7 h-7 text-white"
+                  fill="currentColor"
+                >
                   <path d="M12 2C8 2 5 5 4 8C3 5 0 2 0 2C0 2 0 8 0 14C0 22 8 26 12 30C16 26 24 22 24 14C24 8 24 2 24 2C24 2 21 5 20 8C19 5 16 2 12 2Z" />
                 </svg>
               </div>
@@ -74,20 +86,29 @@ export function Footer() {
                 <h3 className="text-xl font-bold font-serif">
                   Smile<span className="text-[#5a67d8]">MakeOver</span>
                 </h3>
-                <p className="text-xs text-white/60">Affordable Veneers & Cosmetic Dentistry</p>
+                <p className="text-xs text-white/60">
+                  Affordable Veneers & Cosmetic Dentistry
+                </p>
               </div>
             </div>
 
             <p className="text-white/70 text-sm mb-6 max-w-xs">
-              Transform your smile with affordable, membership-based cosmetic dentistry without traditional insurance.
+              Transform your smile with affordable, membership-based cosmetic
+              dentistry without traditional insurance.
             </p>
 
             <div className="space-y-3">
-              <a href="tel:1-800-555-SMILE" className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors">
+              <a
+                href="tel:1-800-555-SMILE"
+                className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors"
+              >
                 <Phone className="w-4 h-4" />
                 (800) 555-SMILE
               </a>
-              <a href="mailto:hello@smilemakeover.com" className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors">
+              <a
+                href="mailto:hello@smilemakeover.com"
+                className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors"
+              >
                 <Mail className="w-4 h-4" />
                 hello@smilemakeover.com
               </a>
@@ -149,12 +170,22 @@ export function Footer() {
             © {new Date().getFullYear()} RankedCEO LLC. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
-            <a href="https://crm.rankedceo.com/privacy" className="text-xs text-white/50 hover:text-white transition-colors">Privacy Policy</a>
-            <a href="https://crm.rankedceo.com/terms" className="text-xs text-white/50 hover:text-white transition-colors">Terms of Service</a>
+            <a
+              href="https://crm.rankedceo.com/privacy"
+              className="text-xs text-white/50 hover:text-white transition-colors"
+            >
+              Privacy Policy
+            </a>
+            <a
+              href="https://crm.rankedceo.com/terms"
+              className="text-xs text-white/50 hover:text-white transition-colors"
+            >
+              Terms of Service
+            </a>
             <span className="text-xs text-white/40">Nationwide Network</span>
           </div>
         </div>
       </div>
     </footer>
-  )
+  );
 }

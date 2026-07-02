@@ -1,12 +1,18 @@
-import { createClient } from '@/lib/supabase/server'
-import { NextResponse } from 'next/server'
+import { createClient } from "@/lib/supabase/server";
+import { NextResponse } from "next/server";
 
 export async function POST() {
-  const supabase = await createClient()
-  await supabase.auth.signOut()
-  
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+
   // Redirect to homepage after logout
-  return NextResponse.redirect(new URL('/', process.env.NEXT_PUBLIC_APP_URL || 'https://crm.rankedceo.com'), {
-    status: 302
-  })
+  return NextResponse.redirect(
+    new URL(
+      "/",
+      process.env.NEXT_PUBLIC_APP_URL || "https://crm.rankedceo.com",
+    ),
+    {
+      status: 302,
+    },
+  );
 }

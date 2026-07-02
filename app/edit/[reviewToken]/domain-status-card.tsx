@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 // =============================================================================
 // app/edit/[reviewToken]/domain-status-card.tsx
@@ -11,30 +11,51 @@
 // Phase 6.3
 // =============================================================================
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition } from "react";
 import {
   submitDomainChangeRequest,
   getClientDomainRequests,
   type ClientDomainChangeRequest,
-} from '@/lib/waas/actions/client-edit'
+} from "@/lib/waas/actions/client-edit";
 
 // ---------------------------------------------------------------------------
 // Status display
 // ---------------------------------------------------------------------------
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; description: string }> = {
-  pending:      { label: 'Pending',      color: 'text-amber-500',   description: 'Your request has been received — we\'ll review it shortly.' },
-  acknowledged: { label: 'Acknowledged', color: 'text-sky-500',     description: 'Our team has reviewed your request and is working on it.' },
-  actioned:     { label: 'Actioned',     color: 'text-emerald-500', description: 'Done! Check the site status card for your updated domain.' },
-  rejected:     { label: 'Rejected',     color: 'text-red-500',     description: 'We couldn\'t fulfil this domain request. See the note below.' },
-}
+const STATUS_CONFIG: Record<
+  string,
+  { label: string; color: string; description: string }
+> = {
+  pending: {
+    label: "Pending",
+    color: "text-amber-500",
+    description: "Your request has been received — we'll review it shortly.",
+  },
+  acknowledged: {
+    label: "Acknowledged",
+    color: "text-sky-500",
+    description: "Our team has reviewed your request and is working on it.",
+  },
+  actioned: {
+    label: "Actioned",
+    color: "text-emerald-500",
+    description: "Done! Check the site status card for your updated domain.",
+  },
+  rejected: {
+    label: "Rejected",
+    color: "text-red-500",
+    description: "We couldn't fulfil this domain request. See the note below.",
+  },
+};
 
 function RequestStatusRow({ req }: { req: ClientDomainChangeRequest }) {
-  const sc = STATUS_CONFIG[req.status] ?? STATUS_CONFIG.pending
+  const sc = STATUS_CONFIG[req.status] ?? STATUS_CONFIG.pending;
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-sm font-mono font-semibold text-slate-800">{req.requestedDomain}</span>
+        <span className="text-sm font-mono font-semibold text-slate-800">
+          {req.requestedDomain}
+        </span>
         <span className={`text-xs font-medium ${sc.color}`}>{sc.label}</span>
       </div>
       <p className="text-[11px] text-slate-500">{sc.description}</p>
@@ -44,7 +65,7 @@ function RequestStatusRow({ req }: { req: ClientDomainChangeRequest }) {
         </p>
       )}
     </div>
-  )
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -52,10 +73,10 @@ function RequestStatusRow({ req }: { req: ClientDomainChangeRequest }) {
 // ---------------------------------------------------------------------------
 
 interface DomainStatusCardProps {
-  reviewToken:    string
-  currentDomain:  string | null    // live domain if set
-  currentSubdomain: string | null  // subdomain if set
-  initialRequests: ClientDomainChangeRequest[]
+  reviewToken: string;
+  currentDomain: string | null; // live domain if set
+  currentSubdomain: string | null; // subdomain if set
+  initialRequests: ClientDomainChangeRequest[];
 }
 
 export function DomainStatusCard({
@@ -64,42 +85,45 @@ export function DomainStatusCard({
   currentSubdomain,
   initialRequests,
 }: DomainStatusCardProps) {
-  const [requests,  setRequests]   = useState<ClientDomainChangeRequest[]>(initialRequests)
-  const [showForm,  setShowForm]   = useState(false)
-  const [domain,    setDomain]     = useState('')
-  const [note,      setNote]       = useState('')
-  const [error,     setError]      = useState<string | null>(null)
-  const [success,   setSuccess]    = useState<string | null>(null)
-  const [isPending, startTransition] = useTransition()
+  const [requests, setRequests] =
+    useState<ClientDomainChangeRequest[]>(initialRequests);
+  const [showForm, setShowForm] = useState(false);
+  const [domain, setDomain] = useState("");
+  const [note, setNote] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setSuccess(null)
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
 
     startTransition(async () => {
       const result = await submitDomainChangeRequest({
         reviewToken,
         requestedDomain: domain,
-        note:            note || undefined,
-      })
+        note: note || undefined,
+      });
 
       if (result.success && result.data) {
-        setSuccess('Request submitted! We\'ll be in touch shortly.')
-        setDomain('')
-        setNote('')
-        setShowForm(false)
+        setSuccess("Request submitted! We'll be in touch shortly.");
+        setDomain("");
+        setNote("");
+        setShowForm(false);
 
         // Refresh list
-        const refreshed = await getClientDomainRequests(reviewToken)
-        if (refreshed.success && refreshed.data) setRequests(refreshed.data)
+        const refreshed = await getClientDomainRequests(reviewToken);
+        if (refreshed.success && refreshed.data) setRequests(refreshed.data);
       } else {
-        setError(result.error ?? 'Submission failed. Please try again.')
+        setError(result.error ?? "Submission failed. Please try again.");
       }
-    })
-  }
+    });
+  };
 
-  const hasPendingRequest = requests.some(r => r.status === 'pending' || r.status === 'acknowledged')
+  const hasPendingRequest = requests.some(
+    (r) => r.status === "pending" || r.status === "acknowledged",
+  );
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
@@ -121,14 +145,22 @@ export function DomainStatusCard({
         {currentDomain ? (
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            <span className="text-sm font-mono font-semibold text-slate-800">{currentDomain}</span>
-            <span className="text-[10px] text-emerald-600 font-medium">Live</span>
+            <span className="text-sm font-mono font-semibold text-slate-800">
+              {currentDomain}
+            </span>
+            <span className="text-[10px] text-emerald-600 font-medium">
+              Live
+            </span>
           </div>
         ) : currentSubdomain ? (
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-sky-400" />
-            <span className="text-sm font-mono text-slate-600">{currentSubdomain}.rankedceo.com</span>
-            <span className="text-[10px] text-sky-500 font-medium">Subdomain</span>
+            <span className="text-sm font-mono text-slate-600">
+              {currentSubdomain}.rankedceo.com
+            </span>
+            <span className="text-[10px] text-sky-500 font-medium">
+              Subdomain
+            </span>
           </div>
         ) : (
           <p className="text-sm text-slate-400">No domain configured yet.</p>
@@ -148,7 +180,10 @@ export function DomainStatusCard({
         {showForm && (
           <form onSubmit={handleSubmit} className="space-y-3 pt-1">
             <div>
-              <label className="text-[11px] font-medium text-slate-500" htmlFor="domain-input">
+              <label
+                className="text-[11px] font-medium text-slate-500"
+                htmlFor="domain-input"
+              >
                 Requested domain
               </label>
               <input
@@ -162,7 +197,10 @@ export function DomainStatusCard({
               />
             </div>
             <div>
-              <label className="text-[11px] font-medium text-slate-500" htmlFor="note-input">
+              <label
+                className="text-[11px] font-medium text-slate-500"
+                htmlFor="note-input"
+              >
                 Note (optional)
               </label>
               <textarea
@@ -175,9 +213,7 @@ export function DomainStatusCard({
               />
             </div>
 
-            {error && (
-              <p className="text-xs text-red-500">{error}</p>
-            )}
+            {error && <p className="text-xs text-red-500">{error}</p>}
 
             <div className="flex gap-2">
               <button
@@ -185,11 +221,14 @@ export function DomainStatusCard({
                 disabled={isPending || !domain.trim()}
                 className="flex-1 rounded-lg bg-slate-900 py-2 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-40 transition-colors"
               >
-                {isPending ? 'Submitting…' : 'Submit Request'}
+                {isPending ? "Submitting…" : "Submit Request"}
               </button>
               <button
                 type="button"
-                onClick={() => { setShowForm(false); setError(null) }}
+                onClick={() => {
+                  setShowForm(false);
+                  setError(null);
+                }}
                 className="rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-500 hover:bg-slate-50 transition-colors"
               >
                 Cancel
@@ -199,5 +238,5 @@ export function DomainStatusCard({
         )}
       </div>
     </div>
-  )
+  );
 }

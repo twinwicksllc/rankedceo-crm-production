@@ -1,9 +1,11 @@
 # Emergency Fix - Hard-Coded Fallbacks for Production
 
 ## Problem
+
 Debug logs ([CRITICAL] and [FINAL-CHECK]) were not appearing in Vercel, indicating the code wasn't running in production.
 
 ## Root Cause
+
 The previous fixes relied on complex logic that might not be executing correctly in the production environment.
 
 ## Solutions Applied
@@ -11,23 +13,25 @@ The previous fixes relied on complex logic that might not be executing correctly
 ### Task 1: Hard-Coded Name Fallback ✅
 
 **Added Local Regex Check Before Supabase Upsert:**
+
 ```typescript
 // HARD-CODED FALLBACK: Force local regex check to avoid 'Valued Lead'
-let lead_name = leadInfo.name || 'Valued Lead'
-if (!lead_name || lead_name === 'Valued Lead') {
+let lead_name = leadInfo.name || "Valued Lead";
+if (!lead_name || lead_name === "Valued Lead") {
   const userMessages = updatedMessages
-    .filter(m => m.role === 'user')
-    .map(m => m.content)
-    .join(' ')
-  const nameMatch = userMessages.match(/I am ([A-Z][a-z]+ [A-Z][a-z]+)/)
+    .filter((m) => m.role === "user")
+    .map((m) => m.content)
+    .join(" ");
+  const nameMatch = userMessages.match(/I am ([A-Z][a-z]+ [A-Z][a-z]+)/);
   if (nameMatch && nameMatch[1]) {
-    lead_name = nameMatch[1]
-    console.error('[EMERGENCY] Name found via hard-coded fallback:', lead_name)
+    lead_name = nameMatch[1];
+    console.error("[EMERGENCY] Name found via hard-coded fallback:", lead_name);
   }
 }
 ```
 
 **What This Does:**
+
 - Forces a local regex check before Supabase upsert
 - Pattern: `/I am ([A-Z][a-z]+ [A-Z][a-z]+)/`
 - Matches: "I am John Doe", "I am Jane Smith"
@@ -37,22 +41,30 @@ if (!lead_name || lead_name === 'Valued Lead') {
 ### Task 2: Force Frontend Redirect ✅
 
 **Added hasShowBookingAction Check:**
+
 ```typescript
 // EMERGENCY: Force redirect if AI response contains "show_booking" regardless of triggerBooking
-const hasShowBookingAction = data.action === 'show_booking' || data.message.toLowerCase().includes('show_booking')
+const hasShowBookingAction =
+  data.action === "show_booking" ||
+  data.message.toLowerCase().includes("show_booking");
 
 if ((shouldBook || hasShowBookingAction) && data.calendlyUrl) {
-  console.error('[FINAL-CHECK] REDIRECT TRIGGERED')
-  console.error('[FINAL-CHECK] Calendly URL:', data.calendlyUrl)
-  console.error('[FINAL-CHECK] Trigger sources:', { shouldBook, hasShowBookingAction, action: data.action })
-  
+  console.error("[FINAL-CHECK] REDIRECT TRIGGERED");
+  console.error("[FINAL-CHECK] Calendly URL:", data.calendlyUrl);
+  console.error("[FINAL-CHECK] Trigger sources:", {
+    shouldBook,
+    hasShowBookingAction,
+    action: data.action,
+  });
+
   // Immediate redirect - no setTimeout, no state checks
-  window.location.assign(data.calendlyUrl)
-  return
+  window.location.assign(data.calendlyUrl);
+  return;
 }
 ```
 
 **What This Does:**
+
 - Checks if AI action is 'show_booking'
 - Checks if AI message contains 'show_booking'
 - Redirects immediately if either condition is true
@@ -62,6 +74,7 @@ if ((shouldBook || hasShowBookingAction) && data.calendlyUrl) {
 ### Task 3: Verify File Persistence ✅
 
 **Confirmed Files Contain Required Code:**
+
 ```bash
 # route.ts
 grep -n "\[CRITICAL\]" app/api/agent/chat/route.ts
@@ -75,6 +88,7 @@ grep -n "\[FINAL-CHECK\]" components/agent/chat-widget.tsx
 ```
 
 **Latest Commit Hash:**
+
 ```
 1ff8eed - emergency: Add hard-coded fallbacks to ensure code runs in production
 ```
@@ -82,12 +96,14 @@ grep -n "\[FINAL-CHECK\]" components/agent/chat-widget.tsx
 ## Expected Logs in Production
 
 ### Vercel Logs (route.ts)
+
 ```
 [EMERGENCY] Name found via hard-coded fallback: John Doe
 [CRITICAL] Upserting Lead: { name: "John Doe", email: "john@example.com", phone: "", industry: "hvac" }
 ```
 
 ### Browser Console (chat-widget.tsx)
+
 ```
 [FINAL-CHECK] REDIRECT TRIGGERED
 [FINAL-CHECK] Calendly URL: https://calendly.com/...
@@ -118,6 +134,7 @@ grep -n "\[FINAL-CHECK\]" components/agent/chat-widget.tsx
 **Repository:** twinwicksllc/rankedceo-crm-production
 
 ## Deployment Status
+
 - ✅ Committed to main branch
 - ✅ Pushed to GitHub
 - 🔄 Vercel auto-deploying (1-2 minutes)
@@ -132,14 +149,18 @@ grep -n "\[FINAL-CHECK\]" components/agent/chat-widget.tsx
 ## Technical Details
 
 ### Why Hard-Coded Fallback Works
+
 The regex pattern `/I am ([A-Z][a-z]+ [A-Z][a-z]+)/` is executed locally before the Supabase upsert, ensuring:
+
 - No reliance on LLM extraction
 - No reliance on complex extraction logic
 - Immediate name capture from user message
 - Guaranteed to execute in production
 
 ### Why hasShowBookingAction Works
+
 The check `data.action === 'show_booking' || data.message.toLowerCase().includes('show_booking')` ensures:
+
 - Redirect triggers even if triggerBooking is false
 - Redirect triggers even if triggerBooking is a string
 - Redirect triggers if AI sets action to 'show_booking'
@@ -156,7 +177,9 @@ The check `data.action === 'show_booking' || data.message.toLowerCase().includes
 - [ ] Browser redirects to Calendly immediately
 
 ## Documentation
+
 This emergency fix adds hard-coded fallbacks that are guaranteed to execute in production, ensuring:
+
 1. Names are always captured via local regex
 2. Redirects always trigger when AI says "show_booking"
 3. Logs are easy to find in Vercel and browser console

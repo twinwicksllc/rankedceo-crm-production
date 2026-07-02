@@ -1,106 +1,129 @@
 # reCAPTCHA Authentication Fix - Complete
 
 ## Problem
+
 Users were unable to sign up at `crm.rankedceo.com` due to reCAPTCHA verification failure.
 
 ## Root Cause
+
 The reCAPTCHA Enterprise integration was failing because:
+
 1. The `@google-cloud/recaptcha-enterprise` package requires Google Cloud authentication
 2. No Google Cloud service account credentials were configured in the environment
 3. The service was trying to authenticate with Google Cloud but failing silently
 4. This caused all authentication attempts to fail
 
 ## Solution
+
 Migrated from **reCAPTCHA Enterprise** to **reCAPTCHA v3 Standard** (the simpler, more common approach).
 
 ### Changes Made
 
 #### 1. Updated reCAPTCHA Service (`lib/services/recaptcha-service.ts`)
+
 **Before:** Used `@google-cloud/recaptcha-enterprise` client library
+
 ```typescript
-import { RecaptchaEnterpriseServiceClient } from '@google-cloud/recaptcha-enterprise';
+import { RecaptchaEnterpriseServiceClient } from "@google-cloud/recaptcha-enterprise";
 const client = new RecaptchaEnterpriseServiceClient();
 const [response] = await client.createAssessment(request);
 ```
 
 **After:** Uses Google's standard verification API
+
 ```typescript
-const verificationUrl = new URL('https://www.google.com/recaptcha/api/siteverify');
-verificationUrl.searchParams.append('secret', this.secretKey);
-verificationUrl.searchParams.append('response', token);
-const response = await fetch(verificationUrl.toString(), { method: 'POST' });
+const verificationUrl = new URL(
+  "https://www.google.com/recaptcha/api/siteverify",
+);
+verificationUrl.searchParams.append("secret", this.secretKey);
+verificationUrl.searchParams.append("response", token);
+const response = await fetch(verificationUrl.toString(), { method: "POST" });
 ```
 
 **Benefits:**
+
 - No Google Cloud authentication required
 - Simple HTTP API call
 - Works immediately with just secret key
 - Lower dependency overhead
 
 #### 2. Updated Root Layout (`app/layout.tsx`)
+
 **Before:**
+
 ```html
 <script src="https://www.google.com/recaptcha/enterprise.js?render=SITE_KEY"></script>
 ```
 
 **After:**
+
 ```html
 <script src="https://www.google.com/recaptcha/api.js?render=SITE_KEY"></script>
 ```
 
 #### 3. Fixed TypeScript Global Declarations
+
 **Before:**
+
 ```typescript
 declare global {
   interface Window {
     grecaptcha?: {
       enterprise?: {
-        execute: (siteKey: string, options: { action: string }) => Promise<string>
-      }
-    }
+        execute: (
+          siteKey: string,
+          options: { action: string },
+        ) => Promise<string>;
+      };
+    };
   }
 }
 ```
 
 **After:**
+
 ```typescript
 declare global {
   interface Window {
     grecaptcha?: {
-      execute: (siteKey: string, options: { action: string }) => Promise<string>
-      ready: (callback: () => void) => void
-    }
+      execute: (
+        siteKey: string,
+        options: { action: string },
+      ) => Promise<string>;
+      ready: (callback: () => void) => void;
+    };
   }
 }
 ```
 
 #### 4. Fixed grecaptcha API Usage
+
 **Before:**
+
 ```typescript
-const token = await window.grecaptcha?.enterprise.execute(
-  SITE_KEY,
-  { action: 'login' }
-)
+const token = await window.grecaptcha?.enterprise.execute(SITE_KEY, {
+  action: "login",
+});
 ```
 
 **After:**
+
 ```typescript
-const grecaptcha = window.grecaptcha
+const grecaptcha = window.grecaptcha;
 grecaptcha.ready(async () => {
-  const token = await grecaptcha.execute(
-    SITE_KEY,
-    { action: 'login' }
-  )
-})
+  const token = await grecaptcha.execute(SITE_KEY, { action: "login" });
+});
 ```
 
 #### 5. Removed Unused Dependencies
+
 - Removed `@google-cloud/recaptcha-enterprise` from package.json
 - This removed 79 packages and reduced bundle size
 
 ## Environment Variables Required
 
 ### For Vercel Production:
+
 ```bash
 # reCAPTCHA v3
 NEXT_PUBLIC_RECAPTCHA_SITE_KEY=6LeaeFUsAAAAAKr8KyPJu0B5njqb3Ha_bqeUrWQ6
@@ -108,6 +131,7 @@ RECAPTCHA_SECRET_KEY=your_secret_key_here
 ```
 
 ### How to Get Secret Key:
+
 1. Go to: https://www.google.com/recaptcha/admin
 2. Find your site key: `6LeaeFUsAAAAAKr8KyPJu0B5njqb3Ha_bqeUrWQ6`
 3. Copy the corresponding Secret Key
@@ -116,6 +140,7 @@ RECAPTCHA_SECRET_KEY=your_secret_key_here
 ## Build Verification
 
 ✅ **Build Status:** Success
+
 - All 21 routes generated successfully
 - No TypeScript errors
 - No compilation errors
@@ -123,6 +148,7 @@ RECAPTCHA_SECRET_KEY=your_secret_key_here
 - Signup page: 2.92 kB (157 kB First Load JS)
 
 **Routes Generated:**
+
 - `/` - Homepage
 - `/login` - Login with reCAPTCHA v3 ✅
 - `/signup` - Signup with reCAPTCHA v3 ✅
@@ -147,6 +173,7 @@ RECAPTCHA_SECRET_KEY=your_secret_key_here
 - `/pipelines/new` - New pipeline
 
 **API Routes:**
+
 - `/api/activities` - Activities CRUD
 - `/api/activities/[id]` - Single activity
 - `/api/activities/stats` - Activity statistics
@@ -156,12 +183,14 @@ RECAPTCHA_SECRET_KEY=your_secret_key_here
 ## Deployment Steps
 
 ### 1. Add Secret Key to Vercel
+
 1. Go to Vercel Dashboard → Settings → Environment Variables
 2. Add variable: `RECAPTCHA_SECRET_KEY`
 3. Value: [Your secret key from Google reCAPTCHA admin]
 4. Deploy the project
 
 ### 2. Verify the Fix
+
 1. Wait for Vercel deployment to complete
 2. Navigate to: https://crm.rankedceo.com/signup
 3. Fill out the signup form
@@ -169,6 +198,7 @@ RECAPTCHA_SECRET_KEY=your_secret_key_here
 5. **Expected:** Account created successfully, redirected to dashboard
 
 ### 3. Test Login
+
 1. Navigate to: https://crm.rankedceo.com/login
 2. Enter credentials
 3. Submit the form
@@ -202,20 +232,24 @@ RECAPTCHA_SECRET_KEY=your_secret_key_here
 ## Security Features
 
 ### Invisible Protection
+
 - No visible checkbox for legitimate users
 - Seamless user experience
 - Background risk assessment
 
 ### Risk Scoring
+
 - Score 0.0 - 1.0 (higher = more trustworthy)
 - Default threshold: 0.5
 - Adjustable based on your needs
 
 ### Action-Based Scoring
+
 - Different actions (login, signup) for context-aware scoring
 - Helps Google's ML learn your traffic patterns
 
 ### Fraud Prevention
+
 - Detects automated bots
 - Protects against credential stuffing
 - Prevents mass account creation
@@ -224,21 +258,27 @@ RECAPTCHA_SECRET_KEY=your_secret_key_here
 ## Troubleshooting
 
 ### Issue: "reCAPTCHA verification failed"
+
 **Solutions:**
+
 1. Verify `RECAPTCHA_SECRET_KEY` is set in Vercel
 2. Check Vercel deployment logs for errors
 3. Verify site key matches the one in Google Console
 4. Check browser console for client-side errors
 
 ### Issue: "reCAPTCHA not loaded"
+
 **Solutions:**
+
 1. Check internet connection
 2. Verify script tag is correct in layout
 3. Check for ad blockers or browser extensions
 4. Try incognito/private browser mode
 
 ### Issue: Score too low for legitimate users
+
 **Solutions:**
+
 1. Adjust threshold in `app/api/auth/verify-recaptcha/route.ts`
 2. Change `if (score === null || score < 0.5)` to `if (score === null || score < 0.3)`
 3. Monitor scores in Google reCAPTCHA admin console

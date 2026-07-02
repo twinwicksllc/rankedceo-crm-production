@@ -1,93 +1,120 @@
-'use client'
+"use client";
 
 // =============================================================================
 // Step 2: Domain Wishlist
 // =============================================================================
 
-import React, { useState } from 'react'
-import type { DomainWishlistItem } from '@/lib/waas/types'
+import React, { useState } from "react";
+import type { DomainWishlistItem } from "@/lib/waas/types";
 
-const EXTENSIONS: DomainWishlistItem['extension'][] = [
-  '.com',
-  '.net',
-  '.org',
-  '.co',
-  '.io',
-  '.ai',
-  '.us',
-  '.biz',
-  '.info',
-  '.pro',
-  '.services',
-]
+const EXTENSIONS: DomainWishlistItem["extension"][] = [
+  ".com",
+  ".net",
+  ".org",
+  ".co",
+  ".io",
+  ".ai",
+  ".us",
+  ".biz",
+  ".info",
+  ".pro",
+  ".services",
+];
 
 interface Props {
-  domains:    DomainWishlistItem[]
-  setDomains: (d: DomainWishlistItem[]) => void
-  onNext:     () => void
-  onBack:     () => void
-  isLoading:  boolean
+  domains: DomainWishlistItem[];
+  setDomains: (d: DomainWishlistItem[]) => void;
+  onNext: () => void;
+  onBack: () => void;
+  isLoading: boolean;
 }
 
-export function StepDomainWishlist({ domains, setDomains, onNext, onBack, isLoading }: Props) {
-  const [domainInput, setDomainInput] = useState('')
-  const [selectedExt, setSelectedExt] = useState<DomainWishlistItem['extension']>('.com')
-  const [inputError,  setInputError]  = useState('')
+export function StepDomainWishlist({
+  domains,
+  setDomains,
+  onNext,
+  onBack,
+  isLoading,
+}: Props) {
+  const [domainInput, setDomainInput] = useState("");
+  const [selectedExt, setSelectedExt] =
+    useState<DomainWishlistItem["extension"]>(".com");
+  const [inputError, setInputError] = useState("");
 
-  const MAX_DOMAINS = 3
+  const MAX_DOMAINS = 3;
 
   const sanitizeDomain = (val: string) =>
-    val.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '')
+    val
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "")
+      .replace(/^-+|-+$/g, "");
 
   const handleAdd = () => {
-    setInputError('')
-    const name = sanitizeDomain(domainInput.trim())
-    if (!name) { setInputError('Please enter a domain name.'); return }
-    if (name.length < 2) { setInputError('Domain must be at least 2 characters.'); return }
-    if (domains.length >= MAX_DOMAINS) { setInputError('Maximum 3 domains allowed.'); return }
-    if (domains.some(d => d.domain_name === name && d.extension === selectedExt)) {
-      setInputError('That domain + extension combo is already added.')
-      return
+    setInputError("");
+    const name = sanitizeDomain(domainInput.trim());
+    if (!name) {
+      setInputError("Please enter a domain name.");
+      return;
+    }
+    if (name.length < 2) {
+      setInputError("Domain must be at least 2 characters.");
+      return;
+    }
+    if (domains.length >= MAX_DOMAINS) {
+      setInputError("Maximum 3 domains allowed.");
+      return;
+    }
+    if (
+      domains.some((d) => d.domain_name === name && d.extension === selectedExt)
+    ) {
+      setInputError("That domain + extension combo is already added.");
+      return;
     }
     const newDomain: DomainWishlistItem = {
       domain_name: name,
-      extension:   selectedExt,
-      priority:    (domains.length + 1) as 1 | 2 | 3,
-    }
-    setDomains([...domains, newDomain])
-    setDomainInput('')
-  }
+      extension: selectedExt,
+      priority: (domains.length + 1) as 1 | 2 | 3,
+    };
+    setDomains([...domains, newDomain]);
+    setDomainInput("");
+  };
 
   const handleRemove = (i: number) => {
     const updated = domains
       .filter((_, idx) => idx !== i)
-      .map((d, idx) => ({ ...d, priority: (idx + 1) as 1 | 2 | 3 }))
-    setDomains(updated)
-  }
+      .map((d, idx) => ({ ...d, priority: (idx + 1) as 1 | 2 | 3 }));
+    setDomains(updated);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') { e.preventDefault(); handleAdd() }
-  }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleAdd();
+    }
+  };
 
-  const priorityLabels = ['1st Choice', '2nd Choice', '3rd Choice']
+  const priorityLabels = ["1st Choice", "2nd Choice", "3rd Choice"];
   const priorityColors = [
-    'from-blue-500 to-blue-600',
-    'from-violet-500 to-violet-600',
-    'from-indigo-500 to-indigo-600',
-  ]
+    "from-blue-500 to-blue-600",
+    "from-violet-500 to-violet-600",
+    "from-indigo-500 to-indigo-600",
+  ];
 
   return (
     <div>
       {/* Header */}
       <div className="mb-8">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 mb-4">
-          <span className="text-blue-400 text-xs font-semibold uppercase tracking-wider">Step 2 of 4</span>
+          <span className="text-blue-400 text-xs font-semibold uppercase tracking-wider">
+            Step 2 of 4
+          </span>
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white leading-tight">
           Choose your dream domain
         </h1>
         <p className="text-slate-500 dark:text-white/50 mt-2 text-sm sm:text-base">
-          Add up to 3 domain preferences. We'll check availability and secure the best option for you.
+          Add up to 3 domain preferences. We'll check availability and secure
+          the best option for you.
         </p>
       </div>
 
@@ -102,7 +129,7 @@ export function StepDomainWishlist({ domains, setDomains, onNext, onBack, isLoad
             <input
               type="text"
               value={domainInput}
-              onChange={e => setDomainInput(e.target.value)}
+              onChange={(e) => setDomainInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="acmeplumbing"
               maxLength={50}
@@ -111,14 +138,18 @@ export function StepDomainWishlist({ domains, setDomains, onNext, onBack, isLoad
             {/* Extension selector */}
             <select
               value={selectedExt}
-              onChange={e => setSelectedExt(e.target.value as DomainWishlistItem['extension'])}
+              onChange={(e) =>
+                setSelectedExt(
+                  e.target.value as DomainWishlistItem["extension"],
+                )
+              }
               className="h-full px-3 bg-slate-200 dark:bg-white/10 text-slate-900 dark:text-white text-sm font-medium border-l border-slate-300 dark:border-white/10 outline-none cursor-pointer [&_option]:bg-[#0A0F1E]"
             >
-              {EXTENSIONS.map(ext => (
+              {EXTENSIONS.map((ext) => (
                 <option
                   key={ext}
                   value={ext}
-                  style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}
+                  style={{ backgroundColor: "#0A0F1E", color: "#E5E7EB" }}
                 >
                   {ext}
                 </option>
@@ -140,7 +171,8 @@ export function StepDomainWishlist({ domains, setDomains, onNext, onBack, isLoad
           <p className="mt-2 text-xs text-red-400">{inputError}</p>
         )}
         <p className="mt-2 text-xs text-slate-400 dark:text-white/30">
-          {domains.length}/{MAX_DOMAINS} domains added • Letters, numbers, and hyphens only
+          {domains.length}/{MAX_DOMAINS} domains added • Letters, numbers, and
+          hyphens only
         </p>
       </div>
 
@@ -153,7 +185,9 @@ export function StepDomainWishlist({ domains, setDomains, onNext, onBack, isLoad
               className="flex items-center gap-4 p-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10"
             >
               {/* Priority badge */}
-              <div className={`flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br ${priorityColors[i]} text-white text-xs font-bold shrink-0`}>
+              <div
+                className={`flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br ${priorityColors[i]} text-white text-xs font-bold shrink-0`}
+              >
                 {i + 1}
               </div>
 
@@ -167,13 +201,17 @@ export function StepDomainWishlist({ domains, setDomains, onNext, onBack, isLoad
                     {d.extension}
                   </span>
                 </div>
-                <span className="text-slate-400 dark:text-white/30 text-xs">{priorityLabels[i]}</span>
+                <span className="text-slate-400 dark:text-white/30 text-xs">
+                  {priorityLabels[i]}
+                </span>
               </div>
 
               {/* Status badge */}
               <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 shrink-0">
                 <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                <span className="text-amber-400 text-xs font-medium">Requested</span>
+                <span className="text-amber-400 text-xs font-medium">
+                  Requested
+                </span>
               </div>
 
               {/* Remove */}
@@ -183,7 +221,12 @@ export function StepDomainWishlist({ domains, setDomains, onNext, onBack, isLoad
                 className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 dark:text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
+                  <path
+                    d="M2 2l10 10M12 2L2 12"
+                    stroke="currentColor"
+                    strokeWidth="1.75"
+                    strokeLinecap="round"
+                  />
                 </svg>
               </button>
             </div>
@@ -192,7 +235,11 @@ export function StepDomainWishlist({ domains, setDomains, onNext, onBack, isLoad
       ) : (
         <div className="flex flex-col items-center justify-center py-10 rounded-xl border border-dashed border-slate-300 dark:border-white/10 mb-8">
           <div className="text-3xl mb-3">🌐</div>
-          <p className="text-slate-400 dark:text-white/30 text-sm text-center">No domains added yet.<br/>Add at least one to continue.</p>
+          <p className="text-slate-400 dark:text-white/30 text-sm text-center">
+            No domains added yet.
+            <br />
+            Add at least one to continue.
+          </p>
         </div>
       )}
 
@@ -213,17 +260,35 @@ export function StepDomainWishlist({ domains, setDomains, onNext, onBack, isLoad
         >
           {isLoading ? (
             <>
-              <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeOpacity="0.25"/>
-                <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/>
+              <svg
+                className="animate-spin w-5 h-5"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="white"
+                  strokeWidth="3"
+                  strokeOpacity="0.25"
+                />
+                <path
+                  d="M12 2a10 10 0 0 1 10 10"
+                  stroke="white"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
               </svg>
               Saving…
             </>
           ) : (
-            <>Continue to Brand Identity <span className="ml-1">→</span></>
+            <>
+              Continue to Brand Identity <span className="ml-1">→</span>
+            </>
           )}
         </button>
       </div>
     </div>
-  )
+  );
 }

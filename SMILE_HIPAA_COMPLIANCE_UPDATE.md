@@ -1,34 +1,41 @@
 # Smile Assessment HIPAA Compliance Update
 
 ## Summary
+
 Updated the Smile Assessment server action to use `returning: 'minimal'` for enhanced HIPAA compliance, ensuring no PII (Personally Identifiable Information) is returned in database insert responses.
 
 ## Changes Made
 
 ### 1. Server Action Update (`lib/actions/smile-assessment.ts`)
+
 **Before:**
+
 ```typescript
 const { data: assessment, error: insertError } = await supabase
-  .from('smile_assessments')
+  .from("smile_assessments")
   .insert(data)
-  .select('id')
-  .single()
+  .select("id")
+  .single();
 ```
 
 **After:**
+
 ```typescript
 const { error: insertError } = await supabase
-  .from('smile_assessments')
-  .insert(data, { returning: 'minimal' })
+  .from("smile_assessments")
+  .insert(data, { returning: "minimal" });
 ```
 
 **Impact:**
+
 - Removes PII from response by using minimal return type
 - Updated `SubmitAssessmentResult` interface to remove `assessmentId` property
 - Enhanced HIPAA compliance by not returning any data from insert operations
 
 ### 2. Database Migration (`supabase/migrations/20240222000004_smile_assessments_clean_slate.sql`)
+
 Created a clean slate migration that:
+
 - Drops existing `smile_assessments` table and policies
 - Recreates table with proper column types (TEXT[] for array fields)
 - Implements HIPAA-hardened RLS policies:
@@ -44,16 +51,19 @@ Created a clean slate migration that:
 ## HIPAA Compliance Improvements
 
 ### Data Minimization
+
 - No PII returned in insert responses
 - Minimal return type ensures no accidental data exposure
 - Error messages sanitized to avoid PII leakage
 
 ### Access Control
+
 - Public submissions only to Pool Account (ID: `00000000-0000-4000-a000-000000000004`)
 - Authenticated users can only see their account's data
 - Foreign key references properly secured
 
 ### Audit Trail
+
 - All PII handled server-side only
 - No PII logged in error messages
 - Database-level RLS enforcement
@@ -61,18 +71,22 @@ Created a clean slate migration that:
 ## Migration Instructions
 
 ### For the Database
+
 Run the following migration in Supabase SQL Editor:
+
 ```bash
 supabase/migrations/20240222000004_smile_assessments_clean_slate.sql
 ```
 
 This will:
+
 1. Drop existing table and policies (if any)
 2. Create new table with correct schema
 3. Apply HIPAA-hardened security policies
 4. Set up proper permissions
 
 ### For the Application
+
 The code changes are already committed and pushed to GitHub (commit `2dcb01a`). Vercel will auto-deploy these changes.
 
 ## Testing Checklist

@@ -110,43 +110,43 @@ WAAS_SUPABASE_SERVICE_ROLE_KEY=eyJ...  # Server-side only, never expose to brows
 
 ### `tenants` Table
 
-| Column              | Type                   | Description                                        |
-|---------------------|------------------------|----------------------------------------------------|
-| `id`                | UUID (PK)              | Auto-generated                                     |
-| `slug`              | TEXT UNIQUE NOT NULL   | URL-safe identifier (e.g. `client-a`)              |
-| `domain`            | TEXT UNIQUE            | Custom domain (e.g. `client-a.com`)                |
-| `subdomain`         | TEXT UNIQUE            | Subdomain (e.g. `client-a` → `client-a.rankedceo.com`) |
-| `brand_config`      | JSONB                  | Colors, logo, fonts, contact info, social links    |
-| `package_tier`      | ENUM                   | `hosting` \| `standard` \| `premium`              |
-| `status`            | ENUM                   | `onboarding` \| `active` \| `suspended` \| `cancelled` |
-| `crm_account_id`    | UUID (soft ref)        | Links to CRM `accounts.id` (different DB)          |
-| `domain_verified`   | BOOLEAN                | Whether custom domain CNAME is verified            |
-| `target_industry`   | TEXT                   | e.g. `plumbing`, `hvac`, `real_estate`             |
-| `target_location`   | TEXT                   | e.g. `Chicago, IL`                                 |
+| Column            | Type                 | Description                                            |
+| ----------------- | -------------------- | ------------------------------------------------------ |
+| `id`              | UUID (PK)            | Auto-generated                                         |
+| `slug`            | TEXT UNIQUE NOT NULL | URL-safe identifier (e.g. `client-a`)                  |
+| `domain`          | TEXT UNIQUE          | Custom domain (e.g. `client-a.com`)                    |
+| `subdomain`       | TEXT UNIQUE          | Subdomain (e.g. `client-a` → `client-a.rankedceo.com`) |
+| `brand_config`    | JSONB                | Colors, logo, fonts, contact info, social links        |
+| `package_tier`    | ENUM                 | `hosting` \| `standard` \| `premium`                   |
+| `status`          | ENUM                 | `onboarding` \| `active` \| `suspended` \| `cancelled` |
+| `crm_account_id`  | UUID (soft ref)      | Links to CRM `accounts.id` (different DB)              |
+| `domain_verified` | BOOLEAN              | Whether custom domain CNAME is verified                |
+| `target_industry` | TEXT                 | e.g. `plumbing`, `hvac`, `real_estate`                 |
+| `target_location` | TEXT                 | e.g. `Chicago, IL`                                     |
 
 ### `audits` Table
 
-| Column              | Type                   | Description                                        |
-|---------------------|------------------------|----------------------------------------------------|
-| `id`                | UUID (PK)              | Auto-generated, used for polling                   |
-| `tenant_id`         | UUID (FK → tenants)    | Null for prospect audits                           |
-| `audit_type`        | ENUM                   | `prospect` \| `tenant` \| `competitor`            |
-| `status`            | ENUM                   | `pending` \| `running` \| `completed` \| `failed` \| `expired` |
-| `target_url`        | TEXT NOT NULL          | The website being audited                          |
-| `competitor_urls`   | TEXT[]                 | Up to 5 competitor URLs                            |
-| `report_data`       | JSONB                  | Full SEO report (scores, rankings, issues, etc.)   |
-| `requestor_*`       | TEXT                   | Lead capture fields (name, email, phone, company)  |
-| `expires_at`        | TIMESTAMPTZ            | Default: 90 days from creation                     |
+| Column            | Type                | Description                                                    |
+| ----------------- | ------------------- | -------------------------------------------------------------- |
+| `id`              | UUID (PK)           | Auto-generated, used for polling                               |
+| `tenant_id`       | UUID (FK → tenants) | Null for prospect audits                                       |
+| `audit_type`      | ENUM                | `prospect` \| `tenant` \| `competitor`                         |
+| `status`          | ENUM                | `pending` \| `running` \| `completed` \| `failed` \| `expired` |
+| `target_url`      | TEXT NOT NULL       | The website being audited                                      |
+| `competitor_urls` | TEXT[]              | Up to 5 competitor URLs                                        |
+| `report_data`     | JSONB               | Full SEO report (scores, rankings, issues, etc.)               |
+| `requestor_*`     | TEXT                | Lead capture fields (name, email, phone, company)              |
+| `expires_at`      | TIMESTAMPTZ         | Default: 90 days from creation                                 |
 
 ### Row Level Security
 
-| Table     | Policy                    | Who                              |
-|-----------|---------------------------|----------------------------------|
-| `tenants` | Read active tenants       | `anon` (for middleware lookup)   |
-| `tenants` | Full CRUD                 | `waas_admin` role                |
-| `audits`  | Insert prospect audits    | `anon` (public audit tool)       |
-| `audits`  | Read own prospect audits  | `anon`                           |
-| `audits`  | Full CRUD                 | `waas_admin` role                |
+| Table     | Policy                   | Who                            |
+| --------- | ------------------------ | ------------------------------ |
+| `tenants` | Read active tenants      | `anon` (for middleware lookup) |
+| `tenants` | Full CRUD                | `waas_admin` role              |
+| `audits`  | Insert prospect audits   | `anon` (public audit tool)     |
+| `audits`  | Read own prospect audits | `anon`                         |
+| `audits`  | Full CRUD                | `waas_admin` role              |
 
 ---
 
@@ -176,15 +176,16 @@ const brand = JSON.parse(headers().get(WAAS_HEADERS.BRAND_CONFIG) ?? '{}')
 
 ### Tenant APIs (Auth Required)
 
-| Method | Endpoint                    | Description              |
-|--------|-----------------------------|--------------------------|
-| GET    | `/api/waas/tenants`         | List all tenants         |
-| POST   | `/api/waas/tenants`         | Create tenant            |
-| GET    | `/api/waas/tenants/[id]`    | Get tenant by ID         |
-| PATCH  | `/api/waas/tenants/[id]`    | Update tenant            |
-| DELETE | `/api/waas/tenants/[id]`    | Soft delete tenant       |
+| Method | Endpoint                 | Description        |
+| ------ | ------------------------ | ------------------ |
+| GET    | `/api/waas/tenants`      | List all tenants   |
+| POST   | `/api/waas/tenants`      | Create tenant      |
+| GET    | `/api/waas/tenants/[id]` | Get tenant by ID   |
+| PATCH  | `/api/waas/tenants/[id]` | Update tenant      |
+| DELETE | `/api/waas/tenants/[id]` | Soft delete tenant |
 
 **POST /api/waas/tenants** request body:
+
 ```json
 {
   "slug": "client-a",
@@ -210,13 +211,14 @@ const brand = JSON.parse(headers().get(WAAS_HEADERS.BRAND_CONFIG) ?? '{}')
 
 ### Audit APIs
 
-| Method | Endpoint                              | Auth     | Description                    |
-|--------|---------------------------------------|----------|--------------------------------|
-| GET    | `/api/waas/audits`                    | Required | List audits (admin)            |
-| POST   | `/api/waas/audits`                    | None     | Create prospect audit (public) |
-| GET    | `/api/waas/audits/[id]/status`        | None     | Poll audit status              |
+| Method | Endpoint                       | Auth     | Description                    |
+| ------ | ------------------------------ | -------- | ------------------------------ |
+| GET    | `/api/waas/audits`             | Required | List audits (admin)            |
+| POST   | `/api/waas/audits`             | None     | Create prospect audit (public) |
+| GET    | `/api/waas/audits/[id]/status` | None     | Poll audit status              |
 
 **POST /api/waas/audits** request body:
+
 ```json
 {
   "target_url": "https://old-plumber-site.com",
@@ -233,6 +235,7 @@ const brand = JSON.parse(headers().get(WAAS_HEADERS.BRAND_CONFIG) ?? '{}')
 ```
 
 **Response:**
+
 ```json
 {
   "audit_id": "uuid-here",
@@ -290,15 +293,15 @@ WAAS_SEO_PROVIDER                  = serper  (production) | mock (preview)
 
 ## Package Tier Features
 
-| Feature                  | Hosting | Standard | Premium |
-|--------------------------|---------|----------|---------|
-| Website hosting          | ✅      | ✅       | ✅      |
-| Custom domain            | ❌      | ✅       | ✅      |
-| SEO audit tool           | ❌      | ✅       | ✅      |
-| Competitor analysis      | ❌      | ✅       | ✅      |
-| AI insights              | ❌      | ❌       | ✅      |
-| White-label branding     | ❌      | ❌       | ✅      |
-| Audits per month         | 0       | 10       | Unlimited |
+| Feature              | Hosting | Standard | Premium   |
+| -------------------- | ------- | -------- | --------- |
+| Website hosting      | ✅      | ✅       | ✅        |
+| Custom domain        | ❌      | ✅       | ✅        |
+| SEO audit tool       | ❌      | ✅       | ✅        |
+| Competitor analysis  | ❌      | ✅       | ✅        |
+| AI insights          | ❌      | ❌       | ✅        |
+| White-label branding | ❌      | ❌       | ✅        |
+| Audits per month     | 0       | 10       | Unlimited |
 
 ---
 
@@ -325,4 +328,4 @@ The following features are scoped for Phase 2:
 
 ---
 
-*Phase 1 completed. Foundation is solid. Ready for Phase 2.*
+_Phase 1 completed. Foundation is solid. Ready for Phase 2._

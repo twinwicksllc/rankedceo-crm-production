@@ -1,9 +1,11 @@
 # Supabase Email Confirmation URL Fix
 
 ## Problem
+
 After signing up, users receive an email confirmation link that points to `http://localhost:3000` instead of the production domain `https://crm.rankedceo.com`. This causes the confirmation link to fail.
 
 ## Root Cause
+
 The `NEXT_PUBLIC_APP_URL` environment variable was set to `https://rankedceo.com` instead of `https://crm.rankedceo.com`.
 
 Supabase uses `NEXT_PUBLIC_APP_URL` to generate email confirmation links and other redirect URLs.
@@ -13,6 +15,7 @@ Supabase uses `NEXT_PUBLIC_APP_URL` to generate email confirmation links and oth
 ### 1. Update Environment Variable in Vercel
 
 **Go to Vercel:**
+
 1. Navigate to: https://vercel.com/twinwicksllc/rankedceo-crm-production/settings/environment-variables
 2. Find or create: `NEXT_PUBLIC_APP_URL`
 3. Set the value to: `https://crm.rankedceo.com`
@@ -24,12 +27,14 @@ Supabase uses `NEXT_PUBLIC_APP_URL` to generate email confirmation links and oth
 ### 2. Update Local Environment Files
 
 **Files Updated:**
+
 - `.env.production` - Changed from `https://rankedceo.com` to `https://crm.rankedceo.com`
 - `.env.example` - Added production URL reference
 
 ### 3. Redeploy Application
 
 After updating the environment variable in Vercel:
+
 1. Go to: https://vercel.com/twinwicksllc/rankedceo-crm-production
 2. Click "Redeploy" or push a new commit
 3. Wait for deployment to complete (1-2 minutes)
@@ -37,6 +42,7 @@ After updating the environment variable in Vercel:
 ### 4. Verify the Fix
 
 **To test:**
+
 1. Try to sign up with a new email address
 2. Check your email inbox
 3. Click the confirmation link
@@ -46,6 +52,7 @@ After updating the environment variable in Vercel:
 ## Why This Happens
 
 Supabase Auth automatically:
+
 - Reads `NEXT_PUBLIC_APP_URL` from environment variables
 - Uses it as the base URL for:
   - Email confirmation links
@@ -65,7 +72,7 @@ For complete email authentication setup, also verify:
 2. Navigate to: **Authentication** → **URL Configuration**
 3. Set:
    - **Site URL**: `https://crm.rankedceo.com`
-   - **Redirect URLs**: 
+   - **Redirect URLs**:
      ```
      https://crm.rankedceo.com/auth/callback
      https://crm.rankedceo.com/**
@@ -75,6 +82,7 @@ For complete email authentication setup, also verify:
 ### Email Templates (Optional)
 
 You can customize email templates in Supabase:
+
 1. Navigate to: **Authentication** → **Email Templates**
 2. Customize:
    - Confirm signup
@@ -102,6 +110,7 @@ After deploying the fix:
 ### Issue: Email still points to localhost after update
 
 **Solution:**
+
 - Ensure you redeployed after updating the environment variable
 - Clear browser cache
 - Try in Incognito/Private mode
@@ -110,6 +119,7 @@ After deploying the fix:
 ### Issue: Email points to wrong domain
 
 **Solution:**
+
 - Double-check `NEXT_PUBLIC_APP_URL` in Vercel
 - Verify no typos in the URL
 - Check Supabase Auth settings for Site URL
@@ -118,6 +128,7 @@ After deploying the fix:
 ### Issue: Confirmation link works but doesn't verify email
 
 **Solution:**
+
 - Check Supabase logs for errors
 - Verify Supabase Auth is enabled
 - Check email settings in Supabase dashboard

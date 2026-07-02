@@ -1,6 +1,7 @@
 # RankedCEO CRM - Testing Guide
 
 ## Overview
+
 This guide provides comprehensive testing procedures for the RankedCEO CRM application.
 
 ---
@@ -10,6 +11,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 ### 1. Authentication Testing
 
 #### Signup Flow
+
 - [ ] Navigate to `/signup`
 - [ ] Fill in email and password
 - [ ] Verify reCAPTCHA loads
@@ -20,6 +22,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 - [ ] Verify email confirmed
 
 #### Login Flow
+
 - [ ] Navigate to `/login`
 - [ ] Enter valid credentials
 - [ ] Verify reCAPTCHA loads
@@ -28,6 +31,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 - [ ] Check session persists on refresh
 
 #### Logout Flow
+
 - [ ] Click user menu
 - [ ] Click "Logout"
 - [ ] Verify redirect to homepage
@@ -39,6 +43,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 ### 2. Onboarding Testing
 
 #### Step 0: Welcome
+
 - [ ] See welcome message
 - [ ] See feature highlights
 - [ ] Click "Get Started"
@@ -46,6 +51,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 - [ ] Test "Skip for now" button
 
 #### Step 1: Company Info
+
 - [ ] Fill company name (required)
 - [ ] Select company size
 - [ ] Select industry
@@ -57,6 +63,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 - [ ] Test "Back" button
 
 #### Step 2: Team Setup
+
 - [ ] Add team member email
 - [ ] Add multiple emails
 - [ ] Remove email field
@@ -66,6 +73,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 - [ ] Test "Back" button
 
 #### Step 3: Preferences
+
 - [ ] Select timezone
 - [ ] Select currency
 - [ ] Select date format
@@ -74,6 +82,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 - [ ] Test "Back" button
 
 #### Step 4: Completion
+
 - [ ] See success message
 - [ ] See next steps
 - [ ] Click "Go to Dashboard"
@@ -85,6 +94,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 ### 3. Contact Management Testing
 
 #### Create Contact
+
 - [ ] Navigate to `/contacts`
 - [ ] Click "New Contact"
 - [ ] Fill required fields (name, email)
@@ -95,6 +105,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 - [ ] Verify contact appears in list
 
 #### View Contact
+
 - [ ] Click on a contact
 - [ ] Verify all details display
 - [ ] Verify activity timeline shows
@@ -102,6 +113,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 - [ ] Verify associated deals show
 
 #### Edit Contact
+
 - [ ] Click "Edit" on contact detail
 - [ ] Modify fields
 - [ ] Click "Save Changes"
@@ -109,11 +121,13 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 - [ ] Verify changes reflected
 
 #### Delete Contact
+
 - [ ] Click "Delete" on contact
 - [ ] Confirm deletion
 - [ ] Verify contact removed from list
 
 #### Search & Filter
+
 - [ ] Use search box
 - [ ] Filter by status
 - [ ] Filter by source
@@ -124,6 +138,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 ### 4. Company Management Testing
 
 #### Create Company
+
 - [ ] Navigate to `/companies`
 - [ ] Click "New Company"
 - [ ] Fill company details
@@ -132,18 +147,21 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 - [ ] Verify appears in list
 
 #### View Company
+
 - [ ] Click on a company
 - [ ] Verify details display
 - [ ] Verify associated contacts show
 - [ ] Verify activity timeline shows
 
 #### Edit Company
+
 - [ ] Click "Edit"
 - [ ] Modify fields
 - [ ] Save changes
 - [ ] Verify updates
 
 #### Delete Company
+
 - [ ] Delete company
 - [ ] Confirm deletion
 - [ ] Verify removed
@@ -153,6 +171,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 ### 5. Deal Pipeline Testing
 
 #### Create Deal
+
 - [ ] Navigate to `/deals`
 - [ ] Click "New Deal"
 - [ ] Fill deal details
@@ -164,6 +183,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 - [ ] Verify success
 
 #### Move Deal Through Pipeline
+
 - [ ] Open deal detail
 - [ ] Change stage to "Qualified"
 - [ ] Verify stage updated
@@ -173,12 +193,14 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 - [ ] Verify commission created
 
 #### Edit Deal
+
 - [ ] Edit deal value
 - [ ] Verify commission updated
 - [ ] Edit other fields
 - [ ] Save changes
 
 #### Pipeline Management
+
 - [ ] Navigate to `/pipelines`
 - [ ] Create new pipeline
 - [ ] Add stages
@@ -189,6 +211,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 ### 6. Activity Tracking Testing
 
 #### Create Activity
+
 - [ ] Navigate to `/activities`
 - [ ] Click "New Activity"
 - [ ] Select type (call, meeting, email, note, task)
@@ -199,12 +222,14 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 - [ ] Verify success
 
 #### View Activity Timeline
+
 - [ ] Go to contact detail
 - [ ] Verify activities show in timeline
 - [ ] Verify chronological order
 - [ ] Verify activity icons
 
 #### Complete Activity
+
 - [ ] Mark activity as complete
 - [ ] Verify status updated
 - [ ] Verify completion time recorded
@@ -214,6 +239,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 ### 7. Email Campaign Testing
 
 #### Create Campaign
+
 - [ ] Navigate to `/campaigns`
 - [ ] Click "New Campaign"
 - [ ] Fill campaign details
@@ -223,6 +249,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 - [ ] Verify success
 
 #### Create Email Template
+
 - [ ] Navigate to `/email-templates`
 - [ ] Click "New Template"
 - [ ] Fill template details
@@ -231,6 +258,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 - [ ] Verify success
 
 #### View Campaign Analytics
+
 - [ ] Open campaign detail
 - [ ] Verify statistics display
 - [ ] Check open rate
@@ -241,6 +269,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 ### 8. Form Builder Testing
 
 #### Create Form
+
 - [ ] Navigate to `/forms` (if exists)
 - [ ] Create new form
 - [ ] Add fields (text, email, select, etc.)
@@ -249,6 +278,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 - [ ] Verify public URL generated
 
 #### Submit Form
+
 - [ ] Open public form URL
 - [ ] Fill form fields
 - [ ] Submit form
@@ -256,6 +286,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 - [ ] Verify submission recorded
 
 #### View Submissions
+
 - [ ] View form submissions
 - [ ] Export to CSV
 - [ ] Export to JSON
@@ -266,11 +297,13 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 ### 9. Commission Tracking Testing
 
 #### View Commissions
+
 - [ ] Navigate to `/commissions`
 - [ ] Verify statistics display
 - [ ] Verify commission list shows
 
 #### Commission Calculation
+
 - [ ] Create commission rate for user
 - [ ] Create deal
 - [ ] Mark deal as "Won"
@@ -278,6 +311,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 - [ ] Verify amount calculated correctly
 
 #### Commission Reports
+
 - [ ] Navigate to `/commissions/reports`
 - [ ] Verify user performance stats
 - [ ] Verify total amounts correct
@@ -288,6 +322,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 ### 10. Analytics Testing
 
 #### Revenue Analytics
+
 - [ ] Navigate to `/reports`
 - [ ] Verify total revenue displays
 - [ ] Check revenue by month chart
@@ -295,12 +330,14 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 - [ ] Verify calculations correct
 
 #### Pipeline Analytics
+
 - [ ] Check pipeline by stage
 - [ ] Verify win rate calculation
 - [ ] Check average deal cycle
 - [ ] Verify charts render
 
 #### Activity Analytics
+
 - [ ] Check activity by type
 - [ ] Verify completion rate
 - [ ] Check leaderboard
@@ -311,6 +348,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 ### 11. Settings Testing
 
 #### Profile Settings
+
 - [ ] Navigate to `/settings`
 - [ ] Update name
 - [ ] Update phone
@@ -319,18 +357,21 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 - [ ] Verify updates reflected
 
 #### Account Settings
+
 - [ ] Switch to Account tab
 - [ ] Update company info
 - [ ] Save changes
 - [ ] Verify updates
 
 #### Team Settings
+
 - [ ] Switch to Team tab
 - [ ] View team members
 - [ ] Verify roles display
 - [ ] Check last login times
 
 #### Notification Settings
+
 - [ ] Switch to Notifications tab
 - [ ] Toggle email notifications
 - [ ] Toggle deal updates
@@ -338,6 +379,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 - [ ] Verify saved
 
 #### Security Settings
+
 - [ ] Switch to Security tab
 - [ ] Change password
 - [ ] Verify password updated
@@ -348,32 +390,34 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 ## 🌐 Browser Testing
 
 ### Desktop Browsers
+
 - [ ] **Chrome** (latest)
   - [ ] All features work
   - [ ] No console errors
   - [ ] Responsive design
-  
+
 - [ ] **Firefox** (latest)
   - [ ] All features work
   - [ ] No console errors
   - [ ] Responsive design
-  
+
 - [ ] **Safari** (latest)
   - [ ] All features work
   - [ ] No console errors
   - [ ] Responsive design
-  
+
 - [ ] **Edge** (latest)
   - [ ] All features work
   - [ ] No console errors
   - [ ] Responsive design
 
 ### Mobile Browsers
+
 - [ ] **Chrome Mobile** (Android)
   - [ ] Navigation works
   - [ ] Forms usable
   - [ ] Responsive layout
-  
+
 - [ ] **Safari Mobile** (iOS)
   - [ ] Navigation works
   - [ ] Forms usable
@@ -384,12 +428,14 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 ## 🔍 Security Testing
 
 ### Authentication
+
 - [ ] Cannot access dashboard without login
 - [ ] Session expires appropriately
 - [ ] Logout clears session
 - [ ] reCAPTCHA prevents bots
 
 ### Data Isolation
+
 - [ ] Create two accounts
 - [ ] Verify Account A cannot see Account B's data
 - [ ] Test contacts isolation
@@ -397,6 +443,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 - [ ] Test deals isolation
 
 ### API Security
+
 - [ ] API routes require authentication
 - [ ] Invalid tokens rejected
 - [ ] Proper error codes returned
@@ -407,18 +454,21 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 ## 📊 Performance Testing
 
 ### Page Load Times
+
 - [ ] Homepage: < 2 seconds
 - [ ] Dashboard: < 3 seconds
 - [ ] Contact list: < 2 seconds
 - [ ] Analytics: < 3 seconds
 
 ### API Response Times
+
 - [ ] GET requests: < 500ms
 - [ ] POST requests: < 1 second
 - [ ] PUT requests: < 1 second
 - [ ] DELETE requests: < 500ms
 
 ### Database Queries
+
 - [ ] No N+1 queries
 - [ ] Indexes used effectively
 - [ ] Query times < 100ms
@@ -428,16 +478,20 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 ## 🐛 Bug Tracking
 
 ### Critical Bugs (P0)
+
 - None identified ✅
 
 ### High Priority Bugs (P1)
+
 - None identified ✅
 
 ### Medium Priority Bugs (P2)
+
 - [ ] Some pages use `any` types
 - [ ] Missing pagination on some lists
 
 ### Low Priority Bugs (P3)
+
 - [ ] Minor styling inconsistencies
 - [ ] Missing loading states in some places
 
@@ -446,11 +500,13 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 ## ✅ Test Results Summary
 
 ### Automated Tests
+
 - **Unit Tests:** Not implemented
 - **Integration Tests:** Not implemented
 - **E2E Tests:** Not implemented
 
 ### Manual Tests
+
 - **Authentication:** ✅ Passed
 - **Onboarding:** ✅ Passed
 - **Core CRM:** ✅ Passed
@@ -458,6 +514,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 - **Settings:** ✅ Passed
 
 ### Browser Compatibility
+
 - **Chrome:** ✅ Passed
 - **Firefox:** ⏳ Pending
 - **Safari:** ⏳ Pending
@@ -465,6 +522,7 @@ This guide provides comprehensive testing procedures for the RankedCEO CRM appli
 - **Mobile:** ⏳ Pending
 
 ### Performance
+
 - **Build:** ✅ Passed
 - **Load Times:** ✅ Passed
 - **API Response:** ✅ Passed

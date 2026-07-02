@@ -1,20 +1,23 @@
 // lib/waas/services/email-templates/billing.ts
 
-import { wrapLayout } from './layout'
-import type { NotificationTemplateData } from './types'
+import { wrapLayout } from "./layout";
+import type { NotificationTemplateData } from "./types";
 
 // ---------------------------------------------------------------------------
 // Template: subscription_activated  (Phase 8.3)
 // ---------------------------------------------------------------------------
 
-export function subscriptionActivated(data: NotificationTemplateData): { subject: string; html: string } {
-  const name       = data.businessName ?? 'Your business'
-  const planLabel  = data.planLabel ?? 'your plan'
-  const interval   = data.planInterval ?? ''
-  const price      = data.planPrice ?? ''
-  const portalUrl  = data.portalUrl ?? '#'
+export function subscriptionActivated(data: NotificationTemplateData): {
+  subject: string;
+  html: string;
+} {
+  const name = data.businessName ?? "Your business";
+  const planLabel = data.planLabel ?? "your plan";
+  const interval = data.planInterval ?? "";
+  const price = data.planPrice ?? "";
+  const portalUrl = data.portalUrl ?? "#";
 
-  const subject = `✅ Your ${planLabel} plan is now active — welcome aboard!`
+  const subject = `✅ Your ${planLabel} plan is now active — welcome aboard!`;
 
   const content = `
     <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">
@@ -22,8 +25,8 @@ export function subscriptionActivated(data: NotificationTemplateData): { subject
     </h1>
     <p style="margin:0 0 20px;font-size:15px;color:#475569;line-height:1.6;">
       Thank you! Your <strong>${planLabel}</strong> subscription for
-      <strong>${name}</strong> is now active${interval ? ` on ${interval} billing` : ''}.
-      ${price ? `You'll be billed <strong>${price}</strong>.` : ''}
+      <strong>${name}</strong> is now active${interval ? ` on ${interval} billing` : ""}.
+      ${price ? `You'll be billed <strong>${price}</strong>.` : ""}
     </p>
 
     <table role="presentation" width="100%">
@@ -33,7 +36,7 @@ export function subscriptionActivated(data: NotificationTemplateData): { subject
             Your active plan
           </p>
           <p style="margin:0;font-size:18px;font-weight:700;color:#15803d;">${planLabel}</p>
-          ${interval ? `<p style="margin:4px 0 0;font-size:13px;color:#166534;">${interval} billing${price ? ` · ${price}` : ''}</p>` : ''}
+          ${interval ? `<p style="margin:4px 0 0;font-size:13px;color:#166534;">${interval} billing${price ? ` · ${price}` : ""}</p>` : ""}
         </td>
       </tr>
     </table>
@@ -49,21 +52,30 @@ export function subscriptionActivated(data: NotificationTemplateData): { subject
         Manage Billing →
       </a>
     </div>
-  `
+  `;
 
-  return { subject, html: wrapLayout(content, `Your ${planLabel} plan is active — all features are now unlocked.`) }
+  return {
+    subject,
+    html: wrapLayout(
+      content,
+      `Your ${planLabel} plan is active — all features are now unlocked.`,
+    ),
+  };
 }
 
 // ---------------------------------------------------------------------------
 // Template: payment_failed  (Phase 8.3)
 // ---------------------------------------------------------------------------
 
-export function paymentFailed(data: NotificationTemplateData): { subject: string; html: string } {
-  const name      = data.businessName ?? 'Your business'
-  const planLabel = data.planLabel ?? 'your plan'
-  const portalUrl = data.portalUrl ?? '#'
+export function paymentFailed(data: NotificationTemplateData): {
+  subject: string;
+  html: string;
+} {
+  const name = data.businessName ?? "Your business";
+  const planLabel = data.planLabel ?? "your plan";
+  const portalUrl = data.portalUrl ?? "#";
 
-  const subject = `⚠️ Payment issue with your ${planLabel} plan — action required`
+  const subject = `⚠️ Payment issue with your ${planLabel} plan — action required`;
 
   const content = `
     <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">
@@ -100,37 +112,51 @@ export function paymentFailed(data: NotificationTemplateData): { subject: string
     <p style="margin:20px 0 0;font-size:12px;color:#94a3b8;text-align:center;">
       Need help? Reply to this email or contact support@rankedceo.com
     </p>
-  `
+  `;
 
-  return { subject, html: wrapLayout(content, `Action needed: payment failed for your ${planLabel} plan.`) }
+  return {
+    subject,
+    html: wrapLayout(
+      content,
+      `Action needed: payment failed for your ${planLabel} plan.`,
+    ),
+  };
 }
 
 // ---------------------------------------------------------------------------
 // Template: plan_changed  (Phase 8.3)
 // ---------------------------------------------------------------------------
 
-export function planChanged(data: NotificationTemplateData): { subject: string; html: string } {
-  const name        = data.businessName ?? 'Your business'
-  const oldPlan     = data.oldPlanLabel ?? 'your previous plan'
-  const newPlan     = data.newPlanLabel ?? 'your new plan'
-  const interval    = data.planInterval ?? ''
-  const price       = data.planPrice ?? ''
-  const portalUrl   = data.portalUrl ?? '#'
+export function planChanged(data: NotificationTemplateData): {
+  subject: string;
+  html: string;
+} {
+  const name = data.businessName ?? "Your business";
+  const oldPlan = data.oldPlanLabel ?? "your previous plan";
+  const newPlan = data.newPlanLabel ?? "your new plan";
+  const interval = data.planInterval ?? "";
+  const price = data.planPrice ?? "";
+  const portalUrl = data.portalUrl ?? "#";
 
   // Determine direction
-  const planOrder: Record<string, number> = { hosting: 0, hosting_only: 1, standard: 2, premium: 3 }
-  const oldRank = planOrder[oldPlan.toLowerCase()] ?? 0
-  const newRank = planOrder[newPlan.toLowerCase()] ?? 0
-  const isUpgrade = newRank >= oldRank
+  const planOrder: Record<string, number> = {
+    hosting: 0,
+    hosting_only: 1,
+    standard: 2,
+    premium: 3,
+  };
+  const oldRank = planOrder[oldPlan.toLowerCase()] ?? 0;
+  const newRank = planOrder[newPlan.toLowerCase()] ?? 0;
+  const isUpgrade = newRank >= oldRank;
 
-  const emoji   = isUpgrade ? '🚀' : '📝'
-  const verb    = isUpgrade ? 'upgraded' : 'updated'
-  const subject = `${emoji} Your plan has been ${verb} to ${newPlan}`
+  const emoji = isUpgrade ? "🚀" : "📝";
+  const verb = isUpgrade ? "upgraded" : "updated";
+  const subject = `${emoji} Your plan has been ${verb} to ${newPlan}`;
 
-  const accentColor = isUpgrade ? '#2563eb' : '#64748b'
-  const bgColor     = isUpgrade ? '#eff6ff' : '#f8fafc'
-  const borderColor = isUpgrade ? '#93c5fd' : '#e2e8f0'
-  const textColor   = isUpgrade ? '#1d4ed8' : '#334155'
+  const accentColor = isUpgrade ? "#2563eb" : "#64748b";
+  const bgColor = isUpgrade ? "#eff6ff" : "#f8fafc";
+  const borderColor = isUpgrade ? "#93c5fd" : "#e2e8f0";
+  const textColor = isUpgrade ? "#1d4ed8" : "#334155";
 
   const content = `
     <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">
@@ -139,7 +165,7 @@ export function planChanged(data: NotificationTemplateData): { subject: string; 
     <p style="margin:0 0 20px;font-size:15px;color:#475569;line-height:1.6;">
       The plan for <strong>${name}</strong> has changed from
       <strong>${oldPlan}</strong> to <strong>${newPlan}</strong>.
-      ${interval ? `You are now on ${interval} billing.` : ''}
+      ${interval ? `You are now on ${interval} billing.` : ""}
     </p>
 
     <table role="presentation" width="100%">
@@ -149,7 +175,7 @@ export function planChanged(data: NotificationTemplateData): { subject: string; 
             Your new plan
           </p>
           <p style="margin:0;font-size:18px;font-weight:700;color:${textColor};">${newPlan}</p>
-          ${interval ? `<p style="margin:4px 0 0;font-size:13px;color:${textColor};">${interval} billing${price ? ` · ${price}` : ''}</p>` : ''}
+          ${interval ? `<p style="margin:4px 0 0;font-size:13px;color:${textColor};">${interval} billing${price ? ` · ${price}` : ""}</p>` : ""}
         </td>
       </tr>
     </table>
@@ -166,8 +192,7 @@ export function planChanged(data: NotificationTemplateData): { subject: string; 
         View Billing Details →
       </a>
     </div>
-  `
+  `;
 
-  return { subject, html: wrapLayout(content) }
+  return { subject, html: wrapLayout(content) };
 }
-

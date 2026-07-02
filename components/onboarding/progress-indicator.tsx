@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { Check } from 'lucide-react';
-import { ONBOARDING_STEPS } from '@/lib/types/onboarding';
+import { Check } from "lucide-react";
+import { ONBOARDING_STEPS } from "@/lib/types/onboarding";
 
 interface ProgressIndicatorProps {
   currentStep: number;
@@ -17,10 +17,10 @@ export function ProgressIndicator({ currentStep }: ProgressIndicatorProps) {
               <div
                 className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors ${
                   currentStep > step.step
-                    ? 'bg-blue-600 border-blue-600 text-white'
+                    ? "bg-blue-600 border-blue-600 text-white"
                     : currentStep === step.step
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-gray-300 text-gray-400'
+                      ? "border-blue-600 text-blue-600"
+                      : "border-gray-300 text-gray-400"
                 }`}
               >
                 {currentStep > step.step ? (
@@ -32,7 +32,7 @@ export function ProgressIndicator({ currentStep }: ProgressIndicatorProps) {
               <div className="mt-2 text-center">
                 <p
                   className={`text-sm font-medium ${
-                    currentStep >= step.step ? 'text-gray-900' : 'text-gray-400'
+                    currentStep >= step.step ? "text-gray-900" : "text-gray-400"
                   }`}
                 >
                   {step.title}
@@ -45,7 +45,7 @@ export function ProgressIndicator({ currentStep }: ProgressIndicatorProps) {
             {index < ONBOARDING_STEPS.length - 1 && (
               <div
                 className={`h-0.5 flex-1 mx-2 transition-colors ${
-                  currentStep > step.step ? 'bg-blue-600' : 'bg-gray-300'
+                  currentStep > step.step ? "bg-blue-600" : "bg-gray-300"
                 }`}
               />
             )}

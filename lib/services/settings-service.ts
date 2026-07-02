@@ -1,23 +1,29 @@
-import { createClient } from '@/lib/supabase/server';
-import type { UserProfile, AccountSettings, TeamMember } from '@/lib/types/settings';
+import { createClient } from "@/lib/supabase/server";
+import type {
+  UserProfile,
+  AccountSettings,
+  TeamMember,
+} from "@/lib/types/settings";
 
 export class SettingsService {
   private async getUserInfo() {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (!user) {
-      throw new Error('Not authenticated');
+      throw new Error("Not authenticated");
     }
 
     const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('account_id, id')
-      .eq('email', user.email)
+      .from("users")
+      .select("account_id, id")
+      .eq("email", user.email)
       .single();
 
     if (userError || !userData) {
-      throw new Error('User not found');
+      throw new Error("User not found");
     }
 
     return { user, account_id: userData.account_id, user_id: userData.id };
@@ -29,9 +35,9 @@ export class SettingsService {
     const { user } = await this.getUserInfo();
 
     const { data, error } = await supabase
-      .from('users')
-      .select('id, name, email, avatar_url, role, phone, title')
-      .eq('email', user.email)
+      .from("users")
+      .select("id, name, email, avatar_url, role, phone, title")
+      .eq("email", user.email)
       .single();
 
     if (error) {
@@ -46,9 +52,9 @@ export class SettingsService {
     const { user } = await this.getUserInfo();
 
     const { data, error } = await supabase
-      .from('users')
+      .from("users")
       .update(updates)
-      .eq('email', user.email)
+      .eq("email", user.email)
       .select()
       .single();
 
@@ -65,9 +71,9 @@ export class SettingsService {
     const { account_id } = await this.getUserInfo();
 
     const { data, error } = await supabase
-      .from('accounts')
-      .select('*')
-      .eq('id', account_id)
+      .from("accounts")
+      .select("*")
+      .eq("id", account_id)
       .single();
 
     if (error) {
@@ -77,14 +83,16 @@ export class SettingsService {
     return data;
   }
 
-  async updateAccountSettings(updates: Partial<AccountSettings>): Promise<AccountSettings> {
+  async updateAccountSettings(
+    updates: Partial<AccountSettings>,
+  ): Promise<AccountSettings> {
     const supabase = await createClient();
     const { account_id } = await this.getUserInfo();
 
     const { data, error } = await supabase
-      .from('accounts')
+      .from("accounts")
       .update(updates)
-      .eq('id', account_id)
+      .eq("id", account_id)
       .select()
       .single();
 
@@ -101,10 +109,12 @@ export class SettingsService {
     const { account_id } = await this.getUserInfo();
 
     const { data, error } = await supabase
-      .from('users')
-      .select('id, name, email, role, status, avatar_url, last_login_at, created_at')
-      .eq('account_id', account_id)
-      .order('created_at', { ascending: false });
+      .from("users")
+      .select(
+        "id, name, email, role, status, avatar_url, last_login_at, created_at",
+      )
+      .eq("account_id", account_id)
+      .order("created_at", { ascending: false });
 
     if (error) {
       throw new Error(`Failed to fetch team members: ${error.message}`);
@@ -113,15 +123,18 @@ export class SettingsService {
     return data || [];
   }
 
-  async updateTeamMember(userId: string, updates: Partial<TeamMember>): Promise<TeamMember> {
+  async updateTeamMember(
+    userId: string,
+    updates: Partial<TeamMember>,
+  ): Promise<TeamMember> {
     const supabase = await createClient();
     const { account_id } = await this.getUserInfo();
 
     const { data, error } = await supabase
-      .from('users')
+      .from("users")
       .update(updates)
-      .eq('id', userId)
-      .eq('account_id', account_id)
+      .eq("id", userId)
+      .eq("account_id", account_id)
       .select()
       .single();
 
@@ -137,10 +150,10 @@ export class SettingsService {
     const { account_id } = await this.getUserInfo();
 
     const { error } = await supabase
-      .from('users')
+      .from("users")
       .delete()
-      .eq('id', userId)
-      .eq('account_id', account_id);
+      .eq("id", userId)
+      .eq("account_id", account_id);
 
     if (error) {
       throw new Error(`Failed to remove team member: ${error.message}`);

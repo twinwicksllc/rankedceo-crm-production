@@ -41,29 +41,34 @@
    Go to Settings → Environment Variables and add:
 
    **reCAPTCHA Enterprise:**
+
    ```
    RECAPTCHA_PROJECT_ID=gen-lang-client-0876272421
    NEXT_PUBLIC_RECAPTCHA_SITE_KEY=6LeaeFUsAAAAAKr8KyPJu0B5njqb3Ha_bqeUrWQ6
    ```
 
    **Supabase:**
+
    ```
    NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
    ```
 
    **AI Services:**
+
    ```
    NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key
    NEXT_PUBLIC_PERPLEXITY_API_KEY=your_perplexity_api_key
    ```
 
    **Email Service:**
+
    ```
    SENDGRID_API_KEY=your_sendgrid_api_key
    ```
 
    **Legacy reCAPTCHA (optional):**
+
    ```
    RECAPTCHA_SITE_KEY=6LeaeFUsAAAAAKr8KyPJu0B5njqb3Ha_bqeUrWQ6
    RECAPTCHA_SECRET_KEY=your_recaptcha_secret_key
@@ -80,6 +85,7 @@
    - Find DNS management for `rankedceo.com`
 
 2. **Add CNAME Record**
+
    ```
    Type: CNAME
    Name: crm
@@ -214,36 +220,44 @@
 ### Common Issues
 
 #### 1. DNS Not Propagating
+
 **Symptoms:** Site not accessible, DNS errors
 
 **Solutions:**
+
 - Wait longer (DNS can take up to 48 hours)
 - Verify CNAME record is correct
 - Check with domain registrar
 - Use DNS checker tools
 
 #### 2. SSL Certificate Not Issued
+
 **Symptoms:** HTTPS warnings, certificate errors
 
 **Solutions:**
+
 - Verify DNS is correctly configured
 - Wait 5-10 minutes for automatic provisioning
 - Check Vercel dashboard for SSL status
 - Contact Vercel support if issue persists
 
 #### 3. Build Fails in Vercel
+
 **Symptoms:** Deployment errors, build failures
 
 **Solutions:**
+
 - Check build logs in Vercel dashboard
 - Verify all environment variables are set
 - Ensure repository is up to date
 - Check for missing dependencies
 
 #### 4. reCAPTCHA Verification Fails
+
 **Symptoms:** Login/signup fails, verification errors
 
 **Solutions:**
+
 - Verify environment variables are set correctly
 - Check domain is added to Google Cloud Console
 - Ensure project ID is correct
@@ -251,9 +265,11 @@
 - Review server logs for verification errors
 
 #### 5. Database Connection Issues
+
 **Symptoms:** Database errors, data not saving
 
 **Solutions:**
+
 - Verify Supabase environment variables
 - Check Supabase dashboard for connection status
 - Review RLS policies
@@ -262,6 +278,7 @@
 ## Post-Deployment Checklist
 
 ### Security
+
 - [ ] SSL certificate is valid and active
 - [ ] All environment variables are set
 - [ ] No sensitive data in code
@@ -269,12 +286,14 @@
 - [ ] Database RLS policies are active
 
 ### Performance
+
 - [ ] Page load times are acceptable (< 3 seconds)
 - [ ] No console errors in browser
 - [ ] Images are optimized
 - [ ] Database queries are fast
 
 ### Functionality
+
 - [ ] All authentication flows work
 - [ ] All CRUD operations work
 - [ ] Navigation is functional
@@ -282,6 +301,7 @@
 - [ ] Activities integrate properly
 
 ### User Experience
+
 - [ ] Mobile responsive design works
 - [ ] No broken links
 - [ ] Error messages are helpful
@@ -291,18 +311,21 @@
 ## Ongoing Maintenance
 
 ### Weekly Tasks
+
 - Review reCAPTCHA analytics
 - Check Vercel deployment logs
 - Monitor error rates
 - Review user feedback
 
 ### Monthly Tasks
+
 - Review and update dependencies
 - Analyze performance metrics
 - Check database storage usage
 - Review security vulnerabilities
 
 ### Quarterly Tasks
+
 - Review and update documentation
 - Conduct security audit
 - Optimize database queries
@@ -311,17 +334,20 @@
 ## Support Resources
 
 ### Documentation
+
 - [Vercel Docs](https://vercel.com/docs)
 - [Next.js Docs](https://nextjs.org/docs)
 - [Supabase Docs](https://supabase.com/docs)
 - [Google Cloud reCAPTCHA Enterprise](https://cloud.google.com/recaptcha-enterprise/docs)
 
 ### Community
+
 - [Vercel Discord](https://vercel.com/discord)
 - [Next.js GitHub](https://github.com/vercel/next.js)
 - [Supabase Discord](https://supabase.com/discord)
 
 ### Emergency Contacts
+
 - Vercel Support: https://vercel.com/support
 - Google Cloud Support: https://cloud.google.com/support
 - Supabase Support: https://supabase.com/support
@@ -331,6 +357,7 @@
 **Estimated Total Time:** 45-60 minutes
 
 **Critical Path:**
+
 1. Google Cloud configuration (5 min)
 2. Vercel configuration (10 min)
 3. DNS setup (5-15 min)
@@ -338,6 +365,7 @@
 5. Testing (15-20 min)
 
 **Success Criteria:**
+
 - ✅ Site accessible at https://crm.rankedceo.com
 - ✅ SSL certificate valid
 - ✅ Login/signup works with reCAPTCHA

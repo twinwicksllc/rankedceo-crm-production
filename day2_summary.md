@@ -1,6 +1,7 @@
 # Day 2: ML Model Implementation - Summary
 
 ## Overview
+
 Successfully implemented the AI prediction models for lead conversion scoring. The system now supports both rule-based scoring (works immediately) and Gemini AI-powered predictions (when enough data is available).
 
 ---
@@ -12,6 +13,7 @@ Successfully implemented the AI prediction models for lead conversion scoring. T
 **Purpose**: Provides immediate lead scoring without requiring historical training data.
 
 **Features**:
+
 - Weighted scoring algorithm based on 25+ features
 - Feature weights based on sales best practices:
   - Engagement (30%): Email opens, clicks, replies
@@ -26,6 +28,7 @@ Successfully implemented the AI prediction models for lead conversion scoring. T
 - Calculates confidence based on data completeness
 
 **Example Output**:
+
 ```typescript
 {
   conversionScore: 75,
@@ -57,6 +60,7 @@ Successfully implemented the AI prediction models for lead conversion scoring. T
 **Purpose**: Advanced AI-powered predictions using Google Gemini Pro for pattern recognition.
 
 **Features**:
+
 - Integrates with Gemini Pro API
 - Sends comprehensive lead data to AI
 - Includes historical context (win rates, top factors)
@@ -66,6 +70,7 @@ Successfully implemented the AI prediction models for lead conversion scoring. T
 - Confidence scoring
 
 **Prompt Structure**:
+
 - Lead demographics
 - Engagement metrics
 - Interaction history
@@ -83,6 +88,7 @@ Successfully implemented the AI prediction models for lead conversion scoring. T
 **Purpose**: Orchestrates predictions using the best available model.
 
 **Features**:
+
 - Automatically selects best model based on data availability
 - Combines rule-based + Gemini AI (70/30 weighted average)
 - Extracts features from contacts
@@ -92,12 +98,14 @@ Successfully implemented the AI prediction models for lead conversion scoring. T
 - Tracks prediction outcomes
 
 **Model Selection Logic**:
+
 1. Check data readiness via ReadinessChecker
 2. If Gemini AI ready → Use hybrid approach
 3. Otherwise → Use rule-based scoring
 4. Always fallback to rule-based on errors
 
 **Database Integration**:
+
 - Stores predictions in `prediction_history` table
 - Updates contact fields:
   - `ai_conversion_score`
@@ -114,12 +122,14 @@ Successfully implemented the AI prediction models for lead conversion scoring. T
 ### 4. API Endpoints (`app/api/ai/predict/route.ts`)
 
 **POST /api/ai/predict**
+
 - Single prediction: `{ contactId: 'uuid' }`
 - Batch prediction: `{ contactIds: ['uuid1', 'uuid2'] }`
 - Returns prediction results
 - Automatically stores in database
 
 **GET /api/ai/predict?contactId=uuid**
+
 - Retrieves existing prediction from database
 - Returns cached AI scores
 - Fast response (no re-computation)
@@ -129,6 +139,7 @@ Successfully implemented the AI prediction models for lead conversion scoring. T
 ### 5. UI Components
 
 #### AI Score Badge (`components/ai/ai-score-badge.tsx`)
+
 - Displays conversion score with color coding
 - Hot (≥70%): Green
 - Warm (40-69%): Yellow
@@ -137,11 +148,13 @@ Successfully implemented the AI prediction models for lead conversion scoring. T
 - Optional sparkle icon
 
 #### AI Segment Badge
+
 - Shows lead segment (Hot/Warm/Cold)
 - Color-coded with trend icons
 - Reusable component
 
 #### AI Insights Panel (`components/ai/ai-insights-panel.tsx`)
+
 - Comprehensive insights display
 - Score overview with confidence
 - Contributing factors list with impact indicators
@@ -162,7 +175,7 @@ Contact → Feature Extraction → Model Selection → Prediction → Storage �
 
 1. **Feature Extraction**: ContactFeatureExtractor pulls 25+ features
 2. **Model Selection**: ReadinessChecker determines best model
-3. **Prediction**: 
+3. **Prediction**:
    - Rule-based: Immediate weighted scoring
    - Gemini AI: API call with structured prompt
    - Hybrid: Weighted combination
@@ -183,12 +196,14 @@ Future: Logistic Regression + Gradient Boosting (Day 2.6-2.7)
 ## Feature Weights (Rule-Based Model)
 
 ### Engagement (30% total)
+
 - Email Reply Rate: 10%
 - Email Open Rate: 8%
 - Email Click Rate: 7%
 - Email Volume: 5%
 
 ### Interaction (25% total)
+
 - Meetings: 8%
 - Calls: 6%
 - Activities: 5%
@@ -197,12 +212,14 @@ Future: Logistic Regression + Gradient Boosting (Day 2.6-2.7)
 - Email Activities: 2%
 
 ### Temporal (15% total)
+
 - Last Interaction: 6%
 - Frequency: 4%
 - Velocity: 3%
 - Contact Age: 2%
 
 ### Demographic (15% total)
+
 - Job Title: 4%
 - Industry: 3%
 - Company Size: 3%
@@ -210,12 +227,14 @@ Future: Logistic Regression + Gradient Boosting (Day 2.6-2.7)
 - Location: 2%
 
 ### Deal History (10% total)
+
 - Win Rate: 3%
 - Won Deals: 3%
 - Total Deals: 2%
 - Deal Value: 2%
 
 ### Lead Score (5% total)
+
 - Manual Score: 5%
 
 ---
@@ -223,6 +242,7 @@ Future: Logistic Regression + Gradient Boosting (Day 2.6-2.7)
 ## Usage Examples
 
 ### Single Prediction
+
 ```typescript
 const predictor = new HybridPredictor();
 const result = await predictor.predict(contactId, accountId);
@@ -234,16 +254,18 @@ console.log(result.recommendedActions); // Top 3 actions
 ```
 
 ### Batch Prediction
+
 ```typescript
 const results = await predictor.batchPredict(contactIds, accountId);
 // Process all contacts at once
 ```
 
 ### API Call
+
 ```typescript
 // Predict
-const response = await fetch('/api/ai/predict', {
-  method: 'POST',
+const response = await fetch("/api/ai/predict", {
+  method: "POST",
   body: JSON.stringify({ contactId }),
 });
 
@@ -252,6 +274,7 @@ const response = await fetch(`/api/ai/predict?contactId=${contactId}`);
 ```
 
 ### UI Display
+
 ```tsx
 <AIScoreBadge score={75} segment="hot" />
 <AISegmentBadge segment="hot" />
@@ -270,18 +293,21 @@ const response = await fetch(`/api/ai/predict?contactId=${contactId}`);
 ## Performance Characteristics
 
 ### Rule-Based Model
+
 - **Speed**: <50ms per prediction
 - **Accuracy**: 60-70% (estimated)
 - **Data Required**: 10+ contacts
 - **Explainability**: High (weighted features)
 
 ### Gemini AI Model
+
 - **Speed**: 2-5 seconds per prediction
 - **Accuracy**: 70-80% (estimated)
 - **Data Required**: 40+ deals
 - **Explainability**: High (AI-generated insights)
 
 ### Hybrid Model
+
 - **Speed**: 2-5 seconds (Gemini API call)
 - **Accuracy**: 75-85% (estimated)
 - **Data Required**: 40+ deals
@@ -292,6 +318,7 @@ const response = await fetch(`/api/ai/predict?contactId=${contactId}`);
 ## Next Steps (Day 3)
 
 ### Phase 3: Prediction Service
+
 1. Real-time prediction triggers
 2. Batch scoring scheduler
 3. Automatic re-scoring on data changes
@@ -299,6 +326,7 @@ const response = await fetch(`/api/ai/predict?contactId=${contactId}`);
 5. A/B testing framework
 
 ### Integration Points
+
 - Contact detail pages (show AI score)
 - Contact list (filter by segment)
 - Dashboard (hot leads widget)
@@ -338,15 +366,18 @@ const response = await fetch(`/api/ai/predict?contactId=${contactId}`);
 ## Configuration Required
 
 ### Environment Variables
+
 ```env
 GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
 ### Database
+
 - All tables created in Day 1 migration
 - No additional setup needed
 
 ### API Access
+
 - Gemini Pro API key (user already has access)
 - No rate limits configured yet
 
@@ -355,6 +386,7 @@ GEMINI_API_KEY=your_gemini_api_key_here
 ## Success Metrics
 
 ### Technical
+
 - ✅ Rule-based model implemented
 - ✅ Gemini AI integration complete
 - ✅ Hybrid engine working
@@ -362,6 +394,7 @@ GEMINI_API_KEY=your_gemini_api_key_here
 - ✅ UI components ready
 
 ### Business
+
 - Immediate value: Rule-based scoring works now
 - Future value: Gemini AI ready when data available
 - Scalability: Hybrid approach supports growth

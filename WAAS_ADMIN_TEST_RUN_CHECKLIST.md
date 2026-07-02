@@ -3,6 +3,7 @@
 Use this for each fresh end-to-end test run across audit -> onboarding -> command center -> review -> deploy.
 
 Standalone companion docs:
+
 - docs/qa/WEEKLY_VISUAL_TEST_PROGRAM.md
 - docs/qa/TESTER_INVITE_TEMPLATES.md
 
@@ -11,11 +12,13 @@ Standalone companion docs:
 Run this quick script first. It is designed for non-technical testers to click through core pages and confirm visual quality.
 
 ### Fill In Before You Start
+
 - Base URL: ____________________
 - Review Token: ____________________
 - Audit ID: ____________________
 
 ### Direct Entry Links
+
 - Login: `<BASE_URL>/login`
 - Admin Dashboard: `<BASE_URL>/admin/dashboard`
 - Audit Start: `<BASE_URL>/audit/start`
@@ -27,11 +30,12 @@ Run this quick script first. It is designed for non-technical testers to click t
 - Client Preview: `<BASE_URL>/edit/<REVIEW_TOKEN>/preview`
 - Domain Requests: `<BASE_URL>/admin/dashboard/domain-requests`
 - Redirect checks:
-	- `<BASE_URL>/waas`
-	- `<BASE_URL>/waas/tenants`
-	- `<BASE_URL>/waas/audits`
+  - `<BASE_URL>/waas`
+  - `<BASE_URL>/waas/tenants`
+  - `<BASE_URL>/waas/audits`
 
 ### 25-Minute Weekly Script
+
 1. Open Login and sign in.
 2. Open Admin Dashboard and confirm queue/table loads.
 3. Open Audit Start and submit one valid URL.
@@ -48,25 +52,27 @@ Run this quick script first. It is designed for non-technical testers to click t
 
 Mark each item: `Pass`, `Minor Issue`, `Fail`, or `N/A`.
 
-| Area | Link Used | Result | Notes |
-|---|---|---|---|
-| Login and session | /login |  |  |
-| Admin dashboard readability | /admin/dashboard |  |  |
-| Audit start clarity | /audit/start |  |  |
-| Audit result readability | /audit/<AUDIT_ID> |  |  |
-| PDF quality and branding | /api/audit/<AUDIT_ID>/pdf |  |  |
-| Client review clarity | /review/<REVIEW_TOKEN> |  |  |
-| Editor usability | /edit/<REVIEW_TOKEN>?tab=edit |  |  |
-| Approval UX clarity | /edit/<REVIEW_TOKEN>?tab=edit&approve=1 |  |  |
-| Preview visual quality | /edit/<REVIEW_TOKEN>/preview |  |  |
-| Admin domain requests | /admin/dashboard/domain-requests |  |  |
-| Redirect behavior | /waas, /waas/tenants, /waas/audits |  |  |
+| Area                        | Link Used                               | Result | Notes |
+| --------------------------- | --------------------------------------- | ------ | ----- |
+| Login and session           | /login                                  |        |       |
+| Admin dashboard readability | /admin/dashboard                        |        |       |
+| Audit start clarity         | /audit/start                            |        |       |
+| Audit result readability    | /audit/<AUDIT_ID>                       |        |       |
+| PDF quality and branding    | /api/audit/<AUDIT_ID>/pdf               |        |       |
+| Client review clarity       | /review/<REVIEW_TOKEN>                  |        |       |
+| Editor usability            | /edit/<REVIEW_TOKEN>?tab=edit           |        |       |
+| Approval UX clarity         | /edit/<REVIEW_TOKEN>?tab=edit&approve=1 |        |       |
+| Preview visual quality      | /edit/<REVIEW_TOKEN>/preview            |        |       |
+| Admin domain requests       | /admin/dashboard/domain-requests        |        |       |
+| Redirect behavior           | /waas, /waas/tenants, /waas/audits      |        |       |
 
 ### Weekly Pass Rule
+
 - Pass: No `Fail` rows and no more than 2 `Minor Issue` rows.
 - Needs Follow-up: Any `Fail`, or 3+ `Minor Issue` rows.
 
 ### Defect Capture (If Anything Looks Wrong)
+
 - What link were you on?
 - What did you expect to see?
 - What actually happened?
@@ -77,11 +83,13 @@ Mark each item: `Pass`, `Minor Issue`, `Fail`, or `N/A`.
 Use this version when sharing testing with non-admin users or clients. It avoids admin-only pages.
 
 ### Fill In Before You Start
+
 - Base URL: ____________________
 - Review Token: ____________________
 - Audit ID: ____________________
 
 ### Client-Safe Entry Links
+
 - Login: `<BASE_URL>/login`
 - Audit Start: `<BASE_URL>/audit/start`
 - Audit Result: `<BASE_URL>/audit/<AUDIT_ID>`
@@ -92,6 +100,7 @@ Use this version when sharing testing with non-admin users or clients. It avoids
 - Client Preview: `<BASE_URL>/edit/<REVIEW_TOKEN>/preview`
 
 ### 15-Minute Client UAT Script
+
 1. Open Login and sign in.
 2. Open Audit Start and confirm instructions are easy to understand.
 3. Submit one audit and wait for completion.
@@ -106,18 +115,19 @@ Use this version when sharing testing with non-admin users or clients. It avoids
 
 Mark each item: `Pass`, `Minor Issue`, `Fail`, or `N/A`.
 
-| Area | Link Used | Result | Notes |
-|---|---|---|---|
-| Login and session | /login |  |  |
-| Audit start clarity | /audit/start |  |  |
-| Audit result readability | /audit/<AUDIT_ID> |  |  |
-| PDF quality and branding | /api/audit/<AUDIT_ID>/pdf |  |  |
-| Client review clarity | /review/<REVIEW_TOKEN> |  |  |
-| Editor usability | /edit/<REVIEW_TOKEN>?tab=edit |  |  |
-| Approval UX clarity | /edit/<REVIEW_TOKEN>?tab=edit&approve=1 |  |  |
-| Preview visual quality | /edit/<REVIEW_TOKEN>/preview |  |  |
+| Area                     | Link Used                               | Result | Notes |
+| ------------------------ | --------------------------------------- | ------ | ----- |
+| Login and session        | /login                                  |        |       |
+| Audit start clarity      | /audit/start                            |        |       |
+| Audit result readability | /audit/<AUDIT_ID>                       |        |       |
+| PDF quality and branding | /api/audit/<AUDIT_ID>/pdf               |        |       |
+| Client review clarity    | /review/<REVIEW_TOKEN>                  |        |       |
+| Editor usability         | /edit/<REVIEW_TOKEN>?tab=edit           |        |       |
+| Approval UX clarity      | /edit/<REVIEW_TOKEN>?tab=edit&approve=1 |        |       |
+| Preview visual quality   | /edit/<REVIEW_TOKEN>/preview            |        |       |
 
 ### Client UAT Pass Rule
+
 - Pass: No `Fail` rows and no more than 2 `Minor Issue` rows.
 - Needs Follow-up: Any `Fail`, or 3+ `Minor Issue` rows.
 
@@ -130,6 +140,7 @@ Hi <TESTER_NAME>,
 Please run a short visual test and share any confusing or broken screens.
 
 Use these links:
+
 - Login: <BASE_URL>/login
 - Audit Start: <BASE_URL>/audit/start
 - Audit Result: <BASE_URL>/audit/<AUDIT_ID>
@@ -140,14 +151,15 @@ Use these links:
 - Client Preview: <BASE_URL>/edit/<REVIEW_TOKEN>/preview
 
 What to do:
+
 1. Sign in.
 2. Click each link in order.
 3. Confirm each page is clear, readable, and easy to use on desktop and mobile.
 4. If anything looks off, send:
-	- The link you were on
-	- What you expected
-	- What happened
-	- A screenshot
+   - The link you were on
+   - What you expected
+   - What happened
+   - A screenshot
 
 Result choices for each page: Pass, Minor Issue, or Fail.
 
@@ -162,6 +174,7 @@ Hi team,
 Please complete this week's visual QA pass for Audit + WaaS.
 
 Run links:
+
 - Login: <BASE_URL>/login
 - Admin Dashboard: <BASE_URL>/admin/dashboard
 - Audit Start: <BASE_URL>/audit/start
@@ -175,6 +188,7 @@ Run links:
 - Redirect checks: <BASE_URL>/waas, <BASE_URL>/waas/tenants, <BASE_URL>/waas/audits
 
 What to do:
+
 1. Open links in order and verify each page loads correctly.
 2. Confirm key UI elements are readable and actions are clear.
 3. Check desktop and mobile viewport rendering for review/edit/preview pages.
@@ -182,11 +196,13 @@ What to do:
 5. Report any issue with route, expected result, actual result, and screenshot.
 
 Pass rule:
+
 - No Fail rows and no more than 2 Minor Issue rows.
 
 Thanks.
 
 ## Run Metadata
+
 - Test ID:
 - Date:
 - Tester:
@@ -195,36 +211,43 @@ Thanks.
 - Commit/Deploy Reference:
 
 ## Pre-Run Setup
+
 - [ ] Hard refresh app and confirm latest deploy is live.
 - [ ] Archive old test tenants in Command Center.
 - [ ] Prepare a unique identity set:
-Business name variant, email alias, and location.
+      Business name variant, email alias, and location.
 - [ ] Confirm expected entry point URL.
 
 ## 1) Audit Funnel
+
 - [ ] Submit audit start form with valid target URL.
 - [ ] Include at least one competitor URL.
 - [ ] Confirm audit result page loads successfully.
 - [ ] Click Get Started CTA.
 - [ ] Confirm onboarding URL includes audit context:
-Accept either `auditId` or `audit_id` query parameter.
+      Accept either `auditId` or `audit_id` query parameter.
 
 Pass/Fail:
 Notes:
 
 ## 2) Onboarding Flow
+
 ### Step 1: Business Identity
+
 - [ ] Save succeeds and advances.
 
 ### Step 2: Domain Wishlist
+
 - [ ] Add domains.
 - [ ] Save succeeds and advances.
 
 ### Step 3: Brand Identity
+
 - [ ] Upload/select logo and colors.
 - [ ] Save succeeds and advances.
 
 ### Step 4: Integrations/USP
+
 - [ ] Submit succeeds.
 - [ ] Completion screen appears.
 
@@ -232,6 +255,7 @@ Pass/Fail:
 Notes:
 
 ## 3) Command Center Queue Integrity
+
 - [ ] New tenant appears in pending/onboarding queue.
 - [ ] Stat cards match visible table rows.
 - [ ] Row includes working Review and Client Link.
@@ -244,19 +268,21 @@ Pass/Fail:
 Notes:
 
 ## 4) Tenant Detail Page
+
 - [ ] Brand Sheet populated.
 - [ ] Domain Requests populated.
-Fallback accepted when imported from onboarding wishlist.
+      Fallback accepted when imported from onboarding wishlist.
 - [ ] Original Audit card populated.
-Fallback by submitter email accepted when source_audit_id is missing.
+      Fallback by submitter email accepted when source_audit_id is missing.
 - [ ] Site Settings save works:
-Meta title, meta description, OG image URL, custom CSS.
+      Meta title, meta description, OG image URL, custom CSS.
 - [ ] Deployment Package readiness block renders checks.
 
 Pass/Fail:
 Notes:
 
 ## 5) Review Page
+
 - [ ] Review page loads for tenant token/id.
 - [ ] Variant previews render.
 - [ ] Select variant saves.
@@ -268,6 +294,7 @@ Pass/Fail:
 Notes:
 
 ## 6) Deploy Path
+
 - [ ] Deploy button appears in expected statuses.
 - [ ] Blockers are explicit when not ready.
 - [ ] After resolving blockers, deploy succeeds.
@@ -277,6 +304,7 @@ Pass/Fail:
 Notes:
 
 ## 7) Regression Checks
+
 - [ ] /waas redirects to /admin/dashboard.
 - [ ] /waas/tenants redirects to /admin/dashboard.
 - [ ] /waas/audits redirects to /admin/dashboard.
@@ -287,23 +315,25 @@ Pass/Fail:
 Notes:
 
 ## Defect Log
+
 1. ID:
-Severity:
-Route:
-Repro Steps:
-Expected:
-Actual:
-Screenshot/Video:
+   Severity:
+   Route:
+   Repro Steps:
+   Expected:
+   Actual:
+   Screenshot/Video:
 
 2. ID:
-Severity:
-Route:
-Repro Steps:
-Expected:
-Actual:
-Screenshot/Video:
+   Severity:
+   Route:
+   Repro Steps:
+   Expected:
+   Actual:
+   Screenshot/Video:
 
 ## Overall Result
+
 - Overall: Pass / Fail
 - Blocking defects count:
 - Non-blocking defects count:

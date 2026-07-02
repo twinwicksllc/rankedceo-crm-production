@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 // =============================================================================
 // app/edit/[reviewToken]/ai-rewrite-panel.tsx
@@ -13,110 +13,126 @@
 //      The modal still shows; user can tweak before saving.
 // =============================================================================
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { requestAiRewriteVariants } from '@/lib/waas/actions/client-edit'
-import type { EditableField }       from '@/lib/waas/client-edit/editable-fields'
+import { useCallback, useEffect, useRef, useState } from "react";
+import { requestAiRewriteVariants } from "@/lib/waas/actions/client-edit";
+import type { EditableField } from "@/lib/waas/client-edit/editable-fields";
 
-const RATE_LIMIT_MS = 6000  // 6-second cooldown between Generate calls
+const RATE_LIMIT_MS = 6000; // 6-second cooldown between Generate calls
 
 interface AiRewritePanelProps {
-  field:        EditableField
-  reviewToken:  string
-  onPick:       (text: string) => void
-  onClose:      () => void
+  field: EditableField;
+  reviewToken: string;
+  onPick: (text: string) => void;
+  onClose: () => void;
 }
 
 interface Variant {
-  tone: string
-  text: string
+  tone: string;
+  text: string;
 }
 
 const TONE_PRESETS = [
-  { label: 'Professional',      desc: 'Polished, business-like'         },
-  { label: 'Friendly',          desc: 'Warm, approachable'              },
-  { label: 'Bold & concise',    desc: 'Punchy, short, direct'           },
-  { label: 'Local & trustworthy', desc: 'Community-focused, credible'   },
-]
+  { label: "Professional", desc: "Polished, business-like" },
+  { label: "Friendly", desc: "Warm, approachable" },
+  { label: "Bold & concise", desc: "Punchy, short, direct" },
+  { label: "Local & trustworthy", desc: "Community-focused, credible" },
+];
 
 function buildFieldContext(field: EditableField): string {
-  return `${field.label} (group: ${field.group})`
+  return `${field.label} (group: ${field.group})`;
 }
 
-export function AiRewritePanel({ field, reviewToken, onPick, onClose }: AiRewritePanelProps) {
-  const [intent,     setIntent]     = useState('')
-  const [tones,      setTones]      = useState<string[]>(['Professional', 'Friendly', 'Bold & concise'])
-  const [variants,   setVariants]   = useState<Variant[]>([])
-  const [loading,    setLoading]    = useState(false)
-  const [error,      setError]      = useState<string | null>(null)
-  const [cooldown,   setCooldown]   = useState(false)
-  const intentRef = useRef<HTMLTextAreaElement>(null)
-  const cooldownTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+export function AiRewritePanel({
+  field,
+  reviewToken,
+  onPick,
+  onClose,
+}: AiRewritePanelProps) {
+  const [intent, setIntent] = useState("");
+  const [tones, setTones] = useState<string[]>([
+    "Professional",
+    "Friendly",
+    "Bold & concise",
+  ]);
+  const [variants, setVariants] = useState<Variant[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(false);
+  const intentRef = useRef<HTMLTextAreaElement>(null);
+  const cooldownTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-focus intent textarea
   useEffect(() => {
-    const t = setTimeout(() => intentRef.current?.focus(), 80)
-    return () => clearTimeout(t)
-  }, [])
+    const t = setTimeout(() => intentRef.current?.focus(), 80);
+    return () => clearTimeout(t);
+  }, []);
 
   // ESC closes panel (not the underlying modal)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.stopPropagation(); onClose() }
-    }
-    window.addEventListener('keydown', handler, { capture: true })
-    return () => window.removeEventListener('keydown', handler, { capture: true })
-  }, [onClose])
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handler, { capture: true });
+    return () =>
+      window.removeEventListener("keydown", handler, { capture: true });
+  }, [onClose]);
 
   // Toggle a tone preset chip
   const toggleTone = useCallback((label: string) => {
     setTones((prev) => {
       if (prev.includes(label)) {
-        return prev.length > 1 ? prev.filter((t) => t !== label) : prev
+        return prev.length > 1 ? prev.filter((t) => t !== label) : prev;
       }
-      const next = [...prev.filter((t) => t !== label), label]
-      return next.slice(-3)  // keep max 3 active
-    })
-  }, [])
+      const next = [...prev.filter((t) => t !== label), label];
+      return next.slice(-3); // keep max 3 active
+    });
+  }, []);
 
   const generate = useCallback(async () => {
-    if (!intent.trim() || loading || cooldown) return
-    setError(null)
-    setVariants([])
-    setLoading(true)
+    if (!intent.trim() || loading || cooldown) return;
+    setError(null);
+    setVariants([]);
+    setLoading(true);
 
     try {
       const result = await requestAiRewriteVariants({
         reviewToken,
-        currentText:  field.value,
-        intent:       intent.trim(),
+        currentText: field.value,
+        intent: intent.trim(),
         fieldContext: buildFieldContext(field),
-        maxLength:    field.maxLength ?? 300,
-        toneHints:    tones,
-      })
+        maxLength: field.maxLength ?? 300,
+        toneHints: tones,
+      });
 
       if (!result.success || !result.data) {
-        setError(result.error ?? 'AI returned no results. Please try again.')
-        return
+        setError(result.error ?? "AI returned no results. Please try again.");
+        return;
       }
-      setVariants(result.data.variants)
+      setVariants(result.data.variants);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unexpected error.')
+      setError(err instanceof Error ? err.message : "Unexpected error.");
     } finally {
-      setLoading(false)
+      setLoading(false);
       // Start cooldown
-      setCooldown(true)
-      if (cooldownTimer.current) clearTimeout(cooldownTimer.current)
-      cooldownTimer.current = setTimeout(() => setCooldown(false), RATE_LIMIT_MS)
+      setCooldown(true);
+      if (cooldownTimer.current) clearTimeout(cooldownTimer.current);
+      cooldownTimer.current = setTimeout(
+        () => setCooldown(false),
+        RATE_LIMIT_MS,
+      );
     }
-  }, [intent, loading, cooldown, reviewToken, field, tones])
+  }, [intent, loading, cooldown, reviewToken, field, tones]);
 
   // Cmd/Ctrl+Enter to generate
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-      e.preventDefault()
-      void generate()
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+      e.preventDefault();
+      void generate();
     }
-  }
+  };
 
   // -------------------------------------------------------------------------
 
@@ -131,7 +147,9 @@ export function AiRewritePanel({ field, reviewToken, onPick, onClose }: AiRewrit
         <div>
           <div className="flex items-center gap-2">
             <span className="text-lg">✨</span>
-            <span className="text-sm font-semibold text-slate-900">Rewrite with AI</span>
+            <span className="text-sm font-semibold text-slate-900">
+              Rewrite with AI
+            </span>
           </div>
           <div className="mt-0.5 text-[11px] text-slate-500 truncate max-w-[280px]">
             {field.label} · {field.group}
@@ -144,7 +162,12 @@ export function AiRewritePanel({ field, reviewToken, onPick, onClose }: AiRewrit
           className="rounded p-1.5 text-slate-400 hover:bg-white/80 hover:text-slate-700"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <path
+              d="M3 3l10 10M13 3L3 13"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
           </svg>
         </button>
       </div>
@@ -161,7 +184,6 @@ export function AiRewritePanel({ field, reviewToken, onPick, onClose }: AiRewrit
 
       {/* Scrollable body */}
       <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-
         {/* Intent */}
         <div>
           <label className="block text-sm font-medium text-slate-800 mb-1.5">
@@ -178,7 +200,12 @@ export function AiRewritePanel({ field, reviewToken, onPick, onClose }: AiRewrit
             className="w-full resize-none rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/20"
           />
           <div className="mt-1 flex items-center justify-between text-[11px] text-slate-400">
-            <span><kbd className="rounded border border-slate-200 bg-slate-50 px-1 font-mono text-[10px]">⌘↵</kbd> to generate</span>
+            <span>
+              <kbd className="rounded border border-slate-200 bg-slate-50 px-1 font-mono text-[10px]">
+                ⌘↵
+              </kbd>{" "}
+              to generate
+            </span>
             <span>{intent.length} / 500</span>
           </div>
         </div>
@@ -190,7 +217,7 @@ export function AiRewritePanel({ field, reviewToken, onPick, onClose }: AiRewrit
           </div>
           <div className="flex flex-wrap gap-1.5">
             {TONE_PRESETS.map((preset) => {
-              const active = tones.includes(preset.label)
+              const active = tones.includes(preset.label);
               return (
                 <button
                   key={preset.label}
@@ -199,13 +226,13 @@ export function AiRewritePanel({ field, reviewToken, onPick, onClose }: AiRewrit
                   title={preset.desc}
                   className={`rounded-full border px-2.5 py-1 text-[12px] font-medium transition-colors ${
                     active
-                      ? 'border-indigo-400 bg-indigo-100 text-indigo-800'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-300 hover:bg-indigo-50'
+                      ? "border-indigo-400 bg-indigo-100 text-indigo-800"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-indigo-300 hover:bg-indigo-50"
                   }`}
                 >
                   {preset.label}
                 </button>
-              )
+              );
             })}
           </div>
         </div>
@@ -218,10 +245,10 @@ export function AiRewritePanel({ field, reviewToken, onPick, onClose }: AiRewrit
           className="w-full rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
         >
           {loading
-            ? 'Generating…'
+            ? "Generating…"
             : cooldown
-              ? 'Please wait…'
-              : '✨ Generate 3 options'}
+              ? "Please wait…"
+              : "✨ Generate 3 options"}
         </button>
 
         {/* Error */}
@@ -235,7 +262,10 @@ export function AiRewritePanel({ field, reviewToken, onPick, onClose }: AiRewrit
         {loading && (
           <div className="space-y-3">
             {[1, 2, 3].map((n) => (
-              <div key={n} className="animate-pulse rounded-lg border border-slate-200 p-4 space-y-2">
+              <div
+                key={n}
+                className="animate-pulse rounded-lg border border-slate-200 p-4 space-y-2"
+              >
                 <div className="h-4 w-20 rounded bg-slate-200" />
                 <div className="h-3 w-full rounded bg-slate-100" />
                 <div className="h-3 w-3/4 rounded bg-slate-100" />
@@ -264,11 +294,11 @@ export function AiRewritePanel({ field, reviewToken, onPick, onClose }: AiRewrit
 
       {/* Footer note */}
       <div className="shrink-0 border-t border-slate-200 bg-slate-50 px-5 py-3 text-[11px] text-slate-500">
-        AI suggestions may need a quick review before publishing.
-        Picking a variant lets you edit it further before saving.
+        AI suggestions may need a quick review before publishing. Picking a
+        variant lets you edit it further before saving.
       </div>
     </div>
-  )
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -276,17 +306,17 @@ export function AiRewritePanel({ field, reviewToken, onPick, onClose }: AiRewrit
 // ---------------------------------------------------------------------------
 
 interface VariantCardProps {
-  variant:   Variant
-  maxLength?: number
-  onUse:     () => void
+  variant: Variant;
+  maxLength?: number;
+  onUse: () => void;
 }
 
 function VariantCard({ variant, maxLength, onUse }: VariantCardProps) {
-  const [expanded, setExpanded] = useState(false)
-  const isTruncatable = variant.text.length > 160
+  const [expanded, setExpanded] = useState(false);
+  const isTruncatable = variant.text.length > 160;
 
-  const charCount = variant.text.length
-  const overLimit = maxLength != null && charCount > maxLength
+  const charCount = variant.text.length;
+  const overLimit = maxLength != null && charCount > maxLength;
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-4 hover:border-indigo-200 hover:shadow-sm transition-all">
@@ -294,12 +324,17 @@ function VariantCard({ variant, maxLength, onUse }: VariantCardProps) {
         <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-700">
           {variant.tone}
         </span>
-        <span className={`text-[11px] ${overLimit ? 'text-amber-600 font-medium' : 'text-slate-400'}`}>
-          {charCount}{maxLength != null ? ` / ${maxLength}` : ''} chars
+        <span
+          className={`text-[11px] ${overLimit ? "text-amber-600 font-medium" : "text-slate-400"}`}
+        >
+          {charCount}
+          {maxLength != null ? ` / ${maxLength}` : ""} chars
         </span>
       </div>
 
-      <p className={`text-sm text-slate-800 leading-relaxed ${!expanded && isTruncatable ? 'line-clamp-4' : ''}`}>
+      <p
+        className={`text-sm text-slate-800 leading-relaxed ${!expanded && isTruncatable ? "line-clamp-4" : ""}`}
+      >
         {variant.text}
       </p>
 
@@ -309,7 +344,7 @@ function VariantCard({ variant, maxLength, onUse }: VariantCardProps) {
           onClick={() => setExpanded((e) => !e)}
           className="mt-1 text-[11px] text-indigo-600 hover:underline"
         >
-          {expanded ? 'Show less' : 'Show more'}
+          {expanded ? "Show less" : "Show more"}
         </button>
       )}
 
@@ -321,5 +356,5 @@ function VariantCard({ variant, maxLength, onUse }: VariantCardProps) {
         Use this
       </button>
     </div>
-  )
+  );
 }

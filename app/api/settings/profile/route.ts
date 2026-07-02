@@ -1,25 +1,27 @@
-import { createClient } from '@/lib/supabase/server';
-import { NextResponse } from 'next/server';
+import { createClient } from "@/lib/supabase/server";
+import { NextResponse } from "next/server";
 
 export async function PUT(request: Request) {
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
     const updates = await request.json();
 
     const { data, error } = await supabase
-      .from('users')
+      .from("users")
       .update({
         name: updates.name,
         phone: updates.phone,
         title: updates.title,
       })
-      .eq('id', user.id)
+      .eq("id", user.id)
       .select()
       .single();
 
@@ -29,7 +31,10 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error('Error updating profile:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error("Error updating profile:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }

@@ -1,11 +1,11 @@
-import type { Block } from "./blocks"
+import type { Block } from "./blocks";
 
 function esc(s: string) {
   return s
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
+    .replace(/"/g, "&quot;");
 }
 
 function renderBlock(block: Block): string {
@@ -14,44 +14,44 @@ function renderBlock(block: Block): string {
       const align =
         block.align === "center"
           ? "text-align:center;align-items:center;"
-          : "text-align:left;align-items:flex-start;"
+          : "text-align:left;align-items:flex-start;";
       return `      <section class="block hero" style="${align}">
         <p class="eyebrow">${esc(block.eyebrow)}</p>
         <h1>${esc(block.title)}</h1>
         <p class="subtitle">${esc(block.subtitle)}</p>
         <a class="btn btn-solid" href="#">${esc(block.buttonLabel)}</a>
-      </section>`
+      </section>`;
     }
     case "heading":
-      return `      <${block.level} class="block heading" style="text-align:${block.align}">${esc(block.text)}</${block.level}>`
+      return `      <${block.level} class="block heading" style="text-align:${block.align}">${esc(block.text)}</${block.level}>`;
     case "text":
-      return `      <p class="block text" style="text-align:${block.align}">${esc(block.text)}</p>`
+      return `      <p class="block text" style="text-align:${block.align}">${esc(block.text)}</p>`;
     case "image":
       return `      <figure class="block image">
         <img src="${esc(block.src)}" alt="${esc(block.alt)}"${block.rounded ? ' style="border-radius:12px"' : ""} />
-      </figure>`
+      </figure>`;
     case "button": {
-      const cls = block.variant === "solid" ? "btn-solid" : "btn-outline"
+      const cls = block.variant === "solid" ? "btn-solid" : "btn-outline";
       return `      <div class="block button-block" style="text-align:${block.align}">
         <a class="btn ${cls}" href="${esc(block.href)}">${esc(block.label)}</a>
-      </div>`
+      </div>`;
     }
     case "columns":
       return `      <div class="block columns">
         <div>${esc(block.left)}</div>
         <div>${esc(block.right)}</div>
-      </div>`
+      </div>`;
     case "spacer": {
-      const h = block.size === "sm" ? 24 : block.size === "lg" ? 96 : 56
-      return `      <div class="block spacer" style="height:${h}px"></div>`
+      const h = block.size === "sm" ? 24 : block.size === "lg" ? 96 : 56;
+      return `      <div class="block spacer" style="height:${h}px"></div>`;
     }
     case "divider":
-      return `      <hr class="block divider" />`
+      return `      <hr class="block divider" />`;
   }
 }
 
 export function exportHtml(blocks: Block[], title = "My Page"): string {
-  const body = blocks.map(renderBlock).join("\n")
+  const body = blocks.map(renderBlock).join("\n");
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -83,5 +83,5 @@ export function exportHtml(blocks: Block[], title = "My Page"): string {
 ${body}
   </main>
 </body>
-</html>`
+</html>`;
 }

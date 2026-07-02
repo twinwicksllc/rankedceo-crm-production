@@ -4,4 +4,4 @@
 // without conflicting with the CRM callback at /api/auth/callback
 // =============================================================================
 
-export { GET } from '@/app/api/auth/callback/route'
+export { GET } from "@/app/api/auth/callback/route";

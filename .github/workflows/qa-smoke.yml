@@ -29,8 +29,8 @@ jobs:
       - name: Setup Node 24
         uses: actions/setup-node@v4.2.0
         with:
-          node-version: '24'
-          cache: 'npm'
+          node-version: "24"
+          cache: "npm"
           cache-dependency-path: qa-agent/package-lock.json
 
       - name: Install QA agent dependencies
@@ -82,9 +82,9 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPEN_API_KEY }}
           SELF_HEAL_PROVIDER: openai
           # Smoke always mocks billing + skips email
-          QA_BILLING_MOCK: 'true'
+          QA_BILLING_MOCK: "true"
           # Explicitly disable restart gate for PR smoke runs
-          QA_RESTART_GATE: 'false'
+          QA_RESTART_GATE: "false"
         run: npm run smoke
 
       - name: Upload evidence on failure

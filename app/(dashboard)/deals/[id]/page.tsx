@@ -1,22 +1,22 @@
-import { notFound } from 'next/navigation';
-import { dealService } from '@/lib/services/deal-service';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ActivityTimeline } from '@/components/activities/activity-timeline';
-import Link from 'next/link';
+import { notFound } from "next/navigation";
+import { dealService } from "@/lib/services/deal-service";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ActivityTimeline } from "@/components/activities/activity-timeline";
+import Link from "next/link";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 async function getDealActivities(dealId: string) {
   const response = await fetch(`/api/activities?deal_id=${dealId}`, {
-    cache: 'no-store',
+    cache: "no-store",
   });
-  
+
   if (!response.ok) {
     return [];
   }
-  
+
   return response.json();
 }
 
@@ -35,36 +35,36 @@ export default async function DealDetailPage({
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
     });
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
     }).format(amount);
   };
 
   const getStageColor = (stage: string) => {
     switch (stage) {
-      case 'Lead':
-        return 'bg-gray-100 text-gray-800';
-      case 'Qualified':
-        return 'bg-blue-100 text-blue-800';
-      case 'Proposal':
-        return 'bg-purple-100 text-purple-800';
-      case 'Negotiation':
-        return 'bg-orange-100 text-orange-800';
-      case 'Won':
-        return 'bg-green-100 text-green-800';
-      case 'Lost':
-        return 'bg-red-100 text-red-800';
+      case "Lead":
+        return "bg-gray-100 text-gray-800";
+      case "Qualified":
+        return "bg-blue-100 text-blue-800";
+      case "Proposal":
+        return "bg-purple-100 text-purple-800";
+      case "Negotiation":
+        return "bg-orange-100 text-orange-800";
+      case "Won":
+        return "bg-green-100 text-green-800";
+      case "Lost":
+        return "bg-red-100 text-red-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -76,11 +76,11 @@ export default async function DealDetailPage({
           <Link href="/deals" className="text-blue-600 hover:underline text-sm">
             ← Back to Deals
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900 mt-2">{deal.title}</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mt-2">
+            {deal.title}
+          </h1>
           <div className="flex items-center gap-3 mt-2">
-            <Badge className={getStageColor(deal.stage)}>
-              {deal.stage}
-            </Badge>
+            <Badge className={getStageColor(deal.stage)}>{deal.stage}</Badge>
             <span className="text-gray-600">
               Created on {formatDate(deal.created_at)}
             </span>
@@ -106,7 +106,9 @@ export default async function DealDetailPage({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <div className="text-sm text-gray-600">Value</div>
-                <div className="font-medium text-2xl">{formatCurrency(deal.value)}</div>
+                <div className="font-medium text-2xl">
+                  {formatCurrency(deal.value)}
+                </div>
               </div>
               <div>
                 <div className="text-sm text-gray-600">Win Probability</div>
@@ -116,16 +118,23 @@ export default async function DealDetailPage({
                 <div className="text-sm text-gray-600">Pipeline</div>
                 <div className="font-medium">
                   {deal.pipeline_id ? (
-                    <Link href={`/pipelines/${deal.pipeline_id}`} className="text-blue-600 hover:underline">
+                    <Link
+                      href={`/pipelines/${deal.pipeline_id}`}
+                      className="text-blue-600 hover:underline"
+                    >
                       View Pipeline
                     </Link>
-                  ) : 'N/A'}
+                  ) : (
+                    "N/A"
+                  )}
                 </div>
               </div>
               <div>
                 <div className="text-sm text-gray-600">Expected Close Date</div>
                 <div className="font-medium">
-                  {deal.expected_close_date ? formatDate(deal.expected_close_date) : 'N/A'}
+                  {deal.expected_close_date
+                    ? formatDate(deal.expected_close_date)
+                    : "N/A"}
                 </div>
               </div>
             </div>
@@ -135,15 +144,14 @@ export default async function DealDetailPage({
           {deal.description && (
             <Card className="p-6">
               <h3 className="font-semibold mb-3">Description</h3>
-              <p className="text-gray-700 whitespace-pre-wrap">{deal.description}</p>
+              <p className="text-gray-700 whitespace-pre-wrap">
+                {deal.description}
+              </p>
             </Card>
           )}
 
           {/* Activity Timeline */}
-          <ActivityTimeline
-            title="Activity History"
-            activities={activities}
-          />
+          <ActivityTimeline title="Activity History" activities={activities} />
         </div>
 
         {/* Sidebar */}

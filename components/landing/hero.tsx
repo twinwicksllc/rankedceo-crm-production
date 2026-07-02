@@ -1,33 +1,33 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Image from "next/image"
-import { Star, CheckCircle2, Sparkles } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { useState } from "react";
+import Image from "next/image";
+import { Star, CheckCircle2, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 
 export function Hero() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     practiceSize: "",
-    timeline: ""
-  })
+    timeline: "",
+  });
 
   const benefits = [
     "Unlimited patient records & management",
     "FREE onboarding & training session",
     "FREE data migration from your current system",
-    "24/7 Priority support (Worth $299/mo)*"
-  ]
+    "24/7 Priority support (Worth $299/mo)*",
+  ];
 
   return (
     <section className="relative bg-gradient-to-br from-primary via-primary/95 to-primary/90 overflow-hidden">
@@ -42,7 +42,7 @@ export function Hero() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-primary/50" />
       </div>
-      
+
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-20 left-10 w-64 h-64 bg-white rounded-full blur-3xl" />
@@ -63,7 +63,8 @@ export function Hero() {
                   ))}
                 </div>
                 <span className="text-sm font-medium">
-                  Rated as <span className="font-bold">{'"Excellent"'}</span> (2,847 Reviews)
+                  Rated as <span className="font-bold">{'"Excellent"'}</span>{" "}
+                  (2,847 Reviews)
                 </span>
               </div>
 
@@ -74,7 +75,9 @@ export function Hero() {
               </h1>
 
               <p className="text-lg text-white/80 mb-8 max-w-xl leading-relaxed mx-auto lg:mx-0">
-                With Smile Pro, you&apos;ll transform how you manage patients, automate appointments, and grow your practice — all in one powerful platform.
+                With Smile Pro, you&apos;ll transform how you manage patients,
+                automate appointments, and grow your practice — all in one
+                powerful platform.
               </p>
             </div>
 
@@ -93,7 +96,11 @@ export function Hero() {
                   Smile Pro Demo
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Reserve your demo <span className="text-secondary font-semibold">(worth $500)</span> & see if Smile Pro is right for you.
+                  Reserve your demo{" "}
+                  <span className="text-secondary font-semibold">
+                    (worth $500)
+                  </span>{" "}
+                  & see if Smile Pro is right for you.
                 </p>
               </div>
 
@@ -106,7 +113,9 @@ export function Hero() {
                     id="name"
                     placeholder="Dr. John Smith"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
                     className="bg-input border-border"
                   />
                 </div>
@@ -120,7 +129,9 @@ export function Hero() {
                     type="email"
                     placeholder="john@yourpractice.com"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
                     className="bg-input border-border"
                   />
                 </div>
@@ -131,7 +142,9 @@ export function Hero() {
                   </Label>
                   <Select
                     value={formData.practiceSize}
-                    onValueChange={(value) => setFormData({ ...formData, practiceSize: value })}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, practiceSize: value })
+                    }
                   >
                     <SelectTrigger className="bg-input border-border">
                       <SelectValue placeholder="Please Choose" />
@@ -151,7 +164,9 @@ export function Hero() {
                   </Label>
                   <Select
                     value={formData.timeline}
-                    onValueChange={(value) => setFormData({ ...formData, timeline: value })}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, timeline: value })
+                    }
                   >
                     <SelectTrigger className="bg-input border-border">
                       <SelectValue placeholder="Please Choose" />
@@ -165,8 +180,8 @@ export function Hero() {
                   </Select>
                 </div>
 
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground font-bold py-6 text-lg"
                 >
                   Get My FREE Demo
@@ -197,7 +212,11 @@ export function Hero() {
         <div className="py-8 pb-16">
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5 max-w-md mx-auto lg:mx-0">
             <p className="text-white/90 italic mb-4">
-              &ldquo;They didn&apos;t just give us software, they guided us through every step <span className="font-semibold text-white">until we had the perfect system for our practice.&rdquo;</span>
+              &ldquo;They didn&apos;t just give us software, they guided us
+              through every step{" "}
+              <span className="font-semibold text-white">
+                until we had the perfect system for our practice.&rdquo;
+              </span>
             </p>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-bold">
@@ -205,7 +224,9 @@ export function Hero() {
               </div>
               <div>
                 <p className="font-semibold text-white">Dr. Rachel Mitchell</p>
-                <p className="text-xs text-white/60">Mitchell Family Dentistry</p>
+                <p className="text-xs text-white/60">
+                  Mitchell Family Dentistry
+                </p>
               </div>
               <div className="ml-auto flex items-center gap-1">
                 <span className="text-xs text-white/60">Google</span>
@@ -220,5 +241,5 @@ export function Hero() {
         </div>
       </div>
     </section>
-  )
+  );
 }

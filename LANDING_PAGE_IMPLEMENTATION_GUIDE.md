@@ -5,9 +5,11 @@
 The v0-created landing page has **significant component incompatibilities** with the production CRM. The components use different styling approaches and structures. We have **two viable options**:
 
 ### ✅ RECOMMENDED: Option A - Copy v0 Components
+
 Copy the v0 Badge, Button, and Card components alongside production components, use them only for the landing page.
 
-### ⚠️ Option B - Adapt Landing Page to Production Components  
+### ⚠️ Option B - Adapt Landing Page to Production Components
+
 Modify the landing page to work with existing production components (more work, potential styling issues).
 
 ---
@@ -15,9 +17,11 @@ Modify the landing page to work with existing production components (more work, 
 ## Component Compatibility Analysis
 
 ### 1. Badge Component
+
 **Status**: ❌ **INCOMPATIBLE**
 
 **Key Differences**:
+
 - V0 uses `<span>` with Slot support, Production uses `<div>`
 - V0 has `asChild` prop, Production doesn't
 - V0 has different styling classes (more modern)
@@ -26,9 +30,11 @@ Modify the landing page to work with existing production components (more work, 
 **Impact**: Landing page badges may not render correctly with production component
 
 ### 2. Button Component
+
 **Status**: ❌ **INCOMPATIBLE**
 
 **Key Differences**:
+
 - V0 has additional size variants: `icon-sm`, `icon-lg`
 - V0 uses different class structures (gap-2, has-[>svg] selectors)
 - V0 has `data-slot` attributes
@@ -38,9 +44,11 @@ Modify the landing page to work with existing production components (more work, 
 **Impact**: Buttons may look different, icon sizing may be off
 
 ### 3. Card Component
+
 **Status**: ❌ **INCOMPATIBLE**
 
 **Key Differences**:
+
 - V0 has completely different structure (flex-col gap-6 vs space-y-1.5)
 - V0 has `CardAction` component, Production doesn't
 - V0 uses `@container` queries
@@ -50,6 +58,7 @@ Modify the landing page to work with existing production components (more work, 
 **Impact**: Card layouts will be significantly different
 
 ### 4. Lucide Icons
+
 **Status**: ✅ **COMPATIBLE**
 
 Both use the same `lucide-react` package. All icons used in v0 landing page should work.
@@ -59,6 +68,7 @@ Both use the same `lucide-react` package. All icons used in v0 landing page shou
 ## RECOMMENDED APPROACH: Option A
 
 ### Strategy
+
 1. Keep production components untouched (no breaking changes)
 2. Copy v0 components with different names
 3. Use v0 components only for landing page
@@ -67,6 +77,7 @@ Both use the same `lucide-react` package. All icons used in v0 landing page shou
 ### Implementation Steps
 
 #### Step 1: Copy V0 Components with New Names
+
 ```bash
 # Copy v0 components as landing-specific versions
 cp /tmp/v0-landing/components/ui/badge.tsx components/ui/badge-landing.tsx
@@ -75,14 +86,18 @@ cp /tmp/v0-landing/components/ui/card.tsx components/ui/card-landing.tsx
 ```
 
 #### Step 2: Rename Exports in Landing Components
+
 In each `-landing.tsx` file, rename exports:
+
 - `Badge` → `BadgeLanding`
-- `Button` → `ButtonLanding`  
+- `Button` → `ButtonLanding`
 - `Card` → `CardLanding`
 - etc.
 
 #### Step 3: Update Landing Page Imports
+
 In `app/page.tsx`:
+
 ```typescript
 import { ButtonLanding as Button } from '@/components/ui/button-landing'
 import { BadgeLanding as Badge } from '@/components/ui/badge-landing'
@@ -90,12 +105,14 @@ import { CardLanding as Card, CardContentLanding as CardContent, ... } from '@/c
 ```
 
 #### Step 4: Test and Deploy
+
 - Build and test locally
 - Verify landing page renders correctly
 - Verify CRM still works with original components
 - Deploy to production
 
 ### Pros ✅
+
 - **Zero risk** to existing CRM functionality
 - **No breaking changes** to production components
 - **Easy to rollback** (just delete landing components)
@@ -103,6 +120,7 @@ import { CardLanding as Card, CardContentLanding as CardContent, ... } from '@/c
 - **Quick implementation** (~30 minutes)
 
 ### Cons ⚠️
+
 - Slight code duplication (3 components)
 - Need to maintain two sets of components
 - Slightly larger bundle size
@@ -112,32 +130,38 @@ import { CardLanding as Card, CardContentLanding as CardContent, ... } from '@/c
 ## ALTERNATIVE: Option B
 
 ### Strategy
+
 Adapt the v0 landing page to work with production components by modifying the JSX and classes.
 
 ### Required Changes
 
 #### 1. Badge Changes
+
 - Remove `asChild` props
 - Adjust class names if needed
 - Test rendering
 
 #### 2. Button Changes
+
 - Change `icon-sm` and `icon-lg` to `icon` or `sm`/`lg`
 - Adjust any v0-specific classes
 - Test all button variants
 
 #### 3. Card Changes
+
 - Restructure CardHeader to match production
 - Remove CardAction usage (not in production)
 - Adjust padding/spacing classes
 - Test all card layouts
 
 ### Pros ✅
+
 - No component duplication
 - Single source of truth for components
 - Smaller bundle size
 
 ### Cons ❌
+
 - **High risk** of styling issues
 - **Time-consuming** to adapt all usages
 - May not match v0 design exactly
@@ -149,6 +173,7 @@ Adapt the v0 landing page to work with production components by modifying the JS
 ## Detailed Implementation Plan (Option A)
 
 ### Phase 1: Preparation (5 min)
+
 ```bash
 # Create feature branch
 cd /workspace
@@ -161,11 +186,13 @@ cp app/page.tsx app/page.tsx.backup
 ### Phase 2: Copy V0 Components (10 min)
 
 **2.1: Copy Badge Component**
+
 ```bash
 cp /tmp/v0-landing/components/ui/badge.tsx components/ui/badge-landing.tsx
 ```
 
 Edit `components/ui/badge-landing.tsx`:
+
 ```typescript
 // Change all exports
 export { BadgeLanding as Badge, badgeVariantsLanding as badgeVariants }
@@ -175,11 +202,13 @@ function BadgeLanding({ ... }) { ... }
 ```
 
 **2.2: Copy Button Component**
+
 ```bash
 cp /tmp/v0-landing/components/ui/button.tsx components/ui/button-landing.tsx
 ```
 
 Edit `components/ui/button-landing.tsx`:
+
 ```typescript
 // Change all exports
 export { ButtonLanding as Button, buttonVariantsLanding as buttonVariants }
@@ -189,11 +218,13 @@ function ButtonLanding({ ... }) { ... }
 ```
 
 **2.3: Copy Card Component**
+
 ```bash
 cp /tmp/v0-landing/components/ui/card.tsx components/ui/card-landing.tsx
 ```
 
 Edit `components/ui/card-landing.tsx`:
+
 ```typescript
 // Change all exports
 export {
@@ -213,18 +244,27 @@ function CardHeaderLanding({ ... }) { ... }
 ```
 
 ### Phase 3: Copy Landing Page (5 min)
+
 ```bash
 cp /tmp/v0-landing/app/page.tsx app/page-new.tsx
 ```
 
 Edit `app/page-new.tsx` imports:
+
 ```typescript
-import { Button } from '@/components/ui/button-landing'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card-landing'
-import { Badge } from '@/components/ui/badge-landing'
+import { Button } from "@/components/ui/button-landing";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card-landing";
+import { Badge } from "@/components/ui/badge-landing";
 ```
 
 ### Phase 4: Replace Homepage (2 min)
+
 ```bash
 mv app/page.tsx app/page-old.tsx
 mv app/page-new.tsx app/page.tsx
@@ -233,11 +273,13 @@ mv app/page-new.tsx app/page.tsx
 ### Phase 5: Build and Test (15 min)
 
 **5.1: Build**
+
 ```bash
 npm run build
 ```
 
 **5.2: Test Landing Page**
+
 - [ ] Homepage loads at `/`
 - [ ] All sections render correctly
 - [ ] Badges display properly
@@ -248,6 +290,7 @@ npm run build
 - [ ] Links work
 
 **5.3: Test CRM**
+
 - [ ] `/login` still works
 - [ ] `/signup` still works
 - [ ] `/dashboard` still works
@@ -255,6 +298,7 @@ npm run build
 - [ ] No console errors
 
 ### Phase 6: Commit and Deploy (10 min)
+
 ```bash
 # Commit changes
 git add .
@@ -272,6 +316,7 @@ git push origin feature/v0-landing-page
 ```
 
 ### Phase 7: Production Verification (5 min)
+
 - [ ] Test production deployment
 - [ ] Verify landing page works
 - [ ] Verify CRM works
@@ -308,6 +353,7 @@ git push origin feature/v0-landing-page
 ## Testing Checklist
 
 ### Visual Testing
+
 - [ ] Hero section displays correctly
 - [ ] Problem/Solution section renders
 - [ ] Features grid displays properly
@@ -321,6 +367,7 @@ git push origin feature/v0-landing-page
 - [ ] Desktop responsive (1280px, 1920px)
 
 ### Functional Testing
+
 - [ ] "Log in" button → `/login`
 - [ ] "Start Free Trial" buttons → `/signup`
 - [ ] "View Demo" button → `/login`
@@ -333,6 +380,7 @@ git push origin feature/v0-landing-page
 - [ ] No console warnings
 
 ### Integration Testing
+
 - [ ] Login flow works
 - [ ] Signup flow works
 - [ ] Dashboard access works
@@ -345,6 +393,7 @@ git push origin feature/v0-landing-page
 - [ ] Email templates work
 
 ### Performance Testing
+
 - [ ] Page load < 3 seconds
 - [ ] First Contentful Paint < 1.5s
 - [ ] Largest Contentful Paint < 2.5s
@@ -388,6 +437,7 @@ git push origin feature/v0-landing-page
 ## Risk Assessment
 
 ### Low Risk ✅
+
 - Using separate components for landing page
 - No changes to production components
 - Easy rollback available
@@ -395,10 +445,12 @@ git push origin feature/v0-landing-page
 - No API changes
 
 ### Medium Risk ⚠️
+
 - Slight bundle size increase
 - Need to maintain two component sets
 
 ### High Risk ❌
+
 - None
 
 ---
@@ -408,6 +460,7 @@ git push origin feature/v0-landing-page
 **Proceed with Option A** - Copy v0 components as landing-specific variants.
 
 This approach:
+
 - ✅ Preserves v0 design integrity
 - ✅ Zero risk to existing CRM
 - ✅ Quick implementation

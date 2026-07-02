@@ -1,31 +1,46 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { CampaignService } from '@/lib/services/campaign-service';
-import { createCampaignSchema, type CampaignType } from '@/lib/validations/campaign';
-import { Loader2 } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { CampaignService } from "@/lib/services/campaign-service";
+import {
+  createCampaignSchema,
+  type CampaignType,
+} from "@/lib/validations/campaign";
+import { Loader2 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 export function CampaignForm() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    type: 'one-time' as CampaignType,
-    subject: '',
-    body: '',
-    from_email: '',
-    from_name: '',
-    scheduled_at: '',
+    name: "",
+    description: "",
+    type: "one-time" as CampaignType,
+    subject: "",
+    body: "",
+    from_email: "",
+    from_name: "",
+    scheduled_at: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,32 +60,32 @@ export function CampaignForm() {
       });
 
       // Create campaign via API
-      const response = await fetch('/api/campaigns', {
-        method: 'POST',
+      const response = await fetch("/api/campaigns", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(validatedData),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create campaign');
+        throw new Error("Failed to create campaign");
       }
 
       const { campaign } = await response.json();
 
       toast({
-        title: 'Success',
-        description: 'Campaign created successfully',
+        title: "Success",
+        description: "Campaign created successfully",
       });
 
       router.push(`/campaigns/${campaign.id}`);
     } catch (error) {
-      console.error('Error creating campaign:', error);
+      console.error("Error creating campaign:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to create campaign. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to create campaign. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -78,7 +93,7 @@ export function CampaignForm() {
   };
 
   const handleChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -90,7 +105,7 @@ export function CampaignForm() {
             id="name"
             placeholder="Welcome email series"
             value={formData.name}
-            onChange={(e) => handleChange('name', e.target.value)}
+            onChange={(e) => handleChange("name", e.target.value)}
             required
           />
         </div>
@@ -101,7 +116,7 @@ export function CampaignForm() {
             id="description"
             placeholder="Describe your campaign..."
             value={formData.description}
-            onChange={(e) => handleChange('description', e.target.value)}
+            onChange={(e) => handleChange("description", e.target.value)}
             rows={3}
           />
         </div>
@@ -110,7 +125,7 @@ export function CampaignForm() {
           <Label htmlFor="type">Campaign Type *</Label>
           <Select
             value={formData.type}
-            onValueChange={(value) => handleChange('type', value)}
+            onValueChange={(value) => handleChange("type", value)}
           >
             <SelectTrigger id="type">
               <SelectValue />
@@ -139,7 +154,7 @@ export function CampaignForm() {
               id="subject"
               placeholder="Welcome to our service!"
               value={formData.subject}
-              onChange={(e) => handleChange('subject', e.target.value)}
+              onChange={(e) => handleChange("subject", e.target.value)}
               required
             />
           </div>
@@ -150,12 +165,13 @@ export function CampaignForm() {
               id="body"
               placeholder="Your email content here..."
               value={formData.body}
-              onChange={(e) => handleChange('body', e.target.value)}
+              onChange={(e) => handleChange("body", e.target.value)}
               rows={10}
               required
             />
             <p className="text-sm text-muted-foreground">
-              Use {"{{variable_name}}"} for personalization (e.g., {"{{first_name}}"})
+              Use {"{{variable_name}}"} for personalization (e.g.,{" "}
+              {"{{first_name}}"})
             </p>
           </div>
 
@@ -166,7 +182,7 @@ export function CampaignForm() {
               type="email"
               placeholder="noreply@rankedceo.com"
               value={formData.from_email}
-              onChange={(e) => handleChange('from_email', e.target.value)}
+              onChange={(e) => handleChange("from_email", e.target.value)}
             />
           </div>
 
@@ -176,7 +192,7 @@ export function CampaignForm() {
               id="from_name"
               placeholder="RankedCEO"
               value={formData.from_name}
-              onChange={(e) => handleChange('from_name', e.target.value)}
+              onChange={(e) => handleChange("from_name", e.target.value)}
             />
           </div>
         </CardContent>
@@ -196,7 +212,7 @@ export function CampaignForm() {
               id="scheduled_at"
               type="datetime-local"
               value={formData.scheduled_at}
-              onChange={(e) => handleChange('scheduled_at', e.target.value)}
+              onChange={(e) => handleChange("scheduled_at", e.target.value)}
             />
             <p className="text-sm text-muted-foreground">
               Leave empty to send immediately
@@ -208,7 +224,7 @@ export function CampaignForm() {
       <div className="flex gap-4">
         <Button type="submit" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {isLoading ? 'Creating...' : 'Create Campaign'}
+          {isLoading ? "Creating..." : "Create Campaign"}
         </Button>
         <Button type="button" variant="outline" asChild>
           <a href="/campaigns">Cancel</a>

@@ -1,29 +1,36 @@
-"use client"
+"use client";
 
-import { useSortable } from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
-import { GripVertical, Trash2 } from "lucide-react"
-import type { Block } from "@/lib/waas/website-builder/blocks"
-import { BlockRenderer } from "./block-renderer"
-import { cn } from "@/lib/utils"
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical, Trash2 } from "lucide-react";
+import type { Block } from "@/lib/waas/website-builder/blocks";
+import { BlockRenderer } from "./block-renderer";
+import { cn } from "@/lib/utils";
 
 interface Props {
-  block:    Block
-  selected: boolean
-  onSelect: () => void
-  onDelete: () => void
+  block: Block;
+  selected: boolean;
+  onSelect: () => void;
+  onDelete: () => void;
 }
 
 export function CanvasBlock({ block, selected, onSelect, onDelete }: Props) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
     id: block.id,
     data: { source: "canvas" },
-  })
+  });
 
   const style = {
     transform: CSS.Translate.toString(transform),
     transition,
-  }
+  };
 
   return (
     <div
@@ -32,7 +39,7 @@ export function CanvasBlock({ block, selected, onSelect, onDelete }: Props) {
       onClick={onSelect}
       className={cn(
         "group relative rounded-lg border border-transparent px-4 py-2 transition-colors",
-        selected  ? "border-accent ring-1 ring-accent" : "hover:border-border",
+        selected ? "border-accent ring-1 ring-accent" : "hover:border-border",
         isDragging && "z-10 opacity-70",
       )}
     >
@@ -61,7 +68,10 @@ export function CanvasBlock({ block, selected, onSelect, onDelete }: Props) {
         )}
       >
         <button
-          onClick={(e) => { e.stopPropagation(); onDelete() }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
           aria-label="Delete block"
           className="flex size-6 items-center justify-center rounded-md border border-border bg-card text-muted-foreground hover:border-destructive hover:text-destructive"
         >
@@ -71,5 +81,5 @@ export function CanvasBlock({ block, selected, onSelect, onDelete }: Props) {
 
       <BlockRenderer block={block} />
     </div>
-  )
+  );
 }

@@ -1,6 +1,7 @@
 # RankedCEO CRM - Complete Rebuild Plan
 
 ## Executive Summary
+
 This document outlines the complete rebuild of the RankedCEO CRM application from Days 1-15, ensuring all files are properly created, tested, and committed to the Git repository for successful Vercel deployment.
 
 ---
@@ -8,6 +9,7 @@ This document outlines the complete rebuild of the RankedCEO CRM application fro
 ## Current State Assessment
 
 ### ✅ What We Have
+
 - Database schema (25 tables) - Already migrated to Supabase
 - RLS policies (73 policies) - Already applied
 - Configuration files (package.json, tsconfig.json, etc.)
@@ -16,6 +18,7 @@ This document outlines the complete rebuild of the RankedCEO CRM application fro
 - Deployment documentation
 
 ### ❌ What's Missing
+
 - Authentication pages (login, signup)
 - Dashboard layout and navigation
 - All CRM modules (Contacts, Companies, Deals, Pipelines)
@@ -32,9 +35,11 @@ This document outlines the complete rebuild of the RankedCEO CRM application fro
 ## Rebuild Strategy
 
 ### Phase 1: Foundation (30 minutes)
+
 **Goal:** Set up core infrastructure and UI components
 
 **Tasks:**
+
 1. Create `app/layout.tsx` - Root layout with fonts and providers
 2. Create `app/globals.css` - Global styles with Tailwind
 3. Install and configure shadcn/ui components (16 components)
@@ -47,9 +52,11 @@ This document outlines the complete rebuild of the RankedCEO CRM application fro
 ---
 
 ### Phase 2: Authentication System (45 minutes)
+
 **Goal:** Complete user authentication flow
 
 **Tasks:**
+
 1. Create `lib/supabase/client.ts` - Browser Supabase client
 2. Create `lib/supabase/server.ts` - Server Supabase client
 3. Create `lib/supabase/middleware.ts` - Auth middleware
@@ -64,9 +71,11 @@ This document outlines the complete rebuild of the RankedCEO CRM application fro
 ---
 
 ### Phase 3: Dashboard Layout (30 minutes)
+
 **Goal:** Create main dashboard structure
 
 **Tasks:**
+
 1. Create `app/(dashboard)/layout.tsx` - Dashboard layout with sidebar
 2. Create `app/(dashboard)/page.tsx` - Dashboard homepage
 3. Create `components/dashboard/sidebar.tsx` - Navigation sidebar
@@ -80,9 +89,11 @@ This document outlines the complete rebuild of the RankedCEO CRM application fro
 ---
 
 ### Phase 4: Contacts Module (60 minutes)
+
 **Goal:** Complete CRUD for contacts
 
 **Tasks:**
+
 1. Create `app/(dashboard)/contacts/page.tsx` - Contacts list
 2. Create `app/(dashboard)/contacts/new/page.tsx` - Create contact
 3. Create `app/(dashboard)/contacts/[id]/page.tsx` - Contact detail
@@ -96,9 +107,11 @@ This document outlines the complete rebuild of the RankedCEO CRM application fro
 ---
 
 ### Phase 5: Companies Module (45 minutes)
+
 **Goal:** Complete CRUD for companies
 
 **Tasks:**
+
 1. Create `app/(dashboard)/companies/page.tsx` - Companies list
 2. Create `app/(dashboard)/companies/new/page.tsx` - Create company
 3. Create `app/(dashboard)/companies/[id]/page.tsx` - Company detail
@@ -112,9 +125,11 @@ This document outlines the complete rebuild of the RankedCEO CRM application fro
 ---
 
 ### Phase 6: Deals & Pipelines (60 minutes)
+
 **Goal:** Kanban board and pipeline management
 
 **Tasks:**
+
 1. Create `app/(dashboard)/deals/page.tsx` - Deals Kanban board
 2. Create `app/(dashboard)/deals/new/page.tsx` - Create deal
 3. Create `app/(dashboard)/deals/[id]/page.tsx` - Deal detail
@@ -130,9 +145,11 @@ This document outlines the complete rebuild of the RankedCEO CRM application fro
 ---
 
 ### Phase 7: Activities & Timeline (45 minutes)
+
 **Goal:** Activity tracking and timeline view
 
 **Tasks:**
+
 1. Create `app/(dashboard)/activities/page.tsx` - Activities list
 2. Create `components/forms/activity-form.tsx` - Activity form
 3. Create `components/timeline/activity-timeline.tsx` - Timeline component
@@ -145,9 +162,11 @@ This document outlines the complete rebuild of the RankedCEO CRM application fro
 ---
 
 ### Phase 8: Campaigns & Email (60 minutes)
+
 **Goal:** Email campaigns and sequences
 
 **Tasks:**
+
 1. Create `lib/email/sendgrid.ts` - SendGrid integration
 2. Create `lib/email/templates.ts` - Email templates
 3. Create `lib/campaigns/campaign-service.ts` - Campaign logic
@@ -163,9 +182,11 @@ This document outlines the complete rebuild of the RankedCEO CRM application fro
 ---
 
 ### Phase 9: Smart BCC & Email Integration (45 minutes)
+
 **Goal:** Email capture and threading
 
 **Tasks:**
+
 1. Create `app/(dashboard)/email/page.tsx` - Email dashboard
 2. Create `app/api/email/webhook/route.ts` - Email webhook
 3. Create `components/email/bcc-instructions.tsx` - BCC setup
@@ -178,9 +199,11 @@ This document outlines the complete rebuild of the RankedCEO CRM application fro
 ---
 
 ### Phase 10: Forms & Lead Capture (45 minutes)
+
 **Goal:** Form builder and public forms
 
 **Tasks:**
+
 1. Create `app/(dashboard)/forms/page.tsx` - Forms list
 2. Create `app/(dashboard)/forms/new/page.tsx` - Form builder
 3. Create `app/(dashboard)/forms/[id]/edit/page.tsx` - Edit form
@@ -194,9 +217,11 @@ This document outlines the complete rebuild of the RankedCEO CRM application fro
 ---
 
 ### Phase 11: Analytics & Reporting (60 minutes)
+
 **Goal:** Revenue, pipeline, and activity analytics
 
 **Tasks:**
+
 1. Create `lib/analytics/revenue.ts` - Revenue calculations
 2. Create `lib/analytics/pipeline.ts` - Pipeline health
 3. Create `lib/analytics/activity.ts` - Activity tracking
@@ -211,9 +236,11 @@ This document outlines the complete rebuild of the RankedCEO CRM application fro
 ---
 
 ### Phase 12: Commission Tracking (60 minutes)
+
 **Goal:** Commission management UI
 
 **Tasks:**
+
 1. Create `lib/commission/commission-service.ts` - Commission logic
 2. Create `app/(dashboard)/commissions/page.tsx` - Commission dashboard
 3. Create `app/(dashboard)/commissions/schemes/page.tsx` - Schemes management
@@ -227,9 +254,11 @@ This document outlines the complete rebuild of the RankedCEO CRM application fro
 ---
 
 ### Phase 13: Onboarding Wizard (45 minutes)
+
 **Goal:** First-time user onboarding
 
 **Tasks:**
+
 1. Create `lib/onboarding/onboarding-service.ts` - Onboarding logic
 2. Create `app/onboarding/page.tsx` - Onboarding entry
 3. Create `components/onboarding/onboarding-wizard.tsx` - Wizard orchestrator
@@ -245,9 +274,11 @@ This document outlines the complete rebuild of the RankedCEO CRM application fro
 ---
 
 ### Phase 14: Settings & User Management (30 minutes)
+
 **Goal:** Settings pages
 
 **Tasks:**
+
 1. Create `app/(dashboard)/settings/page.tsx` - Settings overview
 2. Create `app/(dashboard)/settings/profile/page.tsx` - Profile settings
 3. Create `app/(dashboard)/settings/team/page.tsx` - Team management
@@ -260,9 +291,11 @@ This document outlines the complete rebuild of the RankedCEO CRM application fro
 ---
 
 ### Phase 15: Final Polish & Testing (30 minutes)
+
 **Goal:** Ensure everything works
 
 **Tasks:**
+
 1. Add loading states to all pages
 2. Add error boundaries
 3. Add empty states
@@ -279,6 +312,7 @@ This document outlines the complete rebuild of the RankedCEO CRM application fro
 ## Testing Checklist
 
 After each phase, verify:
+
 - [ ] No TypeScript errors
 - [ ] No build errors (`npm run build`)
 - [ ] Pages load without errors
@@ -292,11 +326,13 @@ After each phase, verify:
 ## Git Workflow
 
 ### Branch Strategy
+
 - Work on: `deployment/prep-production`
 - Commit after each phase
 - Push after every 2-3 commits
 
 ### Commit Message Format
+
 ```
 feat: Add [feature name]
 fix: Fix [issue]
@@ -305,6 +341,7 @@ docs: Update [documentation]
 ```
 
 ### Push Command
+
 ```bash
 git push https://x-access-token:$GITHUB_TOKEN@github.com/twinwicksllc/RankedCEO-CRM.git deployment/prep-production
 ```
@@ -313,23 +350,23 @@ git push https://x-access-token:$GITHUB_TOKEN@github.com/twinwicksllc/RankedCEO-
 
 ## Estimated Timeline
 
-| Phase | Time | Cumulative |
-|-------|------|------------|
-| 1. Foundation | 30 min | 30 min |
-| 2. Authentication | 45 min | 1h 15min |
-| 3. Dashboard | 30 min | 1h 45min |
-| 4. Contacts | 60 min | 2h 45min |
-| 5. Companies | 45 min | 3h 30min |
-| 6. Deals & Pipelines | 60 min | 4h 30min |
-| 7. Activities | 45 min | 5h 15min |
-| 8. Campaigns | 60 min | 6h 15min |
-| 9. Smart BCC | 45 min | 7h |
-| 10. Forms | 45 min | 7h 45min |
-| 11. Analytics | 60 min | 8h 45min |
-| 12. Commissions | 60 min | 9h 45min |
-| 13. Onboarding | 45 min | 10h 30min |
-| 14. Settings | 30 min | 11h |
-| 15. Polish | 30 min | 11h 30min |
+| Phase                | Time   | Cumulative |
+| -------------------- | ------ | ---------- |
+| 1. Foundation        | 30 min | 30 min     |
+| 2. Authentication    | 45 min | 1h 15min   |
+| 3. Dashboard         | 30 min | 1h 45min   |
+| 4. Contacts          | 60 min | 2h 45min   |
+| 5. Companies         | 45 min | 3h 30min   |
+| 6. Deals & Pipelines | 60 min | 4h 30min   |
+| 7. Activities        | 45 min | 5h 15min   |
+| 8. Campaigns         | 60 min | 6h 15min   |
+| 9. Smart BCC         | 45 min | 7h         |
+| 10. Forms            | 45 min | 7h 45min   |
+| 11. Analytics        | 60 min | 8h 45min   |
+| 12. Commissions      | 60 min | 9h 45min   |
+| 13. Onboarding       | 45 min | 10h 30min  |
+| 14. Settings         | 30 min | 11h        |
+| 15. Polish           | 30 min | 11h 30min  |
 
 **Total Estimated Time: 11.5 hours**
 
@@ -340,6 +377,7 @@ git push https://x-access-token:$GITHUB_TOKEN@github.com/twinwicksllc/RankedCEO-
 ## Success Criteria
 
 ### Deployment Ready When:
+
 1. ✅ All pages render without errors
 2. ✅ Authentication flow works (signup → login → dashboard)
 3. ✅ All CRUD operations work (contacts, companies, deals)
@@ -356,18 +394,23 @@ git push https://x-access-token:$GITHUB_TOKEN@github.com/twinwicksllc/RankedCEO-
 ### Potential Issues & Solutions
 
 **Issue 1: Missing Dependencies**
+
 - Solution: Install as needed, update package.json
 
 **Issue 2: Type Errors**
+
 - Solution: Create proper type definitions in `types/`
 
 **Issue 3: Supabase Connection**
+
 - Solution: Verify environment variables, test queries
 
 **Issue 4: Build Failures**
+
 - Solution: Fix errors incrementally, test after each phase
 
 **Issue 5: Git Conflicts**
+
 - Solution: Work on single branch, commit frequently
 
 ---

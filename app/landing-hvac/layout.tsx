@@ -1,23 +1,22 @@
-import './style.css'
+import "./style.css";
 
 export const metadata = {
-  title: 'HVAC Pro | Heating, Cooling & Air Quality Experts',
-  description: 'Get fast, affordable HVAC service from certified technicians. Membership pricing with no surprise fees.',
+  title: "HVAC Pro | Heating, Cooling & Air Quality Experts",
+  description:
+    "Get fast, affordable HVAC service from certified technicians. Membership pricing with no surprise fees.",
   icons: {
-    icon: '/icon.svg',
+    icon: "/icon.svg",
   },
-}
+};
 
 export default function LandingHvacLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en">
-      <body>
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
-  )
+  );
 }

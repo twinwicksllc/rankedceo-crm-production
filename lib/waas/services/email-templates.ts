@@ -8,7 +8,7 @@
 // Templates are designed to be responsive, brand-consistent, and conversion-focused.
 // =============================================================================
 
-import type { NotificationType } from './notifications'
+import type { NotificationType } from "./notifications";
 
 // ---------------------------------------------------------------------------
 // Template Data Types
@@ -16,74 +16,80 @@ import type { NotificationType } from './notifications'
 
 export interface NotificationTemplateData {
   // Common fields
-  businessName?:      string
-  businessTrade?:     string
-  auditScore?:        number
-  auditGrade?:        string
+  businessName?: string;
+  businessTrade?: string;
+  auditScore?: number;
+  auditGrade?: string;
 
   // Site ready for review
-  variantCount?:      number
-  reviewTokenUrl?:    string
+  variantCount?: number;
+  reviewTokenUrl?: string;
 
   // Domain status update
-  domain?:            string
-  domainStatus?:      string
+  domain?: string;
+  domainStatus?: string;
 
   // Site live
-  liveUrl?:           string
-  siteTitle?:         string
+  liveUrl?: string;
+  siteTitle?: string;
 
   // Abandonment emails
-  auditId?:           string
-  abandonmentStage?:  'stage_1' | 'stage_2' | 'stage_3' | 'stage_4'  // 1h, 24h, 48h, 72h
-  topOpportunities?:  string[]
-  getStartedUrl?:     string
+  auditId?: string;
+  abandonmentStage?: "stage_1" | "stage_2" | "stage_3" | "stage_4"; // 1h, 24h, 48h, 72h
+  topOpportunities?: string[];
+  getStartedUrl?: string;
 
   // Task 9 — audit report ready
-  requestorName?:     string
-  targetDomain?:      string
-  auditUrl?:          string
-  pdfUrl?:            string
+  requestorName?: string;
+  targetDomain?: string;
+  auditUrl?: string;
+  pdfUrl?: string;
 
   // Generic fallback
-  [key: string]: unknown
+  [key: string]: unknown;
 }
 
 // ---------------------------------------------------------------------------
 // Template Rendering Engine
 // ---------------------------------------------------------------------------
 
-function interpolateTemplate(template: string, data: NotificationTemplateData): string {
-  let result = template
+function interpolateTemplate(
+  template: string,
+  data: NotificationTemplateData,
+): string {
+  let result = template;
 
   // Simple Handlebars-like interpolation: {{variable}}
   Object.entries(data).forEach(([key, value]) => {
-    const placeholder = new RegExp(`{{${key}}}`, 'g')
+    const placeholder = new RegExp(`{{${key}}}`, "g");
     if (value === null || value === undefined) {
-      result = result.replace(placeholder, '')
-    } else if (typeof value === 'string' || typeof value === 'number') {
-      result = result.replace(placeholder, String(value))
+      result = result.replace(placeholder, "");
+    } else if (typeof value === "string" || typeof value === "number") {
+      result = result.replace(placeholder, String(value));
     } else if (Array.isArray(value)) {
       // For arrays, render as comma-separated or list
-      const joined = value.join(', ')
-      result = result.replace(placeholder, joined)
+      const joined = value.join(", ");
+      result = result.replace(placeholder, joined);
     }
-  })
+  });
 
-  return result
+  return result;
 }
 
 // ---------------------------------------------------------------------------
 // Email Templates
 // ---------------------------------------------------------------------------
 
-const TEMPLATES: Record<NotificationType, (data: NotificationTemplateData) => { subject: string; html: string }> = {
+const TEMPLATES: Record<
+  NotificationType,
+  (data: NotificationTemplateData) => { subject: string; html: string }
+> = {
   // -----------
   // Abandonment Emails (Task 4)
   // -----------
 
   site_ready_for_review: (data) => ({
-    subject: `Your ${data.businessName || 'site'} designs are ready for review`,
+    subject: `Your ${data.businessName || "site"} designs are ready for review`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -367,7 +373,7 @@ const TEMPLATES: Record<NotificationType, (data: NotificationTemplateData) => { 
 
   // Task 9 — audit report ready (sent to requestor when audit completes)
   audit_report_ready: (data) => ({
-    subject: `Your SEO audit for ${data.targetDomain ?? 'your site'} is ready 📊`,
+    subject: `Your SEO audit for ${data.targetDomain ?? "your site"} is ready 📊`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -378,22 +384,29 @@ const TEMPLATES: Record<NotificationType, (data: NotificationTemplateData) => { 
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;">
           <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h1>Your audit is ready${data.requestorName ? `, ${data.requestorName.split(' ')[0]}` : ''}!</h1>
-            <p>We've finished analysing <strong>${data.targetDomain ?? 'your site'}</strong> against your competitors.</p>
+            <h1>Your audit is ready${data.requestorName ? `, ${data.requestorName.split(" ")[0]}` : ""}!</h1>
+            <p>We've finished analysing <strong>${data.targetDomain ?? "your site"}</strong> against your competitors.</p>
             <p style="font-size: 36px; margin: 20px 0; text-align: center;">
-              <strong style="color: ${data.auditGrade === 'A' ? '#16a34a' : data.auditGrade === 'B' ? '#2563eb' : data.auditGrade === 'C' ? '#d97706' : data.auditGrade === 'D' ? '#ea580c' : '#dc2626'};">${data.auditGrade ?? 'F'}</strong>
+              <strong style="color: ${data.auditGrade === "A" ? "#16a34a" : data.auditGrade === "B" ? "#2563eb" : data.auditGrade === "C" ? "#d97706" : data.auditGrade === "D" ? "#ea580c" : "#dc2626"};">${data.auditGrade ?? "F"}</strong>
               &nbsp; <span style="font-size: 20px; color: #64748b;">${data.auditScore ?? 0}/100</span>
             </p>
-            ${data.topOpportunities && data.topOpportunities.length > 0 ? `
+            ${
+              data.topOpportunities && data.topOpportunities.length > 0
+                ? `
             <p><strong>Top opportunities we found:</strong></p>
             <ol>
-              ${(data.topOpportunities).slice(0, 3).map((o: string) => `<li>${o}</li>`).join('')}
+              ${data.topOpportunities
+                .slice(0, 3)
+                .map((o: string) => `<li>${o}</li>`)
+                .join("")}
             </ol>
-            ` : ''}
+            `
+                : ""
+            }
             <p style="text-align: center; margin: 24px 0;">
-              <a href="${data.auditUrl ?? '#'}" style="display: inline-block; padding: 14px 32px; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">View Full Report →</a>
+              <a href="${data.auditUrl ?? "#"}" style="display: inline-block; padding: 14px 32px; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">View Full Report →</a>
             </p>
-            ${data.pdfUrl ? `<p style="text-align: center;"><a href="${data.pdfUrl}" style="color: #2563eb; font-size: 13px;">📄 Download PDF Report</a></p>` : ''}
+            ${data.pdfUrl ? `<p style="text-align: center;"><a href="${data.pdfUrl}" style="color: #2563eb; font-size: 13px;">📄 Download PDF Report</a></p>` : ""}
             <p style="font-size: 12px; color: #94a3b8; text-align: center;">Your report is live for 30 days. You may need to log in or create a free account to view it.</p>
             <p>—<br>The RankedCEO Team</p>
           </div>
@@ -401,7 +414,7 @@ const TEMPLATES: Record<NotificationType, (data: NotificationTemplateData) => { 
       </html>
     `,
   }),
-}
+};
 
 // ---------------------------------------------------------------------------
 // Public API: Render Template
@@ -411,23 +424,23 @@ export function renderEmailTemplate(
   type: NotificationType,
   data: NotificationTemplateData,
 ): { subject: string; html: string } {
-  const renderer = TEMPLATES[type]
+  const renderer = TEMPLATES[type];
 
   if (!renderer) {
-    console.warn(`[email-templates] Unknown notification type: ${type}`)
+    console.warn(`[email-templates] Unknown notification type: ${type}`);
     return {
-      subject: 'Notification from RankedCEO',
-      html: '<p>You have a notification from RankedCEO.</p>',
-    }
+      subject: "Notification from RankedCEO",
+      html: "<p>You have a notification from RankedCEO.</p>",
+    };
   }
 
   try {
-    return renderer(data)
+    return renderer(data);
   } catch (err) {
-    console.error(`[email-templates] Error rendering ${type}:`, err)
+    console.error(`[email-templates] Error rendering ${type}:`, err);
     return {
-      subject: 'Notification from RankedCEO',
-      html: '<p>You have a notification from RankedCEO.</p>',
-    }
+      subject: "Notification from RankedCEO",
+      html: "<p>You have a notification from RankedCEO.</p>",
+    };
   }
 }

@@ -1,32 +1,32 @@
-'use client'
+"use client";
 
-import Image from 'next/image'
-import { useEffect, useState } from 'react'
-import { IndustryLogo, type IndustryType } from '@/components/ui/industry-logo'
+import Image from "next/image";
+import { useEffect, useState } from "react";
+import { IndustryLogo, type IndustryType } from "@/components/ui/industry-logo";
 
 // Map subdomains to industry types
 const SUBDOMAIN_TO_INDUSTRY: Record<string, IndustryType> = {
-  hvac: 'hvac',
-  plumbing: 'plumbing',
-  electrical: 'electrical',
-  smile: 'smile',
-}
+  hvac: "hvac",
+  plumbing: "plumbing",
+  electrical: "electrical",
+  smile: "smile",
+};
 
 function detectIndustry(): IndustryType | null {
-  if (typeof window === 'undefined') return null
-  const hostname = window.location.hostname // e.g. "hvac.rankedceo.com"
-  const subdomain = hostname.split('.')[0]
-  return SUBDOMAIN_TO_INDUSTRY[subdomain] ?? null
+  if (typeof window === "undefined") return null;
+  const hostname = window.location.hostname; // e.g. "hvac.rankedceo.com"
+  const subdomain = hostname.split(".")[0];
+  return SUBDOMAIN_TO_INDUSTRY[subdomain] ?? null;
 }
 
 export function SidebarLogo() {
-  const [industry, setIndustry] = useState<IndustryType | null>(null)
-  const [mounted, setMounted] = useState(false)
+  const [industry, setIndustry] = useState<IndustryType | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setIndustry(detectIndustry())
-    setMounted(true)
-  }, [])
+    setIndustry(detectIndustry());
+    setMounted(true);
+  }, []);
 
   // During SSR or before mount, show RankedCEO logo (avoids layout shift)
   if (!mounted) {
@@ -41,7 +41,7 @@ export function SidebarLogo() {
           priority
         />
       </div>
-    )
+    );
   }
 
   // If on an industry subdomain, show the industry logo on white background
@@ -55,7 +55,7 @@ export function SidebarLogo() {
           className="mx-auto"
         />
       </div>
-    )
+    );
   }
 
   // Default: RankedCEO logo on black background (main CRM)
@@ -70,5 +70,5 @@ export function SidebarLogo() {
         priority
       />
     </div>
-  )
+  );
 }

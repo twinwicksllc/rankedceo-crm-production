@@ -9,67 +9,68 @@
 //   - Sitemap URL pointing to the canonical site root
 // =============================================================================
 
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient }              from '@supabase/supabase-js'
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-export const dynamic    = 'force-dynamic'
-export const revalidate = 3600  // refresh every hour
+export const dynamic = "force-dynamic";
+export const revalidate = 3600; // refresh every hour
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: { site: string } },
 ) {
-  const slug = params.site
+  const slug = params.site;
 
   // Look up tenant to confirm it's active and get domain/subdomain
-  let isActive   = false
-  let siteUrl    = ''
+  let isActive = false;
+  let siteUrl = "";
 
   try {
     const client = createClient(
       process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL!,
       process.env.WAAS_SUPABASE_SERVICE_ROLE_KEY!,
       { auth: { persistSession: false, autoRefreshToken: false } },
-    )
+    );
 
     const { data } = await client
-      .from('tenants')
-      .select('status, domain, subdomain')
-      .eq('slug', slug)
-      .single()
+      .from("tenants")
+      .select("status, domain, subdomain")
+      .eq("slug", slug)
+      .single();
 
     if (data) {
-      const row = data as { status: string; domain: string | null; subdomain: string | null }
-      isActive = row.status === 'active'
+      const row = data as {
+        status: string;
+        domain: string | null;
+        subdomain: string | null;
+      };
+      isActive = row.status === "active";
       if (row.domain) {
-        siteUrl = `https://${row.domain}`
+        siteUrl = `https://${row.domain}`;
       } else if (row.subdomain) {
-        const base = process.env.NEXT_PUBLIC_APP_URL ?? 'https://rankedceo.com'
-        siteUrl = `${base}/sites/${slug}`
+        const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://rankedceo.com";
+        siteUrl = `${base}/sites/${slug}`;
       }
     }
   } catch {
     // DB error — default to disallow to be safe
-    isActive = false
+    isActive = false;
   }
 
   const content = isActive
     ? [
-        'User-agent: *',
-        'Allow: /',
-        '',
+        "User-agent: *",
+        "Allow: /",
+        "",
         ...(siteUrl ? [`Sitemap: ${siteUrl}/sitemap.xml`] : []),
-      ].join('\n')
-    : [
-        'User-agent: *',
-        'Disallow: /',
-      ].join('\n')
+      ].join("\n")
+    : ["User-agent: *", "Disallow: /"].join("\n");
 
   return new NextResponse(content, {
     status: 200,
     headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-      'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "public, max-age=3600, s-maxage=3600",
     },
-  })
+  });
 }

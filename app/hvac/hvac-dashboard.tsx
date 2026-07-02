@@ -1,63 +1,80 @@
-'use client'
+"use client";
 
-import { useState, useEffect, useCallback } from 'react'
-import { Flame, Copy, Check, Plus, RefreshCw } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { DashboardStats } from '@/components/industry/dashboard-stats'
-import { LeadCard } from '@/components/industry/lead-card'
-import { LeadFiltersBar } from '@/components/industry/lead-filters'
-import { getIndustryLeads, getIndustryLeadStats } from '@/lib/actions/industry-lead'
-import type { IndustryLead, LeadStats, LeadFilters, LeadStatus } from '@/lib/types/industry-lead'
-import { IndustryLogo } from '@/components/ui/industry-logo'
+import { useState, useEffect, useCallback } from "react";
+import { Flame, Copy, Check, Plus, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DashboardStats } from "@/components/industry/dashboard-stats";
+import { LeadCard } from "@/components/industry/lead-card";
+import { LeadFiltersBar } from "@/components/industry/lead-filters";
+import {
+  getIndustryLeads,
+  getIndustryLeadStats,
+} from "@/lib/actions/industry-lead";
+import type {
+  IndustryLead,
+  LeadStats,
+  LeadFilters,
+  LeadStatus,
+} from "@/lib/types/industry-lead";
+import { IndustryLogo } from "@/components/ui/industry-logo";
 
 interface HvacDashboardProps {
-  userId: string
-  leadCount: number
+  userId: string;
+  leadCount: number;
 }
 
-export default function HvacDashboard({ userId, leadCount }: HvacDashboardProps) {
-  const [leads, setLeads] = useState<IndustryLead[]>([])
-  const [stats, setStats] = useState<LeadStats | null>(null)
-  const [filters, setFilters] = useState<LeadFilters>({ industry: 'hvac' })
-  const [loading, setLoading] = useState(true)
-  const [copied, setCopied] = useState(false)
+export default function HvacDashboard({
+  userId,
+  leadCount,
+}: HvacDashboardProps) {
+  const [leads, setLeads] = useState<IndustryLead[]>([]);
+  const [stats, setStats] = useState<LeadStats | null>(null);
+  const [filters, setFilters] = useState<LeadFilters>({ industry: "hvac" });
+  const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   const leadLink =
-    typeof window !== 'undefined'
+    typeof window !== "undefined"
       ? `${window.location.origin}/lead?operatorId=${userId}`
-      : `https://hvac.rankedceo.com/lead?operatorId=${userId}`
+      : `https://hvac.rankedceo.com/lead?operatorId=${userId}`;
 
   const loadData = useCallback(async () => {
-    setLoading(true)
+    setLoading(true);
     const [leadsResult, statsResult] = await Promise.all([
-      getIndustryLeads('hvac', filters),
-      getIndustryLeadStats('hvac'),
-    ])
-    if (leadsResult.success) setLeads(leadsResult.data)
-    if (statsResult.success && statsResult.data) setStats(statsResult.data)
-    setLoading(false)
-  }, [filters])
+      getIndustryLeads("hvac", filters),
+      getIndustryLeadStats("hvac"),
+    ]);
+    if (leadsResult.success) setLeads(leadsResult.data);
+    if (statsResult.success && statsResult.data) setStats(statsResult.data);
+    setLoading(false);
+  }, [filters]);
 
-  useEffect(() => { loadData() }, [loadData])
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleCopyLink = async () => {
-    await navigator.clipboard.writeText(leadLink)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
+    await navigator.clipboard.writeText(leadLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleStatusChange = (leadId: string, newStatus: LeadStatus) => {
-    setLeads(prev =>
-      prev.map(l => l.id === leadId ? { ...l, status: newStatus } : l)
-    )
+    setLeads((prev) =>
+      prev.map((l) => (l.id === leadId ? { ...l, status: newStatus } : l)),
+    );
     // Refresh stats after status change
-    getIndustryLeadStats('hvac').then(r => {
-      if (r.success && r.data) setStats(r.data)
-    })
-  }
+    getIndustryLeadStats("hvac").then((r) => {
+      if (r.success && r.data) setStats(r.data);
+    });
+  };
 
-  const emergencyLeads = leads.filter(l => l.urgency === 'emergency' && l.status === 'new')
-  const otherLeads = leads.filter(l => !(l.urgency === 'emergency' && l.status === 'new'))
+  const emergencyLeads = leads.filter(
+    (l) => l.urgency === "emergency" && l.status === "new",
+  );
+  const otherLeads = leads.filter(
+    (l) => !(l.urgency === "emergency" && l.status === "new"),
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -77,7 +94,9 @@ export default function HvacDashboard({ userId, leadCount }: HvacDashboardProps)
                 disabled={loading}
                 className="border-blue-200 text-blue-700 hover:bg-blue-50"
               >
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                />
               </Button>
             </div>
           </div>
@@ -85,7 +104,6 @@ export default function HvacDashboard({ userId, leadCount }: HvacDashboardProps)
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6">
-
         {/* Stats */}
         {stats && <DashboardStats stats={stats} industry="hvac" />}
 
@@ -93,9 +111,12 @@ export default function HvacDashboard({ userId, leadCount }: HvacDashboardProps)
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm font-semibold text-blue-900">Your Lead Capture Link</p>
+              <p className="text-sm font-semibold text-blue-900">
+                Your Lead Capture Link
+              </p>
               <p className="text-xs text-blue-700 mt-0.5">
-                Share this link with customers to capture leads directly to your dashboard
+                Share this link with customers to capture leads directly to your
+                dashboard
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -107,8 +128,12 @@ export default function HvacDashboard({ userId, leadCount }: HvacDashboardProps)
                 onClick={handleCopyLink}
                 className="bg-blue-600 hover:bg-blue-700 text-white flex-shrink-0"
               >
-                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                {copied ? 'Copied!' : 'Copy'}
+                {copied ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+                {copied ? "Copied!" : "Copy"}
               </Button>
             </div>
           </div>
@@ -118,10 +143,11 @@ export default function HvacDashboard({ userId, leadCount }: HvacDashboardProps)
         {emergencyLeads.length > 0 && (
           <div className="rounded-lg border border-red-300 bg-red-50 p-4">
             <p className="text-sm font-bold text-red-800 mb-3">
-              🚨 {emergencyLeads.length} Emergency Lead{emergencyLeads.length > 1 ? 's' : ''} — Needs Immediate Attention
+              🚨 {emergencyLeads.length} Emergency Lead
+              {emergencyLeads.length > 1 ? "s" : ""} — Needs Immediate Attention
             </p>
             <div className="space-y-3">
-              {emergencyLeads.map(lead => (
+              {emergencyLeads.map((lead) => (
                 <LeadCard
                   key={lead.id}
                   lead={lead}
@@ -147,7 +173,7 @@ export default function HvacDashboard({ userId, leadCount }: HvacDashboardProps)
             <Button
               size="sm"
               variant="outline"
-              onClick={() => window.open('/lead', '_blank')}
+              onClick={() => window.open("/lead", "_blank")}
               className="border-blue-200 text-blue-700 hover:bg-blue-50"
             >
               <Plus className="mr-1 h-4 w-4" />
@@ -165,8 +191,11 @@ export default function HvacDashboard({ userId, leadCount }: HvacDashboardProps)
           {/* Lead cards */}
           {loading ? (
             <div className="space-y-3">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="h-24 rounded-lg bg-gray-100 animate-pulse" />
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="h-24 rounded-lg bg-gray-100 animate-pulse"
+                />
               ))}
             </div>
           ) : otherLeads.length === 0 && emergencyLeads.length === 0 ? (
@@ -186,7 +215,7 @@ export default function HvacDashboard({ userId, leadCount }: HvacDashboardProps)
             </div>
           ) : (
             <div className="space-y-3">
-              {otherLeads.map(lead => (
+              {otherLeads.map((lead) => (
                 <LeadCard
                   key={lead.id}
                   lead={lead}
@@ -199,5 +228,5 @@ export default function HvacDashboard({ userId, leadCount }: HvacDashboardProps)
         </div>
       </div>
     </div>
-  )
+  );
 }

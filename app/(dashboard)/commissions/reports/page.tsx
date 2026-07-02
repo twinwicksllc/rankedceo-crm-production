@@ -1,20 +1,22 @@
-import { createClient } from '@/lib/supabase/server';
-import { CommissionService } from '@/lib/services/commission-service';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { formatCurrency } from '@/lib/utils';
+import { createClient } from "@/lib/supabase/server";
+import { CommissionService } from "@/lib/services/commission-service";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { formatCurrency } from "@/lib/utils";
 
 export default async function CommissionReportsPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
     return <div>Not authenticated</div>;
   }
 
   const commissionService = new CommissionService();
-  
+
   let userStats: any[] = [];
   let overallStats: any = {
     total_pending: 0,
@@ -26,14 +28,14 @@ export default async function CommissionReportsPage() {
     paid_amount: 0,
     total_commissions: 0,
   };
-  
+
   try {
     [userStats, overallStats] = await Promise.all([
       commissionService.getUserCommissionStats(),
       commissionService.getCommissionStats(),
     ]);
   } catch (error) {
-    console.error('Error fetching commission reports:', error);
+    console.error("Error fetching commission reports:", error);
   }
 
   return (
@@ -41,7 +43,9 @@ export default async function CommissionReportsPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Commission Reports</h1>
-          <p className="text-muted-foreground">View commission performance by team member</p>
+          <p className="text-muted-foreground">
+            View commission performance by team member
+          </p>
         </div>
         <Button asChild variant="outline">
           <Link href="/commissions">Back to Commissions</Link>
@@ -55,7 +59,11 @@ export default async function CommissionReportsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(overallStats.pending_amount + overallStats.approved_amount + overallStats.paid_amount)}
+              {formatCurrency(
+                overallStats.pending_amount +
+                  overallStats.approved_amount +
+                  overallStats.paid_amount,
+              )}
             </div>
             <p className="text-xs text-muted-foreground">
               All time commissions
@@ -65,15 +73,17 @@ export default async function CommissionReportsPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Payout</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Pending Payout
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(overallStats.pending_amount + overallStats.approved_amount)}
+              {formatCurrency(
+                overallStats.pending_amount + overallStats.approved_amount,
+              )}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Awaiting payment
-            </p>
+            <p className="text-xs text-muted-foreground">Awaiting payment</p>
           </CardContent>
         </Card>
 
@@ -85,9 +95,7 @@ export default async function CommissionReportsPage() {
             <div className="text-2xl font-bold">
               {formatCurrency(overallStats.paid_amount)}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Total paid
-            </p>
+            <p className="text-xs text-muted-foreground">Total paid</p>
           </CardContent>
         </Card>
       </div>
@@ -110,15 +118,23 @@ export default async function CommissionReportsPage() {
                 >
                   <div className="flex-1">
                     <h3 className="font-semibold">{stats.user_name}</h3>
-                    <p className="text-sm text-muted-foreground">{stats.user_email}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {stats.user_email}
+                    </p>
                     <div className="flex gap-4 mt-2 text-sm">
                       <span>
-                        <span className="text-muted-foreground">Avg Rate:</span>{' '}
-                        <span className="font-medium">{stats.average_rate.toFixed(1)}%</span>
+                        <span className="text-muted-foreground">Avg Rate:</span>{" "}
+                        <span className="font-medium">
+                          {stats.average_rate.toFixed(1)}%
+                        </span>
                       </span>
                       <span>
-                        <span className="text-muted-foreground">Commissions:</span>{' '}
-                        <span className="font-medium">{stats.commission_count}</span>
+                        <span className="text-muted-foreground">
+                          Commissions:
+                        </span>{" "}
+                        <span className="font-medium">
+                          {stats.commission_count}
+                        </span>
                       </span>
                     </div>
                   </div>

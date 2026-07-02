@@ -1,6 +1,7 @@
 # RankedCEO CRM - Deployment Guide
 
 ## Overview
+
 This guide walks you through deploying the RankedCEO CRM to production on Vercel with Supabase.
 
 ## Prerequisites
@@ -19,6 +20,7 @@ This guide walks you through deploying the RankedCEO CRM to production on Vercel
 Run these migrations in order in Supabase SQL Editor:
 
 **Critical Migrations:**
+
 1. `000001_create_users_and_accounts.sql` - Core tables
 2. `000007_correct_link_auth_users.sql` - Auth linking
 3. `ONBOARDING_COMPLETE_MIGRATION.sql` - Onboarding setup
@@ -28,6 +30,7 @@ Run these migrations in order in Supabase SQL Editor:
 7. All other migrations in `supabase/migrations/`
 
 **How to run:**
+
 1. Go to https://supabase.com/dashboard
 2. Select your project
 3. Click "SQL Editor" → "New Query"
@@ -38,10 +41,11 @@ Run these migrations in order in Supabase SQL Editor:
 ### 1.2 Verify Tables Created
 
 Run this query to verify all tables exist:
+
 ```sql
-SELECT table_name 
-FROM information_schema.tables 
-WHERE table_schema = 'public' 
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
 ORDER BY table_name;
 ```
 
@@ -50,10 +54,11 @@ You should see 30+ tables.
 ### 1.3 Verify RLS Policies
 
 Run this query to verify RLS is enabled:
+
 ```sql
-SELECT tablename, rowsecurity 
-FROM pg_tables 
-WHERE schemaname = 'public' 
+SELECT tablename, rowsecurity
+FROM pg_tables
+WHERE schemaname = 'public'
 ORDER BY tablename;
 ```
 
@@ -64,27 +69,32 @@ All tables should have `rowsecurity = true`.
 ### 2.1 Get Supabase Credentials
 
 From Supabase Dashboard → Settings → API:
+
 - `NEXT_PUBLIC_SUPABASE_URL` - Project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Anon/Public key
 
 ### 2.2 Get API Keys
 
 **SendGrid:**
+
 - Go to https://app.sendgrid.com/settings/api_keys
 - Create new API key with "Full Access"
 - Copy the key (shown only once)
 
 **Gemini AI:**
+
 - Go to https://makersuite.google.com/app/apikey
 - Create API key
 - Copy the key
 
 **Perplexity AI:**
+
 - Go to https://www.perplexity.ai/settings/api
 - Create API key
 - Copy the key
 
 **reCAPTCHA v3:**
+
 - Go to https://www.google.com/recaptcha/admin
 - Create v3 site key
 - Add domain: `crm.rankedceo.com`
@@ -141,12 +151,14 @@ NEXT_PUBLIC_APP_URL=https://crm.rankedceo.com
 ### 4.1 GoDaddy DNS Settings
 
 **For Landing Page (rankedceo.com):**
+
 - Type: A Record
 - Name: @
 - Value: [Your hosting IP]
 - TTL: 600
 
 **For CRM (crm.rankedceo.com):**
+
 - Type: CNAME
 - Name: crm
 - Value: cname.vercel-dns.com
@@ -229,6 +241,7 @@ dig crm.rankedceo.com
 ### 8.1 Error Tracking
 
 **Sentry:**
+
 ```bash
 npm install @sentry/nextjs
 npx @sentry/wizard@latest -i nextjs
@@ -237,6 +250,7 @@ npx @sentry/wizard@latest -i nextjs
 ### 8.2 Analytics
 
 **Vercel Analytics:**
+
 1. Go to Vercel Dashboard → Analytics
 2. Enable Web Analytics
 3. Add to `app/layout.tsx`
@@ -244,6 +258,7 @@ npx @sentry/wizard@latest -i nextjs
 ### 8.3 Uptime Monitoring
 
 **Options:**
+
 - UptimeRobot (free)
 - Pingdom
 - StatusCake
@@ -253,6 +268,7 @@ npx @sentry/wizard@latest -i nextjs
 ### 9.1 Database Backups
 
 Supabase automatically backs up your database daily. To enable:
+
 1. Go to Supabase Dashboard → Database → Backups
 2. Verify automatic backups are enabled
 3. Test restore process
@@ -274,11 +290,13 @@ Supabase automatically backs up your database daily. To enable:
 ### 10.2 Monitor Logs
 
 **Vercel Logs:**
+
 1. Go to Vercel Dashboard → Deployments → [Latest] → Logs
 2. Monitor for errors
 3. Check API response times
 
 **Supabase Logs:**
+
 1. Go to Supabase Dashboard → Logs
 2. Monitor database queries
 3. Check for slow queries
@@ -286,6 +304,7 @@ Supabase automatically backs up your database daily. To enable:
 ### 10.3 Performance Check
 
 **Lighthouse Audit:**
+
 1. Open Chrome DevTools
 2. Go to Lighthouse tab
 3. Run audit
@@ -298,24 +317,28 @@ Supabase automatically backs up your database daily. To enable:
 ## Troubleshooting
 
 ### Build Fails
+
 - Check environment variables are set
 - Verify all dependencies installed
 - Check for TypeScript errors
 - Review build logs
 
 ### Database Errors
+
 - Verify migrations ran successfully
 - Check RLS policies
 - Verify user has account_id
 - Check Supabase logs
 
 ### Authentication Issues
+
 - Verify Supabase Auth settings
 - Check redirect URLs
 - Verify reCAPTCHA keys
 - Check domain whitelist
 
 ### Email Not Sending
+
 - Verify SendGrid API key
 - Check sender verification
 - Review SendGrid activity logs
@@ -342,12 +365,14 @@ If issues occur:
 ## Success Metrics
 
 ### Week 1
+
 - [ ] 10+ user signups
 - [ ] 0 critical bugs
 - [ ] < 1 second API response time
 - [ ] 99.9% uptime
 
 ### Month 1
+
 - [ ] 50+ user signups
 - [ ] 100+ contacts created
 - [ ] 50+ deals created

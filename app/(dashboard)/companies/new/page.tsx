@@ -1,26 +1,28 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import CompanyForm from '@/components/forms/company-form'
-import { Card } from '@/components/ui/card'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { ArrowLeft } from 'lucide-react'
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import CompanyForm from "@/components/forms/company-form";
+import { Card } from "@/components/ui/card";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 export default async function NewCompanyPage() {
-  const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
   // Get user's account
   const { data: userData } = await supabase
-    .from('users')
-    .select('account_id')
-    .eq('id', user.id)
-    .single()
+    .from("users")
+    .select("account_id")
+    .eq("id", user.id)
+    .single();
 
   if (!userData?.account_id) {
-    return <div>No account found</div>
+    return <div>No account found</div>;
   }
 
   return (
@@ -46,5 +48,5 @@ export default async function NewCompanyPage() {
         <CompanyForm accountId={userData.account_id} />
       </Card>
     </div>
-  )
+  );
 }

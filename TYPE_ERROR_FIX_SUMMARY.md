@@ -1,41 +1,50 @@
 # TypeScript Error Fix - Commit b031d78
 
 ## Problem
+
 Vercel build failed with TypeScript error:
+
 ```
 ./app/api/agent/chat/route.ts:130:28
 Type error: Cannot find name 'updatedMessages'.
 ```
 
 ## Root Cause
+
 The hard-coded fallback logic was added inside the `upsertChatLead` function, but `updatedMessages` is defined later in the main POST function. The `upsertChatLead` function doesn't have access to `updatedMessages` because it's defined in a different scope.
 
 ## Solution Applied
 
 **Removed from Wrong Scope:**
+
 ```typescript
 // REMOVED from upsertChatLead function (lines 127-139)
 // This code was trying to access updatedMessages which doesn't exist in this scope
 ```
 
 **Added to Correct Scope:**
+
 ```typescript
 // ADDED after updatedLeadInfo definition (line 298)
 // HARD-CODED FALLBACK: Force local regex check to avoid 'Valued Lead'
-if (!updatedLeadInfo.name || updatedLeadInfo.name === 'Valued Lead') {
+if (!updatedLeadInfo.name || updatedLeadInfo.name === "Valued Lead") {
   const userMessagesText = updatedMessages
-    .filter(m => m.role === 'user')
-    .map(m => m.content)
-    .join(' ')
-  const nameMatch = userMessagesText.match(/I am ([A-Z][a-z]+ [A-Z][a-z]+)/)
+    .filter((m) => m.role === "user")
+    .map((m) => m.content)
+    .join(" ");
+  const nameMatch = userMessagesText.match(/I am ([A-Z][a-z]+ [A-Z][a-z]+)/);
   if (nameMatch && nameMatch[1]) {
-    updatedLeadInfo.name = nameMatch[1]
-    console.error('[EMERGENCY] Name found via hard-coded fallback:', updatedLeadInfo.name)
+    updatedLeadInfo.name = nameMatch[1];
+    console.error(
+      "[EMERGENCY] Name found via hard-coded fallback:",
+      updatedLeadInfo.name,
+    );
   }
 }
 ```
 
 **What This Does:**
+
 - Checks if `updatedLeadInfo.name` is missing or 'Valued Lead'
 - Uses `updatedMessages` (which is defined in this scope) to extract name
 - Pattern: `/I am ([A-Z][a-z]+ [A-Z][a-z]+)/`
@@ -45,6 +54,7 @@ if (!updatedLeadInfo.name || updatedLeadInfo.name === 'Valued Lead') {
 ## Code Flow
 
 **Before (Broken):**
+
 ```typescript
 // Line 19: async function upsertChatLead(...) {
 //   Line 127: const userMessages = updatedMessages  // ❌ ERROR: updatedMessages not defined here
@@ -55,6 +65,7 @@ if (!updatedLeadInfo.name || updatedLeadInfo.name === 'Valued Lead') {
 ```
 
 **After (Fixed):**
+
 ```typescript
 // Line 19: async function upsertChatLead(...) {
 //   ...
@@ -85,6 +96,7 @@ if (!updatedLeadInfo.name || updatedLeadInfo.name === 'Valued Lead') {
 **Repository:** twinwicksllc/rankedceo-crm-production
 
 ## Deployment Status
+
 - ✅ Committed to main branch
 - ✅ Pushed to GitHub
 - 🔄 Vercel auto-deploying (1-2 minutes)
@@ -92,12 +104,14 @@ if (!updatedLeadInfo.name || updatedLeadInfo.name === 'Valued Lead') {
 ## Expected Logs in Production
 
 ### Vercel Logs (route.ts)
+
 ```
 [EMERGENCY] Name found via hard-coded fallback: John Doe
 [CRITICAL] Upserting Lead: { name: "John Doe", email: "john@example.com", phone: "", industry: "hvac" }
 ```
 
 ### Browser Console (chat-widget.tsx)
+
 ```
 [FINAL-CHECK] REDIRECT TRIGGERED
 [FINAL-CHECK] Calendly URL: https://calendly.com/...
@@ -131,20 +145,26 @@ if (!updatedLeadInfo.name || updatedLeadInfo.name === 'Valued Lead') {
 ## Technical Details
 
 ### Why Scope Matters
+
 In JavaScript/TypeScript, variables defined inside a function are only accessible within that function. The `upsertChatLead` function is defined at the module level (line 19), while `updatedMessages` is defined inside the POST function (line 245). They are in different scopes.
 
 ### Why Moving the Code Works
+
 By moving the hard-coded fallback logic to after `updatedLeadInfo` is defined (line 298), the code now has access to:
+
 - `updatedMessages` (defined at line 245)
 - `updatedLeadInfo` (defined at line 293)
 - All other variables in the POST function scope
 
 ### Why Hard-Coded Fallback Works
+
 The regex pattern `/I am ([A-Z][a-z]+ [A-Z][a-z]+)/` is executed after the AI extraction, ensuring:
+
 - Name is captured even if AI extraction fails
 - No reliance on LLM or complex extraction logic
 - Immediate name capture from user message
 - Guaranteed to execute in production
 
 ## Documentation
+
 This fix resolves the TypeScript error by moving the hard-coded fallback logic to the correct scope where `updatedMessages` is defined, ensuring the code compiles and deploys successfully.

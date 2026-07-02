@@ -13,107 +13,126 @@
  *   7. Hand off report to ReportDispatcher (Sprint 3)
  */
 
-import * as path from 'node:path'
-import * as fs from 'node:fs/promises'
-import { PersonaRouter } from '../personas/PersonaRouter.js'
-import { EscalationEngine, CriticalHaltError } from './EscalationEngine.js'
-import { StepExecutor } from '../steps/StepExecutor.js'
-import { loadScenario } from './ScenarioLoader.js'
-import { SupabaseAdapter } from '../adaptors/supabase/SupabaseAdapter.js'
-import { ReportDispatcher } from '../reporting/ReportDispatcher.js'
-import type { RunConfig, RunReport, RunStatus } from '../types.js'
+import * as path from "node:path";
+import * as fs from "node:fs/promises";
+import { PersonaRouter } from "../personas/PersonaRouter.js";
+import { EscalationEngine, CriticalHaltError } from "./EscalationEngine.js";
+import { StepExecutor } from "../steps/StepExecutor.js";
+import { loadScenario } from "./ScenarioLoader.js";
+import { SupabaseAdapter } from "../adaptors/supabase/SupabaseAdapter.js";
+import { ReportDispatcher } from "../reporting/ReportDispatcher.js";
+import type { RunConfig, RunReport, RunStatus } from "../types.js";
 
 export class Orchestrator {
-  private readonly evidenceDir: string
+  private readonly evidenceDir: string;
 
   constructor(private readonly config: RunConfig) {
-    this.evidenceDir = path.join('evidence', config.runId)
+    this.evidenceDir = path.join("evidence", config.runId);
   }
 
   async run(): Promise<RunReport> {
-    const startedAt = new Date().toISOString()
-    console.log(`\n🤖 QA Agent — Run ${this.config.runId}`)
-    console.log(`   Mode:     ${this.config.mode}`)
-    console.log(`   Scenario: ${this.config.scenarioPath}`)
-    console.log(`   Base URL: ${this.config.baseUrl}`)
-    console.log(`   Started:  ${startedAt}\n`)
+    const startedAt = new Date().toISOString();
+    console.log(`\n🤖 QA Agent — Run ${this.config.runId}`);
+    console.log(`   Mode:     ${this.config.mode}`);
+    console.log(`   Scenario: ${this.config.scenarioPath}`);
+    console.log(`   Base URL: ${this.config.baseUrl}`);
+    console.log(`   Started:  ${startedAt}\n`);
 
     // ── 1. Restart gate ───────────────────────────────────────────────────
-    const escalation = new EscalationEngine(this.config, this.evidenceDir)
-    await escalation.checkRestartGate()
+    const escalation = new EscalationEngine(this.config, this.evidenceDir);
+    await escalation.checkRestartGate();
 
     // ── 2. Load scenario ──────────────────────────────────────────────────
-    const scenario = await loadScenario(this.config.scenarioPath)
-    console.log(`📋 Scenario: "${scenario.name}" (${scenario.steps.length} steps)\n`)
+    const scenario = await loadScenario(this.config.scenarioPath);
+    console.log(
+      `📋 Scenario: "${scenario.name}" (${scenario.steps.length} steps)\n`,
+    );
 
     // Filter steps to current run mode
-    const steps = scenario.steps
+    const steps = scenario.steps;
 
     // ── 3. Init infrastructure ────────────────────────────────────────────
-    await fs.mkdir(this.evidenceDir, { recursive: true })
-    const router = new PersonaRouter()
-    const db = new SupabaseAdapter()
+    await fs.mkdir(this.evidenceDir, { recursive: true });
+    const router = new PersonaRouter();
+    const db = new SupabaseAdapter();
 
     try {
-      await router.init(this.config)
+      await router.init(this.config);
     } catch (initErr) {
       // Capture a screenshot of what the page looks like on init failure
       try {
-        const screenshotPath = path.join(this.evidenceDir, 'init-failure-admin.png')
-        await router.screenshot('admin', screenshotPath)
-        console.error(`📸 Init failure screenshot saved: ${screenshotPath}`)
-      } catch { /* screenshot may fail if browser didn't launch */ }
-      await router.teardown()
-      throw initErr
+        const screenshotPath = path.join(
+          this.evidenceDir,
+          "init-failure-admin.png",
+        );
+        await router.screenshot("admin", screenshotPath);
+        console.error(`📸 Init failure screenshot saved: ${screenshotPath}`);
+      } catch {
+        /* screenshot may fail if browser didn't launch */
+      }
+      await router.teardown();
+      throw initErr;
     }
-    console.log('✅ Browser contexts initialised (client + admin)\n')
+    console.log("✅ Browser contexts initialised (client + admin)\n");
 
-    const executor = new StepExecutor(router, db, this.evidenceDir, this.config.runId)
+    const executor = new StepExecutor(
+      router,
+      db,
+      this.evidenceDir,
+      this.config.runId,
+    );
 
     // ── 4. Execute steps ──────────────────────────────────────────────────
-    let passedSteps = 0
-    let findingSteps = 0
-    let status: RunStatus = 'running'
+    let passedSteps = 0;
+    let findingSteps = 0;
+    let status: RunStatus = "running";
 
     try {
       for (let i = 0; i < steps.length; i++) {
-        const step = steps[i]
-        const prefix = `[${String(i + 1).padStart(3, '0')}/${steps.length}]`
-        console.log(`${prefix} ${step.type.padEnd(12)} ${step.persona.padEnd(6)} ${step.id}`)
+        const step = steps[i];
+        const prefix = `[${String(i + 1).padStart(3, "0")}/${steps.length}]`;
+        console.log(
+          `${prefix} ${step.type.padEnd(12)} ${step.persona.padEnd(6)} ${step.id}`,
+        );
 
-        const finding = await executor.execute(step)
+        const finding = await executor.execute(step);
 
         if (finding) {
-          findingSteps++
+          findingSteps++;
           // EscalationEngine handles logging + throwing on critical
-          await escalation.record(finding)
+          await escalation.record(finding);
         } else {
-          passedSteps++
+          passedSteps++;
         }
       }
 
       // All steps complete without critical halt
-      const allFindings = escalation.getFindings()
-      const hasErrors = allFindings.some(f => f.severity === 'error')
-      status = hasErrors ? 'pass_with_findings' : (allFindings.length > 0 ? 'pass_with_findings' : 'pass')
-
+      const allFindings = escalation.getFindings();
+      const hasErrors = allFindings.some((f) => f.severity === "error");
+      status = hasErrors
+        ? "pass_with_findings"
+        : allFindings.length > 0
+          ? "pass_with_findings"
+          : "pass";
     } catch (err) {
       if (err instanceof CriticalHaltError) {
-        status = 'critical_halt'
-        console.error(`\n🚨 Run ${this.config.runId} halted at step ${err.finding.stepId}`)
+        status = "critical_halt";
+        console.error(
+          `\n🚨 Run ${this.config.runId} halted at step ${err.finding.stepId}`,
+        );
       } else {
         // Unexpected error — treat as critical
-        status = 'critical_halt'
-        console.error(`\n💥 Unexpected orchestrator error:`, err)
+        status = "critical_halt";
+        console.error(`\n💥 Unexpected orchestrator error:`, err);
       }
     } finally {
-      await router.teardown()
+      await router.teardown();
     }
 
     // ── 5. Build report ───────────────────────────────────────────────────
-    const completedAt = new Date().toISOString()
-    const findings = escalation.getFindings()
-    const criticalFinding = findings.find(f => f.severity === 'critical')
+    const completedAt = new Date().toISOString();
+    const findings = escalation.getFindings();
+    const criticalFinding = findings.find((f) => f.severity === "critical");
 
     const report: RunReport = {
       runId: this.config.runId,
@@ -127,47 +146,54 @@ export class Orchestrator {
       passedSteps,
       findingSteps,
       criticalFinding,
-    }
+    };
 
     // Save raw report JSON to evidence dir
     await fs.writeFile(
-      path.join(this.evidenceDir, 'report.json'),
+      path.join(this.evidenceDir, "report.json"),
       JSON.stringify(report, null, 2),
-      'utf-8',
-    )
+      "utf-8",
+    );
 
     // Summary
-    console.log(`\n${'─'.repeat(60)}`)
-    console.log(`Status:  ${this.statusEmoji(status)} ${status.toUpperCase()}`)
-    console.log(`Passed:  ${passedSteps}/${steps.length} steps`)
-    console.log(`Findings: ${findings.length} (${findings.filter(f => f.severity === 'critical').length} critical, ${findings.filter(f => f.severity === 'error').length} error, ${findings.filter(f => f.severity === 'warning').length} warning)`)
-    console.log(`Duration: ${this.formatDuration(startedAt, completedAt)}`)
-    console.log(`Evidence: ${this.evidenceDir}/`)
-    console.log(`${'─'.repeat(60)}\n`)
+    console.log(`\n${"─".repeat(60)}`);
+    console.log(`Status:  ${this.statusEmoji(status)} ${status.toUpperCase()}`);
+    console.log(`Passed:  ${passedSteps}/${steps.length} steps`);
+    console.log(
+      `Findings: ${findings.length} (${findings.filter((f) => f.severity === "critical").length} critical, ${findings.filter((f) => f.severity === "error").length} error, ${findings.filter((f) => f.severity === "warning").length} warning)`,
+    );
+    console.log(`Duration: ${this.formatDuration(startedAt, completedAt)}`);
+    console.log(`Evidence: ${this.evidenceDir}/`);
+    console.log(`${"─".repeat(60)}\n`);
 
     // ── 6. Dispatch report ────────────────────────────────────────────────
-    const dispatcher = new ReportDispatcher()
-    await dispatcher.dispatch(report, this.evidenceDir)
+    const dispatcher = new ReportDispatcher();
+    await dispatcher.dispatch(report, this.evidenceDir);
 
-    return report
+    return report;
   }
 
   // ─── Private ──────────────────────────────────────────────────────────────
 
   private statusEmoji(status: RunStatus): string {
     switch (status) {
-      case 'pass':              return '✅'
-      case 'pass_with_findings':return '⚠️ '
-      case 'error':             return '❌'
-      case 'critical_halt':     return '🚨'
-      case 'running':           return '🔄'
+      case "pass":
+        return "✅";
+      case "pass_with_findings":
+        return "⚠️ ";
+      case "error":
+        return "❌";
+      case "critical_halt":
+        return "🚨";
+      case "running":
+        return "🔄";
     }
   }
 
   private formatDuration(start: string, end: string): string {
-    const ms = new Date(end).getTime() - new Date(start).getTime()
-    const s = Math.floor(ms / 1000)
-    const m = Math.floor(s / 60)
-    return m > 0 ? `${m}m ${s % 60}s` : `${s}s`
+    const ms = new Date(end).getTime() - new Date(start).getTime();
+    const s = Math.floor(ms / 1000);
+    const m = Math.floor(s / 60);
+    return m > 0 ? `${m}m ${s % 60}s` : `${s}s`;
   }
 }

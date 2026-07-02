@@ -1,17 +1,21 @@
-import { notFound } from 'next/navigation'
-import Link from 'next/link'
-import { CampaignService } from '@/lib/services/campaign-service'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Edit, Copy } from 'lucide-react'
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { CampaignService } from "@/lib/services/campaign-service";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Edit, Copy } from "lucide-react";
 
-export default async function EmailTemplateDetailPage({ params }: { params: { id: string } }) {
-  const campaignService = new CampaignService()
-  const template = await campaignService.getTemplate(params.id)
-  
+export default async function EmailTemplateDetailPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const campaignService = new CampaignService();
+  const template = await campaignService.getTemplate(params.id);
+
   if (!template) {
-    notFound()
+    notFound();
   }
 
   return (
@@ -25,7 +29,9 @@ export default async function EmailTemplateDetailPage({ params }: { params: { id
           </Link>
           <div>
             <h1 className="text-3xl font-bold">{template.name}</h1>
-            <p className="text-sm text-gray-500">Created {new Date(template.created_at).toLocaleDateString()}</p>
+            <p className="text-sm text-gray-500">
+              Created {new Date(template.created_at).toLocaleDateString()}
+            </p>
           </div>
         </div>
       </div>
@@ -50,7 +56,9 @@ export default async function EmailTemplateDetailPage({ params }: { params: { id
             <div className="flex flex-wrap gap-2">
               {template.variables.map((variable, index) => (
                 <Badge key={index} variant="secondary" className="font-mono">
-                  {'{{'}{variable}{'}}'}
+                  {"{{"}
+                  {variable}
+                  {"}}"}
                 </Badge>
               ))}
             </div>
@@ -73,5 +81,5 @@ export default async function EmailTemplateDetailPage({ params }: { params: { id
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

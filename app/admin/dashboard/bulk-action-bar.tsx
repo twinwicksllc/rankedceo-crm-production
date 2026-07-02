@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 // =============================================================================
 // app/admin/dashboard/bulk-action-bar.tsx
@@ -10,11 +10,11 @@
 // =============================================================================
 
 interface BulkActionBarProps {
-  selectedCount: number
-  onActivate:   () => void
-  onSuspend:    () => void
-  onClear:      () => void
-  isBusy:       boolean
+  selectedCount: number;
+  onActivate: () => void;
+  onSuspend: () => void;
+  onClear: () => void;
+  isBusy: boolean;
 }
 
 export function BulkActionBar({
@@ -37,7 +37,7 @@ export function BulkActionBar({
           disabled={isBusy}
           className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-40 transition-colors"
         >
-          {isBusy ? 'Updating…' : '✓ Set Active'}
+          {isBusy ? "Updating…" : "✓ Set Active"}
         </button>
         <button
           type="button"
@@ -45,7 +45,7 @@ export function BulkActionBar({
           disabled={isBusy}
           className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/20 disabled:opacity-40 transition-colors"
         >
-          {isBusy ? 'Updating…' : '⊘ Suspend'}
+          {isBusy ? "Updating…" : "⊘ Suspend"}
         </button>
         <button
           type="button"
@@ -57,5 +57,5 @@ export function BulkActionBar({
         </button>
       </div>
     </div>
-  )
+  );
 }

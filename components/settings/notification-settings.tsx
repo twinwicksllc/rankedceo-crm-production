@@ -1,14 +1,20 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Button } from '@/components/ui/button';
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 
 export function NotificationSettings() {
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
   const [settings, setSettings] = useState({
     email_notifications: true,
     deal_updates: true,
@@ -20,23 +26,23 @@ export function NotificationSettings() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setMessage('');
+    setMessage("");
 
     try {
-      const response = await fetch('/api/settings/notifications', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/settings/notifications", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settings),
       });
 
       if (response.ok) {
-        setMessage('Notification settings updated successfully');
+        setMessage("Notification settings updated successfully");
       } else {
         const data = await response.json();
-        setMessage(data.error || 'Failed to update settings');
+        setMessage(data.error || "Failed to update settings");
       }
     } catch (error) {
-      setMessage('Network error. Please try again.');
+      setMessage("Network error. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -133,18 +139,20 @@ export function NotificationSettings() {
           </div>
 
           {message && (
-            <div className={`p-3 rounded-lg text-sm ${
-              message.includes('success') 
-                ? 'bg-green-50 text-green-800 border border-green-200' 
-                : 'bg-red-50 text-red-800 border border-red-200'
-            }`}>
+            <div
+              className={`p-3 rounded-lg text-sm ${
+                message.includes("success")
+                  ? "bg-green-50 text-green-800 border border-green-200"
+                  : "bg-red-50 text-red-800 border border-red-200"
+              }`}
+            >
               {message}
             </div>
           )}
 
           <div className="flex justify-end">
             <Button type="submit" disabled={loading}>
-              {loading ? 'Saving...' : 'Save Preferences'}
+              {loading ? "Saving..." : "Save Preferences"}
             </Button>
           </div>
         </form>

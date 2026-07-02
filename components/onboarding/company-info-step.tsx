@@ -1,13 +1,19 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { useRouter } from 'next/navigation';
-import { COMPANY_SIZES, INDUSTRIES } from '@/lib/types/onboarding';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useRouter } from "next/navigation";
+import { COMPANY_SIZES, INDUSTRIES } from "@/lib/types/onboarding";
 
 interface CompanyInfoStepProps {
   accountInfo: any;
@@ -17,12 +23,12 @@ export function CompanyInfoStep({ accountInfo }: CompanyInfoStepProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: accountInfo?.name || '',
-    company_size: accountInfo?.company_size || '',
-    industry: accountInfo?.industry || '',
-    website: accountInfo?.website || '',
-    phone: accountInfo?.phone || '',
-    address: accountInfo?.address || '',
+    name: accountInfo?.name || "",
+    company_size: accountInfo?.company_size || "",
+    industry: accountInfo?.industry || "",
+    website: accountInfo?.website || "",
+    phone: accountInfo?.phone || "",
+    address: accountInfo?.address || "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,9 +36,9 @@ export function CompanyInfoStep({ accountInfo }: CompanyInfoStepProps) {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/onboarding/company-info', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/onboarding/company-info", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
@@ -40,7 +46,7 @@ export function CompanyInfoStep({ accountInfo }: CompanyInfoStepProps) {
         window.location.reload();
       }
     } catch (error) {
-      console.error('Error updating company info:', error);
+      console.error("Error updating company info:", error);
     } finally {
       setLoading(false);
     }
@@ -48,21 +54,23 @@ export function CompanyInfoStep({ accountInfo }: CompanyInfoStepProps) {
 
   const handleBack = async () => {
     try {
-      await fetch('/api/onboarding/step', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      await fetch("/api/onboarding/step", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ step: 0 }),
       });
       window.location.reload();
     } catch (error) {
-      console.error('Error going back:', error);
+      console.error("Error going back:", error);
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Tell us about your business</h2>
+        <h2 className="text-2xl font-bold text-gray-900">
+          Tell us about your business
+        </h2>
         <p className="mt-2 text-gray-600">
           This information helps us customize your experience
         </p>
@@ -85,7 +93,9 @@ export function CompanyInfoStep({ accountInfo }: CompanyInfoStepProps) {
             <Label htmlFor="company_size">Company Size</Label>
             <Select
               value={formData.company_size}
-              onValueChange={(value) => setFormData({ ...formData, company_size: value })}
+              onValueChange={(value) =>
+                setFormData({ ...formData, company_size: value })
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select size" />
@@ -104,7 +114,9 @@ export function CompanyInfoStep({ accountInfo }: CompanyInfoStepProps) {
             <Label htmlFor="industry">Industry</Label>
             <Select
               value={formData.industry}
-              onValueChange={(value) => setFormData({ ...formData, industry: value })}
+              onValueChange={(value) =>
+                setFormData({ ...formData, industry: value })
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select industry" />
@@ -127,7 +139,9 @@ export function CompanyInfoStep({ accountInfo }: CompanyInfoStepProps) {
               id="website"
               type="url"
               value={formData.website}
-              onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, website: e.target.value })
+              }
               placeholder="https://example.com"
             />
           </div>
@@ -138,7 +152,9 @@ export function CompanyInfoStep({ accountInfo }: CompanyInfoStepProps) {
               id="phone"
               type="tel"
               value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, phone: e.target.value })
+              }
               placeholder="+1 (555) 123-4567"
             />
           </div>
@@ -149,7 +165,9 @@ export function CompanyInfoStep({ accountInfo }: CompanyInfoStepProps) {
           <Textarea
             id="address"
             value={formData.address}
-            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, address: e.target.value })
+            }
             placeholder="123 Main St, City, State, ZIP"
             rows={3}
           />
@@ -161,7 +179,7 @@ export function CompanyInfoStep({ accountInfo }: CompanyInfoStepProps) {
           Back
         </Button>
         <Button type="submit" disabled={loading || !formData.name}>
-          {loading ? 'Saving...' : 'Continue'}
+          {loading ? "Saving..." : "Continue"}
         </Button>
       </div>
     </form>

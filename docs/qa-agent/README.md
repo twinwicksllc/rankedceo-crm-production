@@ -55,21 +55,21 @@ The **Orchestrator** is the central coordinator. It checks the restart gate (ope
 
 ## Environment Variables
 
-| Variable | Required | Description |
-|---|---|---|
-| `NEXT_PUBLIC_APP_URL` or `--base-url` | ✅ | Base URL to test against (e.g. `https://qa.rankedceo.com`) |
-| `QA_ADMIN_EMAIL` | ✅ | Admin user email for the admin Playwright context |
-| `QA_ADMIN_PASSWORD` | ✅ | Admin user password |
-| `QA_CLIENT_REVIEW_TOKEN` | ✅ | A valid review token for the client Playwright context |
-| `QA_SUPABASE_URL` | ✅ in CI | QA Supabase project URL dedicated to QA runs |
-| `QA_SUPABASE_SERVICE_ROLE_KEY` | ✅ in CI | QA Supabase service role key (full access to `qa` schema) |
-| `SUPABASE_URL` | ✅ (runtime fallback) | Supabase project URL consumed by the adapter |
-| `SUPABASE_SERVICE_ROLE_KEY` | ✅ (runtime fallback) | Service role key consumed by the adapter |
-| `RESEND_API_KEY` | ✅ | Resend API key for report email delivery |
-| `QA_REPORT_TO_EMAIL` | ✅ | Email address to receive QA run reports |
-| `GITHUB_TOKEN` | ✅ in CI | GitHub token for critical halt issue creation and restart gate |
-| `GITHUB_REPO` | ✅ in CI | `owner/repo` string (e.g. `twinwicksllc/rankedceo-crm-production`) |
-| `BILLING_MOCK` | optional | Set to `true` to skip real Stripe test mode (auto-set in smoke mode) |
+| Variable                              | Required              | Description                                                          |
+| ------------------------------------- | --------------------- | -------------------------------------------------------------------- |
+| `NEXT_PUBLIC_APP_URL` or `--base-url` | ✅                    | Base URL to test against (e.g. `https://qa.rankedceo.com`)           |
+| `QA_ADMIN_EMAIL`                      | ✅                    | Admin user email for the admin Playwright context                    |
+| `QA_ADMIN_PASSWORD`                   | ✅                    | Admin user password                                                  |
+| `QA_CLIENT_REVIEW_TOKEN`              | ✅                    | A valid review token for the client Playwright context               |
+| `QA_SUPABASE_URL`                     | ✅ in CI              | QA Supabase project URL dedicated to QA runs                         |
+| `QA_SUPABASE_SERVICE_ROLE_KEY`        | ✅ in CI              | QA Supabase service role key (full access to `qa` schema)            |
+| `SUPABASE_URL`                        | ✅ (runtime fallback) | Supabase project URL consumed by the adapter                         |
+| `SUPABASE_SERVICE_ROLE_KEY`           | ✅ (runtime fallback) | Service role key consumed by the adapter                             |
+| `RESEND_API_KEY`                      | ✅                    | Resend API key for report email delivery                             |
+| `QA_REPORT_TO_EMAIL`                  | ✅                    | Email address to receive QA run reports                              |
+| `GITHUB_TOKEN`                        | ✅ in CI              | GitHub token for critical halt issue creation and restart gate       |
+| `GITHUB_REPO`                         | ✅ in CI              | `owner/repo` string (e.g. `twinwicksllc/rankedceo-crm-production`)   |
+| `BILLING_MOCK`                        | optional              | Set to `true` to skip real Stripe test mode (auto-set in smoke mode) |
 
 ### Secrets setup in GitHub
 
@@ -130,10 +130,10 @@ npx tsx src/cli.ts --scenario scenarios/canary_prod_readonly.yaml --mode smoke
 
 ### Exit codes
 
-| Code | Meaning |
-|---|---|
-| `0` | Run passed (with or without informational findings) |
-| `1` | Run ended with `error` or `critical_halt` status |
+| Code | Meaning                                             |
+| ---- | --------------------------------------------------- |
+| `0`  | Run passed (with or without informational findings) |
+| `1`  | Run ended with `error` or `critical_halt` status    |
 
 ---
 
@@ -151,10 +151,10 @@ Triggers on a cron schedule (`0 6 * * 1`). Runs the full lifecycle scenario agai
 
 ## Run Modes
 
-| Mode | Triggered by | Stripe | Email | Scenarios |
-|---|---|---|---|---|
-| `smoke` | Every PR | Mocked | Skipped | `smoke.yaml`, `edge_01`, `edge_03`, `canary_prod_readonly` |
-| `full` | Weekly cron (Monday) | Test mode (4242…) | Resend test mode | All scenarios |
+| Mode    | Triggered by         | Stripe            | Email            | Scenarios                                                  |
+| ------- | -------------------- | ----------------- | ---------------- | ---------------------------------------------------------- |
+| `smoke` | Every PR             | Mocked            | Skipped          | `smoke.yaml`, `edge_01`, `edge_03`, `canary_prod_readonly` |
+| `full`  | Weekly cron (Monday) | Test mode (4242…) | Resend test mode | All scenarios                                              |
 
 The `modes:` field in each YAML scenario file controls which modes the scenario is eligible to run in. The CLI's `--mode` flag selects the run mode; the `Orchestrator` enforces compatibility.
 
@@ -162,12 +162,12 @@ The `modes:` field in each YAML scenario file controls which modes the scenario 
 
 ## Severity Taxonomy
 
-| Level | Behaviour | Example |
-|---|---|---|
-| `info` | Logged only, run continues | Navigation step, persona handoff |
-| `warning` | Logged + counted, run continues | Non-critical UI element missing |
-| `error` | Logged + counted, run continues, status becomes `pass_with_findings` | Form element not found |
-| `critical` | Run halts immediately, Resend email fired, GitHub Issue opened | Redirect after failed auth, portal down in production |
+| Level      | Behaviour                                                            | Example                                               |
+| ---------- | -------------------------------------------------------------------- | ----------------------------------------------------- |
+| `info`     | Logged only, run continues                                           | Navigation step, persona handoff                      |
+| `warning`  | Logged + counted, run continues                                      | Non-critical UI element missing                       |
+| `error`    | Logged + counted, run continues, status becomes `pass_with_findings` | Form element not found                                |
+| `critical` | Run halts immediately, Resend email fired, GitHub Issue opened       | Redirect after failed auth, portal down in production |
 
 The `EscalationEngine` governs this behaviour. Only one `critical` finding is needed to trigger a halt.
 

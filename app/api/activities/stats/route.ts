@@ -1,30 +1,32 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 export async function GET() {
   try {
     const supabase = await createClient();
-    
+
     // Get user and account_id
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { data: userData } = await supabase
-      .from('users')
-      .select('account_id')
-      .eq('id', user.id)
+      .from("users")
+      .select("account_id")
+      .eq("id", user.id)
       .single();
 
     if (!userData?.account_id) {
-      return NextResponse.json({ error: 'No account found' }, { status: 404 });
+      return NextResponse.json({ error: "No account found" }, { status: 404 });
     }
 
     const { data, error } = await supabase
-      .from('activities')
-      .select('type, status')
-      .eq('account_id', userData.account_id);
+      .from("activities")
+      .select("type, status")
+      .eq("account_id", userData.account_id);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -38,7 +40,7 @@ export async function GET() {
       completed: 0,
     };
 
-    data?.forEach(activity => {
+    data?.forEach((activity) => {
       if (!stats.byType[activity.type]) {
         stats.byType[activity.type] = 0;
       }
@@ -49,16 +51,19 @@ export async function GET() {
       }
       stats.byStatus[activity.status]++;
 
-      if (activity.status === 'pending') {
+      if (activity.status === "pending") {
         stats.pending++;
       }
-      if (activity.status === 'completed') {
+      if (activity.status === "completed") {
         stats.completed++;
       }
     });
 
     return NextResponse.json(stats);
   } catch (error: any) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }

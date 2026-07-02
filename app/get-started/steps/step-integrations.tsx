@@ -1,46 +1,54 @@
-'use client'
+"use client";
 
 // =============================================================================
 // Step 4: Integrations & Sales Hooks
 // Calendly URL, Financing toggle, USP textarea
 // =============================================================================
 
-import React from 'react'
-import type { UseFormReturn } from 'react-hook-form'
-import type { Step4FormData } from '../onboarding-flow'
+import React from "react";
+import type { UseFormReturn } from "react-hook-form";
+import type { Step4FormData } from "../onboarding-flow";
 
 interface Props {
-  form:      UseFormReturn<Step4FormData>
-  onSubmit:  (data: Step4FormData) => void
-  onBack:    () => void
-  isLoading: boolean
+  form: UseFormReturn<Step4FormData>;
+  onSubmit: (data: Step4FormData) => void;
+  onBack: () => void;
+  isLoading: boolean;
 }
 
 export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
-  const { register, handleSubmit, watch, formState: { errors } } = form
-  const financingEnabled = watch('financing_enabled')
-  const uspValue         = watch('usp') ?? ''
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = form;
+  const financingEnabled = watch("financing_enabled");
+  const uspValue = watch("usp") ?? "";
 
   const functionalityOptions = [
-    { key: 'functionality_contact_form' as const, label: 'Contact Form' },
-    { key: 'functionality_booking' as const, label: 'Booking / Scheduler' },
-    { key: 'functionality_gallery' as const, label: 'Photo Gallery' },
-    { key: 'functionality_blog' as const, label: 'Blog' },
-    { key: 'functionality_ecommerce' as const, label: 'E-commerce' },
-  ]
+    { key: "functionality_contact_form" as const, label: "Contact Form" },
+    { key: "functionality_booking" as const, label: "Booking / Scheduler" },
+    { key: "functionality_gallery" as const, label: "Photo Gallery" },
+    { key: "functionality_blog" as const, label: "Blog" },
+    { key: "functionality_ecommerce" as const, label: "E-commerce" },
+  ];
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate>
       {/* Header */}
       <div className="mb-8">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 mb-4">
-          <span className="text-blue-400 text-xs font-semibold uppercase tracking-wider">Step 5 of 5</span>
+          <span className="text-blue-400 text-xs font-semibold uppercase tracking-wider">
+            Step 5 of 5
+          </span>
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white leading-tight">
           Integrations & your edge
         </h1>
         <p className="text-slate-600 dark:text-white/50 mt-2 text-sm sm:text-base">
-          Connect your booking system and tell us what makes you the best choice.
+          Connect your booking system and tell us what makes you the best
+          choice.
         </p>
       </div>
 
@@ -55,22 +63,45 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
           </p>
           <div className="relative">
             <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-slate-500 dark:text-white/30">
-                <rect x="1" y="2" width="14" height="13" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-                <path d="M5 1v2M11 1v2M1 6h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                className="text-slate-500 dark:text-white/30"
+              >
+                <rect
+                  x="1"
+                  y="2"
+                  width="14"
+                  height="13"
+                  rx="2"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M5 1v2M11 1v2M1 6h14"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
               </svg>
             </div>
             <input
-              {...register('calendly_url')}
+              {...register("calendly_url")}
               type="url"
               placeholder="https://calendly.com/yourbusiness"
               className={`w-full h-12 sm:h-14 pl-10 pr-4 rounded-xl bg-slate-100 dark:bg-white/5 border ${
-                errors.calendly_url ? 'border-red-500/50' : 'border-slate-300 dark:border-white/10 focus:border-blue-500/60'
+                errors.calendly_url
+                  ? "border-red-500/50"
+                  : "border-slate-300 dark:border-white/10 focus:border-blue-500/60"
               } text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-white/25 text-sm sm:text-base outline-none focus:ring-2 focus:ring-blue-500/20 transition-all`}
             />
           </div>
           {errors.calendly_url && (
-            <p className="mt-1.5 text-xs text-red-400">{errors.calendly_url.message}</p>
+            <p className="mt-1.5 text-xs text-red-400">
+              {errors.calendly_url.message}
+            </p>
           )}
         </div>
 
@@ -82,16 +113,22 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
           <label className="flex items-start gap-4 p-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 cursor-pointer hover:bg-slate-200 dark:hover:bg-white/10 transition-all group">
             <div className="relative mt-0.5 shrink-0">
               <input
-                {...register('financing_enabled')}
+                {...register("financing_enabled")}
                 type="checkbox"
                 className="sr-only peer"
               />
-              <div className={`w-11 h-6 rounded-full transition-all duration-200 ${
-                financingEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-white/15'
-              }`}>
-                <div className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-200 ${
-                  financingEnabled ? 'translate-x-5' : 'translate-x-0'
-                }`} />
+              <div
+                className={`w-11 h-6 rounded-full transition-all duration-200 ${
+                  financingEnabled
+                    ? "bg-blue-600"
+                    : "bg-slate-300 dark:bg-white/15"
+                }`}
+              >
+                <div
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-200 ${
+                    financingEnabled ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
               </div>
             </div>
             <div>
@@ -104,7 +141,8 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
                 </span>
               </div>
               <p className="text-slate-600 dark:text-white/40 text-xs mt-1">
-                Integrate Optimus/Pricebook financing to offer payment plans to your customers. Increases conversion by up to 40%.
+                Integrate Optimus/Pricebook financing to offer payment plans to
+                your customers. Increases conversion by up to 40%.
               </p>
             </div>
           </label>
@@ -113,29 +151,38 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
         {/* USP */}
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-1">
-            Your Unique Selling Proposition <span className="text-red-400">*</span>
+            Your Unique Selling Proposition{" "}
+            <span className="text-red-400">*</span>
           </label>
           <p className="text-slate-500 dark:text-white/35 text-xs mb-2">
-            What makes your business better than your competitors? Be specific — this becomes your homepage headline.
+            What makes your business better than your competitors? Be specific —
+            this becomes your homepage headline.
           </p>
           <textarea
-            {...register('usp')}
+            {...register("usp")}
             rows={4}
             placeholder="e.g. We're the only HVAC company in Chicago that offers same-day service with a 100% satisfaction guarantee. Our technicians are NATE-certified and we've never missed an appointment in 12 years."
             className={`w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-white/5 border ${
-              errors.usp ? 'border-red-500/50 focus:border-red-500' : 'border-slate-300 dark:border-white/10 focus:border-blue-500/60'
+              errors.usp
+                ? "border-red-500/50 focus:border-red-500"
+                : "border-slate-300 dark:border-white/10 focus:border-blue-500/60"
             } text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 ${
-              errors.usp ? 'focus:ring-red-500/20' : 'focus:ring-blue-500/20'
+              errors.usp ? "focus:ring-red-500/20" : "focus:ring-blue-500/20"
             } transition-all resize-none leading-relaxed`}
           />
           <div className="flex items-center justify-between mt-1.5">
-            {errors.usp
-              ? <p className="text-xs text-red-400">{errors.usp.message}</p>
-              : <span />
-            }
-            <span className={`text-xs ml-auto ${
-              uspValue.length > 450 ? 'text-amber-500 dark:text-amber-400' : 'text-slate-400 dark:text-white/25'
-            }`}>
+            {errors.usp ? (
+              <p className="text-xs text-red-400">{errors.usp.message}</p>
+            ) : (
+              <span />
+            )}
+            <span
+              className={`text-xs ml-auto ${
+                uspValue.length > 450
+                  ? "text-amber-500 dark:text-amber-400"
+                  : "text-slate-400 dark:text-white/25"
+              }`}
+            >
               {uspValue.length}/500
             </span>
           </div>
@@ -143,10 +190,13 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
 
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
-            Value Propositions <span className="text-slate-400 dark:text-white/30">(optional)</span>
+            Value Propositions{" "}
+            <span className="text-slate-400 dark:text-white/30">
+              (optional)
+            </span>
           </label>
           <textarea
-            {...register('value_propositions')}
+            {...register("value_propositions")}
             rows={2}
             placeholder="3-5 bullet-style selling points separated by commas"
             className="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
@@ -155,10 +205,13 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
 
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
-            About Us Narrative <span className="text-slate-400 dark:text-white/30">(optional)</span>
+            About Us Narrative{" "}
+            <span className="text-slate-400 dark:text-white/30">
+              (optional)
+            </span>
           </label>
           <textarea
-            {...register('about_narrative')}
+            {...register("about_narrative")}
             rows={3}
             placeholder="A short paragraph about your story, team, and values"
             className="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
@@ -168,10 +221,13 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
-              Primary CTA <span className="text-slate-400 dark:text-white/30">(optional)</span>
+              Primary CTA{" "}
+              <span className="text-slate-400 dark:text-white/30">
+                (optional)
+              </span>
             </label>
             <input
-              {...register('primary_cta')}
+              {...register("primary_cta")}
               type="text"
               placeholder="Book My Free Estimate"
               className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
@@ -179,10 +235,13 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
-              Service Area <span className="text-slate-400 dark:text-white/30">(optional)</span>
+              Service Area{" "}
+              <span className="text-slate-400 dark:text-white/30">
+                (optional)
+              </span>
             </label>
             <input
-              {...register('service_area')}
+              {...register("service_area")}
               type="text"
               placeholder="Chicago, Evanston, Oak Park"
               className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
@@ -190,41 +249,95 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
-              Brand Tone <span className="text-slate-400 dark:text-white/30">(optional)</span>
+              Brand Tone{" "}
+              <span className="text-slate-400 dark:text-white/30">
+                (optional)
+              </span>
             </label>
             <select
-              {...register('tone')}
+              {...register("tone")}
               className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all [&_option]:bg-[#0A0F1E]"
             >
-              <option value="Professional" style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}>Professional</option>
-              <option value="Friendly" style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}>Friendly</option>
-              <option value="Edgy" style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}>Edgy</option>
-              <option value="Luxurious" style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}>Luxurious</option>
-              <option value="Bold" style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}>Bold</option>
+              <option
+                value="Professional"
+                style={{ backgroundColor: "#0A0F1E", color: "#E5E7EB" }}
+              >
+                Professional
+              </option>
+              <option
+                value="Friendly"
+                style={{ backgroundColor: "#0A0F1E", color: "#E5E7EB" }}
+              >
+                Friendly
+              </option>
+              <option
+                value="Edgy"
+                style={{ backgroundColor: "#0A0F1E", color: "#E5E7EB" }}
+              >
+                Edgy
+              </option>
+              <option
+                value="Luxurious"
+                style={{ backgroundColor: "#0A0F1E", color: "#E5E7EB" }}
+              >
+                Luxurious
+              </option>
+              <option
+                value="Bold"
+                style={{ backgroundColor: "#0A0F1E", color: "#E5E7EB" }}
+              >
+                Bold
+              </option>
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
-              Typography Style <span className="text-slate-400 dark:text-white/30">(optional)</span>
+              Typography Style{" "}
+              <span className="text-slate-400 dark:text-white/30">
+                (optional)
+              </span>
             </label>
             <select
-              {...register('font_preference')}
+              {...register("font_preference")}
               className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all [&_option]:bg-[#0A0F1E]"
             >
-              <option value="Modern" style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}>Modern</option>
-              <option value="Classic" style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}>Classic</option>
-              <option value="Playful" style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}>Playful</option>
-              <option value="Luxury" style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}>Luxury</option>
+              <option
+                value="Modern"
+                style={{ backgroundColor: "#0A0F1E", color: "#E5E7EB" }}
+              >
+                Modern
+              </option>
+              <option
+                value="Classic"
+                style={{ backgroundColor: "#0A0F1E", color: "#E5E7EB" }}
+              >
+                Classic
+              </option>
+              <option
+                value="Playful"
+                style={{ backgroundColor: "#0A0F1E", color: "#E5E7EB" }}
+              >
+                Playful
+              </option>
+              <option
+                value="Luxury"
+                style={{ backgroundColor: "#0A0F1E", color: "#E5E7EB" }}
+              >
+                Luxury
+              </option>
             </select>
           </div>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
-            Target Keywords <span className="text-slate-400 dark:text-white/30">(optional)</span>
+            Target Keywords{" "}
+            <span className="text-slate-400 dark:text-white/30">
+              (optional)
+            </span>
           </label>
           <input
-            {...register('target_keywords')}
+            {...register("target_keywords")}
             type="text"
             placeholder="emergency plumber chicago, sewer repair, water heater replacement"
             className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
@@ -233,10 +346,13 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
 
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
-            Key Phrases <span className="text-slate-400 dark:text-white/30">(optional)</span>
+            Key Phrases{" "}
+            <span className="text-slate-400 dark:text-white/30">
+              (optional)
+            </span>
           </label>
           <input
-            {...register('key_phrases')}
+            {...register("key_phrases")}
             type="text"
             placeholder="same-day service, family-owned, licensed & insured"
             className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
@@ -245,10 +361,13 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
 
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
-            Inspiration URLs <span className="text-slate-400 dark:text-white/30">(optional)</span>
+            Inspiration URLs{" "}
+            <span className="text-slate-400 dark:text-white/30">
+              (optional)
+            </span>
           </label>
           <textarea
-            {...register('inspiration_urls')}
+            {...register("inspiration_urls")}
             rows={2}
             placeholder="Paste 1-3 websites you like, separated by commas"
             className="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
@@ -257,21 +376,42 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
 
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
-            Hero Image Preference <span className="text-slate-400 dark:text-white/30">(optional)</span>
+            Hero Image Preference{" "}
+            <span className="text-slate-400 dark:text-white/30">
+              (optional)
+            </span>
           </label>
           <select
-            {...register('hero_image_preference')}
+            {...register("hero_image_preference")}
             className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all [&_option]:bg-[#0A0F1E]"
           >
-            <option value="Generate for me" style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}>Generate for me</option>
-            <option value="I will upload photos" style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}>I will upload photos</option>
-            <option value="Use quality stock photos" style={{ backgroundColor: '#0A0F1E', color: '#E5E7EB' }}>Use quality stock photos</option>
+            <option
+              value="Generate for me"
+              style={{ backgroundColor: "#0A0F1E", color: "#E5E7EB" }}
+            >
+              Generate for me
+            </option>
+            <option
+              value="I will upload photos"
+              style={{ backgroundColor: "#0A0F1E", color: "#E5E7EB" }}
+            >
+              I will upload photos
+            </option>
+            <option
+              value="Use quality stock photos"
+              style={{ backgroundColor: "#0A0F1E", color: "#E5E7EB" }}
+            >
+              Use quality stock photos
+            </option>
           </select>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-3">
-            Website Functionality <span className="text-slate-400 dark:text-white/30">(optional)</span>
+            Website Functionality{" "}
+            <span className="text-slate-400 dark:text-white/30">
+              (optional)
+            </span>
           </label>
           <div className="grid sm:grid-cols-2 gap-3">
             {functionalityOptions.map((option) => (
@@ -284,7 +424,9 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
                   type="checkbox"
                   className="h-4 w-4 rounded border-slate-300 dark:border-white/20 bg-white dark:bg-white/5"
                 />
-                <span className="text-slate-700 dark:text-white/70 text-sm">{option.label}</span>
+                <span className="text-slate-700 dark:text-white/70 text-sm">
+                  {option.label}
+                </span>
               </label>
             ))}
           </div>
@@ -295,14 +437,29 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-500/15 flex items-center justify-center shrink-0 mt-0.5">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <circle cx="8" cy="8" r="7" stroke="#60A5FA" strokeWidth="1.5"/>
-                <path d="M8 5v4M8 10.5v.5" stroke="#60A5FA" strokeWidth="1.5" strokeLinecap="round"/>
+                <circle
+                  cx="8"
+                  cy="8"
+                  r="7"
+                  stroke="#60A5FA"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M8 5v4M8 10.5v.5"
+                  stroke="#60A5FA"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
               </svg>
             </div>
             <div>
-              <p className="text-blue-700 dark:text-blue-300 font-semibold text-sm mb-1">What happens next?</p>
+              <p className="text-blue-700 dark:text-blue-300 font-semibold text-sm mb-1">
+                What happens next?
+              </p>
               <p className="text-blue-700/80 dark:text-blue-200/70 text-xs leading-relaxed">
-                After you submit, our team reviews your information and begins building your RankedCEO website. You'll receive a confirmation email and your site will be live within 48 hours.
+                After you submit, our team reviews your information and begins
+                building your RankedCEO website. You'll receive a confirmation
+                email and your site will be live within 48 hours.
               </p>
             </div>
           </div>
@@ -325,19 +482,33 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
         >
           {isLoading ? (
             <>
-              <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeOpacity="0.25"/>
-                <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/>
+              <svg
+                className="animate-spin w-5 h-5"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="white"
+                  strokeWidth="3"
+                  strokeOpacity="0.25"
+                />
+                <path
+                  d="M12 2a10 10 0 0 1 10 10"
+                  stroke="white"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
               </svg>
               Submitting…
             </>
           ) : (
-            <>
-              🚀 Submit & Start Building
-            </>
+            <>🚀 Submit & Start Building</>
           )}
         </button>
       </div>
     </form>
-  )
+  );
 }

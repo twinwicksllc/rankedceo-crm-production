@@ -1,78 +1,81 @@
-'use client'
+"use client";
 
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams } from "next/navigation";
 
-const INDUSTRY_CONFIG: Record<string, {
-  name: string
-  color: string
-  accent: string
-  icon: string
-  phone: string
-  nextSteps: string[]
-}> = {
+const INDUSTRY_CONFIG: Record<
+  string,
+  {
+    name: string;
+    color: string;
+    accent: string;
+    icon: string;
+    phone: string;
+    nextSteps: string[];
+  }
+> = {
   hvac: {
-    name: 'HVAC Pro',
-    color: '#1a56a0',
-    accent: '#2563b0',
-    icon: '❄️',
-    phone: '(800) 555-0182',
+    name: "HVAC Pro",
+    color: "#1a56a0",
+    accent: "#2563b0",
+    icon: "❄️",
+    phone: "(800) 555-0182",
     nextSteps: [
-      'A certified HVAC specialist will call you within 1 business hour',
-      'We\'ll confirm your preferred appointment time',
-      'A licensed technician will arrive at your home',
-      'You\'ll receive a transparent, upfront quote — no surprises',
+      "A certified HVAC specialist will call you within 1 business hour",
+      "We'll confirm your preferred appointment time",
+      "A licensed technician will arrive at your home",
+      "You'll receive a transparent, upfront quote — no surprises",
     ],
   },
   plumbing: {
-    name: 'Plumb Pro',
-    color: '#0e7490',
-    accent: '#0891b2',
-    icon: '🔧',
-    phone: '(800) 555-0183',
+    name: "Plumb Pro",
+    color: "#0e7490",
+    accent: "#0891b2",
+    icon: "🔧",
+    phone: "(800) 555-0183",
     nextSteps: [
-      'A licensed plumbing specialist will call you within 1 business hour',
-      'We\'ll confirm your preferred appointment time',
-      'A licensed plumber will arrive at your home',
-      'You\'ll receive a transparent, upfront quote — no surprises',
+      "A licensed plumbing specialist will call you within 1 business hour",
+      "We'll confirm your preferred appointment time",
+      "A licensed plumber will arrive at your home",
+      "You'll receive a transparent, upfront quote — no surprises",
     ],
   },
   electrical: {
-    name: 'Spark Pro',
-    color: '#b45309',
-    accent: '#d97706',
-    icon: '⚡',
-    phone: '(800) 555-0184',
+    name: "Spark Pro",
+    color: "#b45309",
+    accent: "#d97706",
+    icon: "⚡",
+    phone: "(800) 555-0184",
     nextSteps: [
-      'A licensed electrical specialist will call you within 1 business hour',
-      'We\'ll confirm your preferred appointment time',
-      'A licensed electrician will arrive at your home',
-      'You\'ll receive a transparent, upfront quote — no surprises',
+      "A licensed electrical specialist will call you within 1 business hour",
+      "We'll confirm your preferred appointment time",
+      "A licensed electrician will arrive at your home",
+      "You'll receive a transparent, upfront quote — no surprises",
     ],
   },
   smile: {
-    name: 'Smile MakeOver',
-    color: '#7c3aed',
-    accent: '#8b5cf6',
-    icon: '😁',
-    phone: '(800) 555-0185',
+    name: "Smile MakeOver",
+    color: "#7c3aed",
+    accent: "#8b5cf6",
+    icon: "😁",
+    phone: "(800) 555-0185",
     nextSteps: [
-      'A smile consultant will contact you within 1 business hour',
-      'We\'ll schedule your FREE virtual smile consultation',
-      'A licensed cosmetic dentist will review your smile goals',
-      'You\'ll receive a personalized treatment plan — no obligation',
+      "A smile consultant will contact you within 1 business hour",
+      "We'll schedule your FREE virtual smile consultation",
+      "A licensed cosmetic dentist will review your smile goals",
+      "You'll receive a personalized treatment plan — no obligation",
     ],
   },
-}
+};
 
-const DEFAULT_CONFIG = INDUSTRY_CONFIG.hvac
+const DEFAULT_CONFIG = INDUSTRY_CONFIG.hvac;
 
 export default function ThankYouContent() {
-  const searchParams = useSearchParams()
-  const industry = searchParams.get('industry') || ''
-  const status = searchParams.get('status') || 'success'
+  const searchParams = useSearchParams();
+  const industry = searchParams.get("industry") || "";
+  const status = searchParams.get("status") || "success";
 
-  const config = INDUSTRY_CONFIG[industry.toLowerCase()] || DEFAULT_CONFIG
-  const isError = status === 'error'
+  const config = INDUSTRY_CONFIG[industry.toLowerCase()] || DEFAULT_CONFIG;
+  const isError = status === "error";
 
   return (
     <>
@@ -265,29 +268,47 @@ export default function ThankYouContent() {
 
       <div className="ty-page">
         <div className="ty-card">
-
           {isError ? (
             <>
               <div className="ty-icon-wrap error">⚠️</div>
-              <div className="ty-badge" style={{ background: '#ef4444' }}>Submission Issue</div>
+              <div className="ty-badge" style={{ background: "#ef4444" }}>
+                Submission Issue
+              </div>
               <h1 className="ty-title">Something Went Wrong</h1>
               <p className="ty-subtitle">
-                We had trouble processing your request. Please try again or call us directly — we&apos;re happy to help.
+                We had trouble processing your request. Please try again or call
+                us directly — we&apos;re happy to help.
               </p>
-              <div className="ty-phone-box" style={{ background: config.color }}>
+              <div
+                className="ty-phone-box"
+                style={{ background: config.color }}
+              >
                 <div>
                   <p>Call us directly</p>
-                  <a href={`tel:${config.phone.replace(/\D/g, '')}`}>{config.phone}</a>
+                  <a href={`tel:${config.phone.replace(/\D/g, "")}`}>
+                    {config.phone}
+                  </a>
                 </div>
               </div>
-              <a href="javascript:history.back()" className="ty-back-btn" style={{ background: config.color }}>
+              <a
+                href="javascript:history.back()"
+                className="ty-back-btn"
+                style={{ background: config.color }}
+              >
                 ← Try Again
               </a>
             </>
           ) : (
             <>
               <div className="ty-checkmark">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#16a34a"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               </div>
@@ -298,27 +319,42 @@ export default function ThankYouContent() {
 
               <h1 className="ty-title">You&apos;re All Set!</h1>
               <p className="ty-subtitle">
-                Thank you for reaching out. Your consultation request has been received and a specialist will be in touch shortly.
+                Thank you for reaching out. Your consultation request has been
+                received and a specialist will be in touch shortly.
               </p>
 
               <div className="ty-steps">
                 <h3>What Happens Next</h3>
                 {config.nextSteps.map((step, i) => (
                   <div className="ty-step" key={i}>
-                    <div className="ty-step-num" style={{ background: config.color }}>{i + 1}</div>
+                    <div
+                      className="ty-step-num"
+                      style={{ background: config.color }}
+                    >
+                      {i + 1}
+                    </div>
                     <span className="ty-step-text">{step}</span>
                   </div>
                 ))}
               </div>
 
-              <div className="ty-phone-box" style={{ background: config.color }}>
+              <div
+                className="ty-phone-box"
+                style={{ background: config.color }}
+              >
                 <div>
                   <p>Need immediate help? Call us now</p>
-                  <a href={`tel:${config.phone.replace(/\D/g, '')}`}>{config.phone}</a>
+                  <a href={`tel:${config.phone.replace(/\D/g, "")}`}>
+                    {config.phone}
+                  </a>
                 </div>
               </div>
 
-              <a href="/" className="ty-back-btn" style={{ background: config.accent }}>
+              <a
+                href="/"
+                className="ty-back-btn"
+                style={{ background: config.accent }}
+              >
                 ← Back to {config.name}
               </a>
             </>
@@ -330,5 +366,5 @@ export default function ThankYouContent() {
         </div>
       </div>
     </>
-  )
+  );
 }

@@ -1,37 +1,45 @@
-'use client'
+"use client";
 
-import type { EmailFilters } from '@/lib/types/email'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Search, X, Filter } from 'lucide-react'
+import type { EmailFilters } from "@/lib/types/email";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Search, X, Filter } from "lucide-react";
 
 interface EmailFiltersProps {
-  filters: EmailFilters
-  onFiltersChange: (filters: EmailFilters) => void
+  filters: EmailFilters;
+  onFiltersChange: (filters: EmailFilters) => void;
 }
 
 export function EmailFilters({ filters, onFiltersChange }: EmailFiltersProps) {
   const updateFilter = (key: keyof EmailFilters, value: any) => {
-    onFiltersChange({ ...filters, [key]: value })
-  }
+    onFiltersChange({ ...filters, [key]: value });
+  };
 
   const clearFilter = (key: keyof EmailFilters) => {
-    const newFilters = { ...filters }
-    delete newFilters[key]
-    onFiltersChange(newFilters)
-  }
+    const newFilters = { ...filters };
+    delete newFilters[key];
+    onFiltersChange(newFilters);
+  };
 
   const clearAllFilters = () => {
-    onFiltersChange({})
-  }
+    onFiltersChange({});
+  };
 
-  const hasActiveFilters = Object.keys(filters).length > 0
+  const hasActiveFilters = Object.keys(filters).length > 0;
 
   const activeFilterCount = Object.keys(filters).filter(
-    key => filters[key as keyof EmailFilters] !== undefined && filters[key as keyof EmailFilters] !== ''
-  ).length
+    (key) =>
+      filters[key as keyof EmailFilters] !== undefined &&
+      filters[key as keyof EmailFilters] !== "",
+  ).length;
 
   return (
     <div className="space-y-4 p-4 bg-card rounded-lg border">
@@ -41,17 +49,13 @@ export function EmailFilters({ filters, onFiltersChange }: EmailFiltersProps) {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search emails..."
-            value={filters.search || ''}
-            onChange={(e) => updateFilter('search', e.target.value)}
+            value={filters.search || ""}
+            onChange={(e) => updateFilter("search", e.target.value)}
             className="pl-10"
           />
         </div>
         {hasActiveFilters && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={clearAllFilters}
-          >
+          <Button variant="outline" size="sm" onClick={clearAllFilters}>
             <X className="h-4 w-4 mr-2" />
             Clear All
           </Button>
@@ -64,8 +68,10 @@ export function EmailFilters({ filters, onFiltersChange }: EmailFiltersProps) {
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-muted-foreground" />
           <Select
-            value={filters.direction || ''}
-            onValueChange={(value) => updateFilter('direction', value === 'all' ? undefined : value)}
+            value={filters.direction || ""}
+            onValueChange={(value) =>
+              updateFilter("direction", value === "all" ? undefined : value)
+            }
           >
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Direction" />
@@ -80,8 +86,10 @@ export function EmailFilters({ filters, onFiltersChange }: EmailFiltersProps) {
 
         {/* Status Filter */}
         <Select
-          value={filters.status || ''}
-          onValueChange={(value) => updateFilter('status', value === 'all' ? undefined : value)}
+          value={filters.status || ""}
+          onValueChange={(value) =>
+            updateFilter("status", value === "all" ? undefined : value)
+          }
         >
           <SelectTrigger className="w-[140px]">
             <SelectValue placeholder="Status" />
@@ -103,7 +111,7 @@ export function EmailFilters({ filters, onFiltersChange }: EmailFiltersProps) {
               Direction: {filters.direction}
               <X
                 className="h-3 w-3 cursor-pointer"
-                onClick={() => clearFilter('direction')}
+                onClick={() => clearFilter("direction")}
               />
             </Badge>
           )}
@@ -112,12 +120,12 @@ export function EmailFilters({ filters, onFiltersChange }: EmailFiltersProps) {
               Status: {filters.status}
               <X
                 className="h-3 w-3 cursor-pointer"
-                onClick={() => clearFilter('status')}
+                onClick={() => clearFilter("status")}
               />
             </Badge>
           )}
         </div>
       )}
     </div>
-  )
+  );
 }

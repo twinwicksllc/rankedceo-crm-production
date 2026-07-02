@@ -2,8 +2,8 @@ name: QA Agent — Monthly Enduser UX Clarity Run
 
 on:
   schedule:
-    - cron: '0 6 1 * *'   # 06:00 UTC on the 1st of every month
-  workflow_dispatch:        # Allow manual trigger from Actions tab
+    - cron: "0 6 1 * *" # 06:00 UTC on the 1st of every month
+  workflow_dispatch: # Allow manual trigger from Actions tab
 
 jobs:
   enduser-clarity:
@@ -20,8 +20,8 @@ jobs:
       - name: Setup Node 24
         uses: actions/setup-node@v4.2.0
         with:
-          node-version: '24'
-          cache: 'npm'
+          node-version: "24"
+          cache: "npm"
           cache-dependency-path: qa-agent/package-lock.json
 
       - name: Install QA agent dependencies
@@ -55,7 +55,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPO: ${{ github.repository }}
           # Enduser test uses mock billing (no Stripe charges)
-          QA_BILLING_MOCK: 'true'
+          QA_BILLING_MOCK: "true"
         run: npx tsx src/cli.ts --scenario scenarios/enduser_clarity.yaml --mode full
 
       - name: Upload evidence
@@ -73,11 +73,11 @@ jobs:
           script: |
             const fs = require('fs')
             const path = require('path')
-            
+
             // Find most recent report.json without glob
             const evidenceDir = 'qa-agent/evidence'
             let latestReport = null
-            
+
             if (fs.existsSync(evidenceDir)) {
               const runs = fs.readdirSync(evidenceDir)
               for (const run of runs) {
@@ -88,12 +88,12 @@ jobs:
                 }
               }
             }
-            
+
             if (!latestReport) {
               core.summary.addRaw('No report generated.').write()
               return
             }
-            
+
             const report = JSON.parse(fs.readFileSync(latestReport, 'utf-8'))
             const statusEmoji = {
               pass: '✅',

@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { Phone, Mail } from "lucide-react"
-import { IndustryLogo } from "@/components/ui/industry-logo"
-import { Button } from "@/components/ui/button"
+import { Phone, Mail } from "lucide-react";
+import { IndustryLogo } from "@/components/ui/industry-logo";
+import { Button } from "@/components/ui/button";
 
 export function Header() {
   return (
@@ -22,7 +22,10 @@ export function Header() {
 
           {/* Contact Info - Desktop */}
           <div className="hidden md:flex items-center gap-8">
-            <a href="mailto:hello@smilepro.com" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <a
+              href="mailto:hello@smilepro.com"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
               <Mail className="w-4 h-4 text-secondary" />
               hello@smilepro.com
             </a>
@@ -31,8 +34,12 @@ export function Header() {
                 <Phone className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Talk to our experts</p>
-                <p className="text-lg font-bold text-primary">1-800-SMILE-PRO</p>
+                <p className="text-xs text-muted-foreground">
+                  Talk to our experts
+                </p>
+                <p className="text-lg font-bold text-primary">
+                  1-800-SMILE-PRO
+                </p>
               </div>
             </a>
           </div>
@@ -44,5 +51,5 @@ export function Header() {
         </div>
       </div>
     </header>
-  )
+  );
 }

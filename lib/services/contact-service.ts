@@ -1,7 +1,14 @@
-import { createClient } from '@/lib/supabase/server';
-import { Contact, CreateContactInput, UpdateContactInput } from '@/lib/types/contact';
-import { createContactSchema, updateContactSchema } from '@/lib/validations/contact';
-import { z } from 'zod';
+import { createClient } from "@/lib/supabase/server";
+import {
+  Contact,
+  CreateContactInput,
+  UpdateContactInput,
+} from "@/lib/types/contact";
+import {
+  createContactSchema,
+  updateContactSchema,
+} from "@/lib/validations/contact";
+import { z } from "zod";
 
 export class ContactService {
   private supabase;
@@ -22,24 +29,26 @@ export class ContactService {
     const validatedInput = createContactSchema.parse(input);
 
     const client = await this.getClient();
-    
-    const { data: { user } } = await (await this.getClient()).auth.getUser();
+
+    const {
+      data: { user },
+    } = await (await this.getClient()).auth.getUser();
     if (!user) {
-      throw new Error('User not authenticated');
+      throw new Error("User not authenticated");
     }
 
     const { data: accountData, error: accountError } = await client
-      .from('accounts')
-      .select('id')
-      .eq('user_id', user.id)
+      .from("accounts")
+      .select("id")
+      .eq("user_id", user.id)
       .single();
 
     if (accountError || !accountData) {
-      throw new Error('Account not found');
+      throw new Error("Account not found");
     }
 
     const { data, error } = await client
-      .from('contacts')
+      .from("contacts")
       .insert({
         account_id: accountData.id,
         user_id: user.id,
@@ -57,18 +66,20 @@ export class ContactService {
 
   async getContacts(filters: any = {}): Promise<Contact[]> {
     const client = await this.getClient();
-    
+
     let query = client
-      .from('contacts')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .from("contacts")
+      .select("*")
+      .order("created_at", { ascending: false });
 
     if (filters.search) {
-      query = query.or(`first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);
+      query = query.or(
+        `first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`,
+      );
     }
 
     if (filters.company_id) {
-      query = query.eq('company_id', filters.company_id);
+      query = query.eq("company_id", filters.company_id);
     }
 
     const { data, error } = await query;
@@ -82,15 +93,15 @@ export class ContactService {
 
   async getContactById(id: string): Promise<Contact | null> {
     const client = await this.getClient();
-    
+
     const { data, error } = await client
-      .from('contacts')
-      .select('*')
-      .eq('id', id)
+      .from("contacts")
+      .select("*")
+      .eq("id", id)
       .single();
 
     if (error) {
-      if (error.code === 'PGRST116') {
+      if (error.code === "PGRST116") {
         return null;
       }
       throw new Error(`Failed to fetch contact: ${error.message}`);
@@ -104,9 +115,9 @@ export class ContactService {
     const client = await this.getClient();
 
     const { data, error } = await client
-      .from('contacts')
+      .from("contacts")
       .update(validatedInput)
-      .eq('id', id)
+      .eq("id", id)
       .select()
       .single();
 
@@ -119,11 +130,8 @@ export class ContactService {
 
   async deleteContact(id: string): Promise<void> {
     const client = await this.getClient();
-    
-    const { error } = await client
-      .from('contacts')
-      .delete()
-      .eq('id', id);
+
+    const { error } = await client.from("contacts").delete().eq("id", id);
 
     if (error) {
       throw new Error(`Failed to delete contact: ${error.message}`);
@@ -132,10 +140,8 @@ export class ContactService {
 
   async getContactStats() {
     const client = await this.getClient();
-    
-    const { data, error } = await client
-      .from('contacts')
-      .select('status');
+
+    const { data, error } = await client.from("contacts").select("status");
 
     if (error) {
       throw new Error(`Failed to fetch contact stats: ${error.message}`);
@@ -149,9 +155,9 @@ export class ContactService {
     };
 
     data?.forEach((contact: any) => {
-      if (contact.status === 'active') stats.active++;
-      if (contact.status === 'inactive') stats.inactive++;
-      if (contact.status === 'prospect') stats.prospect++;
+      if (contact.status === "active") stats.active++;
+      if (contact.status === "inactive") stats.inactive++;
+      if (contact.status === "prospect") stats.prospect++;
     });
 
     return stats;

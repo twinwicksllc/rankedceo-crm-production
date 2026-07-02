@@ -1,61 +1,78 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import { Shield, Zap, TrendingUp, Search, Clock, BarChart3 } from 'lucide-react'
-import { buildGetStartedUrl, getAuditFunnelProperties } from '@/lib/analytics/audit-funnel'
-import { trackEvent } from '@/lib/analytics/track-event'
-import { AdvantagePointHeader } from '@/components/advantagepoint/header'
-import { OnboardingThemeProvider, useOnboardingTheme } from '@/app/get-started/theme-context'
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import {
+  Shield,
+  Zap,
+  TrendingUp,
+  Search,
+  Clock,
+  BarChart3,
+} from "lucide-react";
+import {
+  buildGetStartedUrl,
+  getAuditFunnelProperties,
+} from "@/lib/analytics/audit-funnel";
+import { trackEvent } from "@/lib/analytics/track-event";
+import { AdvantagePointHeader } from "@/components/advantagepoint/header";
+import {
+  OnboardingThemeProvider,
+  useOnboardingTheme,
+} from "@/app/get-started/theme-context";
 
-const AUDIT_START_URL = '/audit/start'
+const AUDIT_START_URL = "/audit/start";
 
 export function AuditLandingContent() {
-  const { theme } = useOnboardingTheme()
-  const isLight = theme === 'light'
-  const [getStartedUrl, setGetStartedUrl] = useState(AUDIT_START_URL)
-  const [loginUrl, setLoginUrl] = useState('/login')
+  const { theme } = useOnboardingTheme();
+  const isLight = theme === "light";
+  const [getStartedUrl, setGetStartedUrl] = useState(AUDIT_START_URL);
+  const [loginUrl, setLoginUrl] = useState("/login");
 
   useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search)
-    const funnelProperties = getAuditFunnelProperties(searchParams)
+    const searchParams = new URLSearchParams(window.location.search);
+    const funnelProperties = getAuditFunnelProperties(searchParams);
 
-    setGetStartedUrl(buildGetStartedUrl(AUDIT_START_URL, searchParams))
-    setLoginUrl('/login')
+    setGetStartedUrl(buildGetStartedUrl(AUDIT_START_URL, searchParams));
+    setLoginUrl("/login");
 
-    trackEvent('audit_landing_viewed', {
+    trackEvent("audit_landing_viewed", {
       host: window.location.hostname,
       path: window.location.pathname,
       ...funnelProperties,
-    })
-  }, [])
+    });
+  }, []);
 
   const trackCtaClick = (cta: string, destination: string) => {
-    const searchParams = new URLSearchParams(window.location.search)
+    const searchParams = new URLSearchParams(window.location.search);
 
-    trackEvent('audit_landing_cta_clicked', {
+    trackEvent("audit_landing_cta_clicked", {
       cta,
       destination,
       ...getAuditFunnelProperties(searchParams),
-    })
-  }
+    });
+  };
 
   return (
-    <div className={`min-h-screen ${isLight ? 'bg-slate-50' : 'bg-[#030f2f]'}`}>
+    <div className={`min-h-screen ${isLight ? "bg-slate-50" : "bg-[#030f2f]"}`}>
       <AdvantagePointHeader variant="onboarding" />
-      <div className={`border-b ${isLight ? 'border-slate-200 bg-white' : 'border-white/10 bg-[#071634]'}`}>
+      <div
+        className={`border-b ${isLight ? "border-slate-200 bg-white" : "border-white/10 bg-[#071634]"}`}
+      >
         <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex items-center justify-end gap-4">
             <Link
               href={loginUrl}
-              onClick={() => trackCtaClick('nav_login', loginUrl)}
-              className={`text-sm font-medium ${isLight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-300 hover:text-white'}`}
+              onClick={() => trackCtaClick("nav_login", loginUrl)}
+              className={`text-sm font-medium ${isLight ? "text-slate-600 hover:text-slate-900" : "text-slate-300 hover:text-white"}`}
             >
               Log in
             </Link>
             <Link
               href={getStartedUrl}
-              onClick={() => trackCtaClick('nav_start_free_audit', getStartedUrl)}
+              onClick={() =>
+                trackCtaClick("nav_start_free_audit", getStartedUrl)
+              }
               className="rounded-lg bg-gradient-to-r from-cyan-500 to-emerald-500 px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
             >
               Start Free Audit
@@ -67,27 +84,38 @@ export function AuditLandingContent() {
       <section className="py-20 lg:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-3xl text-center">
-            <div className={`mb-6 lg:mb-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ${
-              isLight ? 'bg-green-100 text-green-700' : 'bg-emerald-500/15 text-emerald-300'
-            }`}>
+            <div
+              className={`mb-6 lg:mb-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ${
+                isLight
+                  ? "bg-green-100 text-green-700"
+                  : "bg-emerald-500/15 text-emerald-300"
+              }`}
+            >
               <Clock className="h-4 w-4" />
               <span>Results in under 2 minutes</span>
             </div>
-            <h1 className={`mb-6 lg:mb-4 text-4xl font-bold tracking-tight sm:text-6xl ${isLight ? 'text-slate-900' : 'text-white'}`}>
+            <h1
+              className={`mb-6 lg:mb-4 text-4xl font-bold tracking-tight sm:text-6xl ${isLight ? "text-slate-900" : "text-white"}`}
+            >
               See Your SEO Gaps
               <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                {' '}
+                {" "}
                 vs. Competitors
               </span>
             </h1>
-            <p className={`mb-8 lg:mb-6 text-lg ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
-              Enter your competitor's website URL and get instant insights into their SEO strategy,
-              performance scores, and growth opportunities. Stop guessing - start competing.
+            <p
+              className={`mb-8 lg:mb-6 text-lg ${isLight ? "text-slate-600" : "text-slate-300"}`}
+            >
+              Enter your competitor's website URL and get instant insights into
+              their SEO strategy, performance scores, and growth opportunities.
+              Stop guessing - start competing.
             </p>
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link
                 href={getStartedUrl}
-                onClick={() => trackCtaClick('hero_run_free_audit', getStartedUrl)}
+                onClick={() =>
+                  trackCtaClick("hero_run_free_audit", getStartedUrl)
+                }
                 className="flex w-full items-center justify-center rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg transition-all hover:shadow-xl sm:w-auto"
               >
                 <Shield className="mr-2 h-5 w-5" />
@@ -95,11 +123,11 @@ export function AuditLandingContent() {
               </Link>
               <Link
                 href="#features"
-                onClick={() => trackCtaClick('hero_learn_more', '#features')}
+                onClick={() => trackCtaClick("hero_learn_more", "#features")}
                 className={`flex w-full items-center justify-center rounded-lg border px-8 py-3.5 text-base font-semibold transition-all sm:w-auto ${
                   isLight
-                    ? 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
-                    : 'border-white/20 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white'
+                    ? "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                    : "border-white/20 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white"
                 }`}
               >
                 Learn More
@@ -109,14 +137,22 @@ export function AuditLandingContent() {
         </div>
       </section>
 
-      <section id="features" className={`py-20 lg:py-16 ${isLight ? 'bg-white' : 'bg-[#071534]'}`}>
+      <section
+        id="features"
+        className={`py-20 lg:py-16 ${isLight ? "bg-white" : "bg-[#071534]"}`}
+      >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-16 lg:mb-12 text-center">
-            <h2 className={`mb-4 text-3xl font-bold sm:text-4xl ${isLight ? 'text-slate-900' : 'text-white'}`}>
+            <h2
+              className={`mb-4 text-3xl font-bold sm:text-4xl ${isLight ? "text-slate-900" : "text-white"}`}
+            >
               What the Audit Tells You
             </h2>
-            <p className={`mx-auto max-w-2xl text-lg ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
-              Comprehensive analysis across multiple dimensions of search performance
+            <p
+              className={`mx-auto max-w-2xl text-lg ${isLight ? "text-slate-600" : "text-slate-300"}`}
+            >
+              Comprehensive analysis across multiple dimensions of search
+              performance
             </p>
           </div>
 
@@ -124,63 +160,81 @@ export function AuditLandingContent() {
             {[
               {
                 icon: BarChart3,
-                title: 'SEO Score',
-                description: 'Comprehensive SEO health score based on meta tags, headings, content structure, and keyword optimization.',
+                title: "SEO Score",
+                description:
+                  "Comprehensive SEO health score based on meta tags, headings, content structure, and keyword optimization.",
               },
               {
                 icon: Zap,
-                title: 'Performance Score',
-                description: 'Page speed metrics, Core Web Vitals, and loading performance analysis.',
+                title: "Performance Score",
+                description:
+                  "Page speed metrics, Core Web Vitals, and loading performance analysis.",
               },
               {
                 icon: TrendingUp,
-                title: 'Competitor Analysis',
-                description: 'Side-by-side comparison with industry leaders to identify what you\'re missing.',
+                title: "Competitor Analysis",
+                description:
+                  "Side-by-side comparison with industry leaders to identify what you're missing.",
               },
               {
                 icon: Shield,
-                title: 'Technical Audit',
-                description: 'Check for broken links, sitemap issues, robots.txt problems, and mobile-friendliness.',
+                title: "Technical Audit",
+                description:
+                  "Check for broken links, sitemap issues, robots.txt problems, and mobile-friendliness.",
               },
               {
                 icon: Search,
-                title: 'Backlink Profile',
-                description: 'Analyze competitor domain authority and backlink sources to build your strategy.',
+                title: "Backlink Profile",
+                description:
+                  "Analyze competitor domain authority and backlink sources to build your strategy.",
               },
               {
                 icon: Clock,
-                title: 'Gap Analysis',
-                description: 'Detailed report on specific keywords, rankings, and content gaps you need to address.',
+                title: "Gap Analysis",
+                description:
+                  "Detailed report on specific keywords, rankings, and content gaps you need to address.",
               },
             ].map((feature, i) => (
               <div
                 key={i}
                 className={`rounded-2xl border p-6 transition-all ${
                   isLight
-                    ? 'border-slate-200 bg-slate-50 hover:border-blue-200 hover:shadow-lg'
-                    : 'border-white/10 bg-white/5 hover:border-cyan-300/40 hover:shadow-[0_0_30px_rgba(14,165,233,0.12)]'
+                    ? "border-slate-200 bg-slate-50 hover:border-blue-200 hover:shadow-lg"
+                    : "border-white/10 bg-white/5 hover:border-cyan-300/40 hover:shadow-[0_0_30px_rgba(14,165,233,0.12)]"
                 }`}
               >
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-500">
                   <feature.icon className="h-6 w-6 text-white" />
                 </div>
-                <h3 className={`mb-3 text-xl font-semibold ${isLight ? 'text-slate-900' : 'text-white'}`}>{feature.title}</h3>
-                <p className={isLight ? 'text-slate-600' : 'text-slate-300'}>{feature.description}</p>
+                <h3
+                  className={`mb-3 text-xl font-semibold ${isLight ? "text-slate-900" : "text-white"}`}
+                >
+                  {feature.title}
+                </h3>
+                <p className={isLight ? "text-slate-600" : "text-slate-300"}>
+                  {feature.description}
+                </p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className={`py-20 lg:py-16 ${
-        isLight ? 'bg-gradient-to-br from-slate-900 to-slate-800' : 'bg-gradient-to-br from-[#040f2b] to-[#071c4a]'
-      }`}>
+      <section
+        className={`py-20 lg:py-16 ${
+          isLight
+            ? "bg-gradient-to-br from-slate-900 to-slate-800"
+            : "bg-gradient-to-br from-[#040f2b] to-[#071c4a]"
+        }`}
+      >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-16 lg:mb-12 text-center">
             <h2 className="mb-4 text-3xl font-bold text-white sm:text-4xl">
               How It Works
             </h2>
-            <p className={`mx-auto max-w-2xl text-lg ${isLight ? 'text-slate-300' : 'text-slate-200'}`}>
+            <p
+              className={`mx-auto max-w-2xl text-lg ${isLight ? "text-slate-300" : "text-slate-200"}`}
+            >
               Three simple steps to actionable competitor intelligence
             </p>
           </div>
@@ -188,29 +242,38 @@ export function AuditLandingContent() {
           <div className="grid gap-8 lg:gap-6 md:grid-cols-3">
             {[
               {
-                step: '01',
-                title: 'Enter Competitor URL',
-                description: 'Paste any website URL you want to analyze. Works for any industry, any market.',
+                step: "01",
+                title: "Enter Competitor URL",
+                description:
+                  "Paste any website URL you want to analyze. Works for any industry, any market.",
               },
               {
-                step: '02',
-                title: 'AI Analysis Runs',
-                description: 'Our system crawls the site, analyzes technical SEO, and compares against benchmarks.',
+                step: "02",
+                title: "AI Analysis Runs",
+                description:
+                  "Our system crawls the site, analyzes technical SEO, and compares against benchmarks.",
               },
               {
-                step: '03',
-                title: 'Get Actionable Report',
-                description: 'Receive a detailed audit with scores, gaps, and prioritized recommendations.',
+                step: "03",
+                title: "Get Actionable Report",
+                description:
+                  "Receive a detailed audit with scores, gaps, and prioritized recommendations.",
               },
             ].map((item, i) => (
               <div key={i} className="relative">
                 <div className="mb-6 lg:mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 text-2xl font-bold text-white">
                   {item.step}
                 </div>
-                <h3 className="mb-3 text-xl font-semibold text-white">{item.title}</h3>
-                <p className={isLight ? 'text-slate-400' : 'text-slate-300'}>{item.description}</p>
+                <h3 className="mb-3 text-xl font-semibold text-white">
+                  {item.title}
+                </h3>
+                <p className={isLight ? "text-slate-400" : "text-slate-300"}>
+                  {item.description}
+                </p>
                 {i < 2 && (
-                  <div className={`absolute -right-4 top-8 hidden h-0.5 w-8 md:block ${isLight ? 'bg-slate-700' : 'bg-cyan-300/25'}`} />
+                  <div
+                    className={`absolute -right-4 top-8 hidden h-0.5 w-8 md:block ${isLight ? "bg-slate-700" : "bg-cyan-300/25"}`}
+                  />
                 )}
               </div>
             ))}
@@ -218,22 +281,33 @@ export function AuditLandingContent() {
         </div>
       </section>
 
-      <section className={`py-20 lg:py-16 ${isLight ? 'bg-white' : 'bg-[#071534]'}`}>
+      <section
+        className={`py-20 lg:py-16 ${isLight ? "bg-white" : "bg-[#071534]"}`}
+      >
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <div className={`rounded-3xl border p-8 text-center sm:p-12 lg:p-10 ${
-            isLight
-              ? 'border-blue-200 bg-gradient-to-br from-blue-50 to-purple-50 shadow-lg'
-              : 'border-cyan-300/30 bg-gradient-to-br from-[#0b1f49] to-[#112e68] shadow-[0_0_40px_rgba(14,165,233,0.18)]'
-          }`}>
-            <h2 className={`mb-4 text-3xl font-bold sm:text-4xl ${isLight ? 'text-slate-900' : 'text-white'}`}>
+          <div
+            className={`rounded-3xl border p-8 text-center sm:p-12 lg:p-10 ${
+              isLight
+                ? "border-blue-200 bg-gradient-to-br from-blue-50 to-purple-50 shadow-lg"
+                : "border-cyan-300/30 bg-gradient-to-br from-[#0b1f49] to-[#112e68] shadow-[0_0_40px_rgba(14,165,233,0.18)]"
+            }`}
+          >
+            <h2
+              className={`mb-4 text-3xl font-bold sm:text-4xl ${isLight ? "text-slate-900" : "text-white"}`}
+            >
               Ready to Outrank Your Competitors?
             </h2>
-            <p className={`mb-8 lg:mb-6 text-lg ${isLight ? 'text-slate-600' : 'text-slate-200'}`}>
-              Start your free audit today. No credit card required. Get insights in under 2 minutes.
+            <p
+              className={`mb-8 lg:mb-6 text-lg ${isLight ? "text-slate-600" : "text-slate-200"}`}
+            >
+              Start your free audit today. No credit card required. Get insights
+              in under 2 minutes.
             </p>
             <Link
               href={getStartedUrl}
-              onClick={() => trackCtaClick('footer_start_free_audit', getStartedUrl)}
+              onClick={() =>
+                trackCtaClick("footer_start_free_audit", getStartedUrl)
+              }
               className="inline-flex items-center rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-4 text-base font-semibold text-white shadow-lg transition-all hover:shadow-xl"
             >
               <Shield className="mr-2 h-5 w-5" />
@@ -243,25 +317,33 @@ export function AuditLandingContent() {
         </div>
       </section>
 
-      <footer className={`border-t py-12 lg:py-10 ${
-        isLight ? 'border-slate-200 bg-white' : 'border-white/10 bg-[#040f2b]'
-      }`}>
+      <footer
+        className={`border-t py-12 lg:py-10 ${
+          isLight ? "border-slate-200 bg-white" : "border-white/10 bg-[#040f2b]"
+        }`}
+      >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-purple-600">
                 <Search className="h-4 w-4 text-white" />
               </div>
-              <span className={`text-lg font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>RankedCEO</span>
+              <span
+                className={`text-lg font-bold ${isLight ? "text-slate-900" : "text-white"}`}
+              >
+                RankedCEO
+              </span>
             </div>
-            <p className={`text-sm ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+            <p
+              className={`text-sm ${isLight ? "text-slate-600" : "text-slate-300"}`}
+            >
               © {new Date().getFullYear()} RankedCEO. All rights reserved.
             </p>
           </div>
         </div>
       </footer>
     </div>
-  )
+  );
 }
 
 export function AuditLandingContentWithTheme() {
@@ -269,5 +351,5 @@ export function AuditLandingContentWithTheme() {
     <OnboardingThemeProvider>
       <AuditLandingContent />
     </OnboardingThemeProvider>
-  )
+  );
 }

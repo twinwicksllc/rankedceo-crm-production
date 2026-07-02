@@ -9,22 +9,22 @@
 // No auth required. Statically rendered (no dynamic data).
 // =============================================================================
 
-import type { Metadata } from 'next'
-import Link from 'next/link'
-import { PricingTable } from '@/components/waas/marketing/PricingTable'
+import type { Metadata } from "next";
+import Link from "next/link";
+import { PricingTable } from "@/components/waas/marketing/PricingTable";
 
 export const metadata: Metadata = {
-  title: 'AI-Built Websites for Local Businesses | RankedCEO',
+  title: "AI-Built Websites for Local Businesses | RankedCEO",
   description:
-    'RankedCEO builds, hosts, and ranks your website using AI — starting free. Get a custom-designed site live in 48 hours with built-in SEO audits, competitor tracking, and more.',
+    "RankedCEO builds, hosts, and ranks your website using AI — starting free. Get a custom-designed site live in 48 hours with built-in SEO audits, competitor tracking, and more.",
   openGraph: {
-    title: 'AI-Built Websites for Local Businesses | RankedCEO',
+    title: "AI-Built Websites for Local Businesses | RankedCEO",
     description:
-      'RankedCEO builds, hosts, and ranks your website using AI — starting free. Get a custom-designed site live in 48 hours.',
-    type: 'website',
-    url: 'https://rankedceo.com/waas-plans',
+      "RankedCEO builds, hosts, and ranks your website using AI — starting free. Get a custom-designed site live in 48 hours.",
+    type: "website",
+    url: "https://rankedceo.com/waas-plans",
   },
-}
+};
 
 // ---------------------------------------------------------------------------
 // Hero section (server component — no interactivity needed)
@@ -48,15 +48,16 @@ function HeroSection() {
         </div>
 
         <h1 className="text-5xl sm:text-6xl font-extrabold leading-tight tracking-tight mb-6">
-          Your business website,{' '}
+          Your business website,{" "}
           <span className="bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
             built and ranked by AI
           </span>
         </h1>
 
         <p className="text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto mb-10 leading-relaxed">
-          RankedCEO generates a custom, fully-hosted website for your local business in 48 hours —
-          then continuously audits and improves it so you rank higher on Google.
+          RankedCEO generates a custom, fully-hosted website for your local
+          business in 48 hours — then continuously audits and improves it so you
+          rank higher on Google.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -66,7 +67,13 @@ function HeroSection() {
           >
             Get your free audit
             <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none">
-              <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M3 8h10M9 4l4 4-4 4"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </Link>
           <a
@@ -80,10 +87,10 @@ function HeroSection() {
         {/* Social proof bar */}
         <div className="mt-14 flex flex-wrap justify-center gap-8 text-sm text-slate-400">
           {[
-            { stat: '48h', label: 'Average launch time' },
-            { stat: 'AI-built', label: 'Unique site designs' },
-            { stat: '4 plans', label: 'Starting free' },
-            { stat: '100%', label: 'Managed hosting' },
+            { stat: "48h", label: "Average launch time" },
+            { stat: "AI-built", label: "Unique site designs" },
+            { stat: "4 plans", label: "Starting free" },
+            { stat: "100%", label: "Managed hosting" },
           ].map(({ stat, label }) => (
             <div key={label} className="flex flex-col items-center gap-1">
               <span className="text-2xl font-extrabold text-white">{stat}</span>
@@ -93,7 +100,7 @@ function HeroSection() {
         </div>
       </div>
     </section>
-  )
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -103,24 +110,24 @@ function HeroSection() {
 function HowItWorks() {
   const steps = [
     {
-      num: '01',
-      title: 'Run your free AI audit',
-      body: 'Enter your website URL (or just your business name). Our AI scores your site on SEO, performance, and mobile — and identifies your biggest growth opportunities.',
-      icon: '🔍',
+      num: "01",
+      title: "Run your free AI audit",
+      body: "Enter your website URL (or just your business name). Our AI scores your site on SEO, performance, and mobile — and identifies your biggest growth opportunities.",
+      icon: "🔍",
     },
     {
-      num: '02',
-      title: 'We build your site in 48 hours',
-      body: 'Our AI generates a custom, professionally-designed website tailored to your industry, service area, and brand. You review and approve before anything goes live.',
-      icon: '⚡',
+      num: "02",
+      title: "We build your site in 48 hours",
+      body: "Our AI generates a custom, professionally-designed website tailored to your industry, service area, and brand. You review and approve before anything goes live.",
+      icon: "⚡",
     },
     {
-      num: '03',
-      title: 'We manage, host, and rank it',
-      body: 'Your site is hosted on our lightning-fast infrastructure. Monthly SEO audits track your Google rankings, surface competitor gaps, and guide your next moves.',
-      icon: '📈',
+      num: "03",
+      title: "We manage, host, and rank it",
+      body: "Your site is hosted on our lightning-fast infrastructure. Monthly SEO audits track your Google rankings, surface competitor gaps, and guide your next moves.",
+      icon: "📈",
     },
-  ]
+  ];
 
   return (
     <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-50">
@@ -130,13 +137,17 @@ function HowItWorks() {
             From audit to live site — in three steps
           </h2>
           <p className="text-slate-500 max-w-xl mx-auto">
-            No design skills needed. No dev team needed. Just answer a few questions and we handle the rest.
+            No design skills needed. No dev team needed. Just answer a few
+            questions and we handle the rest.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {steps.map(({ num, title, body, icon }) => (
-            <div key={num} className="relative bg-white rounded-2xl p-8 shadow-sm border border-slate-100">
+            <div
+              key={num}
+              className="relative bg-white rounded-2xl p-8 shadow-sm border border-slate-100"
+            >
               <div className="absolute -top-4 left-6 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full">
                 Step {num}
               </div>
@@ -148,7 +159,7 @@ function HowItWorks() {
         </div>
       </div>
     </section>
-  )
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -157,15 +168,15 @@ function HowItWorks() {
 
 function Industries() {
   const industries = [
-    { icon: '🔧', label: 'Plumbing' },
-    { icon: '❄️', label: 'HVAC' },
-    { icon: '⚡', label: 'Electrical' },
-    { icon: '🏡', label: 'Real Estate' },
-    { icon: '🦷', label: 'Dental / Medical' },
-    { icon: '🌿', label: 'Landscaping' },
-    { icon: '🔑', label: 'Property Management' },
-    { icon: '🚗', label: 'Auto Services' },
-  ]
+    { icon: "🔧", label: "Plumbing" },
+    { icon: "❄️", label: "HVAC" },
+    { icon: "⚡", label: "Electrical" },
+    { icon: "🏡", label: "Real Estate" },
+    { icon: "🦷", label: "Dental / Medical" },
+    { icon: "🌿", label: "Landscaping" },
+    { icon: "🔑", label: "Property Management" },
+    { icon: "🚗", label: "Auto Services" },
+  ];
 
   return (
     <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white border-t border-slate-100">
@@ -186,7 +197,7 @@ function Industries() {
         </div>
       </div>
     </section>
-  )
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -195,42 +206,53 @@ function Industries() {
 
 const FAQS = [
   {
-    q: 'Do I need to provide any content or design assets?',
-    a: 'No. Our AI generates all copy, layout, and design based on your business information. You can optionally upload a logo and photos, but they\'re not required to get started.',
+    q: "Do I need to provide any content or design assets?",
+    a: "No. Our AI generates all copy, layout, and design based on your business information. You can optionally upload a logo and photos, but they're not required to get started.",
   },
   {
-    q: 'What happens to my current website?',
-    a: 'Nothing changes until you\'re ready. We build your new site in parallel, and you choose when (or if) to switch over. We help with the domain transfer when you\'re ready.',
+    q: "What happens to my current website?",
+    a: "Nothing changes until you're ready. We build your new site in parallel, and you choose when (or if) to switch over. We help with the domain transfer when you're ready.",
   },
   {
-    q: 'Can I edit the site myself after it launches?',
-    a: 'Yes — every plan includes access to our client editor where you can update text, images, and toggle sections. Premium plans include AI-assisted rewrites.',
+    q: "Can I edit the site myself after it launches?",
+    a: "Yes — every plan includes access to our client editor where you can update text, images, and toggle sections. Premium plans include AI-assisted rewrites.",
   },
   {
-    q: 'How does annual billing work for the Hosting Only plan?',
-    a: 'The Hosting Only plan is billed once per year at $199. You\'ll receive a renewal reminder 30 days before it expires and can cancel anytime before renewal.',
+    q: "How does annual billing work for the Hosting Only plan?",
+    a: "The Hosting Only plan is billed once per year at $199. You'll receive a renewal reminder 30 days before it expires and can cancel anytime before renewal.",
   },
   {
-    q: 'Can I upgrade or downgrade my plan later?',
-    a: 'Absolutely. You can upgrade or downgrade from within your client portal at any time. Upgrades take effect immediately; downgrades apply at the next billing cycle.',
+    q: "Can I upgrade or downgrade my plan later?",
+    a: "Absolutely. You can upgrade or downgrade from within your client portal at any time. Upgrades take effect immediately; downgrades apply at the next billing cycle.",
   },
   {
-    q: 'What\'s the difference between the Hosting and Hosting Only plans?',
-    a: 'The free Hosting plan is included for all active RankedCEO clients as part of our WaaS service — no separate charge. The Hosting Only plan ($199/yr) is for clients who want standalone hosting without the audit and AI tools.',
+    q: "What's the difference between the Hosting and Hosting Only plans?",
+    a: "The free Hosting plan is included for all active RankedCEO clients as part of our WaaS service — no separate charge. The Hosting Only plan ($199/yr) is for clients who want standalone hosting without the audit and AI tools.",
   },
-]
+];
 
 function FAQ() {
   return (
     <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-50">
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-extrabold text-slate-900 mb-3">Frequently asked questions</h2>
-          <p className="text-slate-500">Still have questions? <Link href="/get-started" className="text-blue-600 hover:underline">Run a free audit</Link> and we&apos;ll walk you through the right plan.</p>
+          <h2 className="text-3xl font-extrabold text-slate-900 mb-3">
+            Frequently asked questions
+          </h2>
+          <p className="text-slate-500">
+            Still have questions?{" "}
+            <Link href="/get-started" className="text-blue-600 hover:underline">
+              Run a free audit
+            </Link>{" "}
+            and we&apos;ll walk you through the right plan.
+          </p>
         </div>
         <div className="space-y-4">
           {FAQS.map(({ q, a }) => (
-            <div key={q} className="bg-white rounded-xl border border-slate-200 p-6">
+            <div
+              key={q}
+              className="bg-white rounded-xl border border-slate-200 p-6"
+            >
               <p className="font-semibold text-slate-800 mb-2">{q}</p>
               <p className="text-sm text-slate-500 leading-relaxed">{a}</p>
             </div>
@@ -238,7 +260,7 @@ function FAQ() {
         </div>
       </div>
     </section>
-  )
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -256,5 +278,5 @@ export default function WaasPlansPage() {
       </div>
       <FAQ />
     </main>
-  )
+  );
 }

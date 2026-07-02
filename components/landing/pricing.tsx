@@ -1,5 +1,5 @@
-import { CheckCircle2, Sparkles } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { CheckCircle2, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const plans = [
   {
@@ -12,9 +12,9 @@ const plans = [
       "Smart scheduling",
       "Basic analytics",
       "Email support",
-      "HIPAA compliant"
+      "HIPAA compliant",
     ],
-    popular: false
+    popular: false,
   },
   {
     name: "Professional",
@@ -28,9 +28,9 @@ const plans = [
       "SMS & email campaigns",
       "Priority support",
       "Treatment planning",
-      "Online booking portal"
+      "Online booking portal",
     ],
-    popular: true
+    popular: true,
   },
   {
     name: "Enterprise",
@@ -44,11 +44,11 @@ const plans = [
       "Dedicated account manager",
       "On-site training",
       "Custom reporting",
-      "API access"
+      "API access",
     ],
-    popular: false
-  }
-]
+    popular: false,
+  },
+];
 
 export function Pricing() {
   return (
@@ -71,11 +71,11 @@ export function Pricing() {
         {/* Pricing Cards */}
         <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
           {plans.map((plan, index) => (
-            <div 
+            <div
               key={index}
               className={`relative bg-card rounded-2xl p-8 border ${
-                plan.popular 
-                  ? "border-secondary shadow-xl scale-105" 
+                plan.popular
+                  ? "border-secondary shadow-xl scale-105"
                   : "border-border shadow-sm"
               }`}
             >
@@ -84,7 +84,7 @@ export function Pricing() {
                   Most Popular
                 </div>
               )}
-              
+
               <div className="text-center mb-6">
                 <h3 className="text-xl font-bold text-foreground mb-2">
                   {plan.name}
@@ -102,7 +102,7 @@ export function Pricing() {
                   <span className="text-muted-foreground">{plan.period}</span>
                 </div>
               </div>
-              
+
               <ul className="space-y-3 mb-8">
                 {plan.features.map((feature, i) => (
                   <li key={i} className="flex items-start gap-3">
@@ -111,11 +111,11 @@ export function Pricing() {
                   </li>
                 ))}
               </ul>
-              
-              <Button 
+
+              <Button
                 className={`w-full font-semibold ${
-                  plan.popular 
-                    ? "bg-secondary hover:bg-secondary/90 text-secondary-foreground" 
+                  plan.popular
+                    ? "bg-secondary hover:bg-secondary/90 text-secondary-foreground"
                     : "bg-primary hover:bg-primary/90 text-primary-foreground"
                 }`}
               >
@@ -142,5 +142,5 @@ export function Pricing() {
         </div>
       </div>
     </section>
-  )
+  );
 }

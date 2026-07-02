@@ -5,7 +5,7 @@ description: >
   obvious CTAs, clear labels, and intuitive navigation. Ensures every action has
   a clear "what do I do next" path. Runs monthly to catch UX regressions that
   could confuse less technical users.
-  
+
   Focus areas:
   - All buttons have clear, action-oriented labels
   - Obvious visual hierarchy (what to click first?)

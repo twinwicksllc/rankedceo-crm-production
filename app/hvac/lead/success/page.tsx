@@ -1,16 +1,15 @@
-import Link from 'next/link'
-import { CheckCircle, Flame, Phone, Clock } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { ChatWidget } from '@/components/agent/chat-widget'
+import Link from "next/link";
+import { CheckCircle, Flame, Phone, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ChatWidget } from "@/components/agent/chat-widget";
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default function HvacLeadSuccessPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-25 flex items-center justify-center p-4">
       <div className="mx-auto max-w-md w-full">
-
         {/* Logo */}
         <div className="flex justify-center mb-6">
           <div className="rounded-full bg-blue-100 p-4">
@@ -31,12 +30,15 @@ export default function HvacLeadSuccessPage() {
           </h1>
 
           <p className="text-gray-600 mb-6">
-            Thank you for reaching out. A certified HVAC technician will review your request and contact you shortly.
+            Thank you for reaching out. A certified HVAC technician will review
+            your request and contact you shortly.
           </p>
 
           {/* What's next */}
           <div className="rounded-lg bg-blue-50 border border-blue-200 p-4 mb-6 text-left space-y-3">
-            <p className="text-sm font-semibold text-blue-900">What happens next?</p>
+            <p className="text-sm font-semibold text-blue-900">
+              What happens next?
+            </p>
             <div className="flex items-start gap-3">
               <Phone className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
               <p className="text-sm text-gray-600">
@@ -46,7 +48,8 @@ export default function HvacLeadSuccessPage() {
             <div className="flex items-start gap-3">
               <Clock className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
               <p className="text-sm text-gray-600">
-                Emergency requests are prioritized for same-day response. Standard requests within 24–48 hours.
+                Emergency requests are prioritized for same-day response.
+                Standard requests within 24–48 hours.
               </p>
             </div>
           </div>
@@ -69,5 +72,5 @@ export default function HvacLeadSuccessPage() {
         position="bottom-right"
       />
     </div>
-  )
+  );
 }

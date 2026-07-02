@@ -1,32 +1,35 @@
-import { Star } from "lucide-react"
+import { Star } from "lucide-react";
 
 const stats = [
   { value: "5,000+", label: "Dental Practices" },
   { value: "98%", label: "Client Satisfaction" },
   { value: "2M+", label: "Patients Managed" },
-  { value: "4.9", label: "Google Rating", isRating: true }
-]
+  { value: "4.9", label: "Google Rating", isRating: true },
+];
 
 const testimonials = [
   {
-    quote: "Smile Pro completely transformed how we manage our practice. We've seen a 40% increase in patient retention since switching.",
+    quote:
+      "Smile Pro completely transformed how we manage our practice. We've seen a 40% increase in patient retention since switching.",
     author: "Dr. Sarah Johnson",
     practice: "Bright Smile Dental",
-    avatar: "SJ"
+    avatar: "SJ",
   },
   {
-    quote: "The automated reminders alone have saved us thousands in no-show revenue. Best investment we've made for our practice.",
+    quote:
+      "The automated reminders alone have saved us thousands in no-show revenue. Best investment we've made for our practice.",
     author: "Dr. Michael Chen",
     practice: "Family Dental Care",
-    avatar: "MC"
+    avatar: "MC",
   },
   {
-    quote: "Finally, a CRM that understands dentistry. The treatment planning feature is incredible and our patients love it.",
+    quote:
+      "Finally, a CRM that understands dentistry. The treatment planning feature is incredible and our patients love it.",
     author: "Dr. Emily Rodriguez",
     practice: "Premier Dental Group",
-    avatar: "ER"
-  }
-]
+    avatar: "ER",
+  },
+];
 
 export function SocialProof() {
   return (
@@ -62,7 +65,7 @@ export function SocialProof() {
         {/* Testimonials */}
         <div className="grid md:grid-cols-3 gap-8">
           {testimonials.map((testimonial, index) => (
-            <div 
+            <div
               key={index}
               className="bg-muted/30 rounded-xl p-6 border border-border"
             >
@@ -72,18 +75,22 @@ export function SocialProof() {
                   <Star key={i} className="w-5 h-5 fill-accent text-accent" />
                 ))}
               </div>
-              
+
               <p className="text-foreground mb-6 leading-relaxed italic">
                 &ldquo;{testimonial.quote}&rdquo;
               </p>
-              
+
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold">
                   {testimonial.avatar}
                 </div>
                 <div>
-                  <p className="font-semibold text-foreground">{testimonial.author}</p>
-                  <p className="text-sm text-muted-foreground">{testimonial.practice}</p>
+                  <p className="font-semibold text-foreground">
+                    {testimonial.author}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {testimonial.practice}
+                  </p>
                 </div>
               </div>
             </div>
@@ -99,11 +106,12 @@ export function SocialProof() {
               ))}
             </div>
             <span className="font-medium text-foreground">
-              <span className="text-primary font-bold">Google</span> 5-Star Patient Reviews
+              <span className="text-primary font-bold">Google</span> 5-Star
+              Patient Reviews
             </span>
           </div>
         </div>
       </div>
     </section>
-  )
+  );
 }

@@ -1,11 +1,13 @@
 # Phase 3: Full End-to-End Booking Flow Testing Plan
 
 ## Overview
+
 This document provides a comprehensive testing plan for the AI chat booking system across all industry subdomains.
 
 ## Prerequisites
 
 ### Before Testing
+
 - [ ] Ensure `agent_conversations` migration has been run in Supabase
 - [ ] Verify Vercel deployment is complete (check latest commit: a400911)
 - [ ] Have test email addresses ready (use real emails for Calendly testing)
@@ -17,6 +19,7 @@ This document provides a comprehensive testing plan for the AI chat booking syst
   - `DEFAULT_ACCOUNT_ID`
 
 ### Test Accounts Needed
+
 - [ ] HVAC operator account (with Calendly connected)
 - [ ] Plumbing operator account (with Calendly connected)
 - [ ] Electrical operator account (with Calendly connected)
@@ -28,12 +31,14 @@ This document provides a comprehensive testing plan for the AI chat booking syst
 ## Test Environment
 
 ### URLs to Test
+
 - HVAC: https://hvac.rankedceo.com/lead
 - Plumbing: https://plumbing.rankedceo.com/lead
 - Electrical: https://electrical.rankedceo.com/lead
 - Smile: https://smile.rankedceo.com/assessment
 
 ### Browser Tools
+
 - Open browser DevTools (F12)
 - Go to Console tab for logs
 - Go to Network tab for API requests
@@ -48,6 +53,7 @@ This document provides a comprehensive testing plan for the AI chat booking syst
 **Objective:** Verify chat widget loads correctly on all landing pages
 
 **Steps:**
+
 1. Navigate to https://hvac.rankedceo.com/lead
 2. Verify chat widget button is visible in bottom-right corner
 3. Verify button has correct color (blue #2563eb for HVAC)
@@ -61,12 +67,14 @@ This document provides a comprehensive testing plan for the AI chat booking syst
 11. Repeat for Smile (purple #9333ea)
 
 **Expected Results:**
+
 - Chat widget visible on all pages
 - Correct industry-specific colors
 - Greeting messages are industry-specific
 - Chat window opens and closes smoothly
 
 **Issues to Log:**
+
 - Widget not visible
 - Wrong color
 - No greeting message
@@ -79,6 +87,7 @@ This document provides a comprehensive testing plan for the AI chat booking syst
 **Objective:** Verify AI responds to basic messages
 
 **Steps:**
+
 1. Open chat widget on HVAC page
 2. Send message: "Hello"
 3. Verify AI responds
@@ -92,12 +101,14 @@ This document provides a comprehensive testing plan for the AI chat booking syst
 11. Verify AI shows booking modal or calendar
 
 **Expected Results:**
+
 - AI responds to all messages
 - AI collects name and email
 - AI offers booking when requested
 - Conversation flows naturally
 
 **Issues to Log:**
+
 - No response from AI
 - Generic responses
 - Doesn't collect information
@@ -110,27 +121,30 @@ This document provides a comprehensive testing plan for the AI chat booking syst
 **Objective:** Verify AI correctly extracts lead info from conversation
 
 **Steps:**
+
 1. Open chat widget on Plumbing page
 2. Send message: "Hi, I'm Jane Smith and my email is jane@example.com"
 3. Check browser console for logs
 4. Send message: "My phone is 555-123-4567"
 5. Check Supabase database:
    ```sql
-   SELECT * FROM agent_conversations 
+   SELECT * FROM agent_conversations
    WHERE session_id = '[session_id from console]'
-   ORDER BY created_at DESC 
+   ORDER BY created_at DESC
    LIMIT 1;
    ```
 6. Verify lead_name, lead_email, lead_phone are populated
 7. Verify messages array contains all messages with timestamps
 
 **Expected Results:**
+
 - Name extracted: "Jane Smith"
 - Email extracted: "jane@example.com"
 - Phone extracted: "555-123-4567"
 - All messages stored in database with timestamps
 
 **Issues to Log:**
+
 - Lead info not extracted
 - Incorrect extraction
 - Messages not saved to database
@@ -143,6 +157,7 @@ This document provides a comprehensive testing plan for the AI chat booking syst
 **Objective:** Verify AI correctly detects booking intent
 
 **Steps:**
+
 1. Open chat widget on Electrical page
 2. Send message: "I have a question about pricing"
 3. Verify AI does NOT show booking modal
@@ -156,11 +171,13 @@ This document provides a comprehensive testing plan for the AI chat booking syst
 11. Verify AI shows booking modal
 
 **Expected Results:**
+
 - Booking modal shown only when intent detected
 - Questions don't trigger booking
 - Clear booking requests trigger modal
 
 **Issues to Log:**
+
 - Booking modal shown too early
 - Booking modal not shown when requested
 - False positives/negatives in intent detection
@@ -174,6 +191,7 @@ This document provides a comprehensive testing plan for the AI chat booking syst
 **Prerequisites:** Operator account must have Calendly connected
 
 **Steps:**
+
 1. Log in as HVAC operator
 2. Connect Calendly account in Settings
 3. Logout
@@ -189,13 +207,14 @@ This document provides a comprehensive testing plan for the AI chat booking syst
 13. Check email for Calendly confirmation
 14. Check Supabase appointments table:
     ```sql
-    SELECT * FROM appointments 
+    SELECT * FROM appointments
     WHERE invitee_email = '[your test email]'
-    ORDER BY created_at DESC 
+    ORDER BY created_at DESC
     LIMIT 1;
     ```
 
 **Expected Results:**
+
 - Calendly calendar loads in modal
 - Available time slots shown
 - Booking form appears
@@ -205,6 +224,7 @@ This document provides a comprehensive testing plan for the AI chat booking syst
 - Conversation status updated to "booked"
 
 **Issues to Log:**
+
 - Calendly not loading
 - No available slots
 - Booking fails
@@ -219,6 +239,7 @@ This document provides a comprehensive testing plan for the AI chat booking syst
 **Objective:** Verify conversation persists across page reloads
 
 **Steps:**
+
 1. Open chat widget on Smile page
 2. Send message: "Hello, I'm testing persistence"
 3. Note the session_id from browser console
@@ -227,18 +248,20 @@ This document provides a comprehensive testing plan for the AI chat booking syst
 6. Verify previous messages are still visible
 7. Send message: "This is after refresh"
 8. Check database:
-    ```sql
-    SELECT messages FROM agent_conversations 
-    WHERE session_id = '[session_id]';
-    ```
+   ```sql
+   SELECT messages FROM agent_conversations
+   WHERE session_id = '[session_id]';
+   ```
 9. Verify both messages are in database
 
 **Expected Results:**
+
 - Chat history preserved after refresh
 - Session ID remains the same
 - All messages stored in database
 
 **Issues to Log:**
+
 - Chat history lost after refresh
 - New session created on refresh
 - Messages not persisted
@@ -250,6 +273,7 @@ This document provides a comprehensive testing plan for the AI chat booking syst
 **Objective:** Verify system handles multiple concurrent conversations
 
 **Steps:**
+
 1. Open HVAC page in Chrome
 2. Open Plumbing page in Firefox
 3. Open Electrical page in Edge
@@ -257,19 +281,21 @@ This document provides a comprehensive testing plan for the AI chat booking syst
 5. Send different messages in each
 6. Verify each conversation is independent
 7. Check database for all three conversations:
-    ```sql
-    SELECT session_id, source, lead_name, lead_email 
-    FROM agent_conversations 
-    WHERE status = 'active'
-    ORDER BY created_at DESC;
-    ```
+   ```sql
+   SELECT session_id, source, lead_name, lead_email
+   FROM agent_conversations
+   WHERE status = 'active'
+   ORDER BY created_at DESC;
+   ```
 
 **Expected Results:**
+
 - Each conversation has unique session_id
 - Conversations don't interfere with each other
 - All conversations stored correctly
 
 **Issues to Log:**
+
 - Conversations mixing
 - Session conflicts
 - Data corruption
@@ -281,6 +307,7 @@ This document provides a comprehensive testing plan for the AI chat booking syst
 **Objective:** Verify system handles errors gracefully
 
 **Steps:**
+
 1. Open chat widget
 2. Send very long message (10,000+ characters)
 3. Verify system handles it
@@ -296,6 +323,7 @@ This document provides a comprehensive testing plan for the AI chat booking syst
 13. Verify system recovers
 
 **Expected Results:**
+
 - Long messages handled
 - Special characters handled
 - Empty messages handled
@@ -303,6 +331,7 @@ This document provides a comprehensive testing plan for the AI chat booking syst
 - System recovers after reconnection
 
 **Issues to Log:**
+
 - System crashes
 - No error messages
 - System doesn't recover
@@ -314,6 +343,7 @@ This document provides a comprehensive testing plan for the AI chat booking syst
 **Objective:** Verify chat widget works on mobile devices
 
 **Steps:**
+
 1. Open browser DevTools
 2. Toggle device toolbar (Ctrl+Shift+M)
 3. Select iPhone 14 Pro
@@ -326,12 +356,14 @@ This document provides a comprehensive testing plan for the AI chat booking syst
 10. Test on other devices (iPad, Android)
 
 **Expected Results:**
+
 - Chat widget visible on mobile
 - Chat window responsive
 - Messages readable
 - Typing works
 
 **Issues to Log:**
+
 - Widget not visible on mobile
 - Chat window too large
 - Text not readable
@@ -344,42 +376,45 @@ This document provides a comprehensive testing plan for the AI chat booking syst
 **Objective:** Verify database integrity after testing
 
 **Steps:**
+
 1. Check for orphaned conversations:
-    ```sql
-    SELECT COUNT(*) FROM agent_conversations 
-    WHERE status = 'active' 
-    AND updated_at < NOW() - INTERVAL '1 hour';
-    ```
+   ```sql
+   SELECT COUNT(*) FROM agent_conversations
+   WHERE status = 'active'
+   AND updated_at < NOW() - INTERVAL '1 hour';
+   ```
 2. Check for conversations without messages:
-    ```sql
-    SELECT id, session_id FROM agent_conversations 
-    WHERE jsonb_array_length(messages) = 0;
-    ```
+   ```sql
+   SELECT id, session_id FROM agent_conversations
+   WHERE jsonb_array_length(messages) = 0;
+   ```
 3. Check for duplicate sessions:
-    ```sql
-    SELECT session_id, COUNT(*) 
-    FROM agent_conversations 
-    GROUP BY session_id 
-    HAVING COUNT(*) > 1;
-    ```
+   ```sql
+   SELECT session_id, COUNT(*)
+   FROM agent_conversations
+   GROUP BY session_id
+   HAVING COUNT(*) > 1;
+   ```
 4. Check conversation statistics:
-    ```sql
-    SELECT 
-      source,
-      status,
-      COUNT(*) as count
-    FROM agent_conversations
-    GROUP BY source, status
-    ORDER BY source, status;
-    ```
+   ```sql
+   SELECT
+     source,
+     status,
+     COUNT(*) as count
+   FROM agent_conversations
+   GROUP BY source, status
+   ORDER BY source, status;
+   ```
 
 **Expected Results:**
+
 - No orphaned conversations
 - No conversations without messages
 - No duplicate sessions
 - Statistics look reasonable
 
 **Issues to Log:**
+
 - Orphaned conversations
 - Empty conversations
 - Duplicate sessions
@@ -390,62 +425,77 @@ This document provides a comprehensive testing plan for the AI chat booking syst
 ## Test Results Template
 
 ### Test 1: Chat Widget Visibility
+
 - **Status:** ☐ Pass ☐ Fail
-- **Notes:** 
+- **Notes:**
 
 ### Test 2: Basic Conversation Flow
+
 - **Status:** ☐ Pass ☐ Fail
-- **Notes:** 
+- **Notes:**
 
 ### Test 3: Lead Information Extraction
+
 - **Status:** ☐ Pass ☐ Fail
-- **Notes:** 
+- **Notes:**
 
 ### Test 4: Booking Intent Detection
+
 - **Status:** ☐ Pass ☐ Fail
-- **Notes:** 
+- **Notes:**
 
 ### Test 5: Calendly Integration
+
 - **Status:** ☐ Pass ☐ Fail
-- **Notes:** 
+- **Notes:**
 
 ### Test 6: Conversation Persistence
+
 - **Status:** ☐ Pass ☐ Fail
-- **Notes:** 
+- **Notes:**
 
 ### Test 7: Multiple Conversations
+
 - **Status:** ☐ Pass ☐ Fail
-- **Notes:** 
+- **Notes:**
 
 ### Test 8: Error Handling
+
 - **Status:** ☐ Pass ☐ Fail
-- **Notes:** 
+- **Notes:**
 
 ### Test 9: Mobile Responsiveness
+
 - **Status:** ☐ Pass ☐ Fail
-- **Notes:** 
+- **Notes:**
 
 ### Test 10: Database Integrity
+
 - **Status:** ☐ Pass ☐ Fail
-- **Notes:** 
+- **Notes:**
 
 ---
 
 ## Common Issues and Solutions
 
 ### Issue: Chat widget not visible
+
 **Solution:** Check browser console for errors, verify JavaScript is enabled
 
 ### Issue: AI not responding
+
 **Solution:** Check GEMINI_API_KEY is set, check network tab for API errors
 
 ### Issue: Calendly not loading
+
 **Solution:** Verify operator has connected Calendly, check access token
 
 ### Issue: Booking not confirmed
+
 **Solution:** Check Calendly webhook is configured, check webhook logs
 
 ### Issue: Conversation not persisting
+
 **Solution:** Verify database migration ran, check RLS policies
 
 ---
@@ -453,12 +503,14 @@ This document provides a comprehensive testing plan for the AI chat booking syst
 ## Performance Benchmarks
 
 ### Target Metrics
+
 - Chat widget load time: < 2 seconds
 - AI response time: < 3 seconds
 - Calendly load time: < 5 seconds
 - Database query time: < 500ms
 
 ### How to Measure
+
 1. Open browser DevTools Network tab
 2. Filter by XHR/Fetch requests
 3. Check timing for each API call
@@ -469,12 +521,14 @@ This document provides a comprehensive testing plan for the AI chat booking syst
 ## Security Testing
 
 ### Test Cases
+
 - [ ] Verify RLS policies prevent cross-account access
 - [ ] Verify anonymous conversations don't expose other users' data
 - [ ] Verify SQL injection attempts are blocked
 - [ ] Verify XSS attempts are blocked
 
 ### SQL Injection Test
+
 ```sql
 -- Try to inject SQL in chat message
 Message: "'; DROP TABLE agent_conversations; --"
@@ -486,6 +540,7 @@ Expected: Message stored as text, no SQL execution
 ## Accessibility Testing
 
 ### Test Cases
+
 - [ ] Chat widget is keyboard navigable
 - [ ] Chat widget has proper ARIA labels
 - [ ] Chat widget works with screen readers
@@ -496,6 +551,7 @@ Expected: Message stored as text, no SQL execution
 ## Browser Compatibility
 
 ### Browsers to Test
+
 - [ ] Chrome (latest)
 - [ ] Firefox (latest)
 - [ ] Safari (latest)
@@ -508,19 +564,21 @@ Expected: Message stored as text, no SQL execution
 ## Post-Testing Cleanup
 
 ### Clean Up Test Data
+
 ```sql
 -- Delete test conversations
-DELETE FROM agent_conversations 
+DELETE FROM agent_conversations
 WHERE lead_email LIKE '%@test.com'
 OR lead_email LIKE '%@example.com';
 
 -- Delete test appointments
-DELETE FROM appointments 
+DELETE FROM appointments
 WHERE invitee_email LIKE '%@test.com'
 OR invitee_email LIKE '%@example.com';
 ```
 
 ### Archive Test Results
+
 - [ ] Save screenshots of issues
 - [ ] Export test results to spreadsheet
 - [ ] Document any bugs found
@@ -531,12 +589,14 @@ OR invitee_email LIKE '%@example.com';
 ## Next Steps After Testing
 
 ### If All Tests Pass
+
 1. Deploy to production
 2. Monitor for 24 hours
 3. Collect user feedback
 4. Plan Phase 5 (Analytics Dashboard)
 
 ### If Tests Fail
+
 1. Document all failures
 2. Prioritize by severity
 3. Fix critical issues first
@@ -548,10 +608,12 @@ OR invitee_email LIKE '%@example.com';
 ## Contact Information
 
 ### For Issues
+
 - GitHub Issues: https://github.com/twinwicksllc/rankedceo-crm-production/issues
 - Support: [Your support email]
 
 ### For Questions
+
 - Technical Lead: [Name]
 - Product Owner: [Name]
 
@@ -560,8 +622,9 @@ OR invitee_email LIKE '%@example.com';
 ## Appendix: Useful Queries
 
 ### Get All Active Conversations
+
 ```sql
-SELECT 
+SELECT
   id,
   session_id,
   source,
@@ -576,8 +639,9 @@ ORDER BY created_at DESC;
 ```
 
 ### Get Conversation Details
+
 ```sql
-SELECT 
+SELECT
   id,
   session_id,
   source,
@@ -594,8 +658,9 @@ WHERE session_id = '[session_id]';
 ```
 
 ### Get Booked Conversations
+
 ```sql
-SELECT 
+SELECT
   ac.id,
   ac.session_id,
   ac.source,
@@ -611,8 +676,9 @@ ORDER BY ac.created_at DESC;
 ```
 
 ### Get Statistics by Source
+
 ```sql
-SELECT 
+SELECT
   source,
   COUNT(*) as total,
   COUNT(CASE WHEN status = 'active' THEN 1 END) as active,

@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 // =============================================================================
 // RankedCEO Website Builder — Onboarding Success Screen
@@ -6,42 +6,42 @@
 // The /edit portal requires a fully-built site (up to 48h after submission).
 // =============================================================================
 
-import React, { useEffect, useState } from 'react'
-import Link from 'next/link'
-import { AdvantagePointHeader } from '@/components/advantagepoint/header'
-import type { WaasPackageTier } from '@/lib/waas/types'
+import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import { AdvantagePointHeader } from "@/components/advantagepoint/header";
+import type { WaasPackageTier } from "@/lib/waas/types";
 
 interface Props {
-  businessName: string
-  tier:         WaasPackageTier
-  reviewToken:  string | null
+  businessName: string;
+  tier: WaasPackageTier;
+  reviewToken: string | null;
 }
 
 const TIER_LABELS: Record<WaasPackageTier, string> = {
-  hosting_only: 'Hosting Only',
-  hosting:      'Hosting',
-  standard:     'Standard',
-  premium:      'Premium',
-}
+  hosting_only: "Hosting Only",
+  hosting: "Hosting",
+  standard: "Standard",
+  premium: "Premium",
+};
 
 export function OnboardingSuccess({ businessName, tier, reviewToken }: Props) {
-  const [showConfetti, setShowConfetti] = useState(false)
+  const [showConfetti, setShowConfetti] = useState(false);
 
   useEffect(() => {
-    setShowConfetti(true)
-    const t = setTimeout(() => setShowConfetti(false), 4000)
-    return () => clearTimeout(t)
-  }, [])
+    setShowConfetti(true);
+    const t = setTimeout(() => setShowConfetti(false), 4000);
+    return () => clearTimeout(t);
+  }, []);
 
   const steps = [
-    { icon: '📧', label: 'Confirmation email sent',    time: 'Just now'   },
-    { icon: '🔍', label: 'Team review begins',         time: 'Within 1h'  },
-    { icon: '🏗️', label: 'Site build starts',          time: 'Within 24h' },
-    { icon: '🚀', label: 'Your site goes live',        time: 'Within 48h' },
-  ]
+    { icon: "📧", label: "Confirmation email sent", time: "Just now" },
+    { icon: "🔍", label: "Team review begins", time: "Within 1h" },
+    { icon: "🏗️", label: "Site build starts", time: "Within 24h" },
+    { icon: "🚀", label: "Your site goes live", time: "Within 48h" },
+  ];
 
   // Build the portal link — only shown as a button, never auto-navigated
-  const portalHref = reviewToken ? `/edit/${reviewToken}` : null
+  const portalHref = reviewToken ? `/edit/${reviewToken}` : null;
 
   return (
     <div className="flex flex-col flex-1">
@@ -55,12 +55,18 @@ export function OnboardingSuccess({ businessName, tier, reviewToken }: Props) {
               key={i}
               className="absolute w-2 h-2 rounded-sm animate-bounce"
               style={{
-                left:              `${Math.random() * 100}%`,
-                top:               `${-10 + Math.random() * 20}%`,
-                backgroundColor:   ['#3B82F6','#8B5CF6','#10B981','#F59E0B','#EF4444'][i % 5],
-                animationDelay:    `${Math.random() * 2}s`,
+                left: `${Math.random() * 100}%`,
+                top: `${-10 + Math.random() * 20}%`,
+                backgroundColor: [
+                  "#3B82F6",
+                  "#8B5CF6",
+                  "#10B981",
+                  "#F59E0B",
+                  "#EF4444",
+                ][i % 5],
+                animationDelay: `${Math.random() * 2}s`,
                 animationDuration: `${1.5 + Math.random() * 2}s`,
-                transform:         `rotate(${Math.random() * 360}deg)`,
+                transform: `rotate(${Math.random() * 360}deg)`,
               }}
             />
           ))}
@@ -69,13 +75,18 @@ export function OnboardingSuccess({ businessName, tier, reviewToken }: Props) {
 
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
         <div className="w-full max-w-lg text-center">
-
           {/* Success icon */}
           <div className="relative inline-flex items-center justify-center w-24 h-24 mb-6">
             <div className="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping" />
             <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-2xl shadow-emerald-500/30">
               <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-                <path d="M8 20l8 8 16-16" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path
+                  d="M8 20l8 8 16-16"
+                  stroke="white"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </div>
           </div>
@@ -84,10 +95,15 @@ export function OnboardingSuccess({ businessName, tier, reviewToken }: Props) {
             You&apos;re in! 🎉
           </h1>
           <p className="text-white/60 text-base sm:text-lg leading-relaxed mb-2">
-            <strong className="text-white">{businessName || 'Your business'}</strong> has been submitted for review.
+            <strong className="text-white">
+              {businessName || "Your business"}
+            </strong>{" "}
+            has been submitted for review.
           </p>
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 mb-8">
-            <span className="text-blue-400 text-sm font-semibold">{TIER_LABELS[tier]} Plan</span>
+            <span className="text-blue-400 text-sm font-semibold">
+              {TIER_LABELS[tier]} Plan
+            </span>
             <span className="text-white/30 text-sm">•</span>
             <span className="text-white/50 text-sm">Pending Review</span>
           </div>
@@ -95,9 +111,28 @@ export function OnboardingSuccess({ businessName, tier, reviewToken }: Props) {
           {/* Email notice */}
           <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
             <div className="flex items-center justify-center gap-2">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 text-emerald-400">
-                <rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-                <path d="M1 5l7 5 7-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                className="shrink-0 text-emerald-400"
+              >
+                <rect
+                  x="1"
+                  y="3"
+                  width="14"
+                  height="10"
+                  rx="2"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M1 5l7 5 7-5"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
               </svg>
               <p className="text-emerald-300 text-sm font-medium">
                 Check your email — a confirmation has been sent to you.
@@ -107,7 +142,9 @@ export function OnboardingSuccess({ businessName, tier, reviewToken }: Props) {
 
           {/* Timeline */}
           <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl p-6 mb-8 text-left">
-            <h3 className="text-white font-semibold text-sm mb-5 uppercase tracking-wider">What happens next</h3>
+            <h3 className="text-white font-semibold text-sm mb-5 uppercase tracking-wider">
+              What happens next
+            </h3>
             <div className="space-y-4">
               {steps.map((step, i) => (
                 <div key={i} className="flex items-center gap-4">
@@ -115,9 +152,13 @@ export function OnboardingSuccess({ businessName, tier, reviewToken }: Props) {
                     {step.icon}
                   </div>
                   <div className="flex-1">
-                    <p className="text-white text-sm font-medium">{step.label}</p>
+                    <p className="text-white text-sm font-medium">
+                      {step.label}
+                    </p>
                   </div>
-                  <span className="text-white/30 text-xs shrink-0">{step.time}</span>
+                  <span className="text-white/30 text-xs shrink-0">
+                    {step.time}
+                  </span>
                 </div>
               ))}
             </div>
@@ -127,14 +168,33 @@ export function OnboardingSuccess({ businessName, tier, reviewToken }: Props) {
           {portalHref && (
             <div className="mb-6 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-left">
               <p className="text-blue-300 text-xs font-medium mb-1 flex items-center gap-1.5">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="shrink-0">
-                  <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.5"/>
-                  <path d="M7 4.5v3.5M7 9.5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  className="shrink-0"
+                >
+                  <circle
+                    cx="7"
+                    cy="7"
+                    r="6"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  />
+                  <path
+                    d="M7 4.5v3.5M7 9.5v.5"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
                 </svg>
                 Your review portal link
               </p>
               <p className="text-blue-200/60 text-xs leading-relaxed">
-                Once your site is built (within 48 hours), you can review, edit, and approve it using the link below. Bookmark it — we&apos;ll also email it to you.
+                Once your site is built (within 48 hours), you can review, edit,
+                and approve it using the link below. Bookmark it — we&apos;ll
+                also email it to you.
               </p>
             </div>
           )}
@@ -154,8 +214,22 @@ export function OnboardingSuccess({ businessName, tier, reviewToken }: Props) {
                 className="flex-1 h-12 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-white font-semibold text-sm hover:from-blue-500 hover:to-violet-500 transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2"
               >
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <rect x="1.5" y="1.5" width="13" height="13" rx="2.5" stroke="white" strokeWidth="1.5"/>
-                  <path d="M5 8h6M9 6l2 2-2 2" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <rect
+                    x="1.5"
+                    y="1.5"
+                    width="13"
+                    height="13"
+                    rx="2.5"
+                    stroke="white"
+                    strokeWidth="1.5"
+                  />
+                  <path
+                    d="M5 8h6M9 6l2 2-2 2"
+                    stroke="white"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
                 Open My Portal
               </Link>
@@ -165,8 +239,21 @@ export function OnboardingSuccess({ businessName, tier, reviewToken }: Props) {
                 className="flex-1 h-12 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-white font-semibold text-sm hover:from-blue-500 hover:to-violet-500 transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2"
               >
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <rect x="1" y="3" width="14" height="10" rx="2" stroke="white" strokeWidth="1.5"/>
-                  <path d="M1 5l7 5 7-5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                  <rect
+                    x="1"
+                    y="3"
+                    width="14"
+                    height="10"
+                    rx="2"
+                    stroke="white"
+                    strokeWidth="1.5"
+                  />
+                  <path
+                    d="M1 5l7 5 7-5"
+                    stroke="white"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
                 </svg>
                 Contact Support
               </a>
@@ -175,5 +262,5 @@ export function OnboardingSuccess({ businessName, tier, reviewToken }: Props) {
         </div>
       </div>
     </div>
-  )
+  );
 }

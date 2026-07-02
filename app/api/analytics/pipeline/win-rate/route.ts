@@ -1,44 +1,50 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { getWinRate } from '@/lib/analytics/pipeline';
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { getWinRate } from "@/lib/analytics/pipeline";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Get account_id from users table
     const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('account_id')
-      .eq('id', user.id)
+      .from("users")
+      .select("account_id")
+      .eq("id", user.id)
       .single();
 
     if (userError || !userData) {
-      return NextResponse.json({ error: 'Account not found' }, { status: 404 });
+      return NextResponse.json({ error: "Account not found" }, { status: 404 });
     }
 
     const accountId = userData.account_id;
 
     // Get query parameters for date filtering
     const searchParams = request.nextUrl.searchParams;
-    const startDate = searchParams.get('startDate') ? new Date(searchParams.get('startDate')!) : undefined;
-    const endDate = searchParams.get('endDate') ? new Date(searchParams.get('endDate')!) : undefined;
+    const startDate = searchParams.get("startDate")
+      ? new Date(searchParams.get("startDate")!)
+      : undefined;
+    const endDate = searchParams.get("endDate")
+      ? new Date(searchParams.get("endDate")!)
+      : undefined;
 
     const winRate = await getWinRate(accountId, startDate, endDate);
 
     return NextResponse.json({ winRate });
   } catch (error) {
-    console.error('[Win Rate API] Error:', error);
+    console.error("[Win Rate API] Error:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch win rate' },
-      { status: 500 }
+      { error: "Failed to fetch win rate" },
+      { status: 500 },
     );
   }
 }

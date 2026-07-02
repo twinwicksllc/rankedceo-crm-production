@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from "react";
 import {
   BarChart,
   Bar,
@@ -10,51 +10,68 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-} from 'recharts'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Activity, CheckCircle2, Clock, AlertTriangle } from 'lucide-react'
+} from "recharts";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Activity, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
 
 interface ActivityDashboardProps {
-  accountId: string
-  dateRange?: { start: Date; end: Date }
+  accountId: string;
+  dateRange?: { start: Date; end: Date };
 }
 
-export function ActivityDashboard({ accountId, dateRange }: ActivityDashboardProps) {
-  const [loading, setLoading] = useState(true)
-  const [activityByType, setActivityByType] = useState<any[]>([])
-  const [completionRate, setCompletionRate] = useState(0)
-  const [leaderboard, setLeaderboard] = useState<any[]>([])
+export function ActivityDashboard({
+  accountId,
+  dateRange,
+}: ActivityDashboardProps) {
+  const [loading, setLoading] = useState(true);
+  const [activityByType, setActivityByType] = useState<any[]>([]);
+  const [completionRate, setCompletionRate] = useState(0);
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [stats, setStats] = useState({
     total: 0,
     completed: 0,
     pending: 0,
     overdue: 0,
-  })
+  });
 
   useEffect(() => {
-    fetchActivityData()
-  }, [accountId, dateRange])
+    fetchActivityData();
+  }, [accountId, dateRange]);
 
   const fetchActivityData = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
       const [typeRes, rateRes, leaderboardRes, statsRes] = await Promise.all([
-        fetch(`/api/analytics/activity/by-type?accountId=${accountId}`).then(r => r.json()),
-        fetch(`/api/analytics/activity/completion-rate?accountId=${accountId}`).then(r => r.json()),
-        fetch(`/api/analytics/activity/leaderboard?accountId=${accountId}`).then(r => r.json()),
-        fetch(`/api/analytics/activity/stats?accountId=${accountId}`).then(r => r.json()),
-      ])
+        fetch(`/api/analytics/activity/by-type?accountId=${accountId}`).then(
+          (r) => r.json(),
+        ),
+        fetch(
+          `/api/analytics/activity/completion-rate?accountId=${accountId}`,
+        ).then((r) => r.json()),
+        fetch(
+          `/api/analytics/activity/leaderboard?accountId=${accountId}`,
+        ).then((r) => r.json()),
+        fetch(`/api/analytics/activity/stats?accountId=${accountId}`).then(
+          (r) => r.json(),
+        ),
+      ]);
 
-      setActivityByType(typeRes.data || [])
-      setCompletionRate(rateRes.completionRate || 0)
-      setLeaderboard(leaderboardRes.data || [])
-      setStats(statsRes || { total: 0, completed: 0, pending: 0, overdue: 0 })
+      setActivityByType(typeRes.data || []);
+      setCompletionRate(rateRes.completionRate || 0);
+      setLeaderboard(leaderboardRes.data || []);
+      setStats(statsRes || { total: 0, completed: 0, pending: 0, overdue: 0 });
     } catch (error) {
-      console.error('[Activity Dashboard] Error fetching data:', error)
+      console.error("[Activity Dashboard] Error fetching data:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -70,7 +87,7 @@ export function ActivityDashboard({ accountId, dateRange }: ActivityDashboardPro
           ))}
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -79,7 +96,9 @@ export function ActivityDashboard({ accountId, dateRange }: ActivityDashboardPro
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Activities</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Activities
+            </CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -136,7 +155,7 @@ export function ActivityDashboard({ accountId, dateRange }: ActivityDashboardPro
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="type" />
               <YAxis />
-              <Tooltip formatter={(value: number) => [value, 'Count']} />
+              <Tooltip formatter={(value: number) => [value, "Count"]} />
               <Legend />
               <Bar dataKey="count" fill="#8b5cf6" />
             </BarChart>
@@ -170,7 +189,9 @@ export function ActivityDashboard({ accountId, dateRange }: ActivityDashboardPro
                 </div>
                 <div className="text-right">
                   <div className="text-lg font-bold">{user.activityCount}</div>
-                  <div className="text-xs text-muted-foreground">activities</div>
+                  <div className="text-xs text-muted-foreground">
+                    activities
+                  </div>
                 </div>
               </div>
             ))}
@@ -182,7 +203,9 @@ export function ActivityDashboard({ accountId, dateRange }: ActivityDashboardPro
       <Card>
         <CardHeader>
           <CardTitle>Completion Rate</CardTitle>
-          <CardDescription>Overall activity completion percentage</CardDescription>
+          <CardDescription>
+            Overall activity completion percentage
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -202,15 +225,21 @@ export function ActivityDashboard({ accountId, dateRange }: ActivityDashboardPro
             </div>
             <div className="grid grid-cols-3 gap-4 mt-6">
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-500">{stats.completed}</div>
+                <div className="text-2xl font-bold text-green-500">
+                  {stats.completed}
+                </div>
                 <div className="text-xs text-muted-foreground">Completed</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-yellow-500">{stats.pending}</div>
+                <div className="text-2xl font-bold text-yellow-500">
+                  {stats.pending}
+                </div>
                 <div className="text-xs text-muted-foreground">Pending</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-red-500">{stats.overdue}</div>
+                <div className="text-2xl font-bold text-red-500">
+                  {stats.overdue}
+                </div>
                 <div className="text-xs text-muted-foreground">Overdue</div>
               </div>
             </div>
@@ -218,5 +247,5 @@ export function ActivityDashboard({ accountId, dateRange }: ActivityDashboardPro
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

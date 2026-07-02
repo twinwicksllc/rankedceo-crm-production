@@ -2,8 +2,8 @@ name: QA Agent — Weekly Full Lifecycle Run
 
 on:
   schedule:
-    - cron: '0 6 * * 1'   # 06:00 UTC every Monday
-  workflow_dispatch:        # Allow manual trigger from Actions tab
+    - cron: "0 6 * * 1" # 06:00 UTC every Monday
+  workflow_dispatch: # Allow manual trigger from Actions tab
 
 jobs:
   full-lifecycle:
@@ -23,8 +23,8 @@ jobs:
       - name: Setup Node 24
         uses: actions/setup-node@v4.2.0
         with:
-          node-version: '24'
-          cache: 'npm'
+          node-version: "24"
+          cache: "npm"
           cache-dependency-path: qa-agent/package-lock.json
 
       - name: Install QA agent dependencies
@@ -61,7 +61,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPEN_API_KEY }}
           SELF_HEAL_PROVIDER: openai
           # Full run uses real Stripe test mode + Resend test mode
-          QA_BILLING_MOCK: 'false'
+          QA_BILLING_MOCK: "false"
         run: npm run full
 
       - name: Upload evidence

@@ -1,29 +1,35 @@
 # RLS Security Fix - Successfully Applied
 
 ## Date Applied
+
 January 26, 2025
 
 ## Summary
+
 User successfully applied comprehensive Row-Level Security (RLS) policies to fix the "infinite recursion detected" error and secure all database tables with proper multi-tenant isolation.
 
 ## Problem Description
+
 The application was experiencing critical errors:
+
 - Dashboard showing blank/empty content
 - "Infinite recursion detected in policy for relation 'users'" error
 - All CRM pages failing to load data
 - Database queries failing due to improperly configured RLS policies
 
 ## Root Cause
+
 The original RLS policies were querying the `users` table from within a policy on the `users` table itself, creating infinite recursion. Additionally, policies were not properly configured for multi-tenant account isolation.
 
 ## Solution Applied
 
 ### 1. Secure Helper Function Created
+
 ```sql
-CREATE OR REPLACE FUNCTION get_current_user_account_id() 
+CREATE OR REPLACE FUNCTION get_current_user_account_id()
 RETURNS UUID LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path = public AS $f$
 DECLARE user_account_id UUID;
-BEGIN 
+BEGIN
    SET LOCAL row_security = off;
    SELECT account_id INTO user_account_id FROM public.users WHERE id = auth.uid() LIMIT 1;
    RETURN user_account_id;
@@ -31,13 +37,16 @@ END; $f$;
 ```
 
 **Key Security Features:**
+
 - `SECURITY DEFINER`: Runs with elevated privileges to bypass RLS during lookup
 - `SET search_path = public`: Prevents SQL injection attacks
 - `SET LOCAL row_security = off`: Temporarily disables RLS for the lookup operation
 - `STABLE`: Optimized for repeated calls
 
 ### 2. SELECT Policies Applied
+
 Applied to 7 core tables:
+
 - **users** - Restrictive policy to view teammates in same account only
 - **contacts** - View contacts in user's account
 - **deals** - View deals in user's account
@@ -47,14 +56,17 @@ Applied to 7 core tables:
 - **forms** - View forms in user's account
 
 **Policy Pattern:**
+
 ```sql
-CREATE POLICY "Users can view account data" ON table_name 
-FOR SELECT TO authenticated 
+CREATE POLICY "Users can view account data" ON table_name
+FOR SELECT TO authenticated
 USING (account_id = get_current_user_account_id());
 ```
 
 ### 3. ALL Policies Applied
+
 Applied INSERT, UPDATE, DELETE policies to 6 data tables:
+
 - **contacts** - Full CRUD operations
 - **deals** - Full CRUD operations
 - **lead_assignments** - Full CRUD operations
@@ -63,9 +75,10 @@ Applied INSERT, UPDATE, DELETE policies to 6 data tables:
 - **forms** - Full CRUD operations
 
 **Policy Pattern:**
+
 ```sql
-CREATE POLICY "Users can manage account data" ON table_name 
-FOR ALL TO authenticated 
+CREATE POLICY "Users can manage account data" ON table_name
+FOR ALL TO authenticated
 USING (account_id = get_current_user_account_id())
 WITH CHECK (account_id = get_current_user_account_id());
 ```
@@ -80,19 +93,20 @@ WITH CHECK (account_id = get_current_user_account_id());
 
 ## Tables Secured
 
-| Table | SELECT Policy | ALL Policy | Notes |
-|-------|--------------|------------|-------|
-| users | ✅ | ❌ | Can view teammates, updates restricted to self |
-| contacts | ✅ | ✅ | Full CRUD for account |
-| deals | ✅ | ✅ | Full CRUD for account |
-| lead_assignments | ✅ | ✅ | Full CRUD for account |
-| lead_sources | ✅ | ✅ | Full CRUD for account |
-| form_fields | ✅ | ✅ | Full CRUD for account |
-| forms | ✅ | ✅ | Full CRUD for account |
+| Table            | SELECT Policy | ALL Policy | Notes                                          |
+| ---------------- | ------------- | ---------- | ---------------------------------------------- |
+| users            | ✅            | ❌         | Can view teammates, updates restricted to self |
+| contacts         | ✅            | ✅         | Full CRUD for account                          |
+| deals            | ✅            | ✅         | Full CRUD for account                          |
+| lead_assignments | ✅            | ✅         | Full CRUD for account                          |
+| lead_sources     | ✅            | ✅         | Full CRUD for account                          |
+| form_fields      | ✅            | ✅         | Full CRUD for account                          |
+| forms            | ✅            | ✅         | Full CRUD for account                          |
 
 ## Tables Requiring RLS Policies
 
 The following tables exist but need RLS policies applied:
+
 - **email_messages** - Phase 9 email capture
 - **email_threads** - Phase 9 email threading
 - **companies** - Phase 5 company management
@@ -108,14 +122,17 @@ The following tables exist but need RLS policies applied:
 ## Next Steps
 
 ### Immediate
+
 1. **Test Application**: Visit https://crm.rankedceo.com/dashboard to verify data loads correctly
 2. **Check for Errors**: Review browser console and Vercel logs for any remaining RLS errors
 
 ### Required for Email Functionality
+
 1. Apply RLS policies to `email_messages` and `email_threads` tables
 2. Re-enable Emails tab in navigation (`components/dashboard-nav.tsx`)
 
 ### Recommended for Complete Security
+
 1. Apply RLS policies to remaining tables (companies, pipelines, activities, campaigns, etc.)
 2. Test all CRUD operations across all modules
 3. Verify multi-tenant isolation works correctly
@@ -139,18 +156,21 @@ After RLS fixes, verify:
 ## Technical Notes
 
 ### Why This Works
+
 1. The `get_current_user_account_id()` function runs with elevated privileges
 2. It temporarily disables RLS to perform a lookup of the user's account_id
 3. The RLS policies use this function to filter all queries
 4. This prevents infinite recursion because the function bypasses RLS
 
 ### Security Considerations
+
 - The function is `SECURITY DEFINER` so it runs with database owner privileges
 - `SET search_path = public` prevents users from creating malicious functions
 - Only authenticated users (`auth.uid()` is not null) can access any data
 - All queries are automatically filtered by `account_id`
 
 ### Performance
+
 - The function is marked `STABLE` for caching
 - RLS policies are evaluated once per query, not per row
 - `LIMIT 1` ensures the lookup is efficient

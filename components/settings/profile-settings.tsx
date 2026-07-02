@@ -1,12 +1,18 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useRouter } from 'next/navigation';
-import type { UserProfile } from '@/lib/types/settings';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useRouter } from "next/navigation";
+import type { UserProfile } from "@/lib/types/settings";
 
 interface ProfileSettingsProps {
   profile: UserProfile | null;
@@ -15,35 +21,35 @@ interface ProfileSettingsProps {
 export function ProfileSettings({ profile }: ProfileSettingsProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
   const [formData, setFormData] = useState({
-    name: profile?.name || '',
-    email: profile?.email || '',
-    phone: profile?.phone || '',
-    title: profile?.title || '',
+    name: profile?.name || "",
+    email: profile?.email || "",
+    phone: profile?.phone || "",
+    title: profile?.title || "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setMessage('');
+    setMessage("");
 
     try {
-      const response = await fetch('/api/settings/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/settings/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
       if (response.ok) {
-        setMessage('Profile updated successfully');
+        setMessage("Profile updated successfully");
         router.refresh();
       } else {
         const data = await response.json();
-        setMessage(data.error || 'Failed to update profile');
+        setMessage(data.error || "Failed to update profile");
       }
     } catch (error) {
-      setMessage('Network error. Please try again.');
+      setMessage("Network error. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -63,7 +69,9 @@ export function ProfileSettings({ profile }: ProfileSettingsProps) {
               <Input
                 id="name"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
                 placeholder="John Doe"
               />
             </div>
@@ -88,7 +96,9 @@ export function ProfileSettings({ profile }: ProfileSettingsProps) {
                 id="phone"
                 type="tel"
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, phone: e.target.value })
+                }
                 placeholder="+1 (555) 123-4567"
               />
             </div>
@@ -98,25 +108,29 @@ export function ProfileSettings({ profile }: ProfileSettingsProps) {
               <Input
                 id="title"
                 value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, title: e.target.value })
+                }
                 placeholder="Sales Manager"
               />
             </div>
           </div>
 
           {message && (
-            <div className={`p-3 rounded-lg text-sm ${
-              message.includes('success') 
-                ? 'bg-green-50 text-green-800 border border-green-200' 
-                : 'bg-red-50 text-red-800 border border-red-200'
-            }`}>
+            <div
+              className={`p-3 rounded-lg text-sm ${
+                message.includes("success")
+                  ? "bg-green-50 text-green-800 border border-green-200"
+                  : "bg-red-50 text-red-800 border border-red-200"
+              }`}
+            >
               {message}
             </div>
           )}
 
           <div className="flex justify-end">
             <Button type="submit" disabled={loading}>
-              {loading ? 'Saving...' : 'Save Changes'}
+              {loading ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         </form>

@@ -14,7 +14,7 @@ export interface Company {
   zip_code?: string | null;
   country?: string | null;
   employee_count?: number | null;
-  status: 'active' | 'inactive' | 'prospect';
+  status: "active" | "inactive" | "prospect";
   description?: string | null;
 }
 
@@ -29,7 +29,7 @@ export interface CreateCompanyInput {
   zip_code?: string;
   country?: string;
   employee_count?: number;
-  status?: 'active' | 'inactive' | 'prospect';
+  status?: "active" | "inactive" | "prospect";
   description?: string;
 }
 
@@ -44,11 +44,11 @@ export interface UpdateCompanyInput {
   zip_code?: string;
   country?: string;
   employee_count?: number;
-  status?: 'active' | 'inactive' | 'prospect';
+  status?: "active" | "inactive" | "prospect";
   description?: string;
 }
 
 export interface CompanyFilters {
   search?: string;
-  status?: 'active' | 'inactive' | 'prospect';
+  status?: "active" | "inactive" | "prospect";
 }

@@ -1,41 +1,45 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Building2, Plus, Users, DollarSign } from 'lucide-react'
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Building2, Plus, Users, DollarSign } from "lucide-react";
 
 export default async function CompaniesPage() {
-  const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
   // Get user's account
   const { data: userData } = await supabase
-    .from('users')
-    .select('account_id')
-    .eq('id', user.id)
-    .single()
+    .from("users")
+    .select("account_id")
+    .eq("id", user.id)
+    .single();
 
   if (!userData?.account_id) {
-    return <div>No account found</div>
+    return <div>No account found</div>;
   }
 
   // Fetch companies with contact count
   const { data: companies, error } = await supabase
-    .from('companies')
-    .select(`
+    .from("companies")
+    .select(
+      `
       *,
       contacts:contacts(count)
-    `)
-    .eq('account_id', userData.account_id)
-    .order('created_at', { ascending: false })
+    `,
+    )
+    .eq("account_id", userData.account_id)
+    .order("created_at", { ascending: false });
 
   if (error) {
-    console.error('Error fetching companies:', error)
-    return <div>Error loading companies</div>
+    console.error("Error fetching companies:", error);
+    return <div>Error loading companies</div>;
   }
 
   return (
@@ -69,7 +73,7 @@ export default async function CompaniesPage() {
             </div>
           </div>
         </Card>
-        
+
         <Card className="p-6">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-green-100 rounded-lg">
@@ -78,7 +82,10 @@ export default async function CompaniesPage() {
             <div>
               <p className="text-sm text-muted-foreground">Total Contacts</p>
               <p className="text-2xl font-bold">
-                {companies?.reduce((sum, c) => sum + (c.contacts?.[0]?.count || 0), 0) || 0}
+                {companies?.reduce(
+                  (sum, c) => sum + (c.contacts?.[0]?.count || 0),
+                  0,
+                ) || 0}
               </p>
             </div>
           </div>
@@ -92,7 +99,7 @@ export default async function CompaniesPage() {
             <div>
               <p className="text-sm text-muted-foreground">Active Accounts</p>
               <p className="text-2xl font-bold">
-                {companies?.filter(c => c.status === 'active').length || 0}
+                {companies?.filter((c) => c.status === "active").length || 0}
               </p>
             </div>
           </div>
@@ -103,7 +110,7 @@ export default async function CompaniesPage() {
       <Card>
         <div className="p-6">
           <h2 className="text-xl font-semibold mb-4">All Companies</h2>
-          
+
           {!companies || companies.length === 0 ? (
             <div className="text-center py-12">
               <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -123,12 +130,22 @@ export default async function CompaniesPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-semibold">Company</th>
-                    <th className="text-left py-3 px-4 font-semibold">Industry</th>
+                    <th className="text-left py-3 px-4 font-semibold">
+                      Company
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold">
+                      Industry
+                    </th>
                     <th className="text-left py-3 px-4 font-semibold">Size</th>
-                    <th className="text-left py-3 px-4 font-semibold">Contacts</th>
-                    <th className="text-left py-3 px-4 font-semibold">Status</th>
-                    <th className="text-left py-3 px-4 font-semibold">Actions</th>
+                    <th className="text-left py-3 px-4 font-semibold">
+                      Contacts
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold">
+                      Status
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -136,7 +153,7 @@ export default async function CompaniesPage() {
                     <tr key={company.id} className="border-b hover:bg-muted/50">
                       <td className="py-3 px-4">
                         <div>
-                          <Link 
+                          <Link
                             href={`/companies/${company.id}`}
                             className="font-medium hover:underline"
                           >
@@ -149,20 +166,22 @@ export default async function CompaniesPage() {
                           )}
                         </div>
                       </td>
+                      <td className="py-3 px-4">{company.industry || "-"}</td>
                       <td className="py-3 px-4">
-                        {company.industry || '-'}
-                      </td>
-                      <td className="py-3 px-4">
-                        {company.company_size || '-'}
+                        {company.company_size || "-"}
                       </td>
                       <td className="py-3 px-4">
                         {company.contacts?.[0]?.count || 0}
                       </td>
                       <td className="py-3 px-4">
-                        <Badge 
-                          variant={company.status === 'active' ? 'default' : 'secondary'}
+                        <Badge
+                          variant={
+                            company.status === "active"
+                              ? "default"
+                              : "secondary"
+                          }
                         >
-                          {company.status || 'active'}
+                          {company.status || "active"}
                         </Badge>
                       </td>
                       <td className="py-3 px-4">
@@ -188,5 +207,5 @@ export default async function CompaniesPage() {
         </div>
       </Card>
     </div>
-  )
+  );
 }

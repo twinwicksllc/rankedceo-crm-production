@@ -17,6 +17,7 @@ For example: `qa_agent_20240115_060142_a3f9b2`
 The tag is stored in the `run_tag` column of `qa.qa_runs`. It is derived from the run ID, which is generated at the start of each run in `cli.ts`.
 
 This tagging strategy means:
+
 - QA records are easy to identify and purge without touching production data
 - The `run_tag` format sorts chronologically
 - A single tag covers the entire run (all findings, the HTML report, the run status)
@@ -25,10 +26,10 @@ This tagging strategy means:
 
 ## What data the QA agent writes
 
-| Schema | Table | When written |
-|---|---|---|
-| `qa` | `qa.qa_runs` | Once per run, at completion |
-| `qa` | `qa.qa_scenarios` | When saved via Admin UI |
+| Schema | Table             | When written                |
+| ------ | ----------------- | --------------------------- |
+| `qa`   | `qa.qa_runs`      | Once per run, at completion |
+| `qa`   | `qa.qa_scenarios` | When saved via Admin UI     |
 
 The QA agent does **not** write to the `public` schema. The `SupabaseAdapter` is initialised with `{ db: { schema: 'qa' } }` so all queries target the `qa` schema only.
 
@@ -92,11 +93,14 @@ WHERE run_tag >= 'qa_agent_20240101'
 The `SupabaseAdapter` exposes a `purgeAgentRecords(runTag)` method. You can call it from a one-off script:
 
 ```ts
-import { SupabaseAdapter } from './qa-agent/src/adaptors/supabase/SupabaseAdapter.js'
+import { SupabaseAdapter } from "./qa-agent/src/adaptors/supabase/SupabaseAdapter.js";
 
-const db = new SupabaseAdapter(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
-await db.purgeAgentRecords('qa_agent_20240115_060142_a3f9b2')
-console.log('Purge complete')
+const db = new SupabaseAdapter(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+);
+await db.purgeAgentRecords("qa_agent_20240115_060142_a3f9b2");
+console.log("Purge complete");
 ```
 
 ---

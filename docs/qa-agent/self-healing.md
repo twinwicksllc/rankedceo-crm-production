@@ -21,9 +21,9 @@ This document explains the self-healing architecture built into the QA agent, ho
 
 QA automation breaks when the UI changes — a renamed `data-testid`, a new redirect URL, or a component that was moved. Instead of silently failing until a developer notices, the QA agent embeds enough context in every critical-halt GitHub Issue for an LLM to:
 
-1. Understand *what* the failing step was trying to do (via the `intent:` field)
-2. Understand *what* selector or pattern failed (from the error message)
-3. See *what the DOM looked like* at the time of failure (from the DOM snapshot)
+1. Understand _what_ the failing step was trying to do (via the `intent:` field)
+2. Understand _what_ selector or pattern failed (from the error message)
+3. See _what the DOM looked like_ at the time of failure (from the DOM snapshot)
 4. Propose a replacement selector or YAML patch
 
 This is the v1.5 self-healing loop.
@@ -81,7 +81,7 @@ You are a QA automation engineer specialising in Playwright test repair.
 
 Every critical-halt GitHub Issue body contains this JSON block, wrapped in HTML comment markers so `llm-relocate.ts` can extract it programmatically:
 
-```
+````
 <!-- SELF_HEAL_PAYLOAD_START -->
 ```json
 {
@@ -98,9 +98,11 @@ Every critical-halt GitHub Issue body contains this JSON block, wrapped in HTML 
   "screenshotPath": "qa-agent/evidence/20240115.../client_client_assert_portal_loads_1705298594.png",
   "domSnippet": "<div class=\"portal-wrapper\">\n  <nav>...</nav>\n  ..."
 }
-```
+````
+
 <!-- SELF_HEAL_PAYLOAD_END -->
-```
+
+````
 
 ### Field reference
 
@@ -136,9 +138,10 @@ Every critical-halt GitHub Issue body contains this JSON block, wrapped in HTML 
 For OpenAI:
 ```bash
 cd qa-agent && npm install openai
-```
+````
 
 For Anthropic:
+
 ```bash
 cd qa-agent && npm install @anthropic-ai/sdk
 ```
@@ -163,6 +166,7 @@ Add these to your GitHub Actions secrets if you want self-healing on CI.
 Open `qa-agent/src/self-healing/llm-relocate.ts` and find the `callLlm()` function. The OpenAI and Anthropic implementations are fully written as comments — uncomment the block for your chosen provider and remove the TODO comment.
 
 **OpenAI example:**
+
 ```typescript
 // BEFORE (v1):
 // TODO v1.5: Replace this comment with the actual OpenAI SDK call:
@@ -172,15 +176,19 @@ Open `qa-agent/src/self-healing/llm-relocate.ts` and find the `callLlm()` functi
 // ...
 
 // AFTER (v1.5):
-import OpenAI from 'openai'
-const client = new OpenAI({ apiKey: config.apiKey })
+import OpenAI from "openai";
+const client = new OpenAI({ apiKey: config.apiKey });
 const response = await client.chat.completions.create({
-  model: config.model ?? 'gpt-4o',
-  messages: [{ role: 'user', content: prompt }],
-  response_format: { type: 'json_object' },
-})
-const raw = JSON.parse(response.choices[0].message.content ?? '{}')
-return { ...raw, model: config.model ?? 'gpt-4o', tokensUsed: response.usage?.total_tokens }
+  model: config.model ?? "gpt-4o",
+  messages: [{ role: "user", content: prompt }],
+  response_format: { type: "json_object" },
+});
+const raw = JSON.parse(response.choices[0].message.content ?? "{}");
+return {
+  ...raw,
+  model: config.model ?? "gpt-4o",
+  tokensUsed: response.usage?.total_tokens,
+};
 ```
 
 ### Step 4 — Populate step metadata in EscalationEngine
@@ -247,9 +255,9 @@ In a future sprint, the self-healing loop can be extended to automatically open 
 
 ## Roadmap
 
-| Version | Feature |
-|---|---|
-| v1 (current) | Stub — logs prompt, no LLM call. selfHealPayload embedded in every critical-halt Issue. |
-| v1.5 | Uncomment LLM SDK call, populate stepType/selector/intent/domSnippet from StepExecutor. LLM proposal logged to console and added as Issue comment. |
-| v2 | Automated PR creation with yamlPatch applied. Developer approval workflow. Confidence-gated auto-merge. |
-| v2.5 | Multi-step context: send the last N steps (not just the failing step) to give the LLM flow context. |
+| Version      | Feature                                                                                                                                            |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| v1 (current) | Stub — logs prompt, no LLM call. selfHealPayload embedded in every critical-halt Issue.                                                            |
+| v1.5         | Uncomment LLM SDK call, populate stepType/selector/intent/domSnippet from StepExecutor. LLM proposal logged to console and added as Issue comment. |
+| v2           | Automated PR creation with yamlPatch applied. Developer approval workflow. Confidence-gated auto-merge.                                            |
+| v2.5         | Multi-step context: send the last N steps (not just the failing step) to give the LLM flow context.                                                |
