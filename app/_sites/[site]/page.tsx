@@ -337,8 +337,8 @@ function buildStructuredData(
             dayOfWeek: string | string[];
             opens: string;
             closes: string;
-            validFrom?: string;
-            validThrough?: string;
+            validFrom?: string | undefined;
+            validThrough?: string | undefined;
           } => Boolean(value),
         )
     : [];
