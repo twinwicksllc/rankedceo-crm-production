@@ -3,7 +3,7 @@ import Link from "next/link";
 import { HvacLeadForm } from "@/components/hvac/hvac-lead-form";
 import { submitIndustryLead } from "@/lib/actions/industry-lead";
 import type { HvacLeadInput } from "@/lib/validations/industry-lead";
-import { ChatWidget } from "@/components/agent/chat-widget";
+import { AgenticTriageChatbot } from "@/components/agent/triage-chatbot";
 import { IndustryLogo } from "@/components/ui/industry-logo";
 
 export const dynamic = "force-dynamic";
@@ -90,8 +90,9 @@ export default async function HvacLeadPage({
         </div>
       </div>
 
-      <ChatWidget
+      <AgenticTriageChatbot
         source="hvac"
+        accountId={operatorId}
         primaryColor="#2563eb"
         position="bottom-right"
         {...(companyName
