@@ -1,4 +1,5 @@
 import type {
+  AEOItemContent,
   AnswerFirstAEOSectionContent,
   ResolvedTenant,
   SectionConfig,
@@ -101,7 +102,7 @@ export function AnswerFirstAEOSection({
   const trade = tenant.primary_trade ?? tenant.target_industry ?? "service";
   const location = tenant.target_location ?? "your local area";
 
-  const fallbackItems = [
+  const fallbackItems: AEOItemContent[] = [
     {
       question: `How fast can ${trade.toLowerCase()} service be dispatched in ${location}`,
       answer:

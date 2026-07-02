@@ -17,7 +17,10 @@ import type {
   TenantSiteConfig,
   SectionConfig,
 } from "@/lib/waas/templates/types";
-import { buildLocalBusinessServiceJsonLdV2 } from "@/lib/waas/utils/local-business-schema-v2";
+import {
+  buildLocalBusinessServiceJsonLdV2,
+  type DayOfWeek,
+} from "@/lib/waas/utils/local-business-schema-v2";
 
 // ---------------------------------------------------------------------------
 // Data fetching
@@ -295,7 +298,7 @@ function buildStructuredData(
         )
     : [];
 
-  const dayNames = new Set([
+  const dayNames = new Set<DayOfWeek>([
     "Monday",
     "Tuesday",
     "Wednesday",
@@ -304,6 +307,8 @@ function buildStructuredData(
     "Saturday",
     "Sunday",
   ]);
+
+  const isDayOfWeek = (value: string): value is DayOfWeek => dayNames.has(value as DayOfWeek);
 
   const hoursSource = brand.operating_hours ?? brand.hours ?? [];
   const operatingHours = Array.isArray(hoursSource)
@@ -318,7 +323,7 @@ function buildStructuredData(
               ? [dayRaw.trim()]
               : [];
 
-          const validDays = dayOfWeek.filter((day) => dayNames.has(day));
+          const validDays = dayOfWeek.filter(isDayOfWeek);
           if (!hour.opens || !hour.closes || validDays.length === 0)
             return null;
 
@@ -334,7 +339,7 @@ function buildStructuredData(
           (
             value,
           ): value is {
-            dayOfWeek: string | string[];
+            dayOfWeek: DayOfWeek | DayOfWeek[];
             opens: string;
             closes: string;
             validFrom: string | undefined;
