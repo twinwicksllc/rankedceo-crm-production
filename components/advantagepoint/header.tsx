@@ -8,6 +8,7 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { createClient } from "@/lib/supabase/client";
 import { useOnboardingTheme } from "@/app/get-started/theme-context";
 
 interface AdvantagePointHeaderProps {
@@ -23,6 +24,16 @@ export function AdvantagePointHeader({
 }: AdvantagePointHeaderProps) {
   const { theme, toggleTheme } = useOnboardingTheme();
   const isLightOnboarding = variant === "onboarding" && theme === "light";
+
+  const handleAdminSignOut = async () => {
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    } finally {
+      window.location.href =
+        "/login?next=/admin/dashboard&adminOnly=1&signed_out=1";
+    }
+  };
 
   return (
     <header
@@ -97,6 +108,15 @@ export function AdvantagePointHeader({
               >
                 🤖 QA
               </Link>
+              <button
+                type="button"
+                onClick={handleAdminSignOut}
+                data-testid="admin-signout"
+                className="h-8 px-3 rounded-lg border border-white/20 text-white/70 hover:text-white hover:border-white/35 transition-colors text-xs font-semibold"
+                title="Sign out"
+              >
+                Sign Out
+              </button>
               <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-white/60 text-xs font-medium">
                 Admin Mode
