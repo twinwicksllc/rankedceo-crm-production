@@ -116,6 +116,7 @@ steps:
     severity: critical
     description: Navigate explicitly to /admin/dashboard after login submit
     url: /admin/dashboard
+    retries: 1
     intent: >-
       Explicitly navigate to /admin/dashboard after login submit to avoid
       client-side router transition flakiness in CI. If authentication is

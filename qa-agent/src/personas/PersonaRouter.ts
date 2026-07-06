@@ -28,8 +28,10 @@ export class PersonaRouter {
   private browser: Browser | null = null;
   private contexts: Map<Persona, PersonaContext> = new Map();
   private activePersona: Persona | null = null;
+  private adminCredentials: AdminCredentials | null = null;
 
   async init(config: RunConfig): Promise<void> {
+    this.adminCredentials = config.adminCredentials;
     this.browser = await chromium.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -79,7 +81,52 @@ export class PersonaRouter {
     }
     if (this.browser) await this.browser.close();
     this.contexts.clear();
+    this.adminCredentials = null;
     this.browser = null;
+  }
+
+  /**
+   * Ensure admin persona has an active authenticated session.
+   * If middleware redirects to /login, perform credentialed login once
+   * and re-open /admin/dashboard.
+   */
+  async ensureAdminSession(): Promise<void> {
+    const page = await this.getPage("admin");
+
+    await this.gotoWithRetry(page, "/admin/dashboard", {
+      waitUntil: "load",
+      timeout: 30_000,
+    });
+    await page.waitForLoadState("domcontentloaded", { timeout: 15_000 });
+
+    const firstPathname = new URL(page.url()).pathname;
+    if (!firstPathname.startsWith("/login")) {
+      return;
+    }
+
+    if (!this.adminCredentials) {
+      throw new Error(
+        "PersonaRouter: admin credentials are not available for re-authentication",
+      );
+    }
+
+    console.warn(
+      "[PersonaRouter] Admin session missing after handoff; attempting re-login",
+    );
+    await this.performAdminLogin(page, this.adminCredentials);
+
+    await this.gotoWithRetry(page, "/admin/dashboard", {
+      waitUntil: "load",
+      timeout: 30_000,
+    });
+    await page.waitForLoadState("domcontentloaded", { timeout: 15_000 });
+
+    const finalPathname = new URL(page.url()).pathname;
+    if (!finalPathname.startsWith("/admin/dashboard")) {
+      throw new Error(
+        `Admin re-authentication did not land on /admin/dashboard (current: ${page.url()})`,
+      );
+    }
   }
 
   // ─── Private ──────────────────────────────────────────────────────────────
@@ -253,5 +300,30 @@ export class PersonaRouter {
     await this.gotoWithRetry(page, `/edit/${credentials.reviewToken}`);
 
     this.contexts.set("enduser", { persona: "enduser", context, page });
+  }
+
+  private async performAdminLogin(
+    page: Page,
+    credentials: AdminCredentials,
+  ): Promise<void> {
+    const emailSelector =
+      '[data-testid="admin-email"], input#email, input[type="email"][autocomplete="email"]';
+    const passwordSelector =
+      '[data-testid="admin-password"], input#password, input[type="password"]';
+    const submitSelector =
+      '[data-testid="admin-login-submit"], button[type="submit"]';
+
+    await page.waitForSelector(emailSelector, {
+      state: "visible",
+      timeout: 20_000,
+    });
+    await page.fill(emailSelector, credentials.email);
+    await page.fill(passwordSelector, credentials.password);
+    await page.click(submitSelector);
+
+    await page.waitForFunction(
+      () => window.location.pathname.startsWith("/admin/dashboard"),
+      { timeout: 45_000 },
+    );
   }
 }
