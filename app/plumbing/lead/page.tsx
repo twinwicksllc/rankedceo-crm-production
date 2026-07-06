@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PlumbingLeadForm } from "@/components/plumbing/plumbing-lead-form";
 import { submitIndustryLead } from "@/lib/actions/industry-lead";
 import type { PlumbingLeadInput } from "@/lib/validations/industry-lead";
-import { ChatWidget } from "@/components/agent/chat-widget";
+import { AgenticTriageChatbot } from "@/components/agent/triage-chatbot";
 import { IndustryLogo } from "@/components/ui/industry-logo";
 
 export const dynamic = "force-dynamic";
@@ -93,8 +93,9 @@ export default async function PlumbingLeadPage({
         </div>
       </div>
 
-      <ChatWidget
+      <AgenticTriageChatbot
         source="plumbing"
+        accountId={operatorId}
         primaryColor="#0d9488"
         position="bottom-right"
         {...(companyName

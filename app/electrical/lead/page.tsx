@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ElectricalLeadForm } from "@/components/electrical/electrical-lead-form";
 import { submitIndustryLead } from "@/lib/actions/industry-lead";
 import type { ElectricalLeadInput } from "@/lib/validations/industry-lead";
-import { ChatWidget } from "@/components/agent/chat-widget";
+import { AgenticTriageChatbot } from "@/components/agent/triage-chatbot";
 import { IndustryLogo } from "@/components/ui/industry-logo";
 
 export const dynamic = "force-dynamic";
@@ -97,8 +97,9 @@ export default async function ElectricalLeadPage({
         </div>
       </div>
 
-      <ChatWidget
+      <AgenticTriageChatbot
         source="electrical"
+        accountId={operatorId}
         primaryColor="#d97706"
         position="bottom-right"
         {...(companyName
