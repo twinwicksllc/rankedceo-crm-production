@@ -24,11 +24,19 @@ export interface PersonaContext {
   page: Page;
 }
 
+interface AdminAuthStateSnapshot {
+  origin: string;
+  cookies: Awaited<ReturnType<BrowserContext["cookies"]>>;
+  localStorage: Array<{ key: string; value: string }>;
+  sessionStorage: Array<{ key: string; value: string }>;
+}
+
 export class PersonaRouter {
   private browser: Browser | null = null;
   private contexts: Map<Persona, PersonaContext> = new Map();
   private activePersona: Persona | null = null;
   private adminCredentials: AdminCredentials | null = null;
+  private adminAuthSnapshot: AdminAuthStateSnapshot | null = null;
 
   async init(config: RunConfig): Promise<void> {
     this.adminCredentials = config.adminCredentials;
@@ -82,7 +90,46 @@ export class PersonaRouter {
     if (this.browser) await this.browser.close();
     this.contexts.clear();
     this.adminCredentials = null;
+    this.adminAuthSnapshot = null;
     this.browser = null;
+  }
+
+  /**
+   * Capture admin cookies + web storage so auth can be re-hydrated after
+   * persona context switching.
+   */
+  async snapshotAdminSession(): Promise<void> {
+    const page = await this.getPage("admin");
+    const adminCtx = this.contexts.get("admin");
+    if (!adminCtx) {
+      throw new Error("PersonaRouter: admin context not initialised");
+    }
+
+    const currentPath = new URL(page.url()).pathname;
+    if (!currentPath.startsWith("/admin")) {
+      return;
+    }
+
+    await this.assertAdminStorageToken(page);
+
+    const origin = new URL(page.url()).origin;
+    const storage = await page.evaluate(() => ({
+      localStorage: Object.entries(window.localStorage).map(([key, value]) => ({
+        key,
+        value,
+      })),
+      sessionStorage: Object.entries(window.sessionStorage).map(
+        ([key, value]) => ({ key, value }),
+      ),
+    }));
+    const cookies = await adminCtx.context.cookies(origin);
+
+    this.adminAuthSnapshot = {
+      origin,
+      cookies,
+      localStorage: storage.localStorage,
+      sessionStorage: storage.sessionStorage,
+    };
   }
 
   /**
@@ -101,6 +148,8 @@ export class PersonaRouter {
 
     const firstPathname = new URL(page.url()).pathname;
     if (!firstPathname.startsWith("/login")) {
+      await this.assertAdminStorageToken(page);
+      await this.snapshotAdminSession();
       return;
     }
 
@@ -113,6 +162,25 @@ export class PersonaRouter {
     console.warn(
       "[PersonaRouter] Admin session missing after handoff; attempting re-login",
     );
+
+    const restored = await this.restoreAdminAuthSnapshot(page);
+    if (restored) {
+      await this.gotoWithRetry(page, "/admin/dashboard", {
+        waitUntil: "load",
+        timeout: 30_000,
+      });
+      await page.waitForLoadState("domcontentloaded", { timeout: 15_000 });
+      const restoredPathname = new URL(page.url()).pathname;
+      if (restoredPathname.startsWith("/admin/dashboard")) {
+        await this.assertAdminStorageToken(page);
+        await this.snapshotAdminSession();
+        return;
+      }
+      console.warn(
+        "[PersonaRouter] Restored admin snapshot did not recover session; falling back to credential login",
+      );
+    }
+
     await this.performAdminLogin(page, this.adminCredentials);
 
     await this.gotoWithRetry(page, "/admin/dashboard", {
@@ -127,6 +195,8 @@ export class PersonaRouter {
         `Admin re-authentication did not land on /admin/dashboard (current: ${page.url()})`,
       );
     }
+    await this.assertAdminStorageToken(page);
+    await this.snapshotAdminSession();
   }
 
   // ─── Private ──────────────────────────────────────────────────────────────
@@ -325,5 +395,76 @@ export class PersonaRouter {
       () => window.location.pathname.startsWith("/admin/dashboard"),
       { timeout: 45_000 },
     );
+  }
+
+  private async assertAdminStorageToken(page: Page): Promise<void> {
+    const tokenState = await page.evaluate(() => {
+      const local = Object.entries(window.localStorage);
+      const session = Object.entries(window.sessionStorage);
+
+      const hasAuthKey = (entries: Array<[string, string]>) =>
+        entries.some(([key, value]) => {
+          const keyMatch = /auth-token|access_token|refresh_token|supabase|sb-/i.test(
+            key,
+          );
+          const valueMatch = /access_token|refresh_token|"sub"|"expires_at"/i.test(
+            String(value),
+          );
+          return keyMatch || valueMatch;
+        });
+
+      return {
+        hasLocal: hasAuthKey(local),
+        hasSession: hasAuthKey(session),
+      };
+    });
+
+    if (!tokenState.hasLocal && !tokenState.hasSession) {
+      throw new Error(
+        `Admin auth token not found in web storage at ${page.url()} (localStorage/sessionStorage empty or missing auth keys)`,
+      );
+    }
+  }
+
+  private async restoreAdminAuthSnapshot(page: Page): Promise<boolean> {
+    if (!this.adminAuthSnapshot) {
+      return false;
+    }
+
+    const adminCtx = this.contexts.get("admin");
+    if (!adminCtx) {
+      return false;
+    }
+
+    try {
+      if (this.adminAuthSnapshot.cookies.length > 0) {
+        await adminCtx.context.addCookies(this.adminAuthSnapshot.cookies);
+      }
+
+      await this.gotoWithRetry(page, `${this.adminAuthSnapshot.origin}/login`, {
+        waitUntil: "domcontentloaded",
+        timeout: 30_000,
+      });
+
+      await page.evaluate((snapshot) => {
+        window.localStorage.clear();
+        window.sessionStorage.clear();
+
+        for (const { key, value } of snapshot.localStorage) {
+          window.localStorage.setItem(key, value);
+        }
+        for (const { key, value } of snapshot.sessionStorage) {
+          window.sessionStorage.setItem(key, value);
+        }
+      }, this.adminAuthSnapshot);
+
+      await this.assertAdminStorageToken(page);
+      return true;
+    } catch (err) {
+      console.warn(
+        `[PersonaRouter] Failed to restore admin auth snapshot: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      return false;
+    }
   }
 }
