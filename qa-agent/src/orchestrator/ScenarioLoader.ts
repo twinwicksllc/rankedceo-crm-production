@@ -8,6 +8,16 @@ import * as yaml from "js-yaml";
 import { z } from "zod";
 import type { Scenario } from "../types.js";
 
+const DOLLAR_ENV_PATTERN = /\$\{([A-Z0-9_]+)\}/g;
+const MUSTACHE_ENV_PATTERN = /\{\{\s*([A-Z0-9_]+)\s*\}\}/g;
+
+const ENV_ALIASES: Record<string, string> = {
+  BASE_URL: "QA_BASE_URL",
+  ADMIN_EMAIL: "QA_ADMIN_EMAIL",
+  ADMIN_PASSWORD: "QA_ADMIN_PASSWORD",
+  CLIENT_REVIEW_TOKEN: "QA_CLIENT_REVIEW_TOKEN",
+};
+
 // ─── Zod Schemas ─────────────────────────────────────────────────────────────
 
 const PersonaSchema = z.enum(["client", "admin", "enduser"]);
@@ -104,7 +114,8 @@ const ScenarioSchema = z.object({
 export async function loadScenario(filePath: string): Promise<Scenario> {
   const raw = await fs.readFile(filePath, "utf-8");
   const parsed = yaml.load(raw);
-  const result = ScenarioSchema.safeParse(parsed);
+  const interpolated = interpolateScenarioVariables(parsed, filePath);
+  const result = ScenarioSchema.safeParse(interpolated);
 
   if (!result.success) {
     const errors = result.error.errors
@@ -114,4 +125,53 @@ export async function loadScenario(filePath: string): Promise<Scenario> {
   }
 
   return result.data as Scenario;
+}
+
+function interpolateScenarioVariables(input: unknown, filePath: string): unknown {
+  const missingTokens = new Set<string>();
+
+  const interpolateString = (value: string): string => {
+    const replaceToken = (token: string): string => {
+      const envName = token in ENV_ALIASES ? ENV_ALIASES[token] : token;
+      const envValue = process.env[envName];
+
+      if (!envValue) {
+        missingTokens.add(`${token} -> ${envName}`);
+        return "";
+      }
+
+      return envValue;
+    };
+
+    const withDollar = value.replace(DOLLAR_ENV_PATTERN, (_m, token: string) =>
+      replaceToken(token),
+    );
+    return withDollar.replace(MUSTACHE_ENV_PATTERN, (_m, token: string) =>
+      replaceToken(token),
+    );
+  };
+
+  const visit = (node: unknown): unknown => {
+    if (typeof node === "string") return interpolateString(node);
+    if (Array.isArray(node)) return node.map((item) => visit(item));
+    if (node && typeof node === "object") {
+      return Object.fromEntries(
+        Object.entries(node).map(([k, v]) => [k, visit(v)]),
+      );
+    }
+    return node;
+  };
+
+  const output = visit(input);
+
+  if (missingTokens.size > 0) {
+    const list = Array.from(missingTokens)
+      .map((entry) => `  - ${entry}`)
+      .join("\n");
+    throw new Error(
+      `Scenario variable substitution failed for "${filePath}". Missing environment values:\n${list}`,
+    );
+  }
+
+  return output;
 }
