@@ -12,7 +12,7 @@ interface FAQSectionProps {
 // NOTE: This section intentionally does not render its own FAQPage JSON-LD.
 // Structured data for FAQ-style sections (this section and
 // `answer-first-aeo`) is collected and emitted exactly once, page-wide, by
-// `collectFaqItemsFromSections()` in `app/_sites/[site]/page.tsx` — see
+// `collectFaqItemsFromSections()` in `app/_sites/[site]/page.tsx` — see 
 // AEO/Bento audit finding 1.2 and `lib/waas/utils/faq-jsonld.ts`. Do not add
 // a `<script type="application/ld+json">` here; doing so would reintroduce
 // the duplicate-FAQPage-node risk this fix eliminates.
