@@ -11,6 +11,8 @@ export interface StepWebsiteBuilderProps {
   businessName: string;
   primaryTrade: string | null;
   primaryColor: string;
+  secondaryColor: string;
+  logoUrl: string | null;
   selectedTemplateSlug: string | null;
   tagline: string | undefined;
   servicesOffered: string | undefined;
@@ -31,6 +33,9 @@ export interface StepWebsiteBuilderProps {
 export function StepWebsiteBuilder({
   businessName,
   primaryTrade,
+  logoUrl,
+  primaryColor,
+  secondaryColor,
   selectedTemplateSlug,
   tagline,
   servicesOffered,
@@ -47,6 +52,9 @@ export function StepWebsiteBuilder({
     businessName,
     primaryTrade,
     selectedTemplateSlug,
+    logoUrl,
+    primaryColor,
+    secondaryColor,
     tagline,
     usp,
     servicesOffered,
