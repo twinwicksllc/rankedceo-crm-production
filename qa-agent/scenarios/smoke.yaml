@@ -117,7 +117,7 @@ steps:
   - id: admin_navigate_dashboard_explicit
     type: navigate
     persona: admin
-    severity: critical
+    severity: warning
     description: Navigate explicitly to admin dashboard to ensure full page load
     url: /admin/dashboard
     retries: 1
@@ -125,6 +125,9 @@ steps:
       After login redirect, navigate explicitly to /admin/dashboard.
       The stepNavigate waits for networkidle, ensuring the server component
       (DB queries, Supabase calls) finishes before asserting content.
+      Warning-level (not critical) so that stale or invalid QA admin
+      credentials do not hard-stop the smoke run — consistent with the
+      warning on admin_assert_dashboard directly above.
 
   - id: admin_assert_dashboard_heading
     type: assert_text

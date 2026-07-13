@@ -112,6 +112,17 @@ export function EditorShell({
       );
       setActiveF(null);
 
+      // Coerce the editor's always-string value back into the proper JSON
+      // type for config fields before persisting — the server also
+      // validates independently (validateConfigValue), but sending the
+      // right type avoids an unnecessary round-trip failure.
+      const coercedValue: string | number | boolean =
+        field.kind === "number"
+          ? Number(newValue)
+          : field.kind === "boolean"
+            ? newValue === "true"
+            : newValue;
+
       startSave(async () => {
         try {
           let result;
@@ -132,7 +143,7 @@ export function EditorShell({
               reviewToken: session.reviewToken,
               variantIndex: session.selectedVariantIndex,
               path: field.path,
-              newValue,
+              newValue: coercedValue,
             });
           }
 

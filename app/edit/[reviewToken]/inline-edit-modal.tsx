@@ -203,6 +203,75 @@ export function InlineEditModal({
             onSelect={(slug) => setValue(slug)}
           />
         );
+
+      case "number":
+        return (
+          <input
+            ref={inputRef}
+            type="number"
+            value={value}
+            min={field.min}
+            max={field.max}
+            step={1}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="0"
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          />
+        );
+
+      case "select":
+        return (
+          <select
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          >
+            {(field.options ?? []).map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        );
+
+      case "boolean":
+        return (
+          <button
+            type="button"
+            role="switch"
+            aria-checked={value === "true"}
+            onClick={() => setValue(value === "true" ? "false" : "true")}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
+              value === "true" ? "bg-blue-600" : "bg-slate-300"
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform ${
+                value === "true" ? "translate-x-5" : "translate-x-0"
+              }`}
+            />
+            <span className="sr-only">
+              {value === "true" ? "Enabled" : "Disabled"}
+            </span>
+          </button>
+        );
+
+      case "string_list":
+        return (
+          <div className="space-y-1.5">
+            <input
+              ref={inputRef}
+              type="text"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder="Item one, Item two, Item three"
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            />
+            <p className="text-[11px] text-slate-400">
+              Comma-separated list.
+            </p>
+          </div>
+        );
     }
   };
 
@@ -246,7 +315,20 @@ export function InlineEditModal({
 
           {/* Body */}
           <div className="p-5">
+            {field.helpText && (
+              <p className="mb-2 text-[12px] text-slate-500">
+                {field.helpText}
+              </p>
+            )}
+
             {renderInput()}
+
+            {field.kind === "number" &&
+              (field.min != null || field.max != null) && (
+                <div className="mt-1.5 text-right text-[11px] text-slate-400">
+                  Range: {field.min ?? 0} to {field.max ?? "\u221e"}
+                </div>
+              )}
 
             {maxLength != null && field.kind === "text" && (
               <div className="mt-1.5 text-right text-[11px] text-slate-400">

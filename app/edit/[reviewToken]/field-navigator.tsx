@@ -58,6 +58,14 @@ function kindBadge(kind: EditableField["kind"]): string {
       return "Image";
     case "font":
       return "Font";
+    case "number":
+      return "Number";
+    case "select":
+      return "Select";
+    case "boolean":
+      return "Switch";
+    case "string_list":
+      return "List";
     case "toggle":
       return "";
   }
@@ -253,6 +261,16 @@ function EditableRow({
             >
               {field.value || "Inter"}
             </span>
+          ) : field.kind === "select" ? (
+            (field.options?.find((o) => o.value === field.value)?.label ??
+              field.value) ||
+            "—"
+          ) : field.kind === "boolean" ? (
+            field.value === "true" ? (
+              "On"
+            ) : (
+              "Off"
+            )
           ) : (
             truncate(field.value || "—")
           )}

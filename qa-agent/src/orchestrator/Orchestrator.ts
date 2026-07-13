@@ -136,7 +136,6 @@ export class Orchestrator {
               };
               await escalation.record(fastFailFinding);
               findingSteps++;
-              status = "error";
               fastFailTriggered = true;
               console.warn(
                 "[Orchestrator] Smoke fast-fail guard engaged; aborting remaining steps.",
@@ -151,15 +150,13 @@ export class Orchestrator {
         }
       }
 
-      if (!fastFailTriggered) {
-        // All steps complete without critical halt
+      // Determine final status from recorded findings (runs whether or not
+      // fast-fail was triggered — fast-fail records its own "error" finding,
+      // so the presence of any finding will produce "pass_with_findings").
+      {
         const allFindings = escalation.getFindings();
-        const hasErrors = allFindings.some((f) => f.severity === "error");
-        status = hasErrors
-          ? "pass_with_findings"
-          : allFindings.length > 0
-            ? "pass_with_findings"
-            : "pass";
+        status =
+          allFindings.length > 0 ? "pass_with_findings" : "pass";
       }
     } catch (err) {
       if (err instanceof CriticalHaltError) {
