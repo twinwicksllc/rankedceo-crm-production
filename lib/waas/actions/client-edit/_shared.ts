@@ -16,7 +16,8 @@ export type EditType =
   | "color_change"
   | "ai_rewrite"
   | "section_toggle"
-  | "font_change";
+  | "font_change"
+  | "config_change"; // Phase 8.6 — sections[N].config.<key> edits
 
 // ---------------------------------------------------------------------------
 // Internal: service-role admin client (same pattern as admin.ts)
@@ -39,6 +40,7 @@ function classifyEditType(path: string): EditType {
   if (/\.enabled$/.test(path)) return "section_toggle";
   if (/image_url$|logo_url$/.test(path)) return "image_swap";
   if (/color$/.test(path)) return "color_change";
+  if (/\.config\.[a-zA-Z0-9_]+$/.test(path)) return "config_change";
   return "text_edit";
 }
 

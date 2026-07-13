@@ -186,6 +186,28 @@ const ALLOWED_SECTION_CONTENT_KEYS = new Set([
   "image_alt",
 ]);
 
+// Top-level leaf keys inside sections[N].config that clients/admins may edit
+// (Phase 8.6 — audit finding 2.1). Config keys drive runtime behavior
+// (dispatch fee, response window, Q&A caps, JSON-LD toggle, visual preset)
+// rather than display copy, so they are validated separately from content
+// keys and must match the definitions in editable-fields.ts's
+// SECTION_CONFIG_FIELDS map exactly.
+const ALLOWED_SECTION_CONFIG_KEYS = new Set([
+  // bento-emergency
+  "responseMinutes",
+  "dispatchFee",
+  "visualDirection",
+  "emergencyLabel",
+  "standardLabel",
+  "operatingHours",
+  "serviceArea",
+  "brands",
+  // answer-first-aeo
+  "maxItems",
+  "maxAnswerWords",
+  "includeJsonLd",
+]);
+
 // Keys permitted on items in arrays like services[i], faq[i], steps[i],
 // badges[i], highlights[i].  Values that are themselves arrays-of-strings
 // are matched separately below (highlights[i]).
@@ -203,6 +225,156 @@ const ALLOWED_ARRAY_ITEM_KEYS = new Set([
   "caption", // Phase 7.3: gallery item caption
   "alt", // Phase 7.3: gallery item alt text
 ]);
+
+// ---------------------------------------------------------------------------
+// Config-value validation (Phase 8.6 — audit finding 2.1)
+//
+// Path allow-listing (above) only confirms a config *key* is editable.
+// Config values drive real runtime behavior, so we additionally validate the
+// *value* server-side — independent of any client-side coercion in the
+// editor UI — so a direct server-action call can never persist a NaN,
+// out-of-range, or wrong-typed config value (mirrors the NaN-guard fix
+// applied to section rendering in lib/waas/utils/section-config.ts).
+// ---------------------------------------------------------------------------
+
+type ConfigValueValidator = (value: JsonValue) => PathValidationResult;
+
+const numberRangeValidator = (
+  min: number,
+  max: number,
+): ConfigValueValidator => {
+  return (value) => {
+    const num =
+      typeof value === "number"
+        ? value
+        : typeof value === "string" && value.trim()
+          ? Number(value)
+          : NaN;
+    if (!Number.isFinite(num)) {
+      return { valid: false, reason: "Value must be a finite number" };
+    }
+    if (num < min || num > max) {
+      return {
+        valid: false,
+        reason: `Value must be between ${min} and ${max}`,
+      };
+    }
+    return { valid: true };
+  };
+};
+
+const booleanValidator: ConfigValueValidator = (value) => {
+  if (
+    typeof value === "boolean" ||
+    value === "true" ||
+    value === "false"
+  ) {
+    return { valid: true };
+  }
+  return { valid: false, reason: "Value must be a boolean" };
+};
+
+const stringWithMaxLenValidator = (maxLen: number): ConfigValueValidator => {
+  return (value) => {
+    if (typeof value !== "string") {
+      return { valid: false, reason: "Value must be a string" };
+    }
+    if (value.length > maxLen) {
+      return {
+        valid: false,
+        reason: `Value exceeds maximum length of ${maxLen} characters`,
+      };
+    }
+    return { valid: true };
+  };
+};
+
+const stringSelectValidator = (allowed: string[]): ConfigValueValidator => {
+  return (value) => {
+    if (typeof value !== "string" || !allowed.includes(value)) {
+      return {
+        valid: false,
+        reason: `Value must be one of: ${allowed.join(", ")}`,
+      };
+    }
+    return { valid: true };
+  };
+};
+
+const stringArrayValidator = (
+  maxItems: number,
+  maxItemLen: number,
+): ConfigValueValidator => {
+  return (value) => {
+    // Accept either a real array of strings or a CSV string (the editor UI
+    // sends CSV for `string_list`-kind fields; both are valid persisted forms).
+    const items = Array.isArray(value)
+      ? value
+      : typeof value === "string"
+        ? value.split(",").map((s) => s.trim())
+        : null;
+
+    if (!items) {
+      return {
+        valid: false,
+        reason: "Value must be an array of strings or a comma-separated string",
+      };
+    }
+    if (items.length > maxItems) {
+      return {
+        valid: false,
+        reason: `Value must contain at most ${maxItems} items`,
+      };
+    }
+    for (const item of items) {
+      if (typeof item !== "string" || item.length > maxItemLen) {
+        return {
+          valid: false,
+          reason: `Each item must be a string of at most ${maxItemLen} characters`,
+        };
+      }
+    }
+    return { valid: true };
+  };
+};
+
+const CONFIG_VALUE_VALIDATORS: Record<string, ConfigValueValidator> = {
+  // bento-emergency
+  responseMinutes: numberRangeValidator(1, 999),
+  dispatchFee: numberRangeValidator(0, 9999),
+  visualDirection: stringSelectValidator([
+    "signal",
+    "calm",
+    "warm",
+    "premium",
+    "showcase",
+  ]),
+  emergencyLabel: stringWithMaxLenValidator(60),
+  standardLabel: stringWithMaxLenValidator(60),
+  operatingHours: stringWithMaxLenValidator(80),
+  serviceArea: stringWithMaxLenValidator(120),
+  brands: stringArrayValidator(12, 40),
+  // answer-first-aeo
+  maxItems: numberRangeValidator(1, 20),
+  maxAnswerWords: numberRangeValidator(20, 300),
+  includeJsonLd: booleanValidator,
+};
+
+/**
+ * Validate a value intended for a `sections[N].config.<key>` path.
+ * Returns `{ valid: true }` for keys with no registered validator (keeps
+ * this additive/non-breaking for any future config key that hasn't been
+ * wired with a validator yet — the path allow-list in `validateEditPath`
+ * is still the primary gate for *which* keys are editable at all).
+ */
+export function validateConfigValue(
+  key: string,
+  value: JsonValue,
+): PathValidationResult {
+  const validator = CONFIG_VALUE_VALIDATORS[key];
+  if (!validator) return { valid: true };
+  return validator(value);
+}
 
 export type PathValidationResult =
   { valid: true } | { valid: false; reason: string };
@@ -252,6 +424,22 @@ export function validateEditPath(path: string): PathValidationResult {
       return {
         valid: false,
         reason: `Section content key '${leafKey}' is not editable by clients`,
+      };
+    }
+    return { valid: true };
+  }
+
+  // Section config paths — validate the leaf key against the config allow-list
+  // Pattern: sections[N].config.<allowed_key>  (Phase 8.6 — audit finding 2.1)
+  const sectionConfigMatch = path.match(
+    /^sections\[\d+\]\.config\.([a-zA-Z0-9_]+)$/,
+  );
+  if (sectionConfigMatch) {
+    const leafKey = sectionConfigMatch[1];
+    if (!ALLOWED_SECTION_CONFIG_KEYS.has(leafKey)) {
+      return {
+        valid: false,
+        reason: `Section config key '${leafKey}' is not editable by clients`,
       };
     }
     return { valid: true };

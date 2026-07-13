@@ -47,6 +47,7 @@ const EDIT_TYPE_ICONS: Record<EditType, string> = {
   ai_rewrite: "✨",
   section_toggle: "👁️",
   font_change: "🔤",
+  config_change: "⚙️",
 };
 
 function formatPath(path: string): string {

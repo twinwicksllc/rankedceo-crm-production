@@ -19,7 +19,19 @@ export type EditableFieldKind =
   | "color" // color picker
   | "image" // image swap (upload zone + URL fallback)
   | "toggle" // section on/off switch (inline — no modal)
-  | "font"; // font family picker (Phase 7.1)
+  | "font" // font family picker (Phase 7.1)
+  | "number" // numeric input with optional min/max (config fields)
+  | "select" // fixed set of string options (config fields, e.g. visualDirection)
+  | "boolean" // true/false switch rendered inside the modal (config fields)
+  | "string_list"; // comma-separated string list (config fields, e.g. brands)
+
+/**
+ * Describes a single option for a `select`-kind config field.
+ */
+export interface SelectOption {
+  value: string;
+  label: string;
+}
 
 export interface EditableField {
   /** Stable id for React keys */
@@ -42,6 +54,14 @@ export interface EditableField {
   sectionOrder?: number;
   /** Soft character-count hint for the input */
   maxLength?: number;
+  /** Minimum value — used by `number`-kind config fields */
+  min?: number;
+  /** Maximum value — used by `number`-kind config fields */
+  max?: number;
+  /** Fixed option list — used by `select`-kind config fields */
+  options?: SelectOption[];
+  /** Optional helper text shown under the field label in the editor UI */
+  helpText?: string;
 }
 
 export interface BrandConfigLike {
@@ -226,6 +246,129 @@ const SECTION_LEAF_FIELDS: Partial<Record<SectionId, LeafDef[]>> = {
   ],
 };
 
+// ---------------------------------------------------------------------------
+// Config-field definitions per section id (Phase 8.6 — audit finding 2.1)
+//
+// These read/write `sections[N].config.<key>` rather than `content.<key>`.
+// Unlike content fields, config fields drive real runtime behavior
+// (dispatch fee, response window, max Q&A cards, FAQPage JSON-LD toggle,
+// visual preset selection) and were previously only changeable via a raw
+// DB edit. Exposing them here — alongside a matching allow-list entry in
+// content-paths.ts — makes them editable from the client/admin editor UI.
+// ---------------------------------------------------------------------------
+
+type ConfigFieldDef = {
+  key: string;
+  label: string;
+  kind: EditableFieldKind;
+  /** Default shown when the config key is absent from the variant's JSON. */
+  defaultValue: string;
+  min?: number;
+  max?: number;
+  options?: SelectOption[];
+  helpText?: string;
+};
+
+const VISUAL_DIRECTION_OPTIONS: SelectOption[] = [
+  { value: "signal", label: "Signal (red/teal, urgent)" },
+  { value: "calm", label: "Calm (blue, reassuring)" },
+  { value: "warm", label: "Warm (amber/orange)" },
+  { value: "premium", label: "Premium (violet/slate)" },
+  { value: "showcase", label: "Showcase (green, fresh)" },
+];
+
+const SECTION_CONFIG_FIELDS: Partial<Record<SectionId, ConfigFieldDef[]>> = {
+  "bento-emergency": [
+    {
+      key: "responseMinutes",
+      label: "Response Window (minutes)",
+      kind: "number",
+      defaultValue: "45",
+      min: 1,
+      max: 999,
+      helpText: "Estimated dispatch response time shown to visitors.",
+    },
+    {
+      key: "dispatchFee",
+      label: "Dispatch Fee ($)",
+      kind: "number",
+      defaultValue: "89",
+      min: 0,
+      max: 9999,
+      helpText: "Flat dispatch/trip fee shown in the emergency toggle.",
+    },
+    {
+      key: "visualDirection",
+      label: "Visual Style",
+      kind: "select",
+      defaultValue: "signal",
+      options: VISUAL_DIRECTION_OPTIONS,
+      helpText: "Color/atmosphere preset for the Bento Emergency grid.",
+    },
+    {
+      key: "emergencyLabel",
+      label: "Emergency Mode Label",
+      kind: "text",
+      defaultValue: "Emergency Mode ON",
+      helpText: "Label shown when the emergency toggle is switched on.",
+    },
+    {
+      key: "standardLabel",
+      label: "Standard Mode Label",
+      kind: "text",
+      defaultValue: "Standard Dispatch",
+      helpText: "Label shown when the emergency toggle is switched off.",
+    },
+    {
+      key: "operatingHours",
+      label: "Operating Hours",
+      kind: "text",
+      defaultValue: "24/7 Priority Support",
+    },
+    {
+      key: "serviceArea",
+      label: "Service Area",
+      kind: "text",
+      defaultValue: "Serving your local area",
+    },
+    {
+      key: "brands",
+      label: "Brands Serviced",
+      kind: "string_list",
+      defaultValue: "Carrier, Trane, Rheem, Lennox",
+      helpText: "Comma-separated list of brand names shown as trust chips.",
+    },
+  ],
+  "answer-first-aeo": [
+    {
+      key: "maxItems",
+      label: "Max Q&A Cards",
+      kind: "number",
+      defaultValue: "6",
+      min: 1,
+      max: 20,
+      helpText: "Maximum number of answer-first Q&A cards to display.",
+    },
+    {
+      key: "maxAnswerWords",
+      label: "Max Words Per Answer",
+      kind: "number",
+      defaultValue: "70",
+      min: 20,
+      max: 300,
+      helpText: "Answers longer than this are truncated for scannability.",
+    },
+    {
+      key: "includeJsonLd",
+      label: "Emit FAQPage Structured Data",
+      kind: "boolean",
+      defaultValue: "true",
+      helpText:
+        "Turn off if this page already has FAQ schema elsewhere, to avoid duplicate FAQPage JSON-LD.",
+    },
+  ],
+};
+
 // Array-of-objects fields per section (items / steps / badges / faq items)
 const SECTION_ARRAY_FIELDS: Partial<
   Record<
@@ -351,6 +494,38 @@ function fieldsForSection(section: SectionConfig): EditableField[] {
       sectionId: sid,
       sectionOrder: order,
       maxLength: leaf.maxLength,
+    });
+  }
+
+  // Config fields (Phase 8.6) — these drive runtime behavior, not display
+  // copy, so unlike content leafs we always surface them (using the same
+  // default the section component itself falls back to) rather than hiding
+  // unset keys. This keeps the editor's displayed value in sync with what
+  // actually renders on the live site.
+  const configDefs = SECTION_CONFIG_FIELDS[sid] ?? [];
+  const config = (section.config ?? {}) as Record<string, unknown>;
+  for (const def of configDefs) {
+    const current = config[def.key];
+    const value =
+      current === undefined || current === null
+        ? def.defaultValue
+        : Array.isArray(current)
+          ? current.join(", ")
+          : String(current);
+    out.push({
+      id: `sec-${order}-config-${def.key}`,
+      path: `sections[${order}].config.${def.key}`,
+      label: def.label,
+      value,
+      kind: def.kind,
+      group,
+      scope: "section",
+      sectionId: sid,
+      sectionOrder: order,
+      min: def.min,
+      max: def.max,
+      options: def.options,
+      helpText: def.helpText,
     });
   }
 

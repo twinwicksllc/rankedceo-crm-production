@@ -9,6 +9,7 @@ import {
 } from "@/lib/waas/client-edit/edit-session";
 import {
   validateEditPath,
+  validateConfigValue,
   getValueAtPath,
   setValueAtPath,
   serializeForHistory,
@@ -73,6 +74,19 @@ export async function updateClientVariantContent(
   // --- Validate value is not undefined ---
   if (newValue === undefined) {
     return { success: false, error: "newValue must not be undefined" };
+  }
+
+  // --- Validate config-field values server-side (defense-in-depth) ---
+  // Path allow-listing only confirms the *key* is editable; config values
+  // drive real runtime behavior (dispatch fee, response window, Q&A caps,
+  // JSON-LD toggle), so we also validate the *value* independent of any
+  // client-side coercion, mirroring the NaN-guard fix in section rendering.
+  const configKeyMatch = path.match(/^sections\[\d+\]\.config\.([a-zA-Z0-9_]+)$/);
+  if (configKeyMatch) {
+    const valueCheck = validateConfigValue(configKeyMatch[1], newValue);
+    if (!valueCheck.valid) {
+      return { success: false, error: valueCheck.reason };
+    }
   }
 
   // --- Resolve session for tenant context ---
