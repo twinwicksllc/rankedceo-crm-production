@@ -22,6 +22,10 @@ import {
   type DayOfWeek,
 } from "@/lib/waas/utils/local-business-schema-v2";
 import { toSafeJsonLdString } from "@/lib/waas/utils/json-ld";
+import {
+  collectFaqItemsFromSections,
+  toFaqPageJsonLd,
+} from "@/lib/waas/utils/faq-jsonld";
 
 // ---------------------------------------------------------------------------
 // Data fetching
@@ -498,6 +502,13 @@ export default async function SitePage({
   const canonical = buildCanonicalUrl(tenant);
   const structuredData = buildStructuredData(tenant, canonical, sections);
 
+  // Single source of truth for FAQ-style JSON-LD: collects and dedupes Q&A
+  // items from every enabled FAQ-style section (`answer-first-aeo`, `faq`)
+  // and emits exactly one `FAQPage` node for the page, instead of letting
+  // each section render its own competing JSON-LD block. See AEO/Bento
+  // audit finding 1.2 and `lib/waas/utils/faq-jsonld.ts`.
+  const faqItems = collectFaqItemsFromSections(sections, tenant);
+
   return (
     <>
       {/* JSON-LD structured data for local business */}
@@ -507,6 +518,14 @@ export default async function SitePage({
           __html: toSafeJsonLdString(structuredData),
         }}
       />
+      {faqItems.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: toSafeJsonLdString(toFaqPageJsonLd(faqItems)),
+          }}
+        />
+      )}
       <SectionRenderer
         tenant={tenant}
         sections={sections}
