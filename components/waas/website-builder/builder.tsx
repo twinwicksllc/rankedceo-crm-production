@@ -12,7 +12,7 @@
 //   • Export HTML button kept as a secondary "Preview" action for the customer
 // =============================================================================
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import {
   DndContext,
@@ -56,6 +56,9 @@ export interface OnboardingPrefill {
   businessName: string;
   primaryTrade: string | null;
   selectedTemplateSlug: string | null | undefined;
+  logoUrl: string | null | undefined;
+  primaryColor: string | undefined;
+  secondaryColor: string | undefined;
   tagline: string | undefined;
   usp: string;
   servicesOffered: string | undefined;
@@ -77,6 +80,14 @@ function parseList(raw: string | undefined | null): string[] {
         .split(/,/)
         .map((l) => l.trim())
         .filter(Boolean);
+}
+
+function isHexColor(value: string | undefined | null): value is string {
+  return Boolean(value && /^#[0-9A-Fa-f]{6}$/.test(value));
+}
+
+function withAlpha(hex: string, alpha: string): string {
+  return `${hex}${alpha}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -119,7 +130,19 @@ function sectionHero(
   location: string,
   tradeLabel: string,
 ): Block[] {
-  return [
+  const blocks: Block[] = [];
+
+  if (p.logoUrl) {
+    blocks.push({
+      ...(createBlock("image") as Extract<Block, { type: "image" }>),
+      src: p.logoUrl,
+      alt: `${p.businessName || "Business"} logo`,
+      rounded: false,
+    });
+    blocks.push(mkSpacer("sm"));
+  }
+
+  blocks.push(
     mkHero({
       eyebrow: tradeLabel,
       title:
@@ -130,7 +153,9 @@ function sectionHero(
       buttonLabel: p.primaryCta || "Get a Free Quote",
       align: "center",
     }),
-  ];
+  );
+
+  return blocks;
 }
 
 function sectionServices(p: OnboardingPrefill, tradeLabel: string): Block[] {
@@ -246,6 +271,80 @@ function sectionGallery(): Block[] {
   ];
 }
 
+function sectionAnswerFirstAeo(
+  p: OnboardingPrefill,
+  sectionContent: Record<string, unknown> | undefined,
+): Block[] {
+  const headline =
+    typeof sectionContent?.headline === "string"
+      ? sectionContent.headline
+      : `Answer-First ${p.primaryTrade || "Service"} Questions`;
+  const intro =
+    typeof sectionContent?.intro === "string"
+      ? sectionContent.intro
+      : `Quick, factual answers your customers ask before booking ${p.businessName || "your team"}.`;
+
+  const blocks: Block[] = [mkH2(headline), mkText(intro)];
+
+  const items = Array.isArray(sectionContent?.items)
+    ? sectionContent.items.slice(0, 3)
+    : [];
+
+  for (const item of items) {
+    if (!item || typeof item !== "object") continue;
+    const question =
+      typeof (item as Record<string, unknown>).question === "string"
+        ? (item as Record<string, unknown>).question
+        : null;
+    const answer =
+      typeof (item as Record<string, unknown>).answer === "string"
+        ? (item as Record<string, unknown>).answer
+        : null;
+    if (question) blocks.push(mkH3(question));
+    if (answer) blocks.push(mkText(answer));
+  }
+
+  blocks.push(mkSpacer("sm"));
+  return blocks;
+}
+
+function sectionBentoEmergency(
+  p: OnboardingPrefill,
+  sectionContent: Record<string, unknown> | undefined,
+): Block[] {
+  const headline =
+    typeof sectionContent?.headline === "string"
+      ? sectionContent.headline
+      : `Emergency ${p.primaryTrade || "Service"} Dispatch`;
+  const subheadline =
+    typeof sectionContent?.subheadline === "string"
+      ? sectionContent.subheadline
+      : `Fast triage, clear response windows, and practical next steps for urgent requests.`;
+
+  const blocks: Block[] = [mkH2(headline), mkText(subheadline)];
+
+  const items = Array.isArray(sectionContent?.items)
+    ? sectionContent.items.slice(0, 4)
+    : [];
+
+  for (const item of items) {
+    if (!item || typeof item !== "object") continue;
+    const title =
+      typeof (item as Record<string, unknown>).title === "string"
+        ? (item as Record<string, unknown>).title
+        : null;
+    const description =
+      typeof (item as Record<string, unknown>).description === "string"
+        ? (item as Record<string, unknown>).description
+        : null;
+    if (title) blocks.push(mkH3(title));
+    if (description) blocks.push(mkText(description));
+  }
+
+  blocks.push(mkSpacer("sm"));
+  return blocks;
+}
+
 // ---------------------------------------------------------------------------
 // Main builder — respects the chosen template's section order
 // ---------------------------------------------------------------------------
@@ -267,41 +366,56 @@ function buildInitialBlocks(p: OnboardingPrefill): Block[] {
   for (const section of layout) {
     if (!section.enabled) continue;
 
-    // Separator before every section except the first
-    if (blocks.length > 0) blocks.push(createBlock("divider"));
+    let sectionBlocks: Block[] = [];
+    const sectionContent =
+      section.content && typeof section.content === "object"
+        ? (section.content as Record<string, unknown>)
+        : undefined;
 
     switch (section.section) {
       case "hero":
-        blocks.push(...sectionHero(p, location, tradeLabel));
+        sectionBlocks = sectionHero(p, location, tradeLabel);
+        break;
+      case "answer-first-aeo":
+        sectionBlocks = sectionAnswerFirstAeo(p, sectionContent);
+        break;
+      case "bento-emergency":
+        sectionBlocks = sectionBentoEmergency(p, sectionContent);
         break;
       case "services":
-        blocks.push(...sectionServices(p, tradeLabel));
+        sectionBlocks = sectionServices(p, tradeLabel);
         break;
       case "about":
-        blocks.push(...sectionAbout(p));
+        sectionBlocks = sectionAbout(p);
         break;
       case "trust":
-        blocks.push(...sectionTrust(p));
+        sectionBlocks = sectionTrust(p);
         break;
       case "reviews":
-        blocks.push(...sectionReviews());
+        sectionBlocks = sectionReviews();
         break;
       case "faq":
-        blocks.push(...sectionFaq(p, location));
+        sectionBlocks = sectionFaq(p, location);
         break;
       case "how-it-works":
-        blocks.push(...sectionHowItWorks(p));
+        sectionBlocks = sectionHowItWorks(p);
         break;
       case "booking":
-        blocks.push(...sectionBooking(p));
+        sectionBlocks = sectionBooking(p);
         break;
       case "financing":
-        blocks.push(...sectionFinancing(p));
+        sectionBlocks = sectionFinancing(p);
         break;
       case "gallery":
-        blocks.push(...sectionGallery());
+        sectionBlocks = sectionGallery();
         break;
     }
+
+    if (sectionBlocks.length === 0) continue;
+
+    // Separator before every rendered section except the first
+    if (blocks.length > 0) blocks.push(createBlock("divider"));
+    blocks.push(...sectionBlocks);
   }
 
   // Safety net: if template had no enabled sections, fall back to basics
@@ -382,6 +496,25 @@ export function Builder({
     [blocks, selectedId],
   );
 
+  const brandThemeStyle = useMemo<CSSProperties>(() => {
+    const primary = isHexColor(prefill.primaryColor)
+      ? prefill.primaryColor
+      : "#2563EB";
+    const secondary = isHexColor(prefill.secondaryColor)
+      ? prefill.secondaryColor
+      : "#1E40AF";
+    const accent = withAlpha(primary, "33");
+
+    return {
+      "--primary": primary,
+      "--ring": secondary,
+      "--accent": accent,
+      "--secondary": withAlpha(secondary, "1A"),
+      "--sidebar-primary": primary,
+      "--sidebar-accent": withAlpha(secondary, "14"),
+    } as CSSProperties;
+  }, [prefill.primaryColor, prefill.secondaryColor]);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -460,7 +593,10 @@ export function Builder({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="fixed inset-0 z-50 flex flex-col bg-background">
+      <div
+        className="fixed inset-0 z-50 flex flex-col bg-background"
+        style={brandThemeStyle}
+      >
         {/* ------------------------------------------------------------------ */}
         {/* Top bar                                                             */}
         {/* ------------------------------------------------------------------ */}

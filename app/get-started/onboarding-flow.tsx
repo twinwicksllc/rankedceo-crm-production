@@ -740,6 +740,8 @@ export function OnboardingFlow({
                   businessName={businessName}
                   primaryTrade={primaryTrade}
                   primaryColor={primaryColor}
+                  secondaryColor={secondaryColor}
+                  logoUrl={logoUrl}
                   selectedTemplateSlug={selectedTemplateSlug}
                   // Step 1 fields
                   tagline={step1Form.getValues("tagline")}
