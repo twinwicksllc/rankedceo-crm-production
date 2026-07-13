@@ -1,5 +1,5 @@
 // =============================================================================
-// WaaS Tier 1: BentoEmergencySection (Server Component)
+// WaaS Tier 1: BentoEmergencySection (Server Component) 
 // Mobile-first bento layout with an always-available Emergency Toggle CTA.
 // =============================================================================
 
