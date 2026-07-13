@@ -361,7 +361,6 @@ async function resolveProviderConnection(
 
     if (data) {
       return {
-        provider,
         ...data,
       } as ProviderConnection;
     }

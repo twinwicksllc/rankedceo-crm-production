@@ -517,8 +517,12 @@ function getStageLabel(stage: TriageStage): string {
       return "Step 3 of 4";
     case "calendar":
       return "Step 4 of 4";
+    case "slots":
+      return "Choose a time";
     case "booking":
       return "Booking";
+    case "success":
+      return "Booked";
   }
 }
 
@@ -608,13 +612,15 @@ export function AgenticTriageChatbot({
       return;
     }
 
+    const selectedEventType = state.selectedEventType;
+
     const loadSlots = async () => {
       dispatch({ type: "load_slots_start" });
       try {
         const start = new Date();
         const end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
         const params = new URLSearchParams({
-          event_type_uri: state.selectedEventType.uri,
+          event_type_uri: selectedEventType.uri,
           start_time: start.toISOString(),
           end_time: end.toISOString(),
           ...(accountId ? { account_id: accountId } : {}),

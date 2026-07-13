@@ -18,6 +18,8 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 
+const SESSION_PERSISTENCE_TIMEOUT_MS = 500;
+
 // Google SVG icon
 function GoogleIcon() {
   return (
@@ -119,6 +121,55 @@ function LoginForm() {
     return callbackUrl.toString();
   };
 
+  const waitForSessionPersistence = async () => {
+    await new Promise<void>((resolve) => {
+      let settled = false;
+      let authSubscription: { unsubscribe: () => void } | null = null;
+
+      const settle = () => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeoutId);
+        authSubscription?.unsubscribe();
+        resolve();
+      };
+
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (session) {
+          settle();
+        }
+      });
+      authSubscription = subscription;
+
+      const timeoutId = window.setTimeout(() => {
+        console.warn(
+          "[LoginForm] Timed out waiting for session persistence before redirect.",
+        );
+        settle();
+      }, SESSION_PERSISTENCE_TIMEOUT_MS);
+
+      void supabase.auth
+        .getSession()
+        .then(({ data }) => {
+          if (!settled && data.session) {
+            settle();
+          }
+        })
+        .catch((sessionError) => {
+          if (settled) {
+            return;
+          }
+          console.warn(
+            "[LoginForm] Unable to verify session before redirect.",
+            sessionError,
+          );
+          settle();
+        });
+    });
+  };
+
   // ─── Email + Password ───────────────────────────────────────────────────────────────────────────
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,17 +183,12 @@ function LoginForm() {
       });
       if (signInError) throw signInError;
 
+      await waitForSessionPersistence();
+
       // Handle redirect
       const targetPath = redirectTo.startsWith("/") ? redirectTo : "/dashboard";
-
-      // For admin routes, a full page reload is often more reliable to ensure 
-      // the server picks up the new session cookies immediately.
-      if (targetPath.startsWith("/admin")) {
-        window.location.href = targetPath;
-      } else {
-        router.push(targetPath);
-        router.refresh();
-      }
+      router.replace(targetPath);
+      router.refresh();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to sign in");
     } finally {
