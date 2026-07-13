@@ -1,3 +1,5 @@
+"use server";
+
 import type { AuditReportData } from "@/lib/waas/types";
 import { getRawClient } from "./_shared";
 

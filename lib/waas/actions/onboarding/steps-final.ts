@@ -14,6 +14,7 @@ import {
   getRawClient,
   updateTenantWithFallback,
   ensureLogosBucket,
+  isMissingSchemaTable,
 } from "./_shared";
 import type { ActionResult } from "./_shared";
 
@@ -30,25 +31,70 @@ export async function saveOnboardingStepTemplate(
   try {
     const supabase = getRawClient();
 
+    let selectedTemplateSlug: string | null = data.selected_template_slug;
+
+    // Production-safe: if the selected slug is not seeded in site_templates,
+    // fall back to an available template instead of failing onboarding.
+    const { data: selectedTemplate, error: selectedTemplateError } = await supabase
+      .from("site_templates")
+      .select("slug")
+      .eq("slug", selectedTemplateSlug)
+      .maybeSingle();
+
+    if (selectedTemplateError) {
+      const msg = selectedTemplateError.message ?? "";
+      if (!isMissingSchemaTable(msg, "site_templates")) {
+        return { success: false, error: msg };
+      }
+      selectedTemplateSlug = null;
+    } else if (!selectedTemplate) {
+      const fallbackCandidates = ["default", "modern", "bold", "trust-first"];
+      const { data: fallbackTemplates, error: fallbackError } = await supabase
+        .from("site_templates")
+        .select("slug")
+        .in("slug", fallbackCandidates);
+
+      if (fallbackError) {
+        const msg = fallbackError.message ?? "";
+        if (!isMissingSchemaTable(msg, "site_templates")) {
+          return { success: false, error: msg };
+        }
+        selectedTemplateSlug = null;
+      } else {
+        const available = new Set(
+          ((fallbackTemplates as Array<{ slug: string }> | null) ?? []).map(
+            (t) => t.slug,
+          ),
+        );
+        selectedTemplateSlug =
+          fallbackCandidates.find((slug) => available.has(slug)) ?? null;
+      }
+    }
+
     // Upsert into tenant_site_config
+    const upsertPayload: Record<string, unknown> = {
+      tenant_id: tenantId,
+      client_selected_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    if (selectedTemplateSlug) {
+      upsertPayload.client_selected_template_slug = selectedTemplateSlug;
+    }
+
     const { error: configError } = await supabase
       .from("tenant_site_config")
-      .upsert(
-        {
-          tenant_id: tenantId,
-          client_selected_template_slug: data.selected_template_slug,
-          client_selected_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "tenant_id" },
-      );
+      .upsert(upsertPayload, { onConflict: "tenant_id" });
 
     if (configError) {
       // Gracefully handle missing table / column — don't block onboarding
       const msg = configError.message ?? "";
       const isSchemaGap =
         /could not find.*column.*client_selected_template_slug/i.test(msg) ||
-        /could not find.*table.*tenant_site_config/i.test(msg);
+        /could not find.*table.*tenant_site_config/i.test(msg) ||
+        /violates foreign key constraint.*client_selected_template_slug/i.test(
+          msg,
+        );
 
       if (!isSchemaGap) {
         return { success: false, error: msg };
