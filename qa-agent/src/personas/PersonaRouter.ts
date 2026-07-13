@@ -464,21 +464,33 @@ export class PersonaRouter {
     const tokenState = await page.evaluate(() => {
       const local = Object.entries(window.localStorage);
       const session = Object.entries(window.sessionStorage);
+      let hasLocal = false;
+      for (const [key, value] of local) {
+        const keyMatch =
+          /auth-token|access_token|refresh_token|supabase|sb-/i.test(key);
+        const valueMatch =
+          /access_token|refresh_token|"sub"|"expires_at"/i.test(String(value));
+        if (keyMatch || valueMatch) {
+          hasLocal = true;
+          break;
+        }
+      }
 
-      const hasAuthKey = (entries: Array<[string, string]>) =>
-        entries.some(([key, value]) => {
-          const keyMatch = /auth-token|access_token|refresh_token|supabase|sb-/i.test(
-            key,
-          );
-          const valueMatch = /access_token|refresh_token|"sub"|"expires_at"/i.test(
-            String(value),
-          );
-          return keyMatch || valueMatch;
-        });
+      let hasSession = false;
+      for (const [key, value] of session) {
+        const keyMatch =
+          /auth-token|access_token|refresh_token|supabase|sb-/i.test(key);
+        const valueMatch =
+          /access_token|refresh_token|"sub"|"expires_at"/i.test(String(value));
+        if (keyMatch || valueMatch) {
+          hasSession = true;
+          break;
+        }
+      }
 
       return {
-        hasLocal: hasAuthKey(local),
-        hasSession: hasAuthKey(session),
+        hasLocal,
+        hasSession,
       };
     });
 
@@ -509,18 +521,14 @@ export class PersonaRouter {
     const hasStorageToken = await page.evaluate(() => {
       const local = Object.entries(window.localStorage);
       const session = Object.entries(window.sessionStorage);
-      const hasAuthKey = (entries: Array<[string, string]>) =>
-        entries.some(([key, value]) => {
-          const keyMatch = /auth-token|access_token|refresh_token|supabase|sb-/i.test(
-            key,
-          );
-          const valueMatch = /access_token|refresh_token|"sub"|"expires_at"/i.test(
-            String(value),
-          );
-          return keyMatch || valueMatch;
-        });
-
-      return hasAuthKey(local) || hasAuthKey(session);
+      for (const [key, value] of [...local, ...session]) {
+        const keyMatch =
+          /auth-token|access_token|refresh_token|supabase|sb-/i.test(key);
+        const valueMatch =
+          /access_token|refresh_token|"sub"|"expires_at"/i.test(String(value));
+        if (keyMatch || valueMatch) return true;
+      }
+      return false;
     });
 
     return hasAuthCookie || hasStorageToken;
