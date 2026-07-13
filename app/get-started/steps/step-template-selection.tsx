@@ -53,6 +53,9 @@ const SEO_RATIONALE: Record<string, string> = {
     "High CTA density with booking schema and offer keywords converts searchers directly into phone calls and booked appointments.",
 };
 
+const TEMPLATE_COLOR_DISCLAIMER =
+  "Preview colors are illustrative only. Your final site colors come from your logo and brand settings in the previous step, not from the template swatch you select here.";
+
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
@@ -132,6 +135,14 @@ export function StepTemplateSelection({
             ? `We've picked the top 3 designs for ${primaryTrade} businesses. Each is pre-wired for local SEO.`
             : "We've pre-selected the best designs for local service businesses. Each is optimised for local SEO."}
         </p>
+        <div className="mt-4 rounded-xl border border-amber-500/25 bg-amber-500/[0.06] p-3 text-left">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+            Template colors are previews only
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-white/50">
+            {TEMPLATE_COLOR_DISCLAIMER}
+          </p>
+        </div>
       </div>
 
       {/* ── Recommended cards ── */}
@@ -183,7 +194,7 @@ export function StepTemplateSelection({
 
           {!selectedSlug && (
             <span className="text-[11px] text-slate-400 dark:text-white/25 italic">
-              We'll use the top pick if you skip
+              We&apos;ll use the top pick if you skip
             </span>
           )}
         </div>

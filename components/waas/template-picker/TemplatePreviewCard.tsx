@@ -202,6 +202,7 @@ export function TemplatePreviewCard({
   const isRecommended = recommendRank === 2 || recommendRank === 3;
 
   const paddingClass = compact ? "p-3" : "p-4";
+  const uniquenessCallout = template.description ?? template.tagline;
 
   return (
     <button
@@ -255,7 +256,21 @@ export function TemplatePreviewCard({
       <PaletteSwatch palette={template.preview_palette} />
 
       {/* ── ④ Mini layout preview ── */}
-      <MiniLayoutPreview template={template} />
+      <div className="space-y-2">
+        <MiniLayoutPreview template={template} />
+        <div className="rounded-xl border border-amber-200/80 dark:border-amber-400/20 bg-amber-50/90 dark:bg-amber-500/[0.06] px-3 py-3 shadow-sm">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-800 dark:text-amber-200">
+            What makes it unique
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-slate-700 dark:text-white/80">
+            {uniquenessCallout}
+          </p>
+          <p className="mt-2 text-[10px] leading-relaxed text-amber-800/90 dark:text-amber-200/90">
+            Preview colors only. Final branding colors come from the branding
+            step, not this template swatch.
+          </p>
+        </div>
+      </div>
 
       {/* ── ⑤ Name + tagline ── */}
       <div className="space-y-0.5">
