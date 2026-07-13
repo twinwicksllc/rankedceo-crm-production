@@ -8,6 +8,13 @@ export type BlockType =
   | "spacer"
   | "divider";
 
+export type HeroVariant =
+  | "centered"
+  | "split"
+  | "editorial"
+  | "emergency"
+  | "full-bleed-gallery";
+
 export interface BlockBase {
   id: string;
   type: BlockType;
@@ -20,6 +27,7 @@ export interface HeroBlock extends BlockBase {
   subtitle: string;
   buttonLabel: string;
   align: "left" | "center";
+  variant: HeroVariant;
 }
 
 export interface HeadingBlock extends BlockBase {
@@ -114,6 +122,7 @@ export function createBlock(type: BlockType): Block {
           "A clear, compelling subtitle that explains what your product does and why it matters.",
         buttonLabel: "Get started",
         align: "center",
+        variant: "centered",
       };
     case "heading":
       return {

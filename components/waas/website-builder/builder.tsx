@@ -117,6 +117,11 @@ type SpacerBlock = Extract<Block, { type: "spacer" }>;
 function mkHero(overrides: Partial<HeroBlock>): HeroBlock {
   return { ...(createBlock("hero") as HeroBlock), ...overrides };
 }
+
+function getTemplateVariant(slug: string | null | undefined): string {
+  const template = TEMPLATE_REGISTRY[slug ?? ""] ?? TEMPLATE_REGISTRY.modern;
+  return template.slug;
+}
 function mkH2(text: string): HeadingBlock {
   return {
     ...(createBlock("heading") as HeadingBlock),
@@ -145,11 +150,13 @@ function sectionHero(
   location: string,
   tradeLabel: string,
   sectionContent: Record<string, unknown> | undefined,
+  templateSlug: string | null | undefined,
 ): Block[] {
   const templateEyebrow = getStringField(sectionContent, "eyebrow");
   const templateHeadline = getStringField(sectionContent, "headline");
   const templateSubheadline = getStringField(sectionContent, "subheadline");
   const templatePrimaryCta = getStringField(sectionContent, "primaryCtaLabel");
+  const variant = getStringField(sectionContent, "variant") ?? getTemplateVariant(templateSlug);
   const blocks: Block[] = [];
 
   if (p.logoUrl) {
@@ -175,6 +182,7 @@ function sectionHero(
         `Serving ${location || "your area"} with quality and care.`,
       buttonLabel: p.primaryCta || templatePrimaryCta || "Get a Free Quote",
       align: "center",
+      variant: variant as HeroBlock["variant"],
     }),
   );
 
@@ -440,7 +448,13 @@ function buildInitialBlocks(p: OnboardingPrefill): Block[] {
 
     switch (section.section) {
       case "hero":
-        sectionBlocks = sectionHero(p, location, tradeLabel, sectionContent);
+        sectionBlocks = sectionHero(
+          p,
+          location,
+          tradeLabel,
+          sectionContent,
+          p.selectedTemplateSlug,
+        );
         break;
       case "answer-first-aeo":
         sectionBlocks = sectionAnswerFirstAeo(p, sectionContent);
@@ -486,7 +500,9 @@ function buildInitialBlocks(p: OnboardingPrefill): Block[] {
 
   // Safety net: if template had no enabled sections, fall back to basics
   if (blocks.length === 0) {
-    blocks.push(...sectionHero(p, location, tradeLabel, undefined));
+    blocks.push(
+      ...sectionHero(p, location, tradeLabel, undefined, p.selectedTemplateSlug),
+    );
     blocks.push(createBlock("divider"));
     blocks.push(...sectionServices(p, tradeLabel, undefined));
     blocks.push(createBlock("divider"));
@@ -569,10 +585,14 @@ export function Builder({
     const primary = isHexColor(prefill.primaryColor)
       ? prefill.primaryColor
       : "#2563EB";
+    const templatePalette = prefill.selectedTemplateSlug
+      ? TEMPLATE_REGISTRY[prefill.selectedTemplateSlug]?.preview_palette
+      : undefined;
     const secondary = isHexColor(prefill.secondaryColor)
       ? prefill.secondaryColor
-      : "#1E40AF";
+      : templatePalette?.secondary ?? "#1E40AF";
     const accent = withAlpha(primary, "33");
+    const background = templatePalette?.background ?? "#FFFFFF";
 
     return {
       "--primary": primary,
@@ -581,8 +601,10 @@ export function Builder({
       "--secondary": withAlpha(secondary, "1A"),
       "--sidebar-primary": primary,
       "--sidebar-accent": withAlpha(secondary, "14"),
+      "--background": background,
+      "--card": background,
     } as CSSProperties;
-  }, [prefill.primaryColor, prefill.secondaryColor]);
+  }, [prefill.primaryColor, prefill.secondaryColor, prefill.selectedTemplateSlug]);
 
   useEffect(() => {
     setMounted(true);
