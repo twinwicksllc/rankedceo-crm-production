@@ -13,18 +13,16 @@ import {
   readConfigNumber,
   readConfigStringArray,
 } from "@/lib/waas/utils/section-config";
+import {
+  getBentoDefaultsForTrade,
+  type BentoItem,
+} from "@/lib/waas/utils/bento-trade-defaults";
 
 interface BentoEmergencySectionProps {
   tenant: ResolvedTenant;
   config: SectionConfig["config"];
   content?: BentoEmergencySectionContent;
 }
-
-type BentoItem = {
-  icon: string;
-  title: string;
-  description: string;
-};
 
 type VisualDirection = "signal" | "calm" | "warm" | "premium" | "showcase";
 
@@ -85,114 +83,13 @@ const VISUAL_PRESETS: Record<VisualDirection, VisualPreset> = {
   },
 };
 
-const DEFAULT_ITEMS_BY_TRADE: Record<string, BentoItem[]> = {
-  Plumbing: [
-    {
-      icon: "Leak",
-      title: "Burst Pipe Repair",
-      description:
-        "Fast isolation, pressure stabilization, and clean restoration plan.",
-    },
-    {
-      icon: "Drain",
-      title: "Drain Blockage Removal",
-      description:
-        "Hydro-jet capable response for severe kitchen and mainline clogs.",
-    },
-    {
-      icon: "Heater",
-      title: "Water Heater Diagnostics",
-      description: "Gas and electric systems, with same-visit safety checks.",
-    },
-    {
-      icon: "Sewer",
-      title: "Sewer Line Camera Scan",
-      description: "Pinpoint root cause before full repair to reduce downtime.",
-    },
-  ],
-  HVAC: [
-    {
-      icon: "Cooling",
-      title: "No-Cool Emergency",
-      description:
-        "Rapid AC diagnostics for compressor, capacitor, and airflow issues.",
-    },
-    {
-      icon: "Heating",
-      title: "No-Heat Emergency",
-      description:
-        "System-safe startup and failure isolation for urgent calls.",
-    },
-    {
-      icon: "Airflow",
-      title: "Airflow Failure",
-      description:
-        "Static pressure checks and duct-path triage for quick recovery.",
-    },
-    {
-      icon: "Thermostat",
-      title: "Control Failure",
-      description:
-        "Thermostat and control board checks with replacement options.",
-    },
-  ],
-  Electrical: [
-    {
-      icon: "Panel",
-      title: "Panel Fault Triage",
-      description:
-        "Hot breaker, trip-loop, and feeder checks with safety-first workflow.",
-    },
-    {
-      icon: "Circuit",
-      title: "Dead Circuit Restore",
-      description:
-        "Targeted circuit tracing to restore critical rooms quickly.",
-    },
-    {
-      icon: "Outlet",
-      title: "Outlet and Switch Safety",
-      description: "Arc and heat diagnostics for urgent hazards and failures.",
-    },
-    {
-      icon: "Backup",
-      title: "Backup Power Readiness",
-      description: "Generator and transfer checks during outage conditions.",
-    },
-  ],
-  default: [
-    {
-      icon: "Rapid",
-      title: "Priority Dispatch",
-      description: "Priority queue handling for urgent service interruptions.",
-    },
-    {
-      icon: "Clear",
-      title: "Upfront Scope",
-      description: "Clear scope before work starts with practical options.",
-    },
-    {
-      icon: "Licensed",
-      title: "Licensed Team",
-      description:
-        "Qualified technicians with documented process and safety checks.",
-    },
-    {
-      icon: "Follow-up",
-      title: "After-Service Follow-up",
-      description: "Post-repair verification to confirm stable performance.",
-    },
-  ],
-};
-
 export function BentoEmergencySection({
   tenant,
   config,
   content,
 }: BentoEmergencySectionProps) {
   const trade = tenant.primary_trade ?? tenant.target_industry ?? "default";
-  const fallbackItems =
-    DEFAULT_ITEMS_BY_TRADE[trade] ?? DEFAULT_ITEMS_BY_TRADE.default;
+  const fallbackItems = getBentoDefaultsForTrade(trade);
 
   const itemCards: BentoItem[] = content?.items?.length
     ? content.items.map((item) => ({
@@ -476,82 +373,86 @@ export function BentoEmergencySection({
       </div>
 
       {/* Pure CSS state toggle keeps this interaction responsive without client JS. */}
-      <div className="fixed bottom-4 left-1/2 z-50 w-[min(92vw,420px)] -translate-x-1/2">
-        <input id={toggleId} type="checkbox" className="peer sr-only" />
+      {phoneDigits ? (
+        <div className="fixed bottom-4 left-1/2 z-50 w-[min(92vw,420px)] -translate-x-1/2">
+          <input id={toggleId} type="checkbox" className="peer sr-only" />
 
-        <div
-          className="rounded-2xl border p-3 shadow-2xl"
-          style={{
-            borderColor: preset.cardBorder,
-            backgroundColor: preset.toggleSurface,
-          }}
-        >
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <p
-              className="text-sm font-semibold"
-              style={{ color: "var(--brand-text)" }}
-            >
-              Emergency Toggle
-            </p>
-            <label
-              htmlFor={toggleId}
-              className="inline-flex cursor-pointer items-center gap-2 rounded-full border px-2 py-1 text-xs font-semibold"
-              style={{
-                borderColor: preset.cardBorder,
-                color: "var(--brand-text)",
-              }}
-            >
-              <span
-                aria-hidden="true"
-                className="relative h-4 w-8 rounded-full"
-                style={{ backgroundColor: "rgba(15,23,42,0.18)" }}
+          <div
+            className="rounded-2xl border p-3 shadow-2xl"
+            style={{
+              borderColor: preset.cardBorder,
+              backgroundColor: preset.toggleSurface,
+            }}
+          >
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <p
+                className="text-sm font-semibold"
+                style={{ color: "var(--brand-text)" }}
               >
-                <span className="absolute left-0.5 top-0.5 h-3 w-3 rounded-full bg-white transition-transform duration-200 peer-checked:translate-x-4" />
-              </span>
-              <span className="peer-checked:hidden">{standardLabel}</span>
-              <span className="hidden peer-checked:inline">
-                {emergencyLabel}
-              </span>
-            </label>
-          </div>
-
-          {phoneDigits ? (
-            <>
-              <a
-                href={`tel:${phoneDigits}`}
-                className="flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-white peer-checked:hidden"
-                style={{ backgroundColor: preset.idleCta }}
-                aria-label={`Call ${businessName}`}
-              >
-                Call {phoneRaw || "Now"}
-              </a>
-
-              <a
-                href={`tel:${phoneDigits}`}
-                className="hidden w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-white peer-checked:flex"
-                style={{ backgroundColor: preset.emergencyCta }}
-                aria-label={`Emergency call ${businessName}`}
-              >
-                Emergency Call - Priority Queue
-              </a>
-
-              <p className="mt-2 text-center text-[11px] text-rose-700 hidden peer-checked:block">
-                Priority lane active. Dispatcher routes your request first.
+                Emergency Toggle
               </p>
-            </>
-          ) : (
-            <p
-              className="rounded-xl border px-3 py-2 text-center text-xs"
-              style={{
-                borderColor: preset.cardBorder,
-                color: "var(--brand-text)",
-              }}
+              <label
+                htmlFor={toggleId}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-full border px-2 py-1 text-xs font-semibold"
+                style={{
+                  borderColor: preset.cardBorder,
+                  color: "var(--brand-text)",
+                }}
+              >
+                <span
+                  aria-hidden="true"
+                  className="relative h-4 w-8 rounded-full"
+                  style={{ backgroundColor: "rgba(15,23,42,0.18)" }}
+                >
+                  <span className="absolute left-0.5 top-0.5 h-3 w-3 rounded-full bg-white transition-transform duration-200 peer-checked:translate-x-4" />
+                </span>
+                <span className="peer-checked:hidden">{standardLabel}</span>
+                <span className="hidden peer-checked:inline">
+                  {emergencyLabel}
+                </span>
+              </label>
+            </div>
+
+            <a
+              href={`tel:${phoneDigits}`}
+              className="flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-white peer-checked:hidden"
+              style={{ backgroundColor: preset.idleCta }}
+              aria-label={`Call ${businessName}`}
             >
-              Add a business phone number to activate one-tap emergency calling.
+              Call {phoneRaw || "Now"}
+            </a>
+
+            <a
+              href={`tel:${phoneDigits}`}
+              className="hidden w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-white peer-checked:flex"
+              style={{ backgroundColor: preset.emergencyCta }}
+              aria-label={`Emergency call ${businessName}`}
+            >
+              Emergency Call - Priority Queue
+            </a>
+
+            <p className="mt-2 text-center text-[11px] text-rose-700 hidden peer-checked:block">
+              Priority lane active. Dispatcher routes your request first.
             </p>
-          )}
+          </div>
         </div>
-      </div>
+      ) : (
+        // No phone configured yet: collapse to a lightweight nudge banner
+        // instead of rendering the full (non-functional) emergency toggle
+        // switch and call-to-action UI. See AEO/Bento audit finding 3.3.
+        <div className="fixed bottom-4 left-1/2 z-50 w-[min(92vw,420px)] -translate-x-1/2">
+          <div
+            className="rounded-xl border px-4 py-2.5 text-center text-xs shadow-lg"
+            style={{
+              borderColor: preset.cardBorder,
+              backgroundColor: preset.toggleSurface,
+              color: "var(--brand-text)",
+            }}
+          >
+            Add a business phone number to activate one-tap emergency calling.
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes bento-rise {
