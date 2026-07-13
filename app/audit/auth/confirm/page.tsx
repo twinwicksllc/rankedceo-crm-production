@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createAuditClient } from "@/lib/supabase/audit-client";
 
 /**
- * Audit Auth Confirm Page
+ * Audit Auth Confirm Page 
  *
  * Handles the OAuth landing after Google sign-in. This page must support
  * TWO possible response shapes:
