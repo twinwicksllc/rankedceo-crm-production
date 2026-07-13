@@ -12,7 +12,13 @@
 //   • Export HTML button kept as a secondary "Preview" action for the customer
 // =============================================================================
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { createPortal } from "react-dom";
 import {
   DndContext,
@@ -90,6 +96,16 @@ function withAlpha(hex: string, alpha: string): string {
   return `${hex}${alpha}`;
 }
 
+function getStringField(
+  source: Record<string, unknown> | undefined,
+  key: string,
+): string | undefined {
+  const value = source?.[key];
+  return typeof value === "string" && value.trim().length > 0
+    ? value
+    : undefined;
+}
+
 // ---------------------------------------------------------------------------
 // Per-section block builders
 // ---------------------------------------------------------------------------
@@ -129,7 +145,13 @@ function sectionHero(
   p: OnboardingPrefill,
   location: string,
   tradeLabel: string,
+  sectionContent: Record<string, unknown> | undefined,
 ): Block[] {
+  const templateEyebrow = getStringField(sectionContent, "eyebrow");
+  const templateHeadline = getStringField(sectionContent, "headline");
+  const templateSubheadline = getStringField(sectionContent, "subheadline");
+  const templatePrimaryCta = getStringField(sectionContent, "primaryCtaLabel");
+
   const blocks: Block[] = [];
 
   if (p.logoUrl) {
@@ -144,13 +166,16 @@ function sectionHero(
 
   blocks.push(
     mkHero({
-      eyebrow: tradeLabel,
+      eyebrow: templateEyebrow ?? tradeLabel,
       title:
         p.tagline ||
+        templateHeadline ||
         `${p.businessName || "Your Business"} — Trusted ${p.primaryTrade || "Professionals"}`,
       subtitle:
-        p.usp || `Serving ${location || "your area"} with quality and care.`,
-      buttonLabel: p.primaryCta || "Get a Free Quote",
+        p.usp ||
+        templateSubheadline ||
+        `Serving ${location || "your area"} with quality and care.`,
+      buttonLabel: p.primaryCta || templatePrimaryCta || "Get a Free Quote",
       align: "center",
     }),
   );
@@ -158,23 +183,53 @@ function sectionHero(
   return blocks;
 }
 
-function sectionServices(p: OnboardingPrefill, tradeLabel: string): Block[] {
+function sectionServices(
+  p: OnboardingPrefill,
+  tradeLabel: string,
+  sectionContent: Record<string, unknown> | undefined,
+): Block[] {
   const services = parseList(p.servicesOffered).slice(0, 6);
-  if (services.length === 0) return [];
+  const contentItems = Array.isArray(sectionContent?.items)
+    ? sectionContent.items
+        .map((item) => {
+          if (!item || typeof item !== "object") return null;
+          const title = (item as Record<string, unknown>).title;
+          return typeof title === "string" && title.trim().length > 0
+            ? title
+            : null;
+        })
+        .filter((item): item is string => Boolean(item))
+        .slice(0, 6)
+    : [];
+
+  const mergedServices = services.length > 0 ? services : contentItems;
+  if (mergedServices.length === 0) return [];
+
+  const servicesHeadline =
+    getStringField(sectionContent, "headline") ?? `Our ${tradeLabel}`;
+
   const blocks: Block[] = [
-    mkH2(`Our ${tradeLabel}`),
-    ...services.map((svc) => mkH3(svc)),
+    mkH2(servicesHeadline),
+    ...mergedServices.map((svc) => mkH3(svc)),
     mkSpacer("sm"),
   ];
   return blocks;
 }
 
-function sectionAbout(p: OnboardingPrefill): Block[] {
+function sectionAbout(
+  p: OnboardingPrefill,
+  sectionContent: Record<string, unknown> | undefined,
+): Block[] {
   const body = p.aboutNarrative;
+  const aboutHeadline =
+    getStringField(sectionContent, "headline") ?? `About ${p.businessName || "Us"}`;
+  const aboutBody = getStringField(sectionContent, "body");
   const blocks: Block[] = [
-    mkH2(`About ${p.businessName || "Us"}`),
+    mkH2(aboutHeadline),
     ...(body
       ? [mkText(body)]
+      : aboutBody
+        ? [mkText(aboutBody)]
       : [
           mkText(
             `${p.businessName || "We"} are dedicated to providing top-quality ${p.primaryTrade ? p.primaryTrade.toLowerCase() : ""} services.`,
@@ -186,8 +241,9 @@ function sectionAbout(p: OnboardingPrefill): Block[] {
 }
 
 function sectionTrust(p: OnboardingPrefill): Block[] {
+  const sectionHeadline = `Why Choose ${p.businessName || "Us"}`;
   return [
-    mkH2(`Why Choose ${p.businessName || "Us"}`),
+    mkH2(sectionHeadline),
     mkText(
       "Licensed & Insured  ·  5-Star Rated  ·  Fast Response  ·  Free Estimates",
     ),
@@ -195,12 +251,15 @@ function sectionTrust(p: OnboardingPrefill): Block[] {
   ];
 }
 
-function sectionReviews(): Block[] {
+function sectionReviews(sectionContent: Record<string, unknown> | undefined): Block[] {
+  const headline = getStringField(sectionContent, "headline") ?? "What Our Customers Say";
+  const subheadline =
+    getStringField(sectionContent, "subheadline") ??
+    '⭐⭐⭐⭐⭐  "Exceptional service — on time, professional, and great value."  — Verified Customer';
+
   return [
-    mkH2("What Our Customers Say"),
-    mkText(
-      '⭐⭐⭐⭐⭐  "Exceptional service — on time, professional, and great value."  — Verified Customer',
-    ),
+    mkH2(headline),
+    mkText(subheadline),
     mkSpacer("sm"),
   ];
 }
@@ -239,13 +298,27 @@ function sectionHowItWorks(p: OnboardingPrefill): Block[] {
   ];
 }
 
-function sectionBooking(p: OnboardingPrefill): Block[] {
+function sectionBooking(
+  p: OnboardingPrefill,
+  sectionContent: Record<string, unknown> | undefined,
+): Block[] {
+  const eyebrow = getStringField(sectionContent, "eyebrow") ?? "Ready to get started?";
+  const headline =
+    getStringField(sectionContent, "headline") ?? "Book Your Free Consultation";
+  const subheadline =
+    getStringField(sectionContent, "subheadline") ??
+    `Contact ${p.businessName || "us"} today — fast response, no obligation.`;
+  const cta =
+    p.primaryCta ||
+    getStringField(sectionContent, "primaryCtaLabel") ||
+    "Book a Free Consultation";
+
   return [
     mkHero({
-      eyebrow: "Ready to get started?",
-      title: "Book Your Free Consultation",
-      subtitle: `Contact ${p.businessName || "us"} today — fast response, no obligation.`,
-      buttonLabel: p.primaryCta || "Book a Free Consultation",
+      eyebrow,
+      title: headline,
+      subtitle: subheadline,
+      buttonLabel: cta,
       align: "center",
     }),
   ];
@@ -369,7 +442,7 @@ function buildInitialBlocks(p: OnboardingPrefill): Block[] {
 
     switch (section.section) {
       case "hero":
-        sectionBlocks = sectionHero(p, location, tradeLabel);
+        sectionBlocks = sectionHero(p, location, tradeLabel, sectionContent);
         break;
       case "answer-first-aeo":
         sectionBlocks = sectionAnswerFirstAeo(p, sectionContent);
@@ -378,16 +451,16 @@ function buildInitialBlocks(p: OnboardingPrefill): Block[] {
         sectionBlocks = sectionBentoEmergency(p, sectionContent);
         break;
       case "services":
-        sectionBlocks = sectionServices(p, tradeLabel);
+        sectionBlocks = sectionServices(p, tradeLabel, sectionContent);
         break;
       case "about":
-        sectionBlocks = sectionAbout(p);
+        sectionBlocks = sectionAbout(p, sectionContent);
         break;
       case "trust":
         sectionBlocks = sectionTrust(p);
         break;
       case "reviews":
-        sectionBlocks = sectionReviews();
+        sectionBlocks = sectionReviews(sectionContent);
         break;
       case "faq":
         sectionBlocks = sectionFaq(p, location);
@@ -396,7 +469,7 @@ function buildInitialBlocks(p: OnboardingPrefill): Block[] {
         sectionBlocks = sectionHowItWorks(p);
         break;
       case "booking":
-        sectionBlocks = sectionBooking(p);
+        sectionBlocks = sectionBooking(p, sectionContent);
         break;
       case "financing":
         sectionBlocks = sectionFinancing(p);
@@ -473,9 +546,12 @@ export function Builder({
   isLoading,
 }: BuilderProps) {
   const [mounted, setMounted] = useState(false);
-  const [blocks, setBlocks] = useState<Block[]>(() =>
-    buildInitialBlocks(prefill),
-  );
+  const initialDraftRef = useRef<Block[]>([]);
+  const [blocks, setBlocks] = useState<Block[]>(() => {
+    const initial = buildInitialBlocks(prefill);
+    initialDraftRef.current = initial;
+    return initial;
+  });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeDrag, setActiveDrag] = useState<{
     type: "palette" | "canvas";
@@ -621,7 +697,13 @@ export function Builder({
             </span>
             <button
               type="button"
-              onClick={() => setBlocks(buildInitialBlocks(prefill))}
+              onClick={() => {
+                const restored = initialDraftRef.current.map((block) => ({
+                  ...block,
+                }));
+                setBlocks(restored);
+                setSelectedId(null);
+              }}
               disabled={isLoading}
               className="flex items-center gap-1.5 rounded-lg border border-border bg-secondary px-3 py-1.5 text-xs font-medium text-foreground hover:bg-secondary/80 transition disabled:opacity-40"
             >
