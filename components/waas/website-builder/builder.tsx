@@ -292,14 +292,11 @@ function sectionAnswerFirstAeo(
 
   for (const item of items) {
     if (!item || typeof item !== "object") continue;
-    const question =
-      typeof (item as Record<string, unknown>).question === "string"
-        ? (item as Record<string, unknown>).question
-        : null;
-    const answer =
-      typeof (item as Record<string, unknown>).answer === "string"
-        ? (item as Record<string, unknown>).answer
-        : null;
+    const itemRecord = item as Record<string, unknown>;
+    const questionValue = itemRecord.question;
+    const answerValue = itemRecord.answer;
+    const question = typeof questionValue === "string" ? questionValue : null;
+    const answer = typeof answerValue === "string" ? answerValue : null;
     if (question) blocks.push(mkH3(question));
     if (answer) blocks.push(mkText(answer));
   }
@@ -329,14 +326,12 @@ function sectionBentoEmergency(
 
   for (const item of items) {
     if (!item || typeof item !== "object") continue;
-    const title =
-      typeof (item as Record<string, unknown>).title === "string"
-        ? (item as Record<string, unknown>).title
-        : null;
+    const itemRecord = item as Record<string, unknown>;
+    const titleValue = itemRecord.title;
+    const descriptionValue = itemRecord.description;
+    const title = typeof titleValue === "string" ? titleValue : null;
     const description =
-      typeof (item as Record<string, unknown>).description === "string"
-        ? (item as Record<string, unknown>).description
-        : null;
+      typeof descriptionValue === "string" ? descriptionValue : null;
     if (title) blocks.push(mkH3(title));
     if (description) blocks.push(mkText(description));
   }
