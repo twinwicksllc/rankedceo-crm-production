@@ -488,11 +488,11 @@ function buildInitialBlocks(p: OnboardingPrefill): Block[] {
 
   // Safety net: if template had no enabled sections, fall back to basics
   if (blocks.length === 0) {
-    blocks.push(...sectionHero(p, location, tradeLabel));
+    blocks.push(...sectionHero(p, location, tradeLabel, undefined));
     blocks.push(createBlock("divider"));
-    blocks.push(...sectionServices(p, tradeLabel));
+    blocks.push(...sectionServices(p, tradeLabel, undefined));
     blocks.push(createBlock("divider"));
-    blocks.push(...sectionBooking(p));
+    blocks.push(...sectionBooking(p, undefined));
   }
 
   return blocks;
