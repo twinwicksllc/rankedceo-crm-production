@@ -4,11 +4,12 @@ import type {
   ResolvedTenant,
   SectionConfig,
 } from "@/lib/waas/templates/types";
+import { readConfigInt } from "@/lib/waas/utils/section-config";
 import {
-  readConfigInt,
-  readConfigBool,
-} from "@/lib/waas/utils/section-config";
-import { toSafeJsonLdString } from "@/lib/waas/utils/json-ld";
+  normalizeQuestion,
+  normalizeAnswer,
+  collapseWhitespace,
+} from "@/lib/waas/utils/faq-jsonld";
 
 interface AnswerFirstAEOSectionProps {
   tenant: ResolvedTenant;
@@ -19,63 +20,13 @@ interface AnswerFirstAEOSectionProps {
 const DEFAULT_MAX_ITEMS = 6;
 const DEFAULT_MAX_ANSWER_WORDS = 70;
 
-const FLUFF_PATTERNS: RegExp[] = [
-  /\bwe\s+are\s+dedicated\s+to\s+excellence\b/gi,
-  /\bcommitted\s+to\s+customer\s+satisfaction\b/gi,
-  /\bstate-of-the-art\b/gi,
-  /\bleading\s+provider\b/gi,
-  /\bunparalleled\s+service\b/gi,
-  /\bworld-class\b/gi,
-  /\byour\s+trusted\s+partner\b/gi,
-];
-
-function collapseWhitespace(value: string): string {
-  return value.replace(/\s+/g, " ").trim();
-}
-
-function stripMarketingFiller(value: string): string {
-  let next = value;
-  for (const pattern of FLUFF_PATTERNS) {
-    next = next.replace(pattern, "");
-  }
-  return collapseWhitespace(next);
-}
-
-function truncateWords(value: string, maxWords: number): string {
-  const words = value.split(/\s+/).filter(Boolean);
-  if (words.length <= maxWords) return value;
-  return `${words.slice(0, maxWords).join(" ")}...`;
-}
-
-function normalizeQuestion(value: string): string {
-  const compact = collapseWhitespace(value);
-  if (!compact) return "What should I know first?";
-  return /[?.!]$/.test(compact) ? compact : `${compact}?`;
-}
-
-function normalizeAnswer(value: string, maxWords: number): string {
-  const stripped = stripMarketingFiller(value);
-  if (!stripped)
-    return "Contact dispatch for a direct, fact-based service assessment.";
-  return truncateWords(stripped, maxWords);
-}
-
-function toFaqJsonLd(
-  items: Array<{ question: string; answer: string }>,
-): Record<string, unknown> {
-  return {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: items.map((item) => ({
-      "@type": "Question",
-      name: item.question,
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: item.answer,
-      },
-    })),
-  };
-}
+// NOTE: FAQPage JSON-LD for this section is no longer emitted here. It is
+// collected and emitted once, page-wide, by
+// `collectFaqItemsFromSections()` / `app/_sites/[site]/page.tsx` so a page
+// with both `answer-first-aeo` and `faq` enabled never emits two competing
+// `FAQPage` nodes. See AEO/Bento audit finding 1.2 and
+// `lib/waas/utils/faq-jsonld.ts`. The `includeJsonLd` config flag is still
+// honored — it's read by the page-level collector instead of here.
 
 export function AnswerFirstAEOSection({
   tenant,
@@ -88,7 +39,6 @@ export function AnswerFirstAEOSection({
     "maxAnswerWords",
     DEFAULT_MAX_ANSWER_WORDS,
   );
-  const includeJsonLd = readConfigBool(config, "includeJsonLd", true);
 
   const trade = tenant.primary_trade ?? tenant.target_industry ?? "service";
   const location = tenant.target_location ?? "your local area";
@@ -158,15 +108,6 @@ export function AnswerFirstAEOSection({
       style={{ backgroundColor: "var(--brand-background)" }}
       aria-label="Answer-first service questions"
     >
-      {includeJsonLd && normalizedItems.length > 0 && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: toSafeJsonLdString(toFaqJsonLd(normalizedItems)),
-          }}
-        />
-      )}
-
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <p

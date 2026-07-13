@@ -2,34 +2,33 @@ import type {
   FAQSectionContent,
   ResolvedTenant,
 } from "@/lib/waas/templates/types";
+import { buildFaqFallbackItems } from "@/lib/waas/utils/faq-jsonld";
 
 interface FAQSectionProps {
   tenant: ResolvedTenant;
   content?: FAQSectionContent;
 }
 
+// NOTE: This section intentionally does not render its own FAQPage JSON-LD.
+// Structured data for FAQ-style sections (this section and
+// `answer-first-aeo`) is collected and emitted exactly once, page-wide, by
+// `collectFaqItemsFromSections()` in `app/_sites/[site]/page.tsx` — see
+// AEO/Bento audit finding 1.2 and `lib/waas/utils/faq-jsonld.ts`. Do not add
+// a `<script type="application/ld+json">` here; doing so would reintroduce
+// the duplicate-FAQPage-node risk this fix eliminates.
+//
+// The default `items` below are built from the same `buildFaqFallbackItems()`
+// helper the page-level collector uses, so the visible cards and the JSON-LD
+// never diverge when a tenant hasn't customized this section's content.
+
 export function FAQSection({ tenant, content }: FAQSectionProps) {
   const trade = tenant.primary_trade ?? tenant.target_industry ?? "service";
+  const location = tenant.target_location ?? "our local service area";
   const headline = content?.headline ?? "Frequently Asked Questions";
   const intro =
     content?.intro ??
     `Answers to common questions about our ${trade.toLowerCase()} services.`;
-  const items = content?.items ?? [
-    {
-      question: "How quickly can you schedule service?",
-      answer:
-        "Most appointments can be scheduled quickly based on current availability and urgency.",
-    },
-    {
-      question: "Do you provide upfront pricing?",
-      answer:
-        "Yes. We review scope and provide clear pricing before work begins.",
-    },
-    {
-      question: "What areas do you serve?",
-      answer: `We serve ${tenant.target_location ?? "our local service area"} and nearby communities.`,
-    },
-  ];
+  const items = content?.items ?? buildFaqFallbackItems(trade, location);
 
   return (
     <section
