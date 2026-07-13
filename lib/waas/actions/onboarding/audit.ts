@@ -80,38 +80,93 @@ function guessBusinessName(report: AuditReportData): string | null {
 /**
  * Extract services list from audit keywords and opportunities.
  */
+function titleCaseWords(value: string): string {
+  return value
+    .split(" ")
+    .map((part) =>
+      part.length <= 2 ? part.toUpperCase() : part[0].toUpperCase() + part.slice(1),
+    )
+    .join(" ");
+}
+
+function normalizeServicePhrase(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s&/+-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function cleanKeywordToServicePhrase(
+  keyword: string,
+  locationWords: Set<string>,
+): string | null {
+  if (!keyword) return null;
+
+  let cleaned = normalizeServicePhrase(keyword)
+    // Strip common local SEO fillers while keeping core service phrases.
+    .replace(/\b(near me|in my area|in the area|company|companies|contractor|contractors|services|service|best|top|local|quote|quotes|cost|pricing|price)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!cleaned) return null;
+
+  const parts = cleaned
+    .split(" ")
+    .filter((part) => part.length > 0 && !locationWords.has(part));
+
+  if (parts.length === 0) return null;
+
+  cleaned = parts.join(" ").trim();
+  if (!cleaned) return null;
+
+  // Keep realistic service phrase lengths (1-5 words).
+  if (parts.length > 5) {
+    cleaned = parts.slice(0, 5).join(" ");
+  }
+
+  return cleaned;
+}
+
 function extractServicesList(report: AuditReportData): string[] | null {
   const services = new Set<string>();
 
-  // Extract from keyword phrases (look for service-related words)
+  const detectedLocation = report.provider_meta?.keyword_detected_location;
+  const locationWords = new Set(
+    normalizeServicePhrase(detectedLocation ?? "")
+      .split(" ")
+      .filter((w) => w.length > 1),
+  );
+
+  // Prefer full keyword phrases so input like
+  // "web design, ai development" stays phrase-level in prefill.
   if (report.rankings && Array.isArray(report.rankings)) {
-    report.rankings.slice(0, 5).forEach((r) => {
-      const keyword = r.keyword || "";
-      // Look for common service indicators
-      const serviceMatches = keyword.match(
-        /\b(service|repair|install|cleaning|design|build|consult|training|support|maintenance|management|strategy|development|consulting)\b/gi,
-      );
-      if (serviceMatches) {
-        serviceMatches.forEach((match) => services.add(match.toLowerCase()));
+    report.rankings.slice(0, 8).forEach((r) => {
+      const phrase = cleanKeywordToServicePhrase(r.keyword ?? "", locationWords);
+      if (phrase) {
+        services.add(phrase);
       }
     });
   }
 
-  // Extract from opportunities
-  if (report.opportunities && Array.isArray(report.opportunities)) {
-    report.opportunities.slice(0, 3).forEach((opp) => {
-      const desc = opp.description || "";
-      // Extract key nouns/concepts from opportunity descriptions
-      const conceptMatches = desc.match(
-        /\b(SEO|content|mobile|performance|speed|user|experience|accessibility)\b/gi,
+  // Secondary source when rankings are sparse.
+  if (services.size === 0 && report.opportunities && Array.isArray(report.opportunities)) {
+    report.opportunities.slice(0, 4).forEach((opp) => {
+      const phrase = cleanKeywordToServicePhrase(
+        `${opp.type ?? ""} ${opp.description ?? ""}`,
+        locationWords,
       );
-      if (conceptMatches) {
-        conceptMatches.forEach((match) => services.add(match.toLowerCase()));
+      if (phrase) {
+        services.add(phrase);
       }
     });
   }
 
-  return services.size > 0 ? Array.from(services) : null;
+  if (services.size === 0) return null;
+
+  return Array.from(services)
+    .slice(0, 6)
+    .map((service) => titleCaseWords(service));
 }
 
 /**
