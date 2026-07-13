@@ -18,6 +18,8 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 
+const SESSION_PERSISTENCE_TIMEOUT_MS = 500;
+
 // Google SVG icon
 function GoogleIcon() {
   return (
@@ -131,7 +133,12 @@ function LoginForm() {
         resolve();
       };
 
-      const timeoutId = window.setTimeout(settle, 1500);
+      const timeoutId = window.setTimeout(() => {
+        console.warn(
+          "[LoginForm] Timed out waiting for session persistence before redirect.",
+        );
+        settle();
+      }, SESSION_PERSISTENCE_TIMEOUT_MS);
       const {
         data: { subscription },
       } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -147,7 +154,11 @@ function LoginForm() {
             settle();
           }
         })
-        .catch(() => {
+        .catch((sessionError) => {
+          console.warn(
+            "[LoginForm] Unable to verify session before redirect.",
+            sessionError,
+          );
           settle();
         });
     });
