@@ -175,7 +175,19 @@ export class PersonaRouter {
    * and re-open /admin/dashboard.
    */
   async ensureAdminSession(): Promise<void> {
-    await this.preflightAdminSession();
+    // Best-effort pre-flight: if auth state is already valid this exits early.
+    // If the preflight throws (no cookies/tokens and no rehydration possible)
+    // we fall through to the full navigate + credential-login path below so
+    // that a missed or failed login step earlier in the scenario does not
+    // permanently block all subsequent admin navigations.
+    try {
+      await this.preflightAdminSession();
+    } catch (preflightErr) {
+      console.warn(
+        `[PersonaRouter] Preflight check failed — proceeding to full login flow: ${preflightErr instanceof Error ? preflightErr.message : String(preflightErr)}`,
+      );
+    }
+
     const page = await this.getPage("admin");
 
     await this.gotoWithRetry(page, "/admin/dashboard", {
