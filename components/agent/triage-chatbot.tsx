@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { IndustryLogo } from "@/components/ui/industry-logo";
 import type {
   AppointmentSource,
+  CalendlyAvailableSlot,
   CalendlyEventType,
   AgentMessage,
 } from "@/lib/types/appointment";
@@ -37,7 +38,14 @@ interface AgenticTriageChatbotProps {
   referralSource?: string;
 }
 
-type TriageStage = "issue" | "severity" | "contact" | "calendar" | "booking";
+type TriageStage =
+  | "issue"
+  | "severity"
+  | "contact"
+  | "calendar"
+  | "slots"
+  | "booking"
+  | "success";
 type SeverityLevel = "critical" | "urgent" | "moderate" | "estimate";
 
 type IssueOption = {
@@ -65,8 +73,14 @@ type TriageState = {
   messages: TranscriptMessage[];
   eventTypes: CalendlyEventType[];
   selectedEventType: CalendlyEventType | null;
+  availableSlots: CalendlyAvailableSlot[];
+  selectedSlot: CalendlyAvailableSlot | null;
   schedulingUrl: string | null;
   loadingEventTypes: boolean;
+  loadingSlots: boolean;
+  bookingInProgress: boolean;
+  bookingError: string | null;
+  appointmentId: string | null;
   contact: {
     name: string;
     email: string;
@@ -84,6 +98,12 @@ type Action =
   | { type: "load_calendar_start" }
   | { type: "load_calendar_success"; eventTypes: CalendlyEventType[] }
   | { type: "select_event_type"; eventType: CalendlyEventType }
+  | { type: "load_slots_start" }
+  | { type: "load_slots_success"; slots: CalendlyAvailableSlot[] }
+  | { type: "select_slot"; slot: CalendlyAvailableSlot }
+  | { type: "book_start" }
+  | { type: "book_success"; schedulingUrl?: string; appointmentId?: string }
+  | { type: "book_error"; error: string }
   | { type: "reset_booking" };
 
 const SEVERITY_OPTIONS: SeverityOption[] = [
@@ -310,8 +330,14 @@ function createInitialState(companyName?: string, referralSource?: string): Tria
     ],
     eventTypes: [],
     selectedEventType: null,
+    availableSlots: [],
+    selectedSlot: null,
     schedulingUrl: null,
     loadingEventTypes: false,
+    loadingSlots: false,
+    bookingInProgress: false,
+    bookingError: null,
+    appointmentId: null,
     contact: {
       name: "",
       email: "",
@@ -381,23 +407,64 @@ function reducer(state: TriageState, action: Action): TriageState {
       return {
         ...state,
         selectedEventType: action.eventType,
-        schedulingUrl: action.eventType.scheduling_url,
-        stage: "booking",
+        availableSlots: [],
+        selectedSlot: null,
+        bookingError: null,
+        stage: "slots",
         messages: [
           ...state.messages,
           createMessage("user", action.eventType.name),
           createMessage(
             "assistant",
-            "Great. I’ve opened the scheduling page so you can pick a time.",
+            "Great. Pick a time slot and I’ll validate it before confirming the booking.",
           ),
+        ],
+      };
+    case "load_slots_start":
+      return { ...state, loadingSlots: true, bookingError: null };
+    case "load_slots_success":
+      return {
+        ...state,
+        loadingSlots: false,
+        availableSlots: action.slots,
+        selectedSlot: action.slots.length > 0 ? action.slots[0] : null,
+      };
+    case "select_slot":
+      return { ...state, selectedSlot: action.slot, bookingError: null };
+    case "book_start":
+      return { ...state, bookingInProgress: true, bookingError: null };
+    case "book_success":
+      return {
+        ...state,
+        bookingInProgress: false,
+        appointmentId: action.appointmentId || null,
+        schedulingUrl: action.schedulingUrl || null,
+        stage: action.schedulingUrl ? "booking" : "success",
+        messages: [
+          ...state.messages,
+          createMessage(
+            "assistant",
+            action.schedulingUrl
+              ? "Your slot passed validation. Complete the final booking handoff below."
+              : "Your appointment is confirmed.",
+          ),
+        ],
+      };
+    case "book_error":
+      return {
+        ...state,
+        bookingInProgress: false,
+        bookingError: action.error,
+        messages: [
+          ...state.messages,
+          createMessage("assistant", action.error),
         ],
       };
     case "reset_booking":
       return {
         ...state,
         schedulingUrl: null,
-        selectedEventType: null,
-        stage: "calendar",
+        stage: "slots",
       };
     default:
       return state;
@@ -486,6 +553,8 @@ export function AgenticTriageChatbot({
     if (state.stage === "severity") return "How severe is it?";
     if (state.stage === "contact") return "Who should we book for?";
     if (state.stage === "calendar") return "Pick the right appointment type.";
+    if (state.stage === "slots") return "Pick a preferred time slot.";
+    if (state.stage === "success") return "Booking complete.";
     return "Your scheduling page is ready.";
   }, [state.stage]);
 
@@ -528,6 +597,49 @@ export function AgenticTriageChatbot({
     void loadEventTypes();
   }, [accountId, state.eventTypes.length, state.isOpen, state.loadingEventTypes, state.stage]);
 
+  useEffect(() => {
+    if (
+      !state.isOpen ||
+      state.stage !== "slots" ||
+      !state.selectedEventType ||
+      state.availableSlots.length > 0 ||
+      state.loadingSlots
+    ) {
+      return;
+    }
+
+    const loadSlots = async () => {
+      dispatch({ type: "load_slots_start" });
+      try {
+        const start = new Date();
+        const end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const params = new URLSearchParams({
+          event_type_uri: state.selectedEventType.uri,
+          start_time: start.toISOString(),
+          end_time: end.toISOString(),
+          ...(accountId ? { account_id: accountId } : {}),
+        });
+
+        const response = await fetch(`/api/calendly/availability?${params.toString()}`);
+        const data = await response.json();
+        const slots = Array.isArray(data.slots) ? data.slots.slice(0, 12) : [];
+        dispatch({ type: "load_slots_success", slots });
+      } catch (error) {
+        console.error("Failed to load slots:", error);
+        dispatch({ type: "load_slots_success", slots: [] });
+      }
+    };
+
+    void loadSlots();
+  }, [
+    accountId,
+    state.availableSlots.length,
+    state.isOpen,
+    state.loadingSlots,
+    state.selectedEventType,
+    state.stage,
+  ]);
+
   function openWidget() {
     dispatch({ type: "open" });
   }
@@ -543,6 +655,100 @@ export function AgenticTriageChatbot({
 
   function handleSelectEventType(eventType: CalendlyEventType) {
     dispatch({ type: "select_event_type", eventType });
+  }
+
+  async function handleConfirmSlotAndBook() {
+    if (
+      !accountId ||
+      !state.issue ||
+      !state.severity ||
+      !state.selectedEventType ||
+      !state.selectedSlot
+    ) {
+      dispatch({ type: "book_error", error: "Missing booking details. Please try another slot." });
+      return;
+    }
+
+    dispatch({ type: "book_start" });
+
+    try {
+      const validatePayload = {
+        accountId,
+        source,
+        severity: state.severity.id,
+        startTime: state.selectedSlot.start_time,
+        endTime: state.selectedSlot.end_time,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+        preferredProvider: "calendly",
+        eventTypeUri: state.selectedEventType.uri,
+      };
+
+      const validateResponse = await fetch("/api/agent/triage/validate-slot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(validatePayload),
+      });
+
+      const validateData = await validateResponse.json();
+      if (!validateResponse.ok || !validateData.valid) {
+        dispatch({
+          type: "book_error",
+          error: validateData.reason || "That time is no longer available. Pick a different slot.",
+        });
+        return;
+      }
+
+      const bookPayload = {
+        ...validatePayload,
+        contact: {
+          name: state.contact.name,
+          email: state.contact.email,
+          phone: state.contact.phone || undefined,
+        },
+        issueId: state.issue.id,
+        issueLabel: state.issue.label,
+        title: `${state.issue.label} - ${state.severity.label}`,
+        notes: `Selected from triage chatbot (${source})`,
+        metadata: {
+          triageOutcome: triageOutcome.label,
+          eventTypeName: state.selectedEventType.name,
+        },
+      };
+
+      const bookResponse = await fetch("/api/agent/triage/book", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bookPayload),
+      });
+      const bookData = await bookResponse.json();
+
+      if (bookResponse.status === 202 && bookData.handoffRequired) {
+        dispatch({
+          type: "book_success",
+          schedulingUrl: bookData.schedulingUrl,
+        });
+        return;
+      }
+
+      if (!bookResponse.ok || !bookData.booked) {
+        dispatch({
+          type: "book_error",
+          error: bookData.error || "Booking failed. Please try a different slot.",
+        });
+        return;
+      }
+
+      dispatch({
+        type: "book_success",
+        appointmentId: bookData.appointmentId,
+      });
+    } catch (error) {
+      console.error("Failed to book slot:", error);
+      dispatch({
+        type: "book_error",
+        error: "Booking request failed. Please try again.",
+      });
+    }
   }
 
   const colorStyle = { "--agent-color": primaryColor } as React.CSSProperties;
@@ -784,6 +990,92 @@ export function AgenticTriageChatbot({
               </div>
             )}
 
+            {state.stage === "slots" && (
+              <div className="mt-4 space-y-3">
+                <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                  <p className="text-sm font-semibold text-slate-900">
+                    {state.selectedEventType?.name}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-slate-600">
+                    Select a time, then we will validate availability and policy windows before booking.
+                  </p>
+                </div>
+
+                {state.loadingSlots ? (
+                  <div className="flex items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white py-10 text-slate-400">
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Loading available slots
+                  </div>
+                ) : state.availableSlots.length > 0 ? (
+                  <div className="grid gap-2">
+                    {state.availableSlots.map((slot) => {
+                      const start = new Date(slot.start_time);
+                      const end = new Date(slot.end_time);
+                      const isSelected =
+                        state.selectedSlot?.start_time === slot.start_time &&
+                        state.selectedSlot?.end_time === slot.end_time;
+
+                      return (
+                        <button
+                          key={`${slot.start_time}_${slot.end_time}`}
+                          onClick={() => dispatch({ type: "select_slot", slot })}
+                          className={`rounded-2xl border p-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${
+                            isSelected
+                              ? "border-slate-900 bg-slate-900 text-white"
+                              : "border-slate-200 bg-white text-slate-800"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-sm font-semibold">
+                              {start.toLocaleString(undefined, {
+                                weekday: "short",
+                                month: "short",
+                                day: "numeric",
+                                hour: "numeric",
+                                minute: "2-digit",
+                              })}
+                            </p>
+                            <span className="text-xs opacity-80">
+                              {Math.round((end.getTime() - start.getTime()) / 60000)} min
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-4 text-sm text-slate-600">
+                    No open slots found for this event type in the next 7 days.
+                  </div>
+                )}
+
+                {state.bookingError && (
+                  <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                    {state.bookingError}
+                  </div>
+                )}
+
+                <Button
+                  onClick={handleConfirmSlotAndBook}
+                  disabled={!state.selectedSlot || state.bookingInProgress || state.loadingSlots}
+                  className="w-full rounded-2xl text-white"
+                  style={{ backgroundColor: primaryColor }}
+                >
+                  {state.bookingInProgress ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Validating and booking
+                    </>
+                  ) : (
+                    <>
+                      <Calendar className="mr-2 h-4 w-4" />
+                      Confirm selected slot
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+
             {state.stage === "booking" && state.schedulingUrl && (
               <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
@@ -803,6 +1095,19 @@ export function AgenticTriageChatbot({
                   className="h-[420px] w-full border-0"
                   title="Schedule Appointment"
                 />
+              </div>
+            )}
+
+            {state.stage === "success" && (
+              <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800">
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Appointment confirmed
+                </div>
+                <p className="mt-2 text-xs leading-5">
+                  We reserved your slot successfully.
+                  {state.appointmentId ? ` Reference: ${state.appointmentId}` : ""}
+                </p>
               </div>
             )}
 
