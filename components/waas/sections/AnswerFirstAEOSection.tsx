@@ -4,6 +4,11 @@ import type {
   ResolvedTenant,
   SectionConfig,
 } from "@/lib/waas/templates/types";
+import {
+  readConfigInt,
+  readConfigBool,
+} from "@/lib/waas/utils/section-config";
+import { toSafeJsonLdString } from "@/lib/waas/utils/json-ld";
 
 interface AnswerFirstAEOSectionProps {
   tenant: ResolvedTenant;
@@ -77,27 +82,13 @@ export function AnswerFirstAEOSection({
   config,
   content,
 }: AnswerFirstAEOSectionProps) {
-  const configuredMaxItems = config.maxItems;
-  const maxItems =
-    typeof configuredMaxItems === "number"
-      ? configuredMaxItems
-      : typeof configuredMaxItems === "string"
-        ? Number(configuredMaxItems)
-        : DEFAULT_MAX_ITEMS;
-
-  const configuredMaxAnswerWords = config.maxAnswerWords;
-  const maxAnswerWords =
-    typeof configuredMaxAnswerWords === "number"
-      ? configuredMaxAnswerWords
-      : typeof configuredMaxAnswerWords === "string"
-        ? Number(configuredMaxAnswerWords)
-        : DEFAULT_MAX_ANSWER_WORDS;
-
-  const configuredIncludeJsonLd = config.includeJsonLd;
-  const includeJsonLd =
-    typeof configuredIncludeJsonLd === "boolean"
-      ? configuredIncludeJsonLd
-      : configuredIncludeJsonLd === "true";
+  const maxItems = readConfigInt(config, "maxItems", DEFAULT_MAX_ITEMS);
+  const maxAnswerWords = readConfigInt(
+    config,
+    "maxAnswerWords",
+    DEFAULT_MAX_ANSWER_WORDS,
+  );
+  const includeJsonLd = readConfigBool(config, "includeJsonLd", true);
 
   const trade = tenant.primary_trade ?? tenant.target_industry ?? "service";
   const location = tenant.target_location ?? "your local area";
@@ -171,7 +162,7 @@ export function AnswerFirstAEOSection({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify(toFaqJsonLd(normalizedItems)),
+            __html: toSafeJsonLdString(toFaqJsonLd(normalizedItems)),
           }}
         />
       )}
