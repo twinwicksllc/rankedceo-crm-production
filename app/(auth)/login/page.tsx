@@ -124,21 +124,16 @@ function LoginForm() {
   const waitForSessionPersistence = async () => {
     await new Promise<void>((resolve) => {
       let settled = false;
+      let authSubscription: { unsubscribe: () => void } | null = null;
 
       const settle = () => {
         if (settled) return;
         settled = true;
         window.clearTimeout(timeoutId);
-        subscription.unsubscribe();
+        authSubscription?.unsubscribe();
         resolve();
       };
 
-      const timeoutId = window.setTimeout(() => {
-        console.warn(
-          "[LoginForm] Timed out waiting for session persistence before redirect.",
-        );
-        settle();
-      }, SESSION_PERSISTENCE_TIMEOUT_MS);
       const {
         data: { subscription },
       } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -146,15 +141,26 @@ function LoginForm() {
           settle();
         }
       });
+      authSubscription = subscription;
+
+      const timeoutId = window.setTimeout(() => {
+        console.warn(
+          "[LoginForm] Timed out waiting for session persistence before redirect.",
+        );
+        settle();
+      }, SESSION_PERSISTENCE_TIMEOUT_MS);
 
       void supabase.auth
         .getSession()
         .then(({ data }) => {
-          if (data.session) {
+          if (!settled && data.session) {
             settle();
           }
         })
         .catch((sessionError) => {
+          if (settled) {
+            return;
+          }
           console.warn(
             "[LoginForm] Unable to verify session before redirect.",
             sessionError,
