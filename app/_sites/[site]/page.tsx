@@ -1,5 +1,5 @@
 // =============================================================================
-// WaaS Phase 4: _sites/[site]/page.tsx
+// WaaS Phase 4: _sites/[site]/page.tsx 
 // Multi-tenant renderer — fetches tenant config, resolves sections, renders site
 //
 // Phase 8.5: Added generateMetadata() for per-tenant SEO (title, description,
