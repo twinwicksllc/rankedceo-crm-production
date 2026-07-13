@@ -12,7 +12,8 @@
 //   • Export HTML button kept as a secondary "Preview" action for the customer
 // =============================================================================
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   DndContext,
   DragOverlay,
@@ -38,7 +39,6 @@ import {
 } from "lucide-react";
 import { BlockPalette } from "./block-palette";
 import { CanvasBlock } from "./canvas-block";
-import { BlockRenderer } from "./block-renderer";
 import { Inspector } from "./inspector";
 import {
   type Block,
@@ -363,6 +363,7 @@ export function Builder({
   onBack,
   isLoading,
 }: BuilderProps) {
+  const [mounted, setMounted] = useState(false);
   const [blocks, setBlocks] = useState<Block[]>(() =>
     buildInitialBlocks(prefill),
   );
@@ -380,6 +381,21 @@ export function Builder({
     () => blocks.find((b) => b.id === selectedId) ?? null,
     [blocks, selectedId],
   );
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mounted]);
 
   function handleDragStart(e: DragStartEvent) {
     const data = e.active.data.current;
@@ -434,7 +450,11 @@ export function Builder({
     if (selectedId === id) setSelectedId(null);
   }
 
-  return (
+  if (!mounted) {
+    return null;
+  }
+
+  return createPortal(
     <DndContext
       sensors={sensors}
       onDragStart={handleDragStart}
@@ -557,6 +577,7 @@ export function Builder({
           </div>
         ) : null}
       </DragOverlay>
-    </DndContext>
+    </DndContext>,
+    document.body,
   );
 }
