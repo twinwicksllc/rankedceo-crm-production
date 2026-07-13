@@ -6,14 +6,36 @@ import { createAuditClient } from "@/lib/supabase/audit-client";
 /**
  * Audit Auth Confirm Page
  *
- * Handles the implicit OAuth landing. After Google OAuth, Supabase redirects
- * here with tokens in the URL hash fragment:
- *   audit.rankedceo.com/audit/auth/confirm#access_token=...&refresh_token=...
+ * Handles the OAuth landing after Google sign-in. This page must support
+ * TWO possible response shapes:
+ *
+ *   1. PKCE (query param):
+ *        audit.rankedceo.com/audit/auth/confirm?code=...
+ *
+ *   2. Implicit (hash fragment):
+ *        audit.rankedceo.com/audit/auth/confirm#access_token=...&refresh_token=...
+ *
+ * IMPORTANT — why both are handled:
+ * `lib/supabase/audit-client.ts` explicitly requests `flowType: "implicit"`,
+ * but `@supabase/ssr`'s `createBrowserClient()` (as of v0.10.2) hardcodes
+ * `flowType: "pkce"` internally and silently ignores/overrides the caller's
+ * setting (see https://github.com/supabase/ssr/issues/175 for the equivalent
+ * defect). As a result, `signInWithOAuth()` actually runs in PKCE mode and
+ * Supabase redirects back here with `?code=` — NOT a hash fragment. This is
+ * safe to exchange on this page because the PKCE code verifier was written
+ * to a cookie on this exact origin (audit.rankedceo.com) by the login page,
+ * so there is no cross-subdomain verifier mismatch here (that concern only
+ * applied to the old design where the callback landed on crm.rankedceo.com).
+ *
+ * We still keep the hash-fragment path as a defensive fallback in case the
+ * library's behavior changes in a future version and implicit flow is
+ * actually honored.
  *
  * Steps:
- * 1. Parse the hash fragment manually
- * 2. Call supabase.auth.setSession() explicitly to write session cookies
- * 3. Hard navigate (window.location.href) to /audit/start so the server
+ * 1. Check for a `?code=` query param → exchangeCodeForSession()
+ * 2. Else check the hash fragment for access_token/refresh_token → setSession()
+ * 3. Else fall back to getSession() / onAuthStateChange with a timeout
+ * 4. Hard navigate (window.location.href) to /audit/start so the server
  *    component gets a fresh request and reads the newly-written cookies
  *
  * We use window.location.href (not router.push) because router.push is
@@ -32,7 +54,34 @@ export default function AuditAuthConfirmPage() {
       const supabase = createAuditClient();
 
       try {
-        // --- Step 1: Parse hash fragment ---
+        // --- Step 0: Check for PKCE-style ?code= query param first ---
+        // See the file-level comment above for why this is the primary path.
+        const searchParams = new URLSearchParams(window.location.search);
+        const code = searchParams.get("code");
+        const queryErrorCode = searchParams.get("error");
+        const queryErrorDesc = searchParams.get("error_description");
+
+        if (queryErrorCode) {
+          throw new Error(queryErrorDesc || queryErrorCode);
+        }
+
+        if (code) {
+          const { data, error } =
+            await supabase.auth.exchangeCodeForSession(code);
+
+          if (error) throw error;
+          if (!data.session)
+            throw new Error("Session could not be established");
+
+          setStatus("success");
+
+          setTimeout(() => {
+            window.location.href = "/audit/start";
+          }, 600);
+          return;
+        }
+
+        // --- Step 1: Parse hash fragment (implicit flow fallback) ---
         const hash = window.location.hash.substring(1); // remove leading #
         const params = new URLSearchParams(hash);
         const accessToken = params.get("access_token");
