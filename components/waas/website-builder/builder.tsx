@@ -105,7 +105,6 @@ function getStringField(
     ? value
     : undefined;
 }
-
 // ---------------------------------------------------------------------------
 // Per-section block builders
 // ---------------------------------------------------------------------------
@@ -151,7 +150,6 @@ function sectionHero(
   const templateHeadline = getStringField(sectionContent, "headline");
   const templateSubheadline = getStringField(sectionContent, "subheadline");
   const templatePrimaryCta = getStringField(sectionContent, "primaryCtaLabel");
-
   const blocks: Block[] = [];
 
   if (p.logoUrl) {
