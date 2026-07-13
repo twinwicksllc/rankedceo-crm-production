@@ -119,6 +119,40 @@ function LoginForm() {
     return callbackUrl.toString();
   };
 
+  const waitForSessionPersistence = async () => {
+    await new Promise<void>((resolve) => {
+      let settled = false;
+
+      const settle = () => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeoutId);
+        subscription.unsubscribe();
+        resolve();
+      };
+
+      const timeoutId = window.setTimeout(settle, 1500);
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (session) {
+          settle();
+        }
+      });
+
+      void supabase.auth
+        .getSession()
+        .then(({ data }) => {
+          if (data.session) {
+            settle();
+          }
+        })
+        .catch(() => {
+          settle();
+        });
+    });
+  };
+
   // ─── Email + Password ───────────────────────────────────────────────────────────────────────────
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,17 +166,12 @@ function LoginForm() {
       });
       if (signInError) throw signInError;
 
+      await waitForSessionPersistence();
+
       // Handle redirect
       const targetPath = redirectTo.startsWith("/") ? redirectTo : "/dashboard";
-
-      // For admin routes, a full page reload is often more reliable to ensure 
-      // the server picks up the new session cookies immediately.
-      if (targetPath.startsWith("/admin")) {
-        window.location.href = targetPath;
-      } else {
-        router.push(targetPath);
-        router.refresh();
-      }
+      router.replace(targetPath);
+      router.refresh();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to sign in");
     } finally {
