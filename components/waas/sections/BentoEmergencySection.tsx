@@ -8,6 +8,11 @@ import type {
   ResolvedTenant,
   SectionConfig,
 } from "@/lib/waas/templates/types";
+import {
+  readConfigString,
+  readConfigNumber,
+  readConfigStringArray,
+} from "@/lib/waas/utils/section-config";
 
 interface BentoEmergencySectionProps {
   tenant: ResolvedTenant;
@@ -179,55 +184,6 @@ const DEFAULT_ITEMS_BY_TRADE: Record<string, BentoItem[]> = {
     },
   ],
 };
-
-function readConfigString(
-  config: SectionConfig["config"],
-  key: string,
-  fallback: string,
-): string {
-  const value = config[key];
-  return typeof value === "string" && value.trim() ? value.trim() : fallback;
-}
-
-function readConfigNumber(
-  config: SectionConfig["config"],
-  key: string,
-  fallback: number,
-): number {
-  const value = config[key];
-  if (typeof value === "number" && Number.isFinite(value) && value > 0)
-    return value;
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed) && parsed > 0) return parsed;
-  }
-  return fallback;
-}
-
-function readConfigStringArray(
-  config: SectionConfig["config"],
-  key: string,
-  fallback: string[],
-): string[] {
-  const value = config[key];
-  if (Array.isArray(value)) {
-    const fromArray = value
-      .filter((item): item is string => typeof item === "string")
-      .map((item) => item.trim())
-      .filter(Boolean);
-    if (fromArray.length > 0) return fromArray;
-  }
-
-  if (typeof value === "string" && value.trim()) {
-    const fromCsv = value
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
-    if (fromCsv.length > 0) return fromCsv;
-  }
-
-  return fallback;
-}
 
 export function BentoEmergencySection({
   tenant,

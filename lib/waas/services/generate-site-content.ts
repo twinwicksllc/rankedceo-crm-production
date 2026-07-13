@@ -351,6 +351,7 @@ function sanitizeSections(value: unknown): SectionConfig[] {
     "about",
     "faq",
     "how-it-works",
+    "gallery",
   ];
 
   return value
@@ -426,7 +427,7 @@ async function generateWithGemini(
     "Return ONLY valid JSON as an array of 3 items.",
     "Each item must include: variantIndex, variantLabel, variantRationale, templateSlug, sections.",
     "Each sections item must include: section, enabled, order, config, content.",
-    "Allowed section values: hero, answer-first-aeo, bento-emergency, services, trust, financing, booking, reviews, about, faq, how-it-works.",
+    "Allowed section values: hero, answer-first-aeo, bento-emergency, services, trust, financing, booking, reviews, about, faq, how-it-works, gallery.",
     "Allowed templateSlug values: modern, bold, trust-first.",
     "Use onboarding inputs as source of truth; do not invent factual claims or certifications.",
     "Use the business USP, tagline, CTA, and about narrative as core source text.",

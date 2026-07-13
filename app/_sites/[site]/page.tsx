@@ -1,5 +1,5 @@
 // =============================================================================
-// WaaS Phase 4: _sites/[site]/page.tsx
+// WaaS Phase 4: _sites/[site]/page.tsx 
 // Multi-tenant renderer — fetches tenant config, resolves sections, renders site
 //
 // Phase 8.5: Added generateMetadata() for per-tenant SEO (title, description,
@@ -21,6 +21,7 @@ import {
   buildLocalBusinessServiceJsonLdV2,
   type DayOfWeek,
 } from "@/lib/waas/utils/local-business-schema-v2";
+import { toSafeJsonLdString } from "@/lib/waas/utils/json-ld";
 
 // ---------------------------------------------------------------------------
 // Data fetching
@@ -502,7 +503,9 @@ export default async function SitePage({
       {/* JSON-LD structured data for local business */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        dangerouslySetInnerHTML={{
+          __html: toSafeJsonLdString(structuredData),
+        }}
       />
       <SectionRenderer
         tenant={tenant}
