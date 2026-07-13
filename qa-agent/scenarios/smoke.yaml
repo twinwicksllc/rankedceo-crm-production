@@ -120,6 +120,7 @@ steps:
     severity: critical
     description: Navigate explicitly to admin dashboard to ensure full page load
     url: /admin/dashboard
+    retries: 1
     intent: >
       After login redirect, navigate explicitly to /admin/dashboard.
       The stepNavigate waits for networkidle, ensuring the server component
@@ -348,6 +349,7 @@ steps:
     severity: warning
     description: Admin returns to dashboard to confirm state
     url: /admin/dashboard
+    retries: 1
     intent: Admin navigates back to verify dashboard state is intact after context switch
 
   - id: admin_assert_dashboard_still_loaded

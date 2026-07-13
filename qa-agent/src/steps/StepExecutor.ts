@@ -133,6 +133,10 @@ export class StepExecutor {
   }
 
   private async stepNavigate(persona: Persona, url: string): Promise<void> {
+    if (persona === "admin" && url.startsWith("/admin")) {
+      await this.router.ensureAdminSession();
+    }
+
     const page = await this.router.getPage(persona);
     // waitUntil:'load' fires after all resources are loaded.
     // Then wait for networkidle so Server Component streaming + Supabase
@@ -300,7 +304,13 @@ export class StepExecutor {
     // In v1 this is synchronous — we just switch the active page.
     // In v1.5 this could involve async signals between parallel runners.
     console.log(`  🔄 Handoff: ${from} → ${to} — ${message}`);
+    if (from === "admin") {
+      await this.router.snapshotAdminSession();
+    }
     await this.router.getPage(to);
+    if (to === "admin") {
+      await this.router.ensureAdminSession();
+    }
     // Brief stabilisation pause after context switch
     await new Promise((res) => setTimeout(res, Math.min(timeoutMs, 1_000)));
   }

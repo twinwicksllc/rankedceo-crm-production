@@ -21,7 +21,13 @@ import { StepExecutor } from "../steps/StepExecutor.js";
 import { loadScenario } from "./ScenarioLoader.js";
 import { SupabaseAdapter } from "../adaptors/supabase/SupabaseAdapter.js";
 import { ReportDispatcher } from "../reporting/ReportDispatcher.js";
-import type { RunConfig, RunReport, RunStatus } from "../types.js";
+import type {
+  RunConfig,
+  RunReport,
+  RunStatus,
+  Finding,
+  ScenarioStep,
+} from "../types.js";
 
 export class Orchestrator {
   private readonly evidenceDir: string;
@@ -86,6 +92,9 @@ export class Orchestrator {
     let passedSteps = 0;
     let findingSteps = 0;
     let status: RunStatus = "running";
+    let consecutiveUiFailures = 0;
+    let lastFailurePersona: string | null = null;
+    let fastFailTriggered = false;
 
     try {
       for (let i = 0; i < steps.length; i++) {
@@ -101,19 +110,57 @@ export class Orchestrator {
           findingSteps++;
           // EscalationEngine handles logging + throwing on critical
           await escalation.record(finding);
+
+          if (this.config.mode === "smoke") {
+            const isUiFailure = this.isUiFailureSignal(step, finding);
+            if (isUiFailure && lastFailurePersona === finding.persona) {
+              consecutiveUiFailures += 1;
+            } else if (isUiFailure) {
+              consecutiveUiFailures = 1;
+              lastFailurePersona = finding.persona;
+            } else {
+              consecutiveUiFailures = 0;
+              lastFailurePersona = null;
+            }
+
+            if (consecutiveUiFailures >= 2) {
+              const fastFailFinding: Finding = {
+                stepId: "orchestrator_smoke_fast_fail",
+                persona: finding.persona,
+                severity: "error",
+                stepType: step.type,
+                message:
+                  `Smoke fast-fail triggered after ${consecutiveUiFailures} consecutive UI failures for persona "${finding.persona}". ` +
+                  "Stopping remaining steps to avoid long timeout cascades from a likely page-load/auth state failure.",
+                timestamp: new Date().toISOString(),
+              };
+              await escalation.record(fastFailFinding);
+              findingSteps++;
+              status = "error";
+              fastFailTriggered = true;
+              console.warn(
+                "[Orchestrator] Smoke fast-fail guard engaged; aborting remaining steps.",
+              );
+              break;
+            }
+          }
         } else {
           passedSteps++;
+          consecutiveUiFailures = 0;
+          lastFailurePersona = null;
         }
       }
 
-      // All steps complete without critical halt
-      const allFindings = escalation.getFindings();
-      const hasErrors = allFindings.some((f) => f.severity === "error");
-      status = hasErrors
-        ? "pass_with_findings"
-        : allFindings.length > 0
+      if (!fastFailTriggered) {
+        // All steps complete without critical halt
+        const allFindings = escalation.getFindings();
+        const hasErrors = allFindings.some((f) => f.severity === "error");
+        status = hasErrors
           ? "pass_with_findings"
-          : "pass";
+          : allFindings.length > 0
+            ? "pass_with_findings"
+            : "pass";
+      }
     } catch (err) {
       if (err instanceof CriticalHaltError) {
         status = "critical_halt";
@@ -195,5 +242,28 @@ export class Orchestrator {
     const s = Math.floor(ms / 1000);
     const m = Math.floor(s / 60);
     return m > 0 ? `${m}m ${s % 60}s` : `${s}s`;
+  }
+
+  private isUiFailureSignal(step: ScenarioStep, finding: Finding): boolean {
+    const uiStepTypes: Array<ScenarioStep["type"]> = [
+      "navigate",
+      "wait_for",
+      "wait_for_url",
+      "assert_text",
+      "assert_url",
+      "click",
+      "fill",
+    ];
+
+    if (!uiStepTypes.includes(step.type)) return false;
+
+    const msg = finding.message.toLowerCase();
+    return (
+      msg.includes("timeout") ||
+      msg.includes("did not match pathname") ||
+      msg.includes("/login?next=/admin/dashboard") ||
+      msg.includes("wait_for") ||
+      msg.includes("wait_for_url")
+    );
   }
 }
