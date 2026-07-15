@@ -42,40 +42,37 @@ function parseLocationString(location: string | null | undefined): {
   return { city: null, state: null };
 }
 
-/**
- * Guess business name from audit metadata.
- * Derives from: keyword patterns, industry, or confidence hints.
- */
-function guessBusinessName(report: AuditReportData): string | null {
-  // If we have keywords, try to extract business name clues from them
-  if (
-    report.rankings &&
-    Array.isArray(report.rankings) &&
-    report.rankings.length > 0
-  ) {
-    // Look for keywords that might include a business type or pattern
-    // e.g., "ACME Plumbing Chicago" might suggest "ACME" as business
-    const firstKeyword = report.rankings[0]?.keyword || "";
+function titleCaseBusinessName(value: string): string {
+  return value
+    .trim()
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .map((word) => {
+      if (word.length === 0) return word;
+      if (word.length <= 3 && word === word.toUpperCase()) return word;
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(" ");
+}
 
-    // Simple heuristic: capitalize first major word(s)
-    // This is a guess; user will always override
-    const words = firstKeyword.split(" ");
-    if (words.length > 1) {
-      // Assume first word(s) before location/service words are business name
-      // Return joined first 1-2 words as guess
-      const guess = words.slice(0, 1).join(" ");
-      if (guess.length >= 2 && guess.length <= 50) {
-        return guess;
-      }
-    }
+function businessNameFromTargetUrl(targetUrl?: string | null): string | null {
+  if (!targetUrl) return null;
+
+  try {
+    const hostname = new URL(targetUrl).hostname.replace(/^www\./, "");
+    const base = hostname.split(".")[0] ?? "";
+    if (!base) return null;
+
+    const cleaned = base
+      .replace(/[-_]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (cleaned.length < 2) return null;
+    return titleCaseBusinessName(cleaned);
+  } catch {
+    return null;
   }
-
-  // Fallback: try detected industry from provider_meta
-  if (report.provider_meta?.keyword_detected_industry) {
-    return null; // Industry alone is not a business name, skip
-  }
-
-  return null;
 }
 
 /**
@@ -299,7 +296,7 @@ export async function extractAuditPreFillForStep1(
     const supabase = getRawClient();
     const { data: audit } = await supabase
       .from("audits")
-      .select("report_data, requestor_email")
+      .select("report_data, requestor_email, requestor_company, target_url")
       .eq("id", auditId)
       .single();
 
@@ -316,8 +313,14 @@ export async function extractAuditPreFillForStep1(
       preFill.email_guess = audit.requestor_email;
     }
 
-    // Guess business name from keywords/metadata
-    preFill.business_name_guess = guessBusinessName(report);
+    // Prefer explicit company captured on audit, fallback to domain-derived name.
+    if (audit.requestor_company && audit.requestor_company.trim().length >= 2) {
+      preFill.business_name_guess = titleCaseBusinessName(
+        audit.requestor_company,
+      );
+    } else {
+      preFill.business_name_guess = businessNameFromTargetUrl(audit.target_url);
+    }
 
     // Extract services from keywords and opportunities
     preFill.services_list = extractServicesList(report);
