@@ -149,7 +149,7 @@ export async function GET(_req: NextRequest, context: RequestContext) {
         data: { user },
       } = await authClient.auth.getUser();
 
-      if (!user) {
+      if (!user?.email) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
 

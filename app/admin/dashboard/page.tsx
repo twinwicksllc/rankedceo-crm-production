@@ -24,8 +24,19 @@ import { TenantList } from "./tenant-list";
 import { RevenueWidget } from "@/components/waas/admin/RevenueWidget";
 
 // ---------------------------------------------------------------------------
-// Status badge
+// Helpers
 // ---------------------------------------------------------------------------
+
+function ConditionalLink({
+  href,
+  children,
+}: {
+  href?: string;
+  children: React.ReactNode;
+}) {
+  if (!href) return <>{children}</>;
+  return <Link href={href}>{children}</Link>;
+}
 
 function StatusBadge({ status }: { status: WaasTenant["status"] }) {
   const config = {
@@ -171,20 +182,26 @@ export default async function AdminDashboardPage({
             icon: "👥",
             color: "blue",
             glow: "shadow-blue-500/10",
+            href: "/admin/leads",
           },
         ].map((card) => (
-          <div
-            key={card.label}
-            className={`rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl p-6 shadow-xl ${card.glow}`}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-2xl">{card.icon}</span>
+          <ConditionalLink key={card.label} href={card.href}>
+            <div
+              className={`h-full rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl p-6 shadow-xl transition-all ${
+                card.href
+                  ? "hover:bg-white/10 hover:border-white/20 cursor-pointer"
+                  : ""
+              } ${card.glow}`}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-2xl">{card.icon}</span>
+              </div>
+              <div className="text-3xl font-bold text-white mb-1">
+                {card.value}
+              </div>
+              <div className="text-white/40 text-sm">{card.label}</div>
             </div>
-            <div className="text-3xl font-bold text-white mb-1">
-              {card.value}
-            </div>
-            <div className="text-white/40 text-sm">{card.label}</div>
-          </div>
+          </ConditionalLink>
         ))}
       </div>
 

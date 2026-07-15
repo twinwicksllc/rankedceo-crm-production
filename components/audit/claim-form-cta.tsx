@@ -98,6 +98,7 @@ export function ClaimFormCta({
   const [status, setStatus] = useState<SubmitStatus>("idle");
   const [error, setError] = useState("");
   const [cta, setCta] = useState("");
+  const [optimizationRequested, setOptimizationRequested] = useState(false);
   const isUrgent = grade === "D" || grade === "F" || grade === "C";
 
   useEffect(() => {
@@ -156,6 +157,7 @@ export function ClaimFormCta({
           phone: form.phone,
           company: form.company,
           target_url: targetDomain, // API expects target_url
+          optimization_requested: optimizationRequested,
         }),
       });
 
@@ -165,10 +167,12 @@ export function ClaimFormCta({
 
       setStatus("success");
 
-      // Auto-redirect to onboarding after 1.5s
-      setTimeout(() => {
-        router.push(cta);
-      }, 1500);
+      // Auto-redirect to onboarding after 1.5s (only if NOT optimization)
+      if (!optimizationRequested) {
+        setTimeout(() => {
+          router.push(cta);
+        }, 1500);
+      }
     } catch (err) {
       setStatus("error");
       setError("Could not claim your spot. Please try again.");
@@ -200,7 +204,9 @@ export function ClaimFormCta({
             color: isLight ? "#16a34a" : "#86efac",
           }}
         >
-          Claim Confirmed!
+          {optimizationRequested
+            ? "Optimization Request Sent!"
+            : "Claim Confirmed!"}
         </h3>
         <p
           style={{
@@ -210,7 +216,9 @@ export function ClaimFormCta({
             lineHeight: 1.5,
           }}
         >
-          Redirecting you to your personalized onboarding journey...
+          {optimizationRequested
+            ? "An expert will review your report and reach out to optimize your current site."
+            : "Redirecting you to your personalized onboarding journey..."}
         </p>
       </div>
     );
@@ -427,6 +435,47 @@ export function ClaimFormCta({
             />
           </div>
 
+          {/* Optimization Request Checkbox */}
+          <div
+            style={{
+              marginTop: 16,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "8px 12px",
+              background: isLight ? "rgba(37,99,235,0.05)" : "rgba(37,99,235,0.08)",
+              borderRadius: 8,
+              border: isLight ? "1px solid rgba(37,99,235,0.1)" : "1px solid rgba(37,99,235,0.15)",
+              cursor: "pointer",
+            }}
+            onClick={() => setOptimizationRequested(!optimizationRequested)}
+          >
+            <input
+              type="checkbox"
+              id="optimizeRequested"
+              checked={optimizationRequested}
+              onChange={(e) => setOptimizationRequested(e.target.checked)}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: 18,
+                height: 18,
+                cursor: "pointer",
+              }}
+            />
+            <label
+              htmlFor="optimizeRequested"
+              style={{
+                fontSize: "0.82rem",
+                fontWeight: 600,
+                color: isLight ? "#1e40af" : "#93c5fd",
+                cursor: "pointer",
+                userSelect: "none",
+              }}
+            >
+              I want to optimize my current site instead of migrating to RankedCEO
+            </label>
+          </div>
+
           {/* Error message */}
           {error && (
             <div
@@ -485,9 +534,17 @@ export function ClaimFormCta({
                 : "0 4px 20px rgba(37,99,235,0.35)";
             }}
           >
-            {status === "submitting"
-              ? "⏳ Claiming your spot..."
-              : "🎯 Claim My Free Website Review"}
+            {status === "submitting" ? (
+              optimizationRequested ? (
+                "⏳ Sending request..."
+              ) : (
+                "⏳ Claiming your spot..."
+              )
+            ) : optimizationRequested ? (
+              "🚀 Request Optimization Review"
+            ) : (
+              "🎯 Claim My Free Website Review"
+            )}
           </button>
         </form>
 

@@ -13,3 +13,4 @@ export * from "./site-settings";
 export * from "./client-review";
 export * from "./domains";
 export * from "./stats";
+export * from "./leads";

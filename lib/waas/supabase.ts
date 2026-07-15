@@ -87,6 +87,7 @@ export interface WaasLead {
   utm_medium: string | null;
   utm_campaign: string | null;
   referrer_url: string | null;
+  optimization_requested: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -531,6 +532,7 @@ export async function captureAuditLead(input: {
   utm_medium: string | null;
   utm_campaign: string | null;
   referrer_url: string | null;
+  optimization_requested?: boolean;
 }): Promise<{ leadId: string | null; error: string | null }> {
   try {
     const client = getRawAdminClient();
@@ -547,6 +549,7 @@ export async function captureAuditLead(input: {
       p_utm_medium: input.utm_medium,
       p_utm_campaign: input.utm_campaign,
       p_referrer_url: input.referrer_url,
+      p_optimization_requested: input.optimization_requested ?? false,
     });
 
     if (error) return { leadId: null, error: error.message };
