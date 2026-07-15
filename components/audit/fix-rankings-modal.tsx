@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import {
   buildGetStartedUrl,
   getAuditFunnelProperties,
@@ -37,9 +38,14 @@ export function FixRankingsModal({
   const { theme } = useOnboardingTheme();
   const isLight = theme === "light";
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [getStartedUrl, setGetStartedUrl] = useState(
     `/get-started?tier=standard&auditId=${auditId}`,
   );
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -103,21 +109,9 @@ export function FixRankingsModal({
     router.push(optimizeUrl);
   };
 
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => {
-          trackOpen();
-          setOpen(true);
-        }}
-        className={triggerClassName}
-        style={triggerStyle}
-      >
-        {triggerLabel}
-      </button>
-
-      {open && (
+  const modalContent =
+    open && mounted
+      ? createPortal(
         <div
           role="dialog"
           aria-modal="true"
@@ -308,8 +302,26 @@ export function FixRankingsModal({
               </button>
             </div>
           </div>
-        </div>
-      )}
+        </div>,
+        document.body,
+      )
+      : null;
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          trackOpen();
+          setOpen(true);
+        }}
+        className={triggerClassName}
+        style={triggerStyle}
+      >
+        {triggerLabel}
+      </button>
+
+      {modalContent}
     </>
   );
 }
