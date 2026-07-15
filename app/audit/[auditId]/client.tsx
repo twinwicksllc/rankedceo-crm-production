@@ -7,6 +7,8 @@
 // =============================================================================
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { getAuditFunnelProperties } from "@/lib/analytics/audit-funnel";
+import { trackEvent } from "@/lib/analytics/track-event";
 import type { AuditReportData } from "@/lib/waas/types";
 import type { WaasAuditRow as WaasAudit } from "@/lib/waas/supabase";
 import { ScoreGauge } from "@/components/audit/score-gauge";
