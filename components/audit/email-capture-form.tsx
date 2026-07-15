@@ -162,6 +162,7 @@ export function EmailCaptureForm({
           email: form.email,
           phone: form.phone, // already formatted by formatPhoneDisplay
           company: form.company,
+          target_url: targetDomain,
         }),
       });
 

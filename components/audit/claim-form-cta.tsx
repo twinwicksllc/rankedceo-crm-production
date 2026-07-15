@@ -155,7 +155,7 @@ export function ClaimFormCta({
           name: form.name,
           phone: form.phone,
           company: form.company,
-          target_domain: targetDomain,
+          target_url: targetDomain, // API expects target_url
         }),
       });
 

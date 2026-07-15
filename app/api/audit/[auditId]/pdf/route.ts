@@ -129,15 +129,6 @@ export async function GET(_req: NextRequest, context: RequestContext) {
   try {
     const auditId = context.params.auditId;
 
-    // Auth check
-    const authClient = await createClient();
-    const {
-      data: { user },
-    } = await authClient.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     // Fetch audit — use service-role client so RLS does not block server-side reads
     const waasAdmin = getWaasAdminClient();
     const { data: audit, error } = (await waasAdmin
@@ -151,14 +142,24 @@ export async function GET(_req: NextRequest, context: RequestContext) {
       return NextResponse.json({ error: "Audit not found" }, { status: 404 });
     }
 
-    // Ownership check — verify user owns the linked tenant (if any)
-    if (audit.tenant_id && user.email) {
+    // Ownership check — if tied to a tenant, verify user owns it
+    if (audit.tenant_id) {
+      const authClient = await createClient();
+      const {
+        data: { user },
+      } = await authClient.auth.getUser();
+
+      if (!user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+
       const { data: tenant } = await waasAdmin
         .from("tenants")
         .select("id")
         .eq("id", audit.tenant_id)
         .eq("submitted_by_email", user.email)
         .single();
+
       if (!tenant) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
       }

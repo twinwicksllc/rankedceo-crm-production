@@ -44,6 +44,7 @@ interface PreFilledFields {
   state: boolean;
   tagline: boolean;
   services_offered: boolean;
+  email: boolean;
 }
 
 export function StepBusinessIdentity({
@@ -70,6 +71,7 @@ export function StepBusinessIdentity({
     state: false,
     tagline: false,
     services_offered: false,
+    email: false,
   });
 
   // Fetch and apply audit pre-fill data when auditId is available
@@ -88,7 +90,15 @@ export function StepBusinessIdentity({
           state: false,
           tagline: false,
           services_offered: false,
+          email: false,
         };
+
+        if (preFill.email_guess) {
+          setValue("email", preFill.email_guess, {
+            shouldValidate: true,
+          });
+          filled.email = true;
+        }
 
         if (preFill.business_name_guess) {
           setValue("legal_name", preFill.business_name_guess, {

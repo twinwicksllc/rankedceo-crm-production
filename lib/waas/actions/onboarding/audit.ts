@@ -19,6 +19,7 @@ export interface AuditPreFillData {
   suggested_tagline?: string | null;
   city_guess?: string | null;
   state_guess?: string | null;
+  email_guess?: string | null;
 }
 
 /**
@@ -298,7 +299,7 @@ export async function extractAuditPreFillForStep1(
     const supabase = getRawClient();
     const { data: audit } = await supabase
       .from("audits")
-      .select("report_data")
+      .select("report_data, requestor_email")
       .eq("id", auditId)
       .single();
 
@@ -309,6 +310,11 @@ export async function extractAuditPreFillForStep1(
     if (!report) return {};
 
     const preFill: AuditPreFillData = {};
+
+    // Use requestor email from audit record
+    if (audit.requestor_email) {
+      preFill.email_guess = audit.requestor_email;
+    }
 
     // Guess business name from keywords/metadata
     preFill.business_name_guess = guessBusinessName(report);
