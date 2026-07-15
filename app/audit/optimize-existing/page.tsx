@@ -21,12 +21,16 @@ export default function OptimizeExistingSitePage() {
 
   const auditId = searchParams.get("auditId") ?? "";
   const targetDomain = searchParams.get("targetDomain") ?? "your-site";
+  const prefillName = searchParams.get("name") ?? "";
+  const prefillEmail = searchParams.get("email") ?? "";
+  const prefillPhone = searchParams.get("phone") ?? "";
+  const prefillCompany = searchParams.get("company") ?? "";
 
   const [form, setForm] = useState<FormState>({
-    name: "",
-    email: "",
-    phone: "",
-    company: "",
+    name: prefillName,
+    email: prefillEmail,
+    phone: prefillPhone,
+    company: prefillCompany,
     notes: "",
   });
   const [status, setStatus] = useState<SubmitState>("idle");
