@@ -6,13 +6,8 @@
 // Uses glassmorphism + heavy shadow, red-to-green gradient urgency
 // =============================================================================
 
-import { useEffect, useState } from "react";
-import {
-  buildGetStartedUrl,
-  getAuditFunnelProperties,
-  getGetStartedBaseUrl,
-} from "@/lib/analytics/audit-funnel";
-import { trackEvent } from "@/lib/analytics/track-event";
+import { useOnboardingTheme } from "@/app/get-started/theme-context";
+import { FixRankingsModal } from "./fix-rankings-modal";
 
 interface BuyNowCtaProps {
   auditId: string;
@@ -79,43 +74,23 @@ export function BuyNowCta({
   grade,
   compact = false,
 }: BuyNowCtaProps) {
+  const { theme } = useOnboardingTheme();
+  const isLight = theme === "light";
   const msg = getScoreMessage(score, grade);
-  const [ctaUrl, setCtaUrl] = useState(
-    `/get-started?tier=standard&auditId=${auditId}`,
-  );
   const isUrgent = grade === "D" || grade === "F" || grade === "C";
   const accentColor = isUrgent ? "#EF4444" : "#2563EB";
-
-  useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    setCtaUrl(
-      buildGetStartedUrl(getGetStartedBaseUrl(), searchParams, {
-        tier: "standard",
-        auditId,
-      }),
-    );
-  }, [auditId]);
-
-  const trackClick = (variant: "compact" | "full") => {
-    const searchParams = new URLSearchParams(window.location.search);
-
-    trackEvent("audit_report_cta_clicked", {
-      ...getAuditFunnelProperties(searchParams, auditId),
-      cta: variant === "compact" ? "buy_now_compact" : "buy_now_full",
-      destination: ctaUrl,
-      targetDomain,
-      score,
-      grade,
-    });
-  };
 
   // ── Compact inline button ────────────────────────────────────────────────
   if (compact) {
     return (
-      <a
-        href={ctaUrl}
-        onClick={() => trackClick("compact")}
-        style={{
+      <FixRankingsModal
+        auditId={auditId}
+        score={score}
+        grade={grade}
+        targetDomain={targetDomain}
+        ctaName="buy_now_compact"
+        triggerLabel="🚀 Fix My Rankings — Start Today"
+        triggerStyle={{
           display: "inline-flex",
           alignItems: "center",
           gap: 8,
@@ -128,11 +103,10 @@ export function BuyNowCta({
           fontWeight: 700,
           boxShadow: "0 4px 20px rgba(37,99,235,0.45)",
           whiteSpace: "nowrap",
+          border: "none",
+          cursor: "pointer",
         }}
-      >
-        <span>🚀</span>
-        <span>Fix My Rankings — Start Today</span>
-      </a>
+      />
     );
   }
 
@@ -140,13 +114,17 @@ export function BuyNowCta({
   return (
     <div
       style={{
-        background:
-          "linear-gradient(135deg, rgba(37,99,235,0.15) 0%, rgba(15,15,20,0.95) 60%, rgba(239,68,68,0.08) 100%)",
-        border: "1px solid rgba(37,99,235,0.35)",
+        background: isLight
+          ? "linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(219,234,254,0.92) 100%)"
+          : "linear-gradient(135deg, rgba(37,99,235,0.15) 0%, rgba(15,15,20,0.95) 60%, rgba(239,68,68,0.08) 100%)",
+        border: isLight
+          ? "1px solid rgba(37,99,235,0.2)"
+          : "1px solid rgba(37,99,235,0.35)",
         borderRadius: 16,
         overflow: "hidden",
-        boxShadow:
-          "0 8px 40px rgba(37,99,235,0.2), 0 0 0 1px rgba(255,255,255,0.05)",
+        boxShadow: isLight
+          ? "0 8px 34px rgba(15,23,42,0.12)"
+          : "0 8px 40px rgba(37,99,235,0.2), 0 0 0 1px rgba(255,255,255,0.05)",
       }}
     >
       {/* Top urgency bar */}
@@ -188,7 +166,7 @@ export function BuyNowCta({
               margin: "0 0 8px",
               fontSize: "clamp(1.1rem, 3vw, 1.5rem)",
               fontWeight: 800,
-              color: "#ffffff",
+              color: isLight ? "#0f172a" : "#ffffff",
               lineHeight: 1.25,
             }}
           >
@@ -198,7 +176,7 @@ export function BuyNowCta({
             style={{
               margin: 0,
               fontSize: "0.88rem",
-              color: "rgba(255,255,255,0.6)",
+              color: isLight ? "#334155" : "rgba(255,255,255,0.6)",
               lineHeight: 1.5,
             }}
           >
@@ -213,10 +191,12 @@ export function BuyNowCta({
             alignItems: "center",
             gap: 12,
             padding: "12px 16px",
-            background: "rgba(255,255,255,0.05)",
+            background: isLight ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.05)",
             borderRadius: 10,
             marginBottom: 20,
-            border: "1px solid rgba(255,255,255,0.08)",
+            border: isLight
+              ? "1px solid rgba(15,23,42,0.12)"
+              : "1px solid rgba(255,255,255,0.08)",
           }}
         >
           <div
@@ -242,7 +222,7 @@ export function BuyNowCta({
               style={{
                 fontSize: "0.82rem",
                 fontWeight: 700,
-                color: "#ffffff",
+                color: isLight ? "#0f172a" : "#ffffff",
                 marginBottom: 2,
               }}
             >
@@ -251,7 +231,7 @@ export function BuyNowCta({
             <div
               style={{
                 fontSize: "0.75rem",
-                color: "rgba(255,255,255,0.45)",
+                color: isLight ? "#475569" : "rgba(255,255,255,0.45)",
               }}
             >
               {score < 50
@@ -295,7 +275,7 @@ export function BuyNowCta({
                     alignItems: "flex-start",
                     gap: 8,
                     fontSize: "0.8rem",
-                    color: "rgba(255,255,255,0.55)",
+                    color: isLight ? "#334155" : "rgba(255,255,255,0.55)",
                   }}
                 >
                   <span>{pp.icon}</span>
@@ -325,7 +305,7 @@ export function BuyNowCta({
                   key={i}
                   style={{
                     fontSize: "0.8rem",
-                    color: "rgba(255,255,255,0.7)",
+                    color: isLight ? "#1e293b" : "rgba(255,255,255,0.7)",
                   }}
                 >
                   {item}
@@ -338,8 +318,10 @@ export function BuyNowCta({
         {/* Pricing teaser */}
         <div
           style={{
-            background: "rgba(37,99,235,0.12)",
-            border: "1px solid rgba(37,99,235,0.3)",
+            background: isLight ? "rgba(37,99,235,0.08)" : "rgba(37,99,235,0.12)",
+            border: isLight
+              ? "1px solid rgba(37,99,235,0.22)"
+              : "1px solid rgba(37,99,235,0.3)",
             borderRadius: 10,
             padding: "14px 18px",
             marginBottom: 20,
@@ -354,7 +336,7 @@ export function BuyNowCta({
             <div
               style={{
                 fontSize: "0.72rem",
-                color: "rgba(255,255,255,0.4)",
+                color: isLight ? "#475569" : "rgba(255,255,255,0.4)",
                 marginBottom: 3,
               }}
             >
@@ -364,7 +346,7 @@ export function BuyNowCta({
               style={{
                 fontSize: "1.6rem",
                 fontWeight: 800,
-                color: "#ffffff",
+                color: isLight ? "#0f172a" : "#ffffff",
                 lineHeight: 1,
               }}
             >
@@ -373,7 +355,7 @@ export function BuyNowCta({
                 style={{
                   fontSize: "0.9rem",
                   fontWeight: 400,
-                  color: "rgba(255,255,255,0.4)",
+                  color: isLight ? "#64748b" : "rgba(255,255,255,0.4)",
                 }}
               >
                 /mo
@@ -383,7 +365,7 @@ export function BuyNowCta({
           <div
             style={{
               fontSize: "0.78rem",
-              color: "rgba(255,255,255,0.5)",
+              color: isLight ? "#475569" : "rgba(255,255,255,0.5)",
               maxWidth: 240,
             }}
           >
@@ -392,15 +374,20 @@ export function BuyNowCta({
         </div>
 
         {/* CTA Button */}
-        <a
-          href={ctaUrl}
-          onClick={() => trackClick("full")}
-          style={{
+        <FixRankingsModal
+          auditId={auditId}
+          score={score}
+          grade={grade}
+          targetDomain={targetDomain}
+          ctaName="buy_now_full"
+          triggerLabel="🚀 Fix My Rankings — Start Today →"
+          triggerStyle={{
             display: "block",
+            width: "100%",
             padding: "16px 24px",
             background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
             color: "#ffffff",
-            textDecoration: "none",
+            border: "none",
             borderRadius: 12,
             fontSize: "1rem",
             fontWeight: 800,
@@ -408,21 +395,9 @@ export function BuyNowCta({
             boxShadow:
               "0 6px 30px rgba(37,99,235,0.5), inset 0 1px 0 rgba(255,255,255,0.15)",
             letterSpacing: "0.01em",
-            transition: "transform 0.15s ease, box-shadow 0.15s ease",
+            cursor: "pointer",
           }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "translateY(-2px)";
-            e.currentTarget.style.boxShadow =
-              "0 10px 40px rgba(37,99,235,0.6), inset 0 1px 0 rgba(255,255,255,0.15)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "translateY(0)";
-            e.currentTarget.style.boxShadow =
-              "0 6px 30px rgba(37,99,235,0.5), inset 0 1px 0 rgba(255,255,255,0.15)";
-          }}
-        >
-          🚀 Fix My Rankings — Start Today →
-        </a>
+        />
 
         {/* Social proof */}
         <div
@@ -430,7 +405,7 @@ export function BuyNowCta({
             marginTop: 14,
             textAlign: "center",
             fontSize: "0.75rem",
-            color: "rgba(255,255,255,0.35)",
+            color: isLight ? "#475569" : "rgba(255,255,255,0.35)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",

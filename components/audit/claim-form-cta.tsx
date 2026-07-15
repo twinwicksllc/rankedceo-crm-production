@@ -43,6 +43,7 @@ interface FormState {
 }
 
 type SubmitStatus = "idle" | "submitting" | "success" | "error";
+type ClaimChoice = "new_website" | "optimize_existing";
 
 // ---------------------------------------------------------------------------
 // Phone formatting helpers
@@ -98,7 +99,8 @@ export function ClaimFormCta({
   const [status, setStatus] = useState<SubmitStatus>("idle");
   const [error, setError] = useState("");
   const [cta, setCta] = useState("");
-  const [optimizationRequested, setOptimizationRequested] = useState(false);
+  const [choiceModalOpen, setChoiceModalOpen] = useState(false);
+  const [pendingChoice, setPendingChoice] = useState<ClaimChoice | null>(null);
   const isUrgent = grade === "D" || grade === "F" || grade === "C";
 
   useEffect(() => {
@@ -125,11 +127,11 @@ export function ClaimFormCta({
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!isFormValid) return;
-
-    setStatus("submitting");
+  const submitLead = async (choice: ClaimChoice) => {
+    setPendingChoice(choice);
+    if (choice === "new_website") {
+      setStatus("submitting");
+    }
     setError("");
 
     try {
@@ -144,7 +146,22 @@ export function ClaimFormCta({
         company: form.company,
         score,
         grade,
+        selection: choice,
       });
+
+      trackEvent("audit_claim_path_selected", {
+        ...getAuditFunnelProperties(searchParams, auditId),
+        score,
+        grade,
+        selection: choice,
+      });
+
+      if (choice === "optimize_existing") {
+        router.push(
+          `/audit/optimize-existing?auditId=${encodeURIComponent(auditId)}&targetDomain=${encodeURIComponent(targetDomain)}&name=${encodeURIComponent(form.name)}&email=${encodeURIComponent(form.email)}&phone=${encodeURIComponent(form.phone)}&company=${encodeURIComponent(form.company)}`,
+        );
+        return;
+      }
 
       // Call /api/audit/leads to capture the lead
       const res = await fetch("/api/audit/leads", {
@@ -157,7 +174,7 @@ export function ClaimFormCta({
           phone: form.phone,
           company: form.company,
           target_url: targetDomain, // API expects target_url
-          optimization_requested: optimizationRequested,
+          optimization_requested: false,
         }),
       });
 
@@ -165,10 +182,10 @@ export function ClaimFormCta({
         throw new Error("Failed to capture lead");
       }
 
-      setStatus("success");
+      if (choice === "new_website") {
+        setStatus("success");
 
-      // Auto-redirect to onboarding after 1.5s (only if NOT optimization)
-      if (!optimizationRequested) {
+        // Auto-redirect to onboarding after 1.5s
         setTimeout(() => {
           router.push(cta);
         }, 1500);
@@ -177,7 +194,16 @@ export function ClaimFormCta({
       setStatus("error");
       setError("Could not claim your spot. Please try again.");
       console.error("Claim form error:", err);
+    } finally {
+      setPendingChoice(null);
+      setChoiceModalOpen(false);
     }
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!isFormValid) return;
+    setChoiceModalOpen(true);
   };
 
   // ── Success state ──────────────────────────────────────────────────────
@@ -204,9 +230,7 @@ export function ClaimFormCta({
             color: isLight ? "#16a34a" : "#86efac",
           }}
         >
-          {optimizationRequested
-            ? "Optimization Request Sent!"
-            : "Claim Confirmed!"}
+          Claim Confirmed!
         </h3>
         <p
           style={{
@@ -216,9 +240,7 @@ export function ClaimFormCta({
             lineHeight: 1.5,
           }}
         >
-          {optimizationRequested
-            ? "An expert will review your report and reach out to optimize your current site."
-            : "Redirecting you to your personalized onboarding journey..."}
+          Redirecting you to your personalized onboarding journey...
         </p>
       </div>
     );
@@ -229,15 +251,15 @@ export function ClaimFormCta({
     <div
       style={{
         background: isLight
-          ? "linear-gradient(135deg, rgba(37,99,235,0.1) 0%, rgba(15,23,42,0.95) 60%, rgba(239,68,68,0.05) 100%)"
+          ? "linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(219,234,254,0.92) 100%)"
           : "linear-gradient(135deg, rgba(37,99,235,0.12) 0%, rgba(15,15,20,0.95) 60%, rgba(239,68,68,0.08) 100%)",
         border: isLight
-          ? "1px solid rgba(37,99,235,0.3)"
+          ? "1px solid rgba(37,99,235,0.2)"
           : "1px solid rgba(37,99,235,0.35)",
         borderRadius: 16,
         overflow: "hidden",
         boxShadow: isLight
-          ? "0 8px 40px rgba(37,99,235,0.12)"
+          ? "0 8px 34px rgba(15,23,42,0.12)"
           : "0 8px 40px rgba(37,99,235,0.2), 0 0 0 1px rgba(255,255,255,0.05)",
       }}
     >
@@ -290,7 +312,7 @@ export function ClaimFormCta({
             style={{
               margin: 0,
               fontSize: "0.88rem",
-              color: isLight ? "#666" : "rgba(255,255,255,0.6)",
+              color: isLight ? "#334155" : "rgba(255,255,255,0.6)",
               lineHeight: 1.5,
             }}
           >
@@ -435,47 +457,6 @@ export function ClaimFormCta({
             />
           </div>
 
-          {/* Optimization Request Checkbox */}
-          <div
-            style={{
-              marginTop: 16,
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              padding: "8px 12px",
-              background: isLight ? "rgba(37,99,235,0.05)" : "rgba(37,99,235,0.08)",
-              borderRadius: 8,
-              border: isLight ? "1px solid rgba(37,99,235,0.1)" : "1px solid rgba(37,99,235,0.15)",
-              cursor: "pointer",
-            }}
-            onClick={() => setOptimizationRequested(!optimizationRequested)}
-          >
-            <input
-              type="checkbox"
-              id="optimizeRequested"
-              checked={optimizationRequested}
-              onChange={(e) => setOptimizationRequested(e.target.checked)}
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                width: 18,
-                height: 18,
-                cursor: "pointer",
-              }}
-            />
-            <label
-              htmlFor="optimizeRequested"
-              style={{
-                fontSize: "0.82rem",
-                fontWeight: 600,
-                color: isLight ? "#1e40af" : "#93c5fd",
-                cursor: "pointer",
-                userSelect: "none",
-              }}
-            >
-              I want to optimize my current site instead of migrating to RankedCEO
-            </label>
-          </div>
-
           {/* Error message */}
           {error && (
             <div
@@ -534,19 +515,191 @@ export function ClaimFormCta({
                 : "0 4px 20px rgba(37,99,235,0.35)";
             }}
           >
-            {status === "submitting" ? (
-              optimizationRequested ? (
-                "⏳ Sending request..."
-              ) : (
-                "⏳ Claiming your spot..."
-              )
-            ) : optimizationRequested ? (
-              "🚀 Request Optimization Review"
-            ) : (
-              "🎯 Claim My Free Website Review"
-            )}
+            {status === "submitting"
+              ? "⏳ Claiming your spot..."
+              : "🎯 Claim My Free Website Review"}
           </button>
         </form>
+
+        {choiceModalOpen && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Choose your next step"
+            onClick={() => setChoiceModalOpen(false)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: isLight ? "rgba(15,23,42,0.45)" : "rgba(0,0,0,0.65)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 16,
+              zIndex: 1000,
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: "min(760px, 100%)",
+                borderRadius: 16,
+                border: isLight
+                  ? "1px solid rgba(15,23,42,0.12)"
+                  : "1px solid rgba(255,255,255,0.14)",
+                background: isLight
+                  ? "linear-gradient(160deg, #ffffff 0%, #eef4ff 100%)"
+                  : "linear-gradient(160deg, #0f172a 0%, #1e293b 100%)",
+                boxShadow: isLight
+                  ? "0 20px 60px rgba(15,23,42,0.25)"
+                  : "0 20px 60px rgba(2,6,23,0.6)",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  padding: "18px 20px",
+                  borderBottom: isLight
+                    ? "1px solid rgba(15,23,42,0.12)"
+                    : "1px solid rgba(255,255,255,0.1)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize: "0.75rem",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                      fontWeight: 700,
+                      color: isLight ? "#1d4ed8" : "#38bdf8",
+                    }}
+                  >
+                    Choose Your Path
+                  </div>
+                  <h3
+                    style={{
+                      margin: "6px 0 0",
+                      fontSize: "1.2rem",
+                      fontWeight: 800,
+                      color: isLight ? "#0f172a" : "#ffffff",
+                    }}
+                  >
+                    Do you want a new website or to optimize your existing one?
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setChoiceModalOpen(false)}
+                  aria-label="Close"
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    color: isLight ? "#0f172a" : "#ffffff",
+                    fontSize: "1.4rem",
+                    cursor: "pointer",
+                    lineHeight: 1,
+                  }}
+                >
+                  x
+                </button>
+              </div>
+
+              <div
+                style={{
+                  padding: 20,
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                  gap: 14,
+                }}
+              >
+                <button
+                  type="button"
+                  disabled={pendingChoice !== null}
+                  onClick={() => {
+                    void submitLead("new_website");
+                  }}
+                  style={{
+                    textAlign: "left",
+                    borderRadius: 12,
+                    border: isLight
+                      ? "1px solid rgba(37,99,235,0.25)"
+                      : "1px solid rgba(56,189,248,0.28)",
+                    background: isLight
+                      ? "rgba(37,99,235,0.06)"
+                      : "rgba(56,189,248,0.1)",
+                    padding: "16px 14px",
+                    cursor: "pointer",
+                    opacity: pendingChoice ? 0.75 : 1,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "0.86rem",
+                      fontWeight: 800,
+                      color: isLight ? "#1d4ed8" : "#38bdf8",
+                      marginBottom: 8,
+                    }}
+                  >
+                    1) Build Me a New Website
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "0.82rem",
+                      color: isLight ? "#334155" : "rgba(255,255,255,0.8)",
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Continue to onboarding and launch your new RankedCEO site.
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={pendingChoice !== null}
+                  onClick={() => {
+                    void submitLead("optimize_existing");
+                  }}
+                  style={{
+                    textAlign: "left",
+                    borderRadius: 12,
+                    border: isLight
+                      ? "1px solid rgba(245,158,11,0.3)"
+                      : "1px solid rgba(245,158,11,0.35)",
+                    background: isLight
+                      ? "rgba(245,158,11,0.08)"
+                      : "rgba(245,158,11,0.12)",
+                    padding: "16px 14px",
+                    cursor: "pointer",
+                    opacity: pendingChoice ? 0.75 : 1,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "0.86rem",
+                      fontWeight: 800,
+                      color: isLight ? "#b45309" : "#fbbf24",
+                      marginBottom: 8,
+                    }}
+                  >
+                    2) Optimize My Existing Site
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "0.82rem",
+                      color: isLight ? "#334155" : "rgba(255,255,255,0.8)",
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Send a direct optimization request to admins for your current site.
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Trust signals */}
         <div
@@ -556,7 +709,7 @@ export function ClaimFormCta({
             gap: 12,
             justifyContent: "center",
             fontSize: "0.75rem",
-            color: isLight ? "#999" : "rgba(255,255,255,0.4)",
+            color: isLight ? "#475569" : "rgba(255,255,255,0.4)",
           }}
         >
           <div>✅ Free 30-min Strategy Call</div>
