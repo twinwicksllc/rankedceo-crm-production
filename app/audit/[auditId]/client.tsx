@@ -7,12 +7,6 @@
 // =============================================================================
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import {
-  buildGetStartedUrl,
-  getAuditFunnelProperties,
-  getGetStartedBaseUrl,
-} from "@/lib/analytics/audit-funnel";
-import { trackEvent } from "@/lib/analytics/track-event";
 import type { AuditReportData } from "@/lib/waas/types";
 import type { WaasAuditRow as WaasAudit } from "@/lib/waas/supabase";
 import { ScoreGauge } from "@/components/audit/score-gauge";
@@ -25,6 +19,7 @@ import { ManualAuditState } from "@/components/audit/manual-audit-state";
 import { BuyNowCta } from "@/components/audit/buy-now-cta";
 import { ClaimFormCta } from "@/components/audit/claim-form-cta";
 import { EmailCaptureForm } from "@/components/audit/email-capture-form";
+import { FixRankingsModal } from "@/components/audit/fix-rankings-modal";
 import { AdvantagePointHeader } from "@/components/advantagepoint/header";
 import {
   OnboardingThemeProvider,
@@ -342,7 +337,13 @@ function AuditReportClientContent({
 
   // ── Full report ───────────────────────────────────────────────────────────
   return (
-    <PageShell auditId={audit.id} expiresAt={audit.expires_at}>
+    <PageShell
+      auditId={audit.id}
+      expiresAt={audit.expires_at}
+      score={score}
+      grade={grade}
+      targetDomain={targetDomain}
+    >
       <FullReport audit={audit} userEmail={userEmail} userName={userName} />
     </PageShell>
   );
@@ -2030,39 +2031,19 @@ function PageShell({
   children,
   auditId,
   expiresAt,
+  score,
+  grade,
+  targetDomain,
 }: {
   children: React.ReactNode;
   auditId?: string;
   expiresAt?: string;
+  score?: number;
+  grade?: "A" | "B" | "C" | "D" | "F";
+  targetDomain?: string;
 }) {
   const { theme } = useOnboardingTheme();
   const isLight = theme === "light";
-  const [ctaUrl, setCtaUrl] = useState(
-    auditId ? `/get-started?tier=standard&auditId=${auditId}` : "",
-  );
-
-  useEffect(() => {
-    if (!auditId) return;
-
-    const searchParams = new URLSearchParams(window.location.search);
-    setCtaUrl(
-      buildGetStartedUrl(getGetStartedBaseUrl(), searchParams, {
-        tier: "standard",
-        auditId,
-      }),
-    );
-  }, [auditId]);
-
-  const trackHeaderClick = () => {
-    if (!auditId) return;
-
-    const searchParams = new URLSearchParams(window.location.search);
-    trackEvent("audit_report_cta_clicked", {
-      ...getAuditFunnelProperties(searchParams, auditId),
-      cta: "report_header",
-      destination: ctaUrl,
-    });
-  };
 
   return (
     <div
@@ -2114,24 +2095,27 @@ function PageShell({
           ← Run Another Audit
         </a>
         {expiresAt && <ExpiryCountdown expiresAt={expiresAt} compact />}
-        {auditId && (
-          <a
-            href={ctaUrl}
-            onClick={trackHeaderClick}
-            style={{
+        {auditId && score != null && grade && (
+          <FixRankingsModal
+            auditId={auditId}
+            score={score}
+            grade={grade}
+            targetDomain={targetDomain}
+            ctaName="report_header"
+            triggerLabel="🚀 Fix My Rankings"
+            triggerStyle={{
               padding: "7px 16px",
               background: "linear-gradient(135deg, #06b6d4, #10b981)",
               color: "#ffffff",
-              textDecoration: "none",
+              border: "none",
               borderRadius: 8,
               fontSize: "0.78rem",
               fontWeight: 700,
               whiteSpace: "nowrap",
               boxShadow: "0 2px 12px rgba(6,182,212,0.35)",
+              cursor: "pointer",
             }}
-          >
-            🚀 Fix My Rankings
-          </a>
+          />
         )}
       </div>
 
