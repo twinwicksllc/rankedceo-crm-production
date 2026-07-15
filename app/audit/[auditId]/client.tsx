@@ -337,6 +337,19 @@ function AuditReportClientContent({
     );
   }
 
+  const report = audit.report_data as ExtendedReportData;
+  const summary = report.summary;
+  const score = summary
+    ? Math.round(
+        summary.performance_score * 0.4 +
+          summary.seo_score * 0.3 +
+          summary.mobile_score * 0.2 +
+          summary.accessibility_score * 0.1,
+      )
+    : 0;
+  const grade = report.grade ?? gradeFromScore(score);
+  const targetDomain = extractDomain(audit.target_url);
+
   // ── Full report ───────────────────────────────────────────────────────────
   return (
     <PageShell
