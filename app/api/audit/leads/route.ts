@@ -11,6 +11,7 @@ import {
   captureAuditLead,
   createWaasClient,
 } from "@/lib/waas/supabase";
+import { SendGridService } from "@/lib/services/sendgrid-service";
 import type { WaasAudit, WaasTenant } from "@/lib/waas/types";
 
 // ---------------------------------------------------------------------------
@@ -66,6 +67,7 @@ export async function POST(req: NextRequest) {
       utm_medium,
       utm_campaign,
       referrer_url,
+      optimization_requested,
     } = body;
 
     // Validate required fields
@@ -122,6 +124,7 @@ export async function POST(req: NextRequest) {
       utm_medium: utm_medium != null ? String(utm_medium) : null,
       utm_campaign: utm_campaign != null ? String(utm_campaign) : null,
       referrer_url: referrer_url != null ? String(referrer_url) : null,
+      optimization_requested: Boolean(optimization_requested),
     });
 
     if (error) {
@@ -135,6 +138,78 @@ export async function POST(req: NextRequest) {
     // Link lead_id back to audit
     if (leadId) {
       await updateAuditRecord(String(audit_id), { lead_id: leadId });
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // SEND NOTIFICATION TO ADMIN IF OPTIMIZATION REQUESTED
+    // ──────────────────────────────────────────────────────────────────────
+    if (optimization_requested) {
+      try {
+        const sendgridKey = process.env.SENDGRID_API_KEY;
+        const fromEmail =
+          process.env.SENDGRID_FROM_EMAIL ?? "notifications@rankedceo.com";
+        const adminEmail =
+          process.env.WAAS_ADMIN_EMAIL ?? "darrick@rankedceo.com";
+
+        if (sendgridKey) {
+          const sg = new SendGridService(sendgridKey);
+          const reportUrl = `${req.nextUrl.origin}/audit/${audit_id}`;
+          const pdfUrl = `${req.nextUrl.origin}/api/audit/${audit_id}/pdf`;
+
+          await sg.sendEmail({
+            to: adminEmail,
+            from: fromEmail,
+            fromName: "RankedCEO Audit Tool",
+            subject: `🚀 Optimization Request: ${company || name || email}`,
+            html: `
+              <div style="font-family: sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+                <div style="background: #0f172a; padding: 24px; text-align: center;">
+                  <h1 style="color: #ffffff; margin: 0; font-size: 20px;">Optimization Request Captured</h1>
+                </div>
+                <div style="padding: 32px;">
+                  <p style="font-size: 16px; margin-bottom: 24px;">A new prospect has requested <strong>site optimization</strong> for their existing property instead of a migration.</p>
+                  
+                  <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 24px;">
+                    <h3 style="margin-top: 0; font-size: 14px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Prospect Details</h3>
+                    <table style="width: 100%; border-collapse: collapse;">
+                      <tr>
+                        <td style="padding: 4px 0; color: #64748b; font-size: 14px; width: 100px;">Name:</td>
+                        <td style="padding: 4px 0; font-size: 14px; font-weight: 600;">${name || "—"}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 4px 0; color: #64748b; font-size: 14px;">Company:</td>
+                        <td style="padding: 4px 0; font-size: 14px; font-weight: 600;">${company || "—"}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 4px 0; color: #64748b; font-size: 14px;">Email:</td>
+                        <td style="padding: 4px 0; font-size: 14px; font-weight: 600;">${email}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 4px 0; color: #64748b; font-size: 14px;">Phone:</td>
+                        <td style="padding: 4px 0; font-size: 14px; font-weight: 600;">${normalizedPhone}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 4px 0; color: #64748b; font-size: 14px;">Target URL:</td>
+                        <td style="padding: 4px 0; font-size: 14px; font-weight: 600;">${target_url || "—"}</td>
+                      </tr>
+                    </table>
+                  </div>
+
+                  <div style="text-align: center; gap: 12px;">
+                    <a href="${reportUrl}" style="display: inline-block; padding: 12px 24px; background: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px;">View Live Report</a>
+                    <a href="${pdfUrl}" style="display: inline-block; padding: 12px 24px; background: #ffffff; color: #2563eb; text-decoration: none; border-radius: 6px; border: 1px solid #2563eb; font-weight: 600; font-size: 14px; margin-left: 10px;">Download PDF</a>
+                  </div>
+                </div>
+                <div style="background: #f1f5f9; padding: 16px; text-align: center; color: #94a3b8; font-size: 12px;">
+                  RankedCEO CRM · Automated Audit Notification
+                </div>
+              </div>
+            `,
+          });
+        }
+      } catch (emailErr) {
+        console.error("[/api/audit/leads] Admin notification error:", emailErr);
+      }
     }
 
     // ──────────────────────────────────────────────────────────────────────
