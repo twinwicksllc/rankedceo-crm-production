@@ -222,6 +222,10 @@ export async function POST(req: NextRequest) {
             o.title ?? o.description ?? "",
         );
       const targetDom = extractDomain(normalizedTarget);
+      const nationalCompetitorNote =
+        ((engineResult.reportData as Record<string, unknown>)
+          .gap_analysis as { nationalCompetitorNote?: string } | undefined)
+          ?.nationalCompetitorNote ?? null;
 
       sendAuditReportReadyEmail({
         recipientEmail: String(requestor_email),
@@ -233,6 +237,7 @@ export async function POST(req: NextRequest) {
         opportunities: opps,
         auditUrl: fullReportUrl,
         pdfUrl: fullPdfUrl,
+        nationalCompetitorNote,
       }).catch((err) =>
         console.error("[/api/audit/run] audit_report_ready email failed:", err),
       );

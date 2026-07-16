@@ -29,4 +29,5 @@ export interface NotificationTemplateData {
   pdfUrl?: string; // Direct PDF download link
   targetDomain?: string; // e.g. 'example.com'
   requestorName?: string; // e.g. 'Jane Smith'
+  nationalCompetitorNote?: string; // Caveat when tracked competitors aren't local
 }

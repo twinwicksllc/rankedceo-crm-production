@@ -47,6 +47,7 @@ export function auditReportReady(data: NotificationTemplateData): {
   const auditUrl = data.auditUrl ?? "#";
   const pdfUrl = data.pdfUrl ?? "#";
   const gColor = gradeColor(grade);
+  const nationalCompetitorNote = data.nationalCompetitorNote;
 
   const subject = `Your SEO audit for ${domain} is ready 📊`;
 
@@ -100,6 +101,18 @@ export function auditReportReady(data: NotificationTemplateData): {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
       ${opportunityRows}
     </table>
+    `
+        : ""
+    }
+
+    ${
+      nationalCompetitorNote
+        ? `
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;margin:0 0 24px;">
+      <p style="margin:0;font-size:12px;color:#92400e;line-height:1.5;">
+        🌍 ${nationalCompetitorNote}
+      </p>
+    </div>
     `
         : ""
     }

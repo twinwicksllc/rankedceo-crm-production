@@ -4,6 +4,7 @@ import {
   SERPER_TARGET_RESULTS,
   SerperOrganicResults,
   SerperSearchResult,
+  PlaceResult,
   extractDomain,
 } from "./types";
 import { normalizeSerperLocation, inferGlFromLocation } from "./location-utils";
@@ -163,4 +164,95 @@ export function findDomainRank(
   }
 
   return { position: null, title: "", snippet: "", link: "" };
+}
+
+// ---------------------------------------------------------------------------
+// Run a single Serper Places ("Local Pack") search
+// ---------------------------------------------------------------------------
+export async function serperPlacesSearch(
+  query: string,
+  location: string = "United States",
+): Promise<PlaceResult[] | null> {
+  const apiKey = process.env.SERPER_API_KEY;
+  if (!apiKey) {
+    console.warn("[Serper] SERPER_API_KEY not set — returning null (places)");
+    return null;
+  }
+
+  try {
+    const normalizedLocation = normalizeSerperLocation(location);
+    const gl = inferGlFromLocation(normalizedLocation);
+
+    auditDebug("places:start", { query, location: normalizedLocation, gl });
+
+    const response = await fetch("https://google.serper.dev/places", {
+      method: "POST",
+      headers: {
+        "X-API-KEY": apiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        q: query,
+        gl,
+        hl: "en",
+        location: normalizedLocation,
+      }),
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      console.error(
+        `[Serper] Places API error ${response.status}: ${await response.text()}`,
+      );
+      auditDebug("places:error", { query, status: response.status });
+      return null;
+    }
+
+    const parsed = (await response.json()) as { places?: PlaceResult[] };
+    const places = parsed.places ?? [];
+
+    auditDebug("places:success", { query, count: places.length });
+    return places;
+  } catch (err) {
+    console.error("[Serper] Places fetch error:", err);
+    auditDebug("places:fetch_error", {
+      query,
+      error: String(err).slice(0, 200),
+    });
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Match a target/competitor domain against a Places result set.
+// Places don't reliably expose a domain, so we match by "website" field
+// first, then fall back to a loose business-name token match against title.
+// ---------------------------------------------------------------------------
+export function findPlaceByDomain(
+  domain: string,
+  places: PlaceResult[],
+): PlaceResult | null {
+  const normalizedDomain = domain.replace(/^www\./, "").toLowerCase();
+
+  for (const place of places) {
+    if (!place.website) continue;
+    const placeDomain = extractDomain(place.website).toLowerCase();
+    if (
+      placeDomain === normalizedDomain ||
+      placeDomain.endsWith(`.${normalizedDomain}`)
+    ) {
+      return place;
+    }
+  }
+
+  const nameToken = normalizedDomain.split(".")[0].replace(/[-_]/g, " ").trim();
+  if (nameToken.length >= 3) {
+    for (const place of places) {
+      if (place.title?.toLowerCase().includes(nameToken)) {
+        return place;
+      }
+    }
+  }
+
+  return null;
 }

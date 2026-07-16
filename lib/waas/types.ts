@@ -410,6 +410,36 @@ export interface AuditProviderMeta {
   keyword_unranked_position_value?: number;
   keyword_serp_results_min?: number;
   keyword_serp_results_max?: number;
+  competitor_locality_summary?: {
+    total: number;
+    local: number;
+    national: number;
+    unknown: number;
+  };
+}
+
+export interface AuditLocalPackPlace {
+  position: number;
+  title: string;
+  address?: string;
+  rating?: number;
+  ratingCount?: number;
+  category?: string;
+}
+
+export interface AuditLocalPackCompetitor {
+  url: string;
+  domain: string;
+  position: number | null;
+  title: string | null;
+}
+
+export interface AuditLocalPack {
+  keyword: string;
+  location: string;
+  places: AuditLocalPackPlace[];
+  target: { position: number | null; title: string | null };
+  competitors: AuditLocalPackCompetitor[];
 }
 
 export interface AuditReportData {
@@ -422,6 +452,7 @@ export interface AuditReportData {
   opportunities?: AuditOpportunity[];
   provider_meta?: AuditProviderMeta;
   keyword_performance?: AuditKeywordPerformance;
+  local_pack?: AuditLocalPack | null;
   data_unavailable?: boolean;
   data_unavailable_reason?: string;
 }

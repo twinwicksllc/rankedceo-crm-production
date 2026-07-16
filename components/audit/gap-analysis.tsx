@@ -21,6 +21,7 @@ interface GapAnalysis {
   rankingGaps: KeywordGap[];
   summary: string;
   opportunityScore: number;
+  nationalCompetitorNote?: string;
 }
 
 interface GapAnalysisProps {
@@ -128,6 +129,36 @@ export function GapAnalysis({
           />
         </div>
       </div>
+
+      {/* National competitor caveat */}
+      {gapAnalysis.nationalCompetitorNote && (
+        <div
+          style={{
+            padding: "10px 14px",
+            borderRadius: 8,
+            background: isLight
+              ? "rgba(217,119,6,0.08)"
+              : "rgba(217,119,6,0.12)",
+            border: "1px solid rgba(217,119,6,0.3)",
+            marginBottom: 16,
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 8,
+          }}
+        >
+          <span style={{ fontSize: "0.85rem", flexShrink: 0 }}>🌍</span>
+          <p
+            style={{
+              margin: 0,
+              fontSize: "0.78rem",
+              color: isLight ? "rgba(15,23,42,0.76)" : "rgba(255,255,255,0.62)",
+              lineHeight: 1.4,
+            }}
+          >
+            {gapAnalysis.nationalCompetitorNote}
+          </p>
+        </div>
+      )}
 
       {/* Missing keywords */}
       {gapAnalysis.missingKeywords.length > 0 && (
