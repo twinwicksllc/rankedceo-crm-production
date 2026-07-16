@@ -7,6 +7,7 @@
 // =============================================================================
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { getAuditFunnelProperties } from "@/lib/analytics/audit-funnel";
 import { trackEvent } from "@/lib/analytics/track-event";
 import type { AuditReportData } from "@/lib/waas/types";
@@ -468,6 +469,7 @@ function FullReport({
         summary={summary}
         completedAt={audit.completed_at}
         maxTrackedPosition={maxTrackedPosition}
+        audit={audit}
       />
 
       {/* ── LEADERBOARD ───────────────────────────────────────────────────── */}
@@ -674,6 +676,7 @@ function HeroSection({
   summary,
   completedAt,
   maxTrackedPosition,
+  audit,
 }: {
   targetDomain: string;
   targetUrl: string;
@@ -683,9 +686,12 @@ function HeroSection({
   summary?: AuditReportData["summary"];
   completedAt: string | null;
   maxTrackedPosition: number;
+  audit: WaasAudit;
 }) {
   const { theme } = useOnboardingTheme();
   const isLight = theme === "light";
+  const [forceRefreshLoading, setForceRefreshLoading] = useState(false);
+  const router = useRouter();
   const gradeColor = getGradeColor(grade);
   const scoreColor = getScoreColor(score);
   const isUrgent = score < 50;
@@ -700,6 +706,39 @@ function HeroSection({
     accessibilityScore * 0.1;
   const measuredKeywords = summary?.measured_keywords ?? 0;
   const evaluatedKeywords = summary?.evaluated_keywords ?? 0;
+
+  const handleForceRefresh = async () => {
+    setForceRefreshLoading(true);
+    try {
+      const response = await fetch("/api/audit/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          target_url: audit.target_url,
+          competitor_urls: audit.competitor_urls,
+          skip_cache: true,
+        }),
+      });
+
+      const data = (await response.json()) as {
+        audit_id?: string;
+        error?: string;
+      };
+
+      if (!response.ok) {
+        console.error("Force refresh failed:", data.error);
+        setForceRefreshLoading(false);
+        return;
+      }
+
+      if (data.audit_id) {
+        router.push(`/audit/${data.audit_id}`);
+      }
+    } catch (err) {
+      console.error("Force refresh error:", err);
+      setForceRefreshLoading(false);
+    }
+  };
 
   return (
     <div
@@ -752,23 +791,64 @@ function HeroSection({
         >
           RankedCEO · Surface Audit Report
         </div>
-        {completedAt && (
-          <div
+        <div
+          style={{
+            display: "flex",
+            gap: 12,
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          {completedAt && (
+            <div
+              style={{
+                fontSize: "0.72rem",
+                color: isLight ? "rgba(15,23,42,0.4)" : "rgba(255,255,255,0.3)",
+              }}
+            >
+              Generated{" "}
+              {new Date(completedAt).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+              })}
+            </div>
+          )}
+          <button
+            onClick={handleForceRefresh}
+            disabled={forceRefreshLoading}
             style={{
+              padding: "6px 12px",
+              background: forceRefreshLoading
+                ? "rgba(100,116,139,0.3)"
+                : "rgba(37,99,235,0.15)",
+              border: "1px solid rgba(37,99,235,0.3)",
+              color: "#2563eb",
+              borderRadius: 6,
               fontSize: "0.72rem",
-              color: isLight ? "rgba(15,23,42,0.4)" : "rgba(255,255,255,0.3)",
+              fontWeight: 600,
+              cursor: forceRefreshLoading ? "not-allowed" : "pointer",
+              opacity: forceRefreshLoading ? 0.6 : 1,
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              if (!forceRefreshLoading) {
+                (e.target as HTMLButtonElement).style.background =
+                  "rgba(37,99,235,0.25)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!forceRefreshLoading) {
+                (e.target as HTMLButtonElement).style.background =
+                  "rgba(37,99,235,0.15)";
+              }
             }}
           >
-            Generated{" "}
-            {new Date(completedAt).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-            })}
-          </div>
-        )}
+            {forceRefreshLoading ? "🔄 Refreshing..." : "🔄 Force Refresh"}
+          </button>
+        </div>
       </div>
 
       {/* Transparent score formula */}

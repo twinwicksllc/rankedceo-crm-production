@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
       requestor_phone,
       requestor_company,
       audit_id,
+      skip_cache,
     } = body;
 
     // ── Validate inputs ──────────────────────────────────────────────────────
@@ -70,8 +71,9 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Check cache for recent identical audit (within 24 hours) ──────────────
+    // Skip if skip_cache flag is explicitly set (allows force refresh)
     const { getRecentAuditRecord } = await import("@/lib/waas/supabase");
-    if (!audit_id && process.env.WAAS_SEO_PROVIDER !== 'mock') {
+    if (!skip_cache && !audit_id && process.env.WAAS_SEO_PROVIDER !== 'mock') {
       const cachedId = await getRecentAuditRecord(normalizedTarget, normalizedCompetitors);
       if (cachedId) {
         console.log(`[WaaS] Returning cached audit ${cachedId} for ${normalizedTarget}`);
