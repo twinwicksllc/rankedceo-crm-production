@@ -179,11 +179,14 @@ export async function generateWithGemini(
 
   const prompt = [
     "Analyze this business website context and produce realistic local SEO keywords.",
-    "Use website evidence first (title, services, address/location clues).",
+    "CRITICAL: First infer the CUSTOMER-FACING business type, not the product name.",
+    "Example: If they sell 'AI web applications', the business type is 'web app developer' or 'custom software developer', NOT 'AI applications'.",
+    "Use website evidence first (title, services, address/location clues) to infer what customers would call this business.",
     "Return ONLY valid JSON with this exact shape:",
     '{"industry":"string|null","location":"City, ST or null","address":"full address or null","keywords":["... exactly 5 strings ..."]}',
     "Keyword rules:",
-    "- high-intent LOCAL service keywords that reflect how real nearby customers search",
+    "- high-intent LOCAL service keywords using CUSTOMER language for what this business does",
+    "- infer realistic job titles / business types (e.g., 'plumber', 'web developer', 'graphic designer', 'pet sitter')",
     "- use patterns like '[service] near me', 'best [service] in [City]', '[service] [City]'",
     "- include city-level geographic intent; avoid county/regional phrasing unless no city is available",
     "- at least 2 keywords must include either 'near me' or the detected city name",
@@ -254,9 +257,12 @@ export async function generateWithPerplexity(
 
   const prompt = [
     "Use the provided website content to infer business type and local market.",
+    "CRITICAL: Infer the CUSTOMER-FACING business type, not technical product names.",
+    "Example: If they sell 'AI web applications', the business type is 'web app developer' or 'custom software developer', NOT 'AI applications'.",
     "Return JSON only with keys industry, location, address, keywords.",
-    "keywords must contain exactly 5 realistic local SEO queries.",
+    "keywords must contain exactly 5 realistic local SEO queries using CUSTOMER language.",
     "Keyword rules:",
+    "- use realistic customer-facing business titles (e.g., 'plumber', 'web developer', 'graphic designer', 'pet sitter')",
     "- prioritize city-level local intent and customer language over enterprise jargon",
     "- include patterns like '[service] near me', 'best [service] in [City]', '[service] [City]'",
     "- at least 2 keywords must contain either 'near me' or the detected city",
