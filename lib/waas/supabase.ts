@@ -391,6 +391,50 @@ export async function resolveTenantByHostname(
 // ExactMatch type inference issues. Read operations use the typed client.
 // ---------------------------------------------------------------------------
 
+export async function getRecentAuditRecord(
+  targetUrl: string,
+  competitorUrls: string[],
+): Promise<string | null> {
+  try {
+    const client = getRawAdminClient();
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    
+    // Convert to sorted array strings to compare exactly (or reasonably close)
+    const { data, error } = await client
+      .from("audits")
+      .select("id, competitor_urls")
+      .eq("target_url", targetUrl)
+      .eq("status", "completed")
+      .gte("created_at", twentyFourHoursAgo)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    if (error) {
+      console.error("[WaaS] getRecentAuditRecord error:", error.message);
+      return null;
+    }
+
+    if (!data || data.length === 0) return null;
+
+    // Verify competitors match
+    const sortedTargetComps = [...competitorUrls].sort();
+    for (const record of data) {
+      const dbComps = record.competitor_urls || [];
+      const sortedDbComps = [...dbComps].sort();
+      if (
+        sortedTargetComps.length === sortedDbComps.length &&
+        sortedTargetComps.every((val, index) => val === sortedDbComps[index])
+      ) {
+        return record.id;
+      }
+    }
+    return null;
+  } catch (err) {
+    console.error("[WaaS] getRecentAuditRecord exception:", err);
+    return null;
+  }
+}
+
 export async function createAuditRecord(
   insert: WaasAuditInsert,
 ): Promise<string | null> {

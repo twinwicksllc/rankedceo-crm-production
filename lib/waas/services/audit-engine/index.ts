@@ -4,6 +4,7 @@ import {
   extractDomain,
   type SearchRankReport,
 } from "../serper";
+import { extractCityFromAddress } from "../serper/location-utils";
 import { generateIndustryKeywordPlan } from "../keyword-generator";
 import {
   runPageSpeedAudit,
@@ -41,8 +42,9 @@ export async function runFullAudit(
   industry: string | null = null,
   location: string | null = null,
 ): Promise<AuditEngineResult> {
+  // Default to serper for live results
   const provider = (process.env.WAAS_SEO_PROVIDER ??
-    "mock") as AuditSeoProvider;
+    "serper") as AuditSeoProvider;
   const usingLiveProviders = provider !== "mock";
   const keywordPlan = await generateIndustryKeywordPlan(
     targetUrl,
@@ -52,6 +54,9 @@ export async function runFullAudit(
   );
   const detectedLocation =
     location ?? keywordPlan.detectedLocation ?? "Chicago, IL";
+  const searchLocation =
+    extractCityFromAddress(keywordPlan.detectedAddress ?? null) ??
+    detectedLocation;
   const keywords = keywordPlan.keywords;
   const totalKeywords = keywords.length;
   let manualReview = false;
@@ -64,6 +69,7 @@ export async function runFullAudit(
     industryHint: industry,
     locationHint: location,
     detectedLocation,
+    searchLocation,
     keywordProvider: keywordPlan.provider,
     keywords,
   });
@@ -77,7 +83,7 @@ export async function runFullAudit(
           targetUrl,
           competitorUrls,
           keyword,
-          detectedLocation,
+          searchLocation,
         ),
       );
     }
@@ -87,7 +93,7 @@ export async function runFullAudit(
   } else {
     const searchResults = await Promise.allSettled(
       keywords.map((keyword) =>
-        getSearchRankings(targetUrl, competitorUrls, keyword, detectedLocation),
+        getSearchRankings(targetUrl, competitorUrls, keyword, searchLocation),
       ),
     );
 
@@ -211,6 +217,7 @@ export async function runFullAudit(
     ...({
       keyword_provider: keywordPlan.provider,
       keyword_detected_location: keywordPlan.detectedLocation,
+      keyword_search_location: searchLocation,
       keyword_detected_industry: keywordPlan.detectedIndustry,
       keyword_detected_address: keywordPlan.detectedAddress,
       keyword_confidence_score: keywordPlan.confidenceScore,
@@ -254,7 +261,7 @@ export async function runFullAudit(
       reportData: guardedReport,
       provider,
       keywordsUsed: keywords,
-      locationDetected: detectedLocation,
+      locationDetected: searchLocation,
       manualReview,
       manualReviewNote,
     };
@@ -413,7 +420,7 @@ export async function runFullAudit(
     reportData,
     provider,
     keywordsUsed: keywords,
-    locationDetected: detectedLocation,
+    locationDetected: searchLocation,
     manualReview,
     manualReviewNote,
   };
