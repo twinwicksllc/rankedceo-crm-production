@@ -7,9 +7,16 @@ import {
   SerperSearchResult,
   SearchRankReport,
   RankResult,
+  PlaceResult,
+  LocalPackReport,
 } from "./types";
 import { buildQueryCandidates } from "./location-utils";
-import { serperSearch, findDomainRank } from "./search-client";
+import {
+  serperSearch,
+  findDomainRank,
+  serperPlacesSearch,
+  findPlaceByDomain,
+} from "./search-client";
 
 // ---------------------------------------------------------------------------
 // Main: Get search rankings for target + competitors
@@ -133,6 +140,62 @@ export async function getSearchRankings(
     },
     competitorResults,
     allResults: bestOrganic.slice(0, 10), // top 10 for display
+    searchedAt: new Date().toISOString(),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Main: Get Google Maps "Local Pack" rankings for target + competitors
+// Cost note: this hits Serper's /places endpoint, a separate billed call
+// from /search — callers should gate this behind LOCAL_PACK_ENABLED.
+// ---------------------------------------------------------------------------
+export async function getLocalPackRankings(
+  targetUrl: string,
+  competitorUrls: string[],
+  keyword: string,
+  location: string = "Chicago, IL",
+): Promise<LocalPackReport | null> {
+  const targetDomain = extractDomain(targetUrl);
+
+  auditDebug("places:keyword_start", { keyword, location, targetDomain });
+
+  const places = await serperPlacesSearch(keyword, location);
+  if (!places || places.length === 0) {
+    auditDebug("places:keyword_empty", { keyword, location });
+    return null;
+  }
+
+  const targetPlace = findPlaceByDomain(targetDomain, places);
+  const competitorResults = competitorUrls.map((url) => {
+    const domain = extractDomain(url);
+    const place = findPlaceByDomain(domain, places);
+    return {
+      url,
+      domain,
+      position: place?.position ?? null,
+      title: place?.title ?? null,
+    };
+  });
+
+  auditDebug("places:keyword_final", {
+    keyword,
+    placesReturned: places.length,
+    targetPosition: targetPlace?.position ?? null,
+    competitorMatchedCount: competitorResults.filter(
+      (result) => result.position !== null,
+    ).length,
+  });
+
+  return {
+    keyword,
+    location,
+    queryUsed: keyword,
+    places: places.slice(0, 10),
+    target: {
+      position: targetPlace?.position ?? null,
+      title: targetPlace?.title ?? null,
+    },
+    competitorResults,
     searchedAt: new Date().toISOString(),
   };
 }
@@ -270,14 +333,96 @@ export function getMockSearchRankings(
   };
 }
 
+// ---------------------------------------------------------------------------
+// MOCK: Local Pack (deterministic, matches getMockSearchRankings' pattern)
+// ---------------------------------------------------------------------------
+export function getMockLocalPackRankings(
+  targetUrl: string,
+  competitorUrls: string[],
+  keyword: string,
+  location: string,
+): LocalPackReport {
+  const targetDomain = extractDomain(targetUrl);
+  const targetHash = stringHash(targetDomain + keyword + "places");
+  // ~1 in 5 chance the target doesn't appear in the local pack at all.
+  const targetPosition = targetHash % 5 === 0 ? null : (targetHash % 3) + 1;
+
+  const competitorResults = competitorUrls.map((url) => {
+    const domain = extractDomain(url);
+    const hash = stringHash(domain + keyword + "places");
+    const position = hash % 4 === 0 ? null : (hash % 3) + 1;
+    return {
+      url,
+      domain,
+      position,
+      title: position !== null ? `${domain} - Local` : null,
+    };
+  });
+
+  const rankedCompetitors: Array<{
+    position: number;
+    title: string;
+    url: string;
+  }> = [];
+  for (const c of competitorResults) {
+    if (c.position !== null) {
+      rankedCompetitors.push({
+        position: c.position,
+        title: c.title ?? `${c.domain} - Local`,
+        url: c.url,
+      });
+    }
+  }
+
+  const places: PlaceResult[] = [
+    ...(targetPosition !== null
+      ? [
+          {
+            position: targetPosition,
+            title: `${targetDomain} - Home Services`,
+            address: location,
+            rating: 4.5,
+            ratingCount: 42,
+            category: "Local Business",
+            website: targetUrl,
+          },
+        ]
+      : []),
+    ...rankedCompetitors.map((c) => ({
+      position: c.position,
+      title: c.title,
+      address: location,
+      rating: 4.3,
+      ratingCount: 30,
+      category: "Local Business",
+      website: c.url,
+    })),
+  ].sort((a, b) => a.position - b.position);
+
+  return {
+    keyword,
+    location,
+    queryUsed: keyword,
+    places,
+    target: {
+      position: targetPosition,
+      title: targetPosition !== null ? `${targetDomain} - Home Services` : null,
+    },
+    competitorResults,
+    searchedAt: new Date().toISOString(),
+  };
+}
+
 // Barrel re-exports
 export type {
   SerperSearchResult,
   SerperOrganicResults,
   RankResult,
   SearchRankReport,
+  PlaceResult,
+  LocalPackReport,
 } from "./types";
-export { extractDomain } from "./types";
+export { extractDomain, LOCAL_PACK_ENABLED } from "./types";
 export {
   normalizeSerperLocation,
   inferGlFromLocation,
@@ -287,4 +432,9 @@ export {
   stripLocationFromKeyword,
   buildQueryCandidates,
 } from "./location-utils";
-export { serperSearch, findDomainRank } from "./search-client";
+export {
+  serperSearch,
+  findDomainRank,
+  serperPlacesSearch,
+  findPlaceByDomain,
+} from "./search-client";

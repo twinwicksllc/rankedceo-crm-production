@@ -188,6 +188,23 @@ export async function GET(_req: NextRequest, context: RequestContext) {
     const leaderboard = Array.isArray((report as any).leaderboard)
       ? ((report as any).leaderboard as any[])
       : [];
+    const gapAnalysis = (report as any).gap_analysis as
+      | { nationalCompetitorNote?: string }
+      | undefined;
+    const localPack = (report as any).local_pack as
+      | {
+          keyword: string;
+          places: Array<{
+            position: number;
+            title: string;
+            address?: string;
+            rating?: number;
+            ratingCount?: number;
+          }>;
+          target: { position: number | null; title: string | null };
+        }
+      | null
+      | undefined;
     const opportunities = report.opportunities ?? [];
     const techIssues = report.technical_issues ?? [];
     const completedDate = audit.completed_at
@@ -400,6 +417,75 @@ export async function GET(_req: NextRequest, context: RequestContext) {
             align: "right",
           });
 
+        doc.moveDown(0.45);
+      });
+
+      if (gapAnalysis?.nationalCompetitorNote) {
+        doc.moveDown(0.25);
+        doc
+          .fillColor("#d97706")
+          .fontSize(8)
+          .font("Helvetica")
+          .text(`🌍  ${gapAnalysis.nationalCompetitorNote}`, MARGIN, (doc as any).y, {
+            width: CONTENT_W,
+          });
+        doc.moveDown(0.4);
+      }
+
+      doc.moveDown(0.5);
+      hr(doc);
+      doc.moveDown(0.75);
+    }
+
+    // ==========================================================================
+    // SECTION 4b — GOOGLE MAPS LOCAL PACK
+    // ==========================================================================
+    if (localPack && localPack.places.length > 0) {
+      sectionHeader(doc, "Google Maps Visibility", "📍");
+
+      const inPack = localPack.target.position !== null;
+      doc
+        .fillColor(inPack ? "#16a34a" : "#dc2626")
+        .fontSize(8)
+        .font("Helvetica-Bold")
+        .text(
+          inPack
+            ? `${targetDomain} appears in the Local Pack at position #${localPack.target.position}`
+            : `${targetDomain} does not currently appear in the Google Maps Local Pack for "${localPack.keyword}"`,
+          MARGIN,
+          (doc as any).y,
+          { width: CONTENT_W },
+        );
+      doc.moveDown(0.4);
+
+      localPack.places.slice(0, 5).forEach((place) => {
+        const rowY = (doc as any).y;
+        const isTarget = place.title === localPack.target.title && inPack;
+        doc
+          .fillColor(isTarget ? "#1d4ed8" : "#94a3b8")
+          .fontSize(9)
+          .font("Helvetica-Bold")
+          .text(`#${place.position}`, MARGIN + 2, rowY, { width: 30 });
+        doc
+          .fillColor(isTarget ? "#0f172a" : "#334155")
+          .fontSize(9)
+          .font(isTarget ? "Helvetica-Bold" : "Helvetica")
+          .text(
+            isTarget ? `${place.title}  ← Your Site` : place.title,
+            MARGIN + 36,
+            rowY,
+            { width: CONTENT_W - 130 },
+          );
+        if (place.rating != null) {
+          doc
+            .fillColor("#d97706")
+            .fontSize(8)
+            .font("Helvetica")
+            .text(`★ ${place.rating}`, PAGE_WIDTH - MARGIN - 60, rowY, {
+              width: 60,
+              align: "right",
+            });
+        }
         doc.moveDown(0.45);
       });
 

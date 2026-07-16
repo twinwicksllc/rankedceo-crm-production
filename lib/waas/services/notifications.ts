@@ -394,6 +394,7 @@ export interface AuditReportReadyArgs {
   opportunities: string[];
   auditUrl: string;
   pdfUrl: string;
+  nationalCompetitorNote?: string | null;
   /** Prevent duplicate sends (defaults to 72h window) */
   dedupWindowHours?: number;
 }
@@ -411,6 +412,7 @@ export async function sendAuditReportReadyEmail(
     opportunities,
     auditUrl,
     pdfUrl,
+    nationalCompetitorNote,
     dedupWindowHours = 72,
   } = args;
 
@@ -434,6 +436,7 @@ export async function sendAuditReportReadyEmail(
     topOpportunities: opportunities,
     auditUrl,
     pdfUrl,
+    nationalCompetitorNote: nationalCompetitorNote ?? undefined,
   };
   const { subject, html } = renderEmailTemplate("audit_report_ready", data);
 

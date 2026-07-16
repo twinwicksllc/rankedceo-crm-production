@@ -14,6 +14,7 @@ import type { WaasAuditRow as WaasAudit } from "@/lib/waas/supabase";
 import { ScoreGauge } from "@/components/audit/score-gauge";
 import { RankingLeaderboard } from "@/components/audit/ranking-leaderboard";
 import { GapAnalysis } from "@/components/audit/gap-analysis";
+import { LocalPackPanel } from "@/components/audit/local-pack-panel";
 import { CompetitorCard } from "@/components/audit/competitor-card";
 import { ExpiryCountdown } from "@/components/audit/expiry-countdown";
 import { ReportSkeleton } from "@/components/audit/report-skeleton";
@@ -38,6 +39,27 @@ interface ExtendedReportData extends AuditReportData {
   grade?: "A" | "B" | "C" | "D" | "F";
   page_speed_full?: PageSpeedFull;
   keywords_used?: string[];
+  local_pack?: LocalPackData | null;
+}
+
+interface LocalPackData {
+  keyword: string;
+  location: string;
+  places: Array<{
+    position: number;
+    title: string;
+    address?: string;
+    rating?: number;
+    ratingCount?: number;
+    category?: string;
+  }>;
+  target: { position: number | null; title: string | null };
+  competitors: Array<{
+    url: string;
+    domain: string;
+    position: number | null;
+    title: string | null;
+  }>;
 }
 
 interface KeywordProviderMeta {
@@ -66,6 +88,7 @@ interface GapAnalysis {
   rankingGaps: KeywordGap[];
   summary: string;
   opportunityScore: number;
+  nationalCompetitorNote?: string;
 }
 
 interface KeywordGap {
@@ -413,6 +436,7 @@ function FullReport({
   const pageSpeed = report.page_speed_full;
   const keywords = report.keywords_used ?? [];
   const competitors = audit.competitor_urls ?? [];
+  const localPack = report.local_pack;
 
   const primaryKeyword = keywords[0] ?? "your industry";
   const providerMeta = report.provider_meta as KeywordProviderMeta | undefined;
@@ -458,6 +482,16 @@ function FullReport({
             location={audit.location_detected ?? "your area"}
             maxTrackedPosition={maxTrackedPosition}
           />
+        </Section>
+      )}
+
+      {/* ── LOCAL PACK ────────────────────────────────────────────────────── */}
+      {localPack && (
+        <Section
+          title="📍 Google Maps Visibility"
+          subtitle={`Local Pack presence for "${localPack.keyword}"`}
+        >
+          <LocalPackPanel localPack={localPack} targetDomain={targetDomain} />
         </Section>
       )}
 

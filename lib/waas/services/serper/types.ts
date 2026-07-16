@@ -10,6 +10,12 @@ export const SERPER_TARGET_RESULTS = (() => {
   return Math.max(10, Math.min(100, parsed));
 })();
 
+// Google Maps "Local Pack" tracking via Serper's /places endpoint. Off by
+// default — this is a separate, additionally-billed Serper call — enable
+// explicitly once Places pricing/quota is confirmed.
+export const LOCAL_PACK_ENABLED =
+  process.env.WAAS_LOCAL_PACK_ENABLED === "true";
+
 export function auditDebug(event: string, payload: Record<string, unknown>) {
   if (!AUDIT_DEBUG) return;
   try {
@@ -52,6 +58,37 @@ export interface SearchRankReport {
   targetResult: RankResult;
   competitorResults: RankResult[];
   allResults: SerperSearchResult[];
+  searchedAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Google Maps Local Pack ("Places") types
+// ---------------------------------------------------------------------------
+export interface PlaceResult {
+  position: number;
+  title: string;
+  address?: string;
+  rating?: number;
+  ratingCount?: number;
+  category?: string;
+  cid?: string;
+  website?: string;
+}
+
+export interface LocalPackCompetitorResult {
+  url: string;
+  domain: string;
+  position: number | null;
+  title: string | null;
+}
+
+export interface LocalPackReport {
+  keyword: string;
+  location: string;
+  queryUsed: string;
+  places: PlaceResult[];
+  target: { position: number | null; title: string | null };
+  competitorResults: LocalPackCompetitorResult[];
   searchedAt: string;
 }
 

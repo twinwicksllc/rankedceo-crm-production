@@ -1,8 +1,12 @@
 import {
   getSearchRankings,
   getMockSearchRankings,
+  getLocalPackRankings,
+  getMockLocalPackRankings,
+  LOCAL_PACK_ENABLED,
   extractDomain,
   type SearchRankReport,
+  type LocalPackReport,
 } from "../serper";
 import { extractCityFromAddress } from "../serper/location-utils";
 import { generateIndustryKeywordPlan } from "../keyword-generator";
@@ -188,6 +192,31 @@ export async function runFullAudit(
     searchLocation,
   );
 
+  // Kick off Google Maps Local Pack tracking (if enabled) in parallel too.
+  // Only the primary keyword is checked to cap the added Serper /places cost.
+  const primaryKeyword = keywords[0];
+  const localPackPromise: Promise<LocalPackReport | null> =
+    LOCAL_PACK_ENABLED && primaryKeyword
+      ? provider === "mock"
+        ? Promise.resolve(
+            getMockLocalPackRankings(
+              targetUrl,
+              competitorUrls,
+              primaryKeyword,
+              searchLocation,
+            ),
+          )
+        : getLocalPackRankings(
+            targetUrl,
+            competitorUrls,
+            primaryKeyword,
+            searchLocation,
+          ).catch((err) => {
+            auditDebug("places:error", { error: String(err).slice(0, 200) });
+            return null;
+          })
+      : Promise.resolve(null);
+
   // ── 2. Run PageSpeed ────────────────────────────────────────────────────────────────────
   let pageSpeed: PageSpeedReport | null = null;
 
@@ -234,6 +263,37 @@ export async function runFullAudit(
     })),
   });
 
+  const localPack = await localPackPromise;
+  if (LOCAL_PACK_ENABLED) {
+    auditDebug("places:complete", {
+      available: localPack !== null,
+      targetPosition: localPack?.target.position ?? null,
+    });
+  }
+
+  const competitorLocalityByDomain = new Map<string, boolean | null>();
+  competitorUrls.forEach((url) => {
+    competitorLocalityByDomain.set(
+      extractDomain(url),
+      competitorLocality.get(url)?.isLocal ?? null,
+    );
+  });
+
+  const localityCounts = competitorUrls.reduce(
+    (acc, url) => {
+      const isLocal = competitorLocality.get(url)?.isLocal;
+      if (isLocal === true) acc.local += 1;
+      else if (isLocal === false) acc.national += 1;
+      else acc.unknown += 1;
+      return acc;
+    },
+    { local: 0, national: 0, unknown: 0 },
+  );
+  const competitorLocalitySummary = {
+    total: competitorUrls.length,
+    ...localityCounts,
+  };
+
   // Persist guard: only enter concierge/manual fallback when BOTH live dependencies fail.
   // If one provider succeeds, we still return a partial-but-actionable automated report.
   const dataUnavailable =
@@ -255,7 +315,11 @@ export async function runFullAudit(
     serpResultsReturned.length > 0 ? Math.max(...serpResultsReturned) : 0;
 
   // ── 3. Compute gap analysis ─────────────────────────────────────────────────────────────────
-  const gapAnalysis = computeGapAnalysis(targetUrl, rankReports);
+  const gapAnalysis = computeGapAnalysis(
+    targetUrl,
+    rankReports,
+    competitorLocalityByDomain,
+  );
   const leaderboard = buildLeaderboard(
     targetUrl,
     competitorUrls,
@@ -304,6 +368,7 @@ export async function runFullAudit(
       keyword_unranked_position_value: unrankedPositionValue,
       keyword_serp_results_min: serpResultsMin,
       keyword_serp_results_max: serpResultsMax,
+      competitor_locality_summary: competitorLocalitySummary,
     } as Record<string, unknown>),
   };
 
@@ -483,6 +548,15 @@ export async function runFullAudit(
       })) ?? []),
     ],
     provider_meta: providerMeta,
+    local_pack: localPack
+      ? {
+          keyword: localPack.keyword,
+          location: localPack.location,
+          places: localPack.places,
+          target: localPack.target,
+          competitors: localPack.competitorResults,
+        }
+      : null,
     // Extended data stored in report_data for the UI
     ...({
       leaderboard,
