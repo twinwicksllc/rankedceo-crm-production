@@ -58,6 +58,7 @@ interface LeaderboardEntry {
   bestPosition: number | null;
   isTarget: boolean;
   badge: string;
+  isLocal?: boolean | null;
 }
 
 interface GapAnalysis {

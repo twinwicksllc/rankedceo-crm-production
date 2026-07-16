@@ -354,6 +354,8 @@ export interface AuditCompetitor {
   keywords_ranking: number;
   estimated_traffic: number;
   top_keywords: string[];
+  is_local?: boolean | null;
+  competitor_detected_location?: string | null;
 }
 
 export type AuditIssueSeverity = "critical" | "warning" | "info";

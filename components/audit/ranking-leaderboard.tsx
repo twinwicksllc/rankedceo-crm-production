@@ -14,6 +14,7 @@ interface LeaderboardEntry {
   bestPosition: number | null;
   isTarget: boolean;
   badge: string;
+  isLocal?: boolean | null;
 }
 
 interface RankingLeaderboardProps {
@@ -194,6 +195,22 @@ function LeaderboardRow({ entry }: { entry: LeaderboardEntry }) {
               }}
             >
               Your Site
+            </span>
+          )}
+          {entry.isLocal === false && (
+            <span
+              style={{
+                fontSize: "0.65rem",
+                fontWeight: 700,
+                padding: "1px 6px",
+                borderRadius: 4,
+                background: "rgba(217,119,6,0.15)",
+                color: "#D97706",
+                border: "1px solid rgba(217,119,6,0.3)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              🌍 National
             </span>
           )}
         </div>

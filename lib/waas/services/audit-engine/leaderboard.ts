@@ -7,6 +7,7 @@ export interface LeaderboardEntry {
   bestPosition: number | null; // best Google position across all keywords
   isTarget: boolean;
   badge: string; // emoji badge
+  isLocal?: boolean | null; // null = unknown/unclassified, false = likely national
 }
 
 export interface KeywordResultSummary {
@@ -106,6 +107,7 @@ export function buildLeaderboard(
       bestPosition,
       isTarget: url === targetUrl,
       badge: "",
+      isLocal: undefined,
     };
   });
 
