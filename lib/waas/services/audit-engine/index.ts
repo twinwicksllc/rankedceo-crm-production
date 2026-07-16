@@ -6,6 +6,7 @@ import {
 } from "../serper";
 import { extractCityFromAddress } from "../serper/location-utils";
 import { generateIndustryKeywordPlan } from "../keyword-generator";
+import { collectSiteSignals } from "../keyword-generator/site-scraper";
 import {
   runPageSpeedAudit,
   getMockPageSpeedReport,
@@ -15,6 +16,55 @@ import type { AuditReportData, AuditSeoProvider } from "../../types";
 import { computeGapAnalysis } from "./gap-analysis";
 import { buildLeaderboard, computeKeywordPerformance } from "./leaderboard";
 import { computeOverallScore } from "./scoring";
+
+interface CompetitorLocality {
+  isLocal: boolean | null;
+  detectedLocation: string | null;
+}
+
+function extractCityToken(location: string | null): string | null {
+  if (!location) return null;
+  const city = location.split(",")[0]?.trim().toLowerCase();
+  return city && city.length > 0 ? city : null;
+}
+
+// Classify each competitor as local/national by comparing their detected
+// homepage location city against the target's search location city.
+// Non-blocking: scraping failures resolve to { isLocal: null } rather than
+// throwing, so a slow/unreachable competitor site never breaks the audit.
+async function classifyCompetitorLocality(
+  competitorUrls: string[],
+  targetSearchLocation: string,
+): Promise<Map<string, CompetitorLocality>> {
+  const targetCity = extractCityToken(targetSearchLocation);
+  const result = new Map<string, CompetitorLocality>();
+
+  const settled = await Promise.allSettled(
+    competitorUrls.map(async (url) => {
+      const signals = await collectSiteSignals(url);
+      const detectedLocation =
+        extractCityFromAddress(signals.addressHint) ?? signals.locationHint;
+      const detectedCity = extractCityToken(detectedLocation);
+      const isLocal =
+        targetCity && detectedCity ? targetCity === detectedCity : null;
+      return { url, isLocal, detectedLocation };
+    }),
+  );
+
+  settled.forEach((entry, i) => {
+    const url = competitorUrls[i];
+    if (entry.status === "fulfilled") {
+      result.set(url, {
+        isLocal: entry.value.isLocal,
+        detectedLocation: entry.value.detectedLocation,
+      });
+    } else {
+      result.set(url, { isLocal: null, detectedLocation: null });
+    }
+  });
+
+  return result;
+}
 
 const AUDIT_DEBUG = process.env.WAAS_AUDIT_DEBUG === "true";
 
@@ -131,6 +181,13 @@ export async function runFullAudit(
     manualReviewNote = `${failedKeywordFetches} keyword search request(s) failed and were excluded from ranking analysis.`;
   }
 
+  // Kick off competitor locality classification now so it runs in parallel
+  // with the PageSpeed audit below rather than adding sequential latency.
+  const competitorLocalityPromise = classifyCompetitorLocality(
+    competitorUrls,
+    searchLocation,
+  );
+
   // ── 2. Run PageSpeed ────────────────────────────────────────────────────────────────────
   let pageSpeed: PageSpeedReport | null = null;
 
@@ -168,6 +225,15 @@ export async function runFullAudit(
       "Both search rankings and PageSpeed APIs failed. Site may be unscrapable.";
   }
 
+  const competitorLocality = await competitorLocalityPromise;
+  auditDebug("competitor:classified", {
+    targetSearchLocation: searchLocation,
+    classifications: competitorUrls.map((url) => ({
+      url,
+      ...competitorLocality.get(url),
+    })),
+  });
+
   // Persist guard: only enter concierge/manual fallback when BOTH live dependencies fail.
   // If one provider succeeds, we still return a partial-but-actionable automated report.
   const dataUnavailable =
@@ -190,7 +256,15 @@ export async function runFullAudit(
 
   // ── 3. Compute gap analysis ─────────────────────────────────────────────────────────────────
   const gapAnalysis = computeGapAnalysis(targetUrl, rankReports);
-  const leaderboard = buildLeaderboard(targetUrl, competitorUrls, rankReports);
+  const leaderboard = buildLeaderboard(
+    targetUrl,
+    competitorUrls,
+    rankReports,
+  ).map((entry) =>
+    entry.isTarget
+      ? entry
+      : { ...entry, isLocal: competitorLocality.get(entry.url)?.isLocal ?? null },
+  );
   const keywordPerformance = computeKeywordPerformance(
     rankReports,
     keywords.length,
@@ -341,6 +415,8 @@ export async function runFullAudit(
         .slice(0, 5)
         .map((entry) => entry.keyword);
 
+      const locality = competitorLocality.get(url);
+
       return {
         url,
         domain,
@@ -348,6 +424,8 @@ export async function runFullAudit(
         keywords_ranking: domainRanks.length,
         estimated_traffic: 0,
         top_keywords: topKeywords,
+        is_local: locality?.isLocal ?? null,
+        competitor_detected_location: locality?.detectedLocation ?? null,
       };
     }),
     technical_issues: [
