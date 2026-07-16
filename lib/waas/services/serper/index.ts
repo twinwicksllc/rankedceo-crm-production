@@ -197,6 +197,15 @@ export function generateKeywords(
 // ---------------------------------------------------------------------------
 // MOCK: Returns realistic-looking data for dev/testing (no API key needed)
 // ---------------------------------------------------------------------------
+function stringHash(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
 export function getMockSearchRankings(
   targetUrl: string,
   competitorUrls: string[],
@@ -205,26 +214,33 @@ export function getMockSearchRankings(
 ): SearchRankReport {
   const targetDomain = extractDomain(targetUrl);
 
-  // Randomly place target between position 8-45 (not great)
-  const targetPos = Math.floor(Math.random() * 37) + 8;
+  const hash = stringHash(targetDomain + keyword);
+  // Deterministic target position between position 8-45
+  const targetPos = (hash % 37) + 8;
 
-  const competitorResults: RankResult[] = competitorUrls.map((url, i) => ({
-    url,
-    domain: extractDomain(url),
-    position: i + 1, // Competitors rank 1st, 2nd, 3rd
-    title: `${extractDomain(url)} - Professional Services`,
-    snippet: `Trusted local service provider. Call us today for a free estimate.`,
-  }));
+  const competitorResults: RankResult[] = competitorUrls.map((url, i) => {
+    const compHash = stringHash(extractDomain(url) + keyword);
+    return {
+      url,
+      domain: extractDomain(url),
+      position: (compHash % 10) + 1, // Deterministic competitor rank between 1-10
+      title: `${extractDomain(url)} - Professional Services`,
+      snippet: `Trusted local service provider. Call us today for a free estimate.`,
+    };
+  });
 
   const mockOrganic: SerperSearchResult[] = [
-    ...competitorUrls.slice(0, 3).map((url, i) => ({
-      position: i + 1,
-      title: `${extractDomain(url)} - Local Experts`,
-      link: url,
-      snippet: "Trusted by 500+ local customers. Free estimates available.",
-      displayLink: extractDomain(url),
-      domain: extractDomain(url),
-    })),
+    ...competitorUrls.slice(0, 3).map((url, i) => {
+      const compHash = stringHash(extractDomain(url) + keyword);
+      return {
+        position: (compHash % 10) + 1,
+        title: `${extractDomain(url)} - Local Experts`,
+        link: url,
+        snippet: "Trusted by 500+ local customers. Free estimates available.",
+        displayLink: extractDomain(url),
+        domain: extractDomain(url),
+      };
+    }),
     {
       position: targetPos,
       title: `${targetDomain} - Home Services`,

@@ -142,6 +142,27 @@ export function parseAiKeywordPlan(text: string): AiKeywordPlan | null {
   }
 }
 
+function inferDetectedCity(
+  addressHint: string | null,
+  locationHint: string | null,
+  providedLocation: string | null,
+): string | null {
+  const fromAddress = addressHint?.match(
+    /,\s*([A-Za-z .'-]{2,60},\s*[A-Z]{2})\s*\d{5}(?:-\d{4})?\b/,
+  )?.[1];
+  if (fromAddress?.trim()) return fromAddress.trim();
+
+  const fromLocation = locationHint?.match(/([A-Za-z .'-]{2,60},\s*[A-Z]{2})/)?.[1];
+  if (fromLocation?.trim()) return fromLocation.trim();
+
+  const fromProvided = providedLocation?.match(
+    /([A-Za-z .'-]{2,60},\s*[A-Z]{2})/,
+  )?.[1];
+  if (fromProvided?.trim()) return fromProvided.trim();
+
+  return null;
+}
+
 export async function generateWithGemini(
   signals: SiteSignals,
   industry: string | null,
@@ -150,6 +171,11 @@ export async function generateWithGemini(
 ): Promise<AiKeywordPlan | null> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
+  const detectedCity = inferDetectedCity(
+    signals.addressHint,
+    signals.locationHint,
+    location,
+  );
 
   const prompt = [
     "Analyze this business website context and produce realistic local SEO keywords.",
@@ -157,15 +183,20 @@ export async function generateWithGemini(
     "Return ONLY valid JSON with this exact shape:",
     '{"industry":"string|null","location":"City, ST or null","address":"full address or null","keywords":["... exactly 5 strings ..."]}',
     "Keyword rules:",
-    "- high-intent service keywords that a real buyer would search",
-    "- include geographic intent tied to detected city/market",
+    "- high-intent LOCAL service keywords that reflect how real nearby customers search",
+    "- use patterns like '[service] near me', 'best [service] in [City]', '[service] [City]'",
+    "- include city-level geographic intent; avoid county/regional phrasing unless no city is available",
+    "- at least 2 keywords must include either 'near me' or the detected city name",
+    "- avoid enterprise/technical B2B acronyms (AWS, cloud architecture, AI/ML infrastructure) unless clearly evidenced on-site",
     "- avoid generic filler and avoid the business name unless clearly transactional",
     "- each keyword must be 2-7 words",
+    "- do not output mixed technical+geo phrases like 'AWS cloud architecture Lake County' unless strongly supported by website evidence",
     "",
     `Domain: ${signals.domain}`,
     `Homepage: ${signals.homepageUrl}`,
     `Provided industry hint: ${industry ?? "none"}`,
     `Provided location hint: ${location ?? "none"}`,
+    `Detected city (use THIS for geo modifiers): ${detectedCity ?? "none"}`,
     `Detected address hint: ${signals.addressHint ?? "none"}`,
     `Detected location hint: ${signals.locationHint ?? "none"}`,
     `Title/meta hints: ${signals.titleHints.join(" | ") || "none"}`,
@@ -215,15 +246,27 @@ export async function generateWithPerplexity(
 ): Promise<AiKeywordPlan | null> {
   const apiKey = process.env.PERPLEXITY_API_KEY;
   if (!apiKey) return null;
+  const detectedCity = inferDetectedCity(
+    signals.addressHint,
+    signals.locationHint,
+    location,
+  );
 
   const prompt = [
     "Use the provided website content to infer business type and local market.",
     "Return JSON only with keys industry, location, address, keywords.",
     "keywords must contain exactly 5 realistic local SEO queries.",
+    "Keyword rules:",
+    "- prioritize city-level local intent and customer language over enterprise jargon",
+    "- include patterns like '[service] near me', 'best [service] in [City]', '[service] [City]'",
+    "- at least 2 keywords must contain either 'near me' or the detected city",
+    "- avoid county/regional phrasing if a city is available",
+    "- avoid technical B2B acronyms unless enterprise positioning is explicit on-site",
     "",
     `Domain: ${signals.domain}`,
     `Provided industry hint: ${industry ?? "none"}`,
     `Provided location hint: ${location ?? "none"}`,
+    `Detected city (use THIS for geo modifiers): ${detectedCity ?? "none"}`,
     `Detected address hint: ${signals.addressHint ?? "none"}`,
     `Detected location hint: ${signals.locationHint ?? "none"}`,
     `Site excerpt: ${signals.textSnippet || "none"}`,

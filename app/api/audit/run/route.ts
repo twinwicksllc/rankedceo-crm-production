@@ -69,6 +69,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // ── Check cache for recent identical audit (within 24 hours) ──────────────
+    const { getRecentAuditRecord } = await import("@/lib/waas/supabase");
+    if (!audit_id && process.env.WAAS_SEO_PROVIDER !== 'mock') {
+      const cachedId = await getRecentAuditRecord(normalizedTarget, normalizedCompetitors);
+      if (cachedId) {
+        console.log(`[WaaS] Returning cached audit ${cachedId} for ${normalizedTarget}`);
+        return NextResponse.json(
+          {
+            audit_id: cachedId,
+            status: "completed",
+            message: "Audit is ready",
+            poll_url: `/api/waas/audits/${cachedId}/status`,
+          },
+          { status: 200 }
+        );
+      }
+    }
+
     // ── Create or update audit record (status: running) ──────────────────────
     let auditId: string | null = audit_id ? String(audit_id) : null;
 
@@ -92,7 +110,7 @@ export async function POST(req: NextRequest) {
           Date.now() + AUDIT_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
         ).toISOString(),
         seo_provider: (process.env.WAAS_SEO_PROVIDER ??
-          "mock") as AuditSeoProvider,
+          "serper") as AuditSeoProvider,
       };
 
       auditId = await createAuditRecord(insert);

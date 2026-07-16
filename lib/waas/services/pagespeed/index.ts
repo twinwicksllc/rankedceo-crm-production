@@ -80,11 +80,21 @@ export async function runPageSpeedAudit(
 // ----------------------------------------------------------------------------
 // MOCK: Realistic data for dev/testing (no API key needed)
 // ----------------------------------------------------------------------------
+function stringHash(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
 export function getMockPageSpeedReport(url: string): PageSpeedReport {
-  // Mock poor scores for the prospect (that's the point — show them they need help)
-  const mobilePerf = Math.floor(Math.random() * 25) + 20; // 20-45 (poor)
-  const mobileSeo = Math.floor(Math.random() * 20) + 35; // 35-55 (mediocre)
-  const desktopPerf = Math.floor(Math.random() * 20) + 45; // 45-65 (average)
+  // Deterministic "random" scores based on the URL so grades don't fluctuate on reload
+  const hash = stringHash(url);
+  const mobilePerf = (hash % 25) + 20; // 20-45 (poor)
+  const mobileSeo = ((hash >> 1) % 20) + 35; // 35-55 (mediocre)
+  const desktopPerf = ((hash >> 2) % 20) + 45; // 45-65 (average)
   const overallScore = Math.round(
     mobilePerf * 0.35 + mobileSeo * 0.3 + desktopPerf * 0.2 + 50 * 0.15,
   );

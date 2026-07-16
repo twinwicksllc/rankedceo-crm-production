@@ -43,6 +43,16 @@ export function parseLocationParts(location: string): {
   return { city, state };
 }
 
+export function extractCityFromAddress(address: string | null): string | null {
+  if (!address) return null;
+
+  const match = address.match(
+    /,\s*([A-Za-z .'-]{2,60},\s*[A-Z]{2})\s*\d{5}(?:-\d{4})?\b/,
+  );
+
+  return match?.[1]?.trim() ?? null;
+}
+
 export function keywordContainsLocation(
   keyword: string,
   location: string,
