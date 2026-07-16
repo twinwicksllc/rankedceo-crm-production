@@ -65,6 +65,7 @@ export interface OnboardingPrefill {
   logoUrl: string | null | undefined;
   primaryColor: string | undefined;
   secondaryColor: string | undefined;
+  textColor: string | undefined;
   tagline: string | undefined;
   usp: string;
   servicesOffered: string | undefined;
@@ -118,10 +119,245 @@ function mkHero(overrides: Partial<HeroBlock>): HeroBlock {
   return { ...(createBlock("hero") as HeroBlock), ...overrides };
 }
 
-function getTemplateVariant(slug: string | null | undefined): string {
-  const template = TEMPLATE_REGISTRY[slug ?? ""] ?? TEMPLATE_REGISTRY.modern;
-  return template.slug;
+const HERO_VARIANTS: HeroBlock["variant"][] = [
+  "centered",
+  "split",
+  "editorial",
+  "emergency",
+  "full-bleed-gallery",
+];
+
+function getDefaultHeroVariant(
+  templateSlug: string | null | undefined,
+): HeroBlock["variant"] {
+  const template = TEMPLATE_REGISTRY[templateSlug ?? ""] ?? TEMPLATE_REGISTRY.modern;
+
+  switch (template.aesthetic) {
+    case "urgent":
+      return "emergency";
+    case "premium":
+      return "editorial";
+    case "visual":
+      return "full-bleed-gallery";
+    case "bold":
+      return "split";
+    default:
+      return "centered";
+  }
 }
+
+function resolveHeroVariant(
+  sectionConfig: Record<string, unknown> | undefined,
+  templateSlug: string | null | undefined,
+): HeroBlock["variant"] {
+  const variantCandidate = sectionConfig?.variant;
+  if (
+    typeof variantCandidate === "string" &&
+    HERO_VARIANTS.includes(variantCandidate as HeroBlock["variant"])
+  ) {
+    return variantCandidate as HeroBlock["variant"];
+  }
+
+  return getDefaultHeroVariant(templateSlug);
+}
+
+interface TemplateVisualPreset {
+  appBackground: string;
+  canvasBackground: string;
+  canvasBorder: string;
+  canvasShadow: string;
+  canvasRadius: string;
+  blockBackground: string;
+  blockBorder: string;
+  blockShadow: string;
+  blockRadius: string;
+  heroGradient: string;
+  dividerColor: string;
+  displayFont: string;
+  bodyFont: string;
+  copyColor: string;
+}
+
+function getTemplateVisualPreset(
+  templateSlug: string | null | undefined,
+): TemplateVisualPreset {
+  const template = TEMPLATE_REGISTRY[templateSlug ?? ""] ?? TEMPLATE_REGISTRY.modern;
+
+  switch (template.slug) {
+    case "bold":
+      return {
+        appBackground: "linear-gradient(145deg, #0F172A 0%, #1E293B 52%, #111827 100%)",
+        canvasBackground: "#0B1220",
+        canvasBorder: "#334155",
+        canvasShadow: "0 26px 54px rgba(15, 23, 42, 0.5)",
+        canvasRadius: "16px",
+        blockBackground: "#111C2E",
+        blockBorder: "#334155",
+        blockShadow: "0 14px 28px rgba(2, 6, 23, 0.45)",
+        blockRadius: "14px",
+        heroGradient: "linear-gradient(135deg, #1E293B 0%, #334155 45%, #0F172A 100%)",
+        dividerColor: "#475569",
+        displayFont: "'Archivo Black', 'Arial Black', sans-serif",
+        bodyFont: "'Barlow', 'Segoe UI', sans-serif",
+        copyColor: "#CBD5E1",
+      };
+    case "trust-first":
+      return {
+        appBackground: "linear-gradient(160deg, #F8FFFC 0%, #ECFDF5 46%, #F0FDFA 100%)",
+        canvasBackground: "#FFFFFF",
+        canvasBorder: "#A7F3D0",
+        canvasShadow: "0 22px 50px rgba(6, 95, 70, 0.16)",
+        canvasRadius: "24px",
+        blockBackground: "#FFFFFF",
+        blockBorder: "#D1FAE5",
+        blockShadow: "0 12px 24px rgba(5, 150, 105, 0.12)",
+        blockRadius: "20px",
+        heroGradient: "linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 50%, #F0FDFA 100%)",
+        dividerColor: "#A7F3D0",
+        displayFont: "'Merriweather', 'Georgia', serif",
+        bodyFont: "'Source Sans 3', 'Segoe UI', sans-serif",
+        copyColor: "#1F2937",
+      };
+    case "local-pro":
+      return {
+        appBackground: "linear-gradient(155deg, #FFFBEB 0%, #FEF3C7 52%, #FFF7ED 100%)",
+        canvasBackground: "#FFFBF2",
+        canvasBorder: "#FCD34D",
+        canvasShadow: "0 20px 42px rgba(180, 83, 9, 0.18)",
+        canvasRadius: "22px",
+        blockBackground: "#FFFFFF",
+        blockBorder: "#FDE68A",
+        blockShadow: "0 10px 22px rgba(202, 138, 4, 0.14)",
+        blockRadius: "18px",
+        heroGradient: "linear-gradient(135deg, #FEF3C7 0%, #FED7AA 52%, #FDE68A 100%)",
+        dividerColor: "#FBBF24",
+        displayFont: "'Alegreya Sans SC', 'Trebuchet MS', sans-serif",
+        bodyFont: "'Nunito Sans', 'Segoe UI', sans-serif",
+        copyColor: "#7C2D12",
+      };
+    case "premium":
+      return {
+        appBackground: "linear-gradient(150deg, #F8FAFC 0%, #E2E8F0 38%, #F1F5F9 100%)",
+        canvasBackground: "#FFFFFF",
+        canvasBorder: "#CBD5E1",
+        canvasShadow: "0 24px 50px rgba(15, 23, 42, 0.18)",
+        canvasRadius: "14px",
+        blockBackground: "#F8FAFC",
+        blockBorder: "#E2E8F0",
+        blockShadow: "0 12px 24px rgba(30, 41, 59, 0.1)",
+        blockRadius: "12px",
+        heroGradient: "linear-gradient(140deg, #E2E8F0 0%, #F8FAFC 48%, #E5E7EB 100%)",
+        dividerColor: "#CBD5E1",
+        displayFont: "'Playfair Display', 'Georgia', serif",
+        bodyFont: "'Lato', 'Segoe UI', sans-serif",
+        copyColor: "#334155",
+      };
+    case "emergency":
+      return {
+        appBackground: "linear-gradient(140deg, #1F2937 0%, #111827 36%, #7F1D1D 100%)",
+        canvasBackground: "#0F172A",
+        canvasBorder: "#EF4444",
+        canvasShadow: "0 24px 50px rgba(127, 29, 29, 0.36)",
+        canvasRadius: "12px",
+        blockBackground: "#111827",
+        blockBorder: "#7F1D1D",
+        blockShadow: "0 12px 26px rgba(127, 29, 29, 0.34)",
+        blockRadius: "10px",
+        heroGradient: "linear-gradient(135deg, #B91C1C 0%, #EF4444 48%, #7F1D1D 100%)",
+        dividerColor: "#EF4444",
+        displayFont: "'Bebas Neue', 'Impact', sans-serif",
+        bodyFont: "'Rajdhani', 'Segoe UI', sans-serif",
+        copyColor: "#E5E7EB",
+      };
+    case "showcase":
+      return {
+        appBackground: "linear-gradient(155deg, #ECFEFF 0%, #E0F2FE 45%, #EDE9FE 100%)",
+        canvasBackground: "#FFFFFF",
+        canvasBorder: "#C4B5FD",
+        canvasShadow: "0 24px 50px rgba(79, 70, 229, 0.18)",
+        canvasRadius: "28px",
+        blockBackground: "#FFFFFF",
+        blockBorder: "#DDD6FE",
+        blockShadow: "0 14px 24px rgba(124, 58, 237, 0.12)",
+        blockRadius: "22px",
+        heroGradient: "linear-gradient(135deg, #DBEAFE 0%, #C4B5FD 52%, #E9D5FF 100%)",
+        dividerColor: "#A5B4FC",
+        displayFont: "'Outfit', 'Avenir Next', sans-serif",
+        bodyFont: "'DM Sans', 'Segoe UI', sans-serif",
+        copyColor: "#334155",
+      };
+    case "consultative":
+      return {
+        appBackground: "linear-gradient(150deg, #EEF2FF 0%, #DDD6FE 45%, #F8FAFC 100%)",
+        canvasBackground: "#F8FAFC",
+        canvasBorder: "#A5B4FC",
+        canvasShadow: "0 20px 44px rgba(67, 56, 202, 0.16)",
+        canvasRadius: "18px",
+        blockBackground: "#FFFFFF",
+        blockBorder: "#C7D2FE",
+        blockShadow: "0 10px 20px rgba(99, 102, 241, 0.12)",
+        blockRadius: "14px",
+        heroGradient: "linear-gradient(135deg, #E0E7FF 0%, #C7D2FE 48%, #DDD6FE 100%)",
+        dividerColor: "#A5B4FC",
+        displayFont: "'IBM Plex Serif', 'Georgia', serif",
+        bodyFont: "'IBM Plex Sans', 'Segoe UI', sans-serif",
+        copyColor: "#3730A3",
+      };
+    case "community":
+      return {
+        appBackground: "linear-gradient(160deg, #FFF7ED 0%, #FFEDD5 46%, #FEF3C7 100%)",
+        canvasBackground: "#FFFBEB",
+        canvasBorder: "#FDBA74",
+        canvasShadow: "0 20px 40px rgba(194, 65, 12, 0.18)",
+        canvasRadius: "26px",
+        blockBackground: "#FFFFFF",
+        blockBorder: "#FED7AA",
+        blockShadow: "0 10px 20px rgba(194, 65, 12, 0.12)",
+        blockRadius: "20px",
+        heroGradient: "linear-gradient(135deg, #FFEDD5 0%, #FED7AA 50%, #FEF3C7 100%)",
+        dividerColor: "#FB923C",
+        displayFont: "'Bitter', 'Georgia', serif",
+        bodyFont: "'Quicksand', 'Segoe UI', sans-serif",
+        copyColor: "#7C2D12",
+      };
+    case "conversion":
+      return {
+        appBackground: "linear-gradient(145deg, #ECFDF5 0%, #D1FAE5 42%, #FEF9C3 100%)",
+        canvasBackground: "#FFFFFF",
+        canvasBorder: "#6EE7B7",
+        canvasShadow: "0 24px 50px rgba(5, 150, 105, 0.2)",
+        canvasRadius: "14px",
+        blockBackground: "#FFFFFF",
+        blockBorder: "#A7F3D0",
+        blockShadow: "0 12px 22px rgba(5, 150, 105, 0.14)",
+        blockRadius: "12px",
+        heroGradient: "linear-gradient(135deg, #86EFAC 0%, #34D399 45%, #FDE047 100%)",
+        dividerColor: "#10B981",
+        displayFont: "'Montserrat', 'Avenir Next', sans-serif",
+        bodyFont: "'Mulish', 'Segoe UI', sans-serif",
+        copyColor: "#14532D",
+      };
+    case "modern":
+    default:
+      return {
+        appBackground: "linear-gradient(145deg, #F8FAFC 0%, #EEF2FF 52%, #F1F5F9 100%)",
+        canvasBackground: "#FFFFFF",
+        canvasBorder: "#BFDBFE",
+        canvasShadow: "0 20px 46px rgba(30, 64, 175, 0.16)",
+        canvasRadius: "20px",
+        blockBackground: "#FFFFFF",
+        blockBorder: "#DBEAFE",
+        blockShadow: "0 10px 20px rgba(37, 99, 235, 0.1)",
+        blockRadius: "16px",
+        heroGradient: "linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 45%, #E0E7FF 100%)",
+        dividerColor: "#BFDBFE",
+        displayFont: "'Sora', 'Avenir Next', 'Segoe UI', sans-serif",
+        bodyFont: "'Manrope', 'Inter', 'Segoe UI', sans-serif",
+        copyColor: "#334155",
+      };
+  }
+}
+
 function mkH2(text: string): HeadingBlock {
   return {
     ...(createBlock("heading") as HeadingBlock),
@@ -150,13 +386,13 @@ function sectionHero(
   location: string,
   tradeLabel: string,
   sectionContent: Record<string, unknown> | undefined,
-  templateSlug: string | null | undefined,
+  sectionConfig: Record<string, unknown> | undefined,
 ): Block[] {
   const templateEyebrow = getStringField(sectionContent, "eyebrow");
   const templateHeadline = getStringField(sectionContent, "headline");
   const templateSubheadline = getStringField(sectionContent, "subheadline");
   const templatePrimaryCta = getStringField(sectionContent, "primaryCtaLabel");
-  const variant = getStringField(sectionContent, "variant") ?? getTemplateVariant(templateSlug);
+  const variant = resolveHeroVariant(sectionConfig, p.selectedTemplateSlug);
   const blocks: Block[] = [];
 
   if (p.logoUrl) {
@@ -182,7 +418,7 @@ function sectionHero(
         `Serving ${location || "your area"} with quality and care.`,
       buttonLabel: p.primaryCta || templatePrimaryCta || "Get a Free Quote",
       align: "center",
-      variant: variant as HeroBlock["variant"],
+      variant,
     }),
   );
 
@@ -453,7 +689,7 @@ function buildInitialBlocks(p: OnboardingPrefill): Block[] {
           location,
           tradeLabel,
           sectionContent,
-          p.selectedTemplateSlug,
+          section.config,
         );
         break;
       case "answer-first-aeo":
@@ -501,7 +737,7 @@ function buildInitialBlocks(p: OnboardingPrefill): Block[] {
   // Safety net: if template had no enabled sections, fall back to basics
   if (blocks.length === 0) {
     blocks.push(
-      ...sectionHero(p, location, tradeLabel, undefined, p.selectedTemplateSlug),
+      ...sectionHero(p, location, tradeLabel, undefined, undefined),
     );
     blocks.push(createBlock("divider"));
     blocks.push(...sectionServices(p, tradeLabel, undefined));
@@ -528,10 +764,15 @@ function CanvasDropZone({
     <div
       ref={setNodeRef}
       className={cn(
-        "mx-auto min-h-full w-full max-w-3xl rounded-xl border bg-card p-6 transition-colors",
-        isOver ? "border-accent" : "border-border",
+        "mx-auto min-h-full w-full max-w-3xl border p-6 transition-all",
         isEmpty && "flex items-center justify-center",
       )}
+      style={{
+        background: "var(--brand-canvas-bg)",
+        borderColor: isOver ? "var(--accent)" : "var(--brand-canvas-border)",
+        boxShadow: "var(--brand-canvas-shadow)",
+        borderRadius: "var(--brand-canvas-radius)",
+      }}
     >
       {children}
     </div>
@@ -581,6 +822,11 @@ export function Builder({
     [blocks, selectedId],
   );
 
+  const visualPreset = useMemo(
+    () => getTemplateVisualPreset(prefill.selectedTemplateSlug),
+    [prefill.selectedTemplateSlug],
+  );
+
   const brandThemeStyle = useMemo<CSSProperties>(() => {
     const primary = isHexColor(prefill.primaryColor)
       ? prefill.primaryColor
@@ -591,6 +837,9 @@ export function Builder({
     const secondary = isHexColor(prefill.secondaryColor)
       ? prefill.secondaryColor
       : templatePalette?.secondary ?? "#1E40AF";
+    const text = isHexColor(prefill.textColor)
+      ? prefill.textColor
+      : "#111827";
     const accent = withAlpha(primary, "33");
     const background = templatePalette?.background ?? "#FFFFFF";
 
@@ -602,9 +851,33 @@ export function Builder({
       "--sidebar-primary": primary,
       "--sidebar-accent": withAlpha(secondary, "14"),
       "--background": background,
-      "--card": background,
+      "--card": visualPreset.blockBackground,
+      "--foreground": text,
+      "--muted-foreground": visualPreset.copyColor,
+      "--brand-app-bg": visualPreset.appBackground,
+      "--brand-canvas-bg": visualPreset.canvasBackground,
+      "--brand-canvas-border": visualPreset.canvasBorder,
+      "--brand-canvas-shadow": visualPreset.canvasShadow,
+      "--brand-block-bg": visualPreset.blockBackground,
+      "--brand-block-border": visualPreset.blockBorder,
+      "--brand-block-shadow": visualPreset.blockShadow,
+      "--brand-hero-gradient": visualPreset.heroGradient,
+      "--brand-divider": visualPreset.dividerColor,
+      "--brand-display-font": visualPreset.displayFont,
+      "--brand-body-font": visualPreset.bodyFont,
+      "--brand-copy-color": visualPreset.copyColor,
+      "--brand-canvas-radius": visualPreset.canvasRadius,
+      "--brand-block-radius": visualPreset.blockRadius,
+      fontFamily: visualPreset.bodyFont,
+      background: visualPreset.appBackground,
     } as CSSProperties;
-  }, [prefill.primaryColor, prefill.secondaryColor, prefill.selectedTemplateSlug]);
+  }, [
+    prefill.primaryColor,
+    prefill.secondaryColor,
+    prefill.textColor,
+    prefill.selectedTemplateSlug,
+    visualPreset,
+  ]);
 
   useEffect(() => {
     setMounted(true);
@@ -685,7 +958,7 @@ export function Builder({
       onDragEnd={handleDragEnd}
     >
       <div
-        className="fixed inset-0 z-50 flex flex-col bg-background"
+        className="fixed inset-0 z-50 flex flex-col"
         style={brandThemeStyle}
       >
         {/* ------------------------------------------------------------------ */}
@@ -755,7 +1028,7 @@ export function Builder({
         <div className="flex min-h-0 flex-1">
           <BlockPalette />
 
-          <main className="flex min-w-0 flex-1 flex-col bg-background">
+          <main className="flex min-w-0 flex-1 flex-col">
             <div className="flex items-center gap-2 border-b border-border px-4 py-2 text-xs text-muted-foreground shrink-0">
               <Eye className="size-3.5" />
               Canvas preview — drag blocks from the left panel

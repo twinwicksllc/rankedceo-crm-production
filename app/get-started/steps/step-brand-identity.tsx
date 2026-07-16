@@ -18,6 +18,8 @@ interface Props {
   setPrimaryColor: (c: string) => void;
   secondaryColor: string;
   setSecondaryColor: (c: string) => void;
+  textColor: string;
+  setTextColor: (c: string) => void;
   logoUrl: string | null;
   setLogoUrl: (u: string | null) => void;
   onNext: () => void;
@@ -391,6 +393,8 @@ export function StepBrandIdentity({
   setPrimaryColor,
   secondaryColor,
   setSecondaryColor,
+  textColor,
+  setTextColor,
   logoUrl,
   setLogoUrl,
   onNext,
@@ -787,6 +791,22 @@ export function StepBrandIdentity({
                 </span>
               </div>
             </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 dark:text-white/50 mb-1.5">
+                Text Color
+              </label>
+              <div className="flex items-center gap-3 h-11 px-3 rounded-xl bg-white dark:bg-white/5 border border-slate-300 dark:border-white/10 focus-within:border-blue-500/60 transition-all">
+                <input
+                  type="color"
+                  value={textColor}
+                  onChange={(e) => setTextColor(e.target.value)}
+                  className="w-7 h-7 rounded-lg cursor-pointer bg-transparent border-0 outline-none p-0"
+                />
+                <span className="text-slate-600 dark:text-white/60 text-xs font-mono uppercase">
+                  {textColor}
+                </span>
+              </div>
+            </div>
           </div>
           {logoColorsSuggested && (
             <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-300/90">
@@ -830,11 +850,24 @@ export function StepBrandIdentity({
               <div className="flex-1 h-8 rounded-lg bg-slate-800 dark:bg-slate-700 flex items-center px-3">
                 <span
                   className="text-xs font-semibold"
-                  style={{ color: primaryColor }}
+                  style={{ color: textColor }}
                 >
                   {businessName || "Your Business"}
                 </span>
               </div>
+            </div>
+            {/* Text color preview */}
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-3 flex items-center gap-3">
+              <div
+                className="w-5 h-5 rounded border-2 border-slate-300 dark:border-white/20 shrink-0"
+                style={{ backgroundColor: textColor }}
+              />
+              <span
+                className="text-sm font-medium"
+                style={{ color: textColor }}
+              >
+                Text Preview — {businessName || "Your Business"}
+              </span>
             </div>
           </div>
         </div>

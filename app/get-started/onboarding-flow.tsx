@@ -204,6 +204,7 @@ export function OnboardingFlow({
   // Step 3 state (logo + colors)
   const [primaryColor, setPrimaryColor] = useState("#2563EB");
   const [secondaryColor, setSecondaryColor] = useState("#1E40AF");
+  const [textColor, setTextColor] = useState("#111827");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [businessName, setBusinessName] = useState("");
 
@@ -406,6 +407,7 @@ export function OnboardingFlow({
       tenantId,
       primaryColor,
       secondaryColor,
+      textColor,
       logoUrl,
       businessName,
     );
@@ -709,6 +711,8 @@ export function OnboardingFlow({
                   setPrimaryColor={setPrimaryColor}
                   secondaryColor={secondaryColor}
                   setSecondaryColor={setSecondaryColor}
+                  textColor={textColor}
+                  setTextColor={setTextColor}
                   logoUrl={logoUrl}
                   setLogoUrl={setLogoUrl}
                   onNext={handleStep3Next}
@@ -741,6 +745,7 @@ export function OnboardingFlow({
                   primaryTrade={primaryTrade}
                   primaryColor={primaryColor}
                   secondaryColor={secondaryColor}
+                  textColor={textColor}
                   logoUrl={logoUrl}
                   selectedTemplateSlug={selectedTemplateSlug}
                   // Step 1 fields
