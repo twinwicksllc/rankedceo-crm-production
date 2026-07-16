@@ -46,6 +46,7 @@ import {
 import { BlockPalette } from "./block-palette";
 import { CanvasBlock } from "./canvas-block";
 import { Inspector } from "./inspector";
+import { BuilderWelcomeModal } from "./builder-welcome-modal";
 import {
   type Block,
   type BlockType,
@@ -812,6 +813,7 @@ export function Builder({
     type: "palette" | "canvas";
     blockType?: BlockType;
   } | null>(null);
+  const [welcomeDismissed, setWelcomeDismissed] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -1083,6 +1085,10 @@ export function Builder({
           </div>
         ) : null}
       </DragOverlay>
+
+      {!welcomeDismissed && (
+        <BuilderWelcomeModal onDismiss={() => setWelcomeDismissed(true)} />
+      )}
     </DndContext>,
     document.body,
   );
