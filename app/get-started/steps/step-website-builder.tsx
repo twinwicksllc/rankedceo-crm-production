@@ -12,6 +12,7 @@ export interface StepWebsiteBuilderProps {
   primaryTrade: string | null;
   primaryColor: string;
   secondaryColor: string;
+  textColor: string;
   logoUrl: string | null;
   selectedTemplateSlug: string | null;
   tagline: string | undefined;
@@ -36,6 +37,7 @@ export function StepWebsiteBuilder({
   logoUrl,
   primaryColor,
   secondaryColor,
+  textColor,
   selectedTemplateSlug,
   tagline,
   servicesOffered,
@@ -55,6 +57,7 @@ export function StepWebsiteBuilder({
     logoUrl,
     primaryColor,
     secondaryColor,
+    textColor,
     tagline,
     usp,
     servicesOffered,

@@ -220,6 +220,7 @@ export async function saveOnboardingStep3(
   tenantId: string,
   primaryColor: string,
   secondaryColor: string,
+  textColor: string,
   logoUrl: string | null,
   businessName: string,
 ): Promise<ActionResult> {
@@ -246,7 +247,7 @@ export async function saveOnboardingStep3(
         secondary: secondaryColor,
         accent: primaryColor + "33", // 20% opacity version of primary
         background: "#FFFFFF",
-        text: "#111827",
+        text: textColor,
       },
     };
 

@@ -30,6 +30,10 @@ export function CanvasBlock({ block, selected, onSelect, onDelete }: Props) {
   const style = {
     transform: CSS.Translate.toString(transform),
     transition,
+    background: "var(--brand-block-bg)",
+    borderColor: selected ? "var(--accent)" : "var(--brand-block-border)",
+    boxShadow: "var(--brand-block-shadow)",
+    borderRadius: "var(--brand-block-radius)",
   };
 
   return (
@@ -38,8 +42,8 @@ export function CanvasBlock({ block, selected, onSelect, onDelete }: Props) {
       style={style}
       onClick={onSelect}
       className={cn(
-        "group relative rounded-lg border border-transparent px-4 py-2 transition-colors",
-        selected ? "border-accent ring-1 ring-accent" : "hover:border-border",
+        "group relative border px-4 py-3 transition-all",
+        selected ? "ring-1 ring-accent" : "hover:border-border",
         isDragging && "z-10 opacity-70",
       )}
     >
