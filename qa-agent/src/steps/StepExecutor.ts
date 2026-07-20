@@ -95,11 +95,20 @@ export class StepExecutor {
       case "navigate":
         return this.stepNavigate(step.persona, step.url);
       case "click":
-        return this.stepClick(step.persona, step.selector);
+        return this.stepClick(
+          step.persona,
+          step.selector,
+          step.dismissOverlaySelector,
+        );
       case "fill":
         return this.stepFill(step.persona, step.selector, step.value);
       case "wait_for":
-        return this.stepWaitFor(step.persona, step.selector, timeoutMs);
+        return this.stepWaitFor(
+          step.persona,
+          step.selector,
+          timeoutMs,
+          step.state,
+        );
       case "wait_for_url":
         return this.stepWaitForUrl(step.persona, step.pattern, timeoutMs);
       case "assert_text":
@@ -145,8 +154,34 @@ export class StepExecutor {
     await page.waitForLoadState("networkidle", { timeout: 30_000 });
   }
 
-  private async stepClick(persona: Persona, selector: string): Promise<void> {
+  private async stepClick(
+    persona: Persona,
+    selector: string,
+    dismissOverlaySelector?: string,
+  ): Promise<void> {
     const page = await this.router.getPage(persona);
+
+    if (dismissOverlaySelector) {
+      // Web-first wait: give a lingering overlay/modal (e.g. one intentionally
+      // opened by a prior step to assert auto-open behavior) a bounded chance
+      // to close before we attempt the click. This is best-effort — if no
+      // such overlay is present, waitForSelector(state:"hidden") resolves
+      // immediately (already hidden/absent). If it's still there after the
+      // bounded wait, we fall through to the normal click, whose own
+      // actionability retries will produce a clear "intercepts pointer
+      // events" error rather than a silent hang.
+      await page
+        .waitForSelector(dismissOverlaySelector, {
+          state: "hidden",
+          timeout: 8_000,
+        })
+        .catch(() => {
+          console.warn(
+            `[StepExecutor] Overlay "${dismissOverlaySelector}" still present before click on "${selector}" — proceeding to click anyway`,
+          );
+        });
+    }
+
     await page.click(selector);
   }
 
@@ -163,10 +198,11 @@ export class StepExecutor {
     persona: Persona,
     selector: string,
     timeoutMs: number,
+    state: "attached" | "detached" | "visible" | "hidden" = "visible",
   ): Promise<void> {
     const page = await this.router.getPage(persona);
     try {
-      await page.waitForSelector(selector, { timeout: timeoutMs });
+      await page.waitForSelector(selector, { timeout: timeoutMs, state });
     } catch (err) {
       const currentUrl = page.url();
       const msg = err instanceof Error ? err.message : String(err);
