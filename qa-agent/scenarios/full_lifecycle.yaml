@@ -240,9 +240,9 @@ steps:
     timeout_ms: 8000
     intent: The overview tab button should be visible
 
-  # ───────────────────────────────────────────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────────────────────
   # SCENE 5b: Task 7 — Status strip / SLA timeline visible on overview tab
-  # ───────────────────────────────────────────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────────────────────
 
   - id: s5b_client_assert_status_strip
     type: wait_for
@@ -291,9 +291,9 @@ steps:
     timeout_ms: 10000
     intent: The editor content area should render
 
-  # ───────────────────────────────────────────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────────────────────
   # SCENE 6b: Task 8 — Approve & Publish button present in editor toolbar
-  # ───────────────────────────────────────────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────────────────────
 
   - id: s6b_client_assert_approve_button
     type: wait_for
@@ -515,9 +515,9 @@ steps:
     timeout_ms: 15000
     intent: Billing tab should load and show updated plan information
 
-  # ───────────────────────────────────────────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────────────────────
   # SCENE 14b: Task 8 — Post-payment approval panel auto-opens (?approve=1)
-  # ───────────────────────────────────────────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────────────────────
 
   - id: s14b_client_navigate_edit_approve
     type: navigate
@@ -547,6 +547,37 @@ steps:
       should have opened automatically via the autoOpenApproval prop.
       We assert the overlay or confirm button is visible.
 
+  # Task 8 cleanup — Scene 14b intentionally triggered ApprovalPanel's auto-open
+  # to verify the Stripe-return UX (see s14b_client_assert_approval_panel above).
+  # That modal is a `fixed inset-0` overlay and was never dismissed, so it kept
+  # intercepting pointer events on every subsequent client step. This is what
+  # caused run #72's s15_client_click_overview failure ("intercepts pointer
+  # events") and the resulting s15_client_assert_overview_loads timeout
+  # (the tab click never landed, so overview-tab-content never mounted — not a
+  # slow backend or a component bug). Closing it here fixes both at the root.
+  - id: s14c_client_dismiss_approval_panel
+    type: click
+    persona: client
+    severity: warning
+    description: "Task 8 cleanup — dismiss ApprovalPanel modal before Scene 15"
+    selector: 'button:has-text("Cancel")'
+    intent: >
+      Scene 14b's job was just to verify the modal auto-opens; it has served
+      its purpose. Dismiss it via the panel's own Cancel button so Scene 15
+      isn't fighting a leftover overlay.
+
+  - id: s14d_client_assert_approval_panel_closed
+    type: wait_for
+    persona: client
+    severity: warning
+    description: "Task 8 cleanup — confirm the overlay actually detached"
+    selector: '.fixed.inset-0'
+    state: hidden
+    timeout_ms: 5000
+    intent: >
+      Web-first assertion that the dismiss click actually closed the overlay,
+      rather than assuming it worked and immediately clicking through to it.
+
   # ═══════════════════════════════════════════════════════════════════════════
   # SCENE 15: Client — Overview Tab Post-Upgrade
   # ═══════════════════════════════════════════════════════════════════════════
@@ -557,6 +588,10 @@ steps:
     severity: warning
     description: Client navigates to Overview tab
     selector: '[data-testid="portal-tab-overview"]'
+    # Defense-in-depth: if any future scenario change leaves an overlay open
+    # ahead of this step, wait (bounded, best-effort) for it to clear instead
+    # of burning the whole click timeout on "intercepts pointer events".
+    dismissOverlaySelector: '.fixed.inset-0'
     intent: Client checks overview tab post-upgrade
 
   - id: s15_client_assert_overview_loads

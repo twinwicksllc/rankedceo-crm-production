@@ -3,7 +3,7 @@
  * Persona-aware, severity-gated, self-healing-ready
  */
 
-// ─── Personas ────────────────────────────────────────────────────────────────
+// ─── Personas ─────────────────────────────────────────────────────────────────
 
 export type Persona = "client" | "admin" | "enduser";
 
@@ -34,7 +34,7 @@ export interface AdminCredentials {
   password: string;
 }
 
-// ─── Severity ────────────────────────────────────────────────────────────────
+// ─── Severity ─────────────────────────────────────────────────────────────────
 
 /**
  * info    — informational, always continues
@@ -44,7 +44,7 @@ export interface AdminCredentials {
  */
 export type Severity = "info" | "warning" | "error" | "critical";
 
-// ─── Scenario DSL ────────────────────────────────────────────────────────────
+// ─── Scenario DSL ────────────────────────────────────────────────────────────────
 
 export interface Scenario {
   id: string;
@@ -104,6 +104,15 @@ export interface NavigateStep extends BaseStep {
 export interface ClickStep extends BaseStep {
   type: "click";
   selector: string;
+  /**
+   * Optional selector for a blocking overlay/modal (e.g. a "fixed inset-0"
+   * dialog) that may still be closing when this step runs. If set, the
+   * executor waits (best-effort, bounded) for it to become hidden/detached
+   * before attempting the click, instead of letting Playwright's click
+   * actionability retries burn the whole step timeout on "intercepts pointer
+   * events" and fail with a confusing error.
+   */
+  dismissOverlaySelector?: string;
 }
 
 export interface FillStep extends BaseStep {
@@ -117,6 +126,12 @@ export interface WaitForStep extends BaseStep {
   selector: string;
   /** timeout in ms, defaults to 10000 */
   timeout_ms?: number;
+  /**
+   * Playwright waitForSelector state to wait for. Defaults to "visible".
+   * Use "hidden"/"detached" for web-first assertions that an overlay/modal
+   * has actually gone away, instead of padding timeout_ms and hoping.
+   */
+  state?: "attached" | "detached" | "visible" | "hidden";
 }
 
 export interface AssertTextStep extends BaseStep {
@@ -168,7 +183,7 @@ export interface WaitForUrlStep extends BaseStep {
   pattern: string;
 }
 
-// ─── Run ─────────────────────────────────────────────────────────────────────
+// ─── Run ────────────────────────────────────────────────────────────────────
 
 export type RunStatus =
   "running" | "pass" | "pass_with_findings" | "error" | "critical_halt";
