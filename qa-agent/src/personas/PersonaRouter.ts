@@ -473,6 +473,14 @@ export class PersonaRouter {
   }
 
   private async assertAdminStorageToken(page: Page): Promise<void> {
+    // NOTE: this app authenticates admins via httpOnly Supabase cookies, which
+    // are never visible to window.localStorage/sessionStorage. Checking storage
+    // alone produces a false-positive "auth missing" failure even when the
+    // session is valid and the page has already rendered the real dashboard.
+    // We now also accept an auth cookie (see hasAdminAuthCookie) as proof
+    // of a valid session before failing the run.
+    const hasCookie = await this.hasAdminAuthCookie(page);
+
     const tokenState = await page.evaluate(() => {
       const local = Object.entries(window.localStorage);
       const session = Object.entries(window.sessionStorage);
@@ -506,11 +514,28 @@ export class PersonaRouter {
       };
     });
 
-    if (!tokenState.hasLocal && !tokenState.hasSession) {
+    if (!tokenState.hasLocal && !tokenState.hasSession && !hasCookie) {
       throw new Error(
-        `Admin auth token not found in web storage at ${page.url()} (localStorage/sessionStorage empty or missing auth keys)`,
+        `Admin auth token not found in cookies or web storage at ${page.url()} (cookies/localStorage/sessionStorage empty or missing auth keys)`,
       );
     }
+  }
+
+  private async hasAdminAuthCookie(page: Page): Promise<boolean> {
+    const adminCtx = this.contexts.get("admin");
+    if (!adminCtx) {
+      return false;
+    }
+    const currentUrl = page.url();
+    const origin = currentUrl
+      ? `${new URL(currentUrl).origin}/`
+      : `${this.baseUrl ?? ""}`;
+    const cookies = origin
+      ? await adminCtx.context.cookies(origin)
+      : await adminCtx.context.cookies();
+    return cookies.some((cookie) =>
+      /sb-|supabase|auth|access|refresh/i.test(cookie.name),
+    );
   }
 
   private async hasAdminCookieOrToken(page: Page): Promise<boolean> {
