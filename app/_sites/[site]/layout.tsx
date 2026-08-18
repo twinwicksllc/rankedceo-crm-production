@@ -95,9 +95,10 @@ function buildLayoutCanonicalUrl(tenant: ResolvedTenant): string {
 export async function generateMetadata({
   params,
 }: {
-  params: { site: string };
+  params: Promise<{ site: string }>;
 }): Promise<Metadata> {
-  const result = await getTenantBySlug(params.site);
+  const { site } = await params;
+  const result = await getTenantBySlug(site);
   if (!result) return { title: "Not Found" };
 
   const { tenant, siteConfig } = result;
@@ -160,9 +161,10 @@ export default async function SiteLayout({
   params,
 }: {
   children: React.ReactNode;
-  params: { site: string };
+  params: Promise<{ site: string }>;
 }) {
-  const result = await getTenantBySlug(params.site);
+  const { site } = await params;
+  const result = await getTenantBySlug(site);
   if (!result) notFound();
 
   const { tenant, siteConfig } = result;

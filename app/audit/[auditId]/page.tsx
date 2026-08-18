@@ -28,11 +28,11 @@ export const metadata: Metadata = {
 // ---------------------------------------------------------------------------
 
 interface PageProps {
-  params: { auditId: string };
+  params: Promise<{ auditId: string }>;
 }
 
 export default async function AuditReportPage({ params }: PageProps) {
-  const { auditId: rawAuditParam } = params;
+  const { auditId: rawAuditParam } = await params;
   const auditId = extractAuditIdFromRouteParam(rawAuditParam);
 
   // Backward-compatible: accepts UUID only or slug-UUID path segment.

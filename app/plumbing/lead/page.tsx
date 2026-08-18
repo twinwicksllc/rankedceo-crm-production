@@ -32,11 +32,12 @@ async function PlumbingLeadFormWrapper({
 export default async function PlumbingLeadPage({
   searchParams,
 }: {
-  searchParams: { operatorId?: string; company?: string; ref?: string };
+  searchParams: Promise<{ operatorId?: string; company?: string; ref?: string }>;
 }) {
-  const operatorId = searchParams.operatorId;
-  const companyName = searchParams.company;
-  const referralSource = searchParams.ref;
+  const resolvedSearchParams = await searchParams;
+  const operatorId = resolvedSearchParams.operatorId;
+  const companyName = resolvedSearchParams.company;
+  const referralSource = resolvedSearchParams.ref;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-teal-25">

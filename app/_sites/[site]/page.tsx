@@ -425,9 +425,10 @@ function buildStructuredData(
 export async function generateMetadata({
   params,
 }: {
-  params: { site: string };
+  params: Promise<{ site: string }>;
 }): Promise<Metadata> {
-  const result = await getTenantPage(params.site);
+  const { site } = await params;
+  const result = await getTenantPage(site);
 
   if (!result) {
     return {
@@ -493,9 +494,10 @@ export async function generateMetadata({
 export default async function SitePage({
   params,
 }: {
-  params: { site: string };
+  params: Promise<{ site: string }>;
 }) {
-  const result = await getTenantPage(params.site);
+  const { site } = await params;
+  const result = await getTenantPage(site);
   if (!result) notFound();
 
   const { tenant, sections, siteConfig } = result;

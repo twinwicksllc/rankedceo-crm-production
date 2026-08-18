@@ -9,11 +9,12 @@ import { ArrowLeft, Edit, Play, Pause } from "lucide-react";
 export default async function CampaignDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const campaignService = new CampaignService();
 
-  const campaign = await campaignService.getCampaign(params.id);
+  const campaign = await campaignService.getCampaign(id);
 
   if (!campaign) {
     notFound();

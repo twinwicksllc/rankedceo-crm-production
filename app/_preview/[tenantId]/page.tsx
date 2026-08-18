@@ -110,21 +110,23 @@ export default async function PreviewTenantPage({
   params,
   searchParams,
 }: {
-  params: { tenantId: string };
-  searchParams?: { template?: string; variant?: string };
+  params: Promise<{ tenantId: string }>;
+  searchParams?: Promise<{ template?: string; variant?: string }>;
 }) {
-  const result = await getPreviewPage(params.tenantId, searchParams?.template);
+  const { tenantId } = await params;
+  const resolvedSearchParams = await searchParams;
+  const result = await getPreviewPage(tenantId, resolvedSearchParams?.template);
   if (!result) notFound();
 
   let sections = result.sections;
-  const variantIndex = Number(searchParams?.variant ?? "");
+  const variantIndex = Number(resolvedSearchParams?.variant ?? "");
   if (
     Number.isInteger(variantIndex) &&
     variantIndex >= 1 &&
     variantIndex <= 3
   ) {
     const variantSections = await getVariantSections(
-      params.tenantId,
+      tenantId,
       variantIndex,
     );
     if (variantSections && variantSections.length > 0) {

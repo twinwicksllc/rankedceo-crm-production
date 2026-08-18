@@ -4,11 +4,12 @@ import { updateFormSchema } from "@/lib/validations/form";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const formService = new FormService();
-    const form = await formService.getFormById(params.id);
+    const form = await formService.getFormById(id);
 
     if (!form) {
       return NextResponse.json({ error: "Form not found" }, { status: 404 });
@@ -26,14 +27,15 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const validatedData = updateFormSchema.parse(body);
 
     const formService = new FormService();
-    const form = await formService.updateForm(params.id, validatedData);
+    const form = await formService.updateForm(id, validatedData);
 
     return NextResponse.json(form);
   } catch (error) {
@@ -50,11 +52,12 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const formService = new FormService();
-    await formService.deleteForm(params.id);
+    await formService.deleteForm(id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

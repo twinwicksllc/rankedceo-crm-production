@@ -14,13 +14,13 @@ import { stripe, INDUSTRY_SUBDOMAIN_MAP } from "@/lib/stripe";
 import SuccessRedirect from "./SuccessRedirect";
 
 interface SuccessPageProps {
-  searchParams: { session_id?: string; industry?: string };
+  searchParams: Promise<{ session_id?: string; industry?: string }>;
 }
 
 export default async function PaySuccessPage({
   searchParams,
 }: SuccessPageProps) {
-  const { session_id, industry } = searchParams;
+  const { session_id, industry } = await searchParams;
 
   // Require auth
   const supabase = await createClient();

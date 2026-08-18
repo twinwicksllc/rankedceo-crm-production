@@ -7,9 +7,10 @@ export const dynamic = "force-dynamic";
 export default async function EditActivityPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const activity = await activityService.getActivityById(params.id);
+  const { id } = await params;
+  const activity = await activityService.getActivityById(id);
 
   if (!activity) {
     notFound();
@@ -36,7 +37,7 @@ export default async function EditActivityPage({
           location: activity.location || undefined,
           attendees: activity.attendees || undefined,
         }}
-        onSuccess={() => redirect(`/activities/${params.id}`)}
+        onSuccess={() => redirect(`/activities/${id}`)}
       />
     </div>
   );

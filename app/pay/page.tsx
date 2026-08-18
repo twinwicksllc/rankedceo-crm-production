@@ -63,11 +63,12 @@ const PRODUCT_MAP: Record<
 };
 
 interface PayPageProps {
-  searchParams: { product?: string };
+  searchParams: Promise<{ product?: string }>;
 }
 
 export default async function PayPage({ searchParams }: PayPageProps) {
-  const productSlug = searchParams.product;
+  const resolvedSearchParams = await searchParams;
+  const productSlug = resolvedSearchParams.product;
 
   // Validate product
   if (!productSlug || !PRODUCT_MAP[productSlug]) {

@@ -9,8 +9,9 @@ import { ArrowLeft } from "lucide-react";
 export default async function EditDealPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const supabase = await createClient();
 
   const {
@@ -33,7 +34,7 @@ export default async function EditDealPage({
   const { data: deal, error } = await supabase
     .from("deals")
     .select("*")
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("account_id", userData.account_id)
     .single();
 

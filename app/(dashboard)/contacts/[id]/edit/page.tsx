@@ -12,8 +12,9 @@ import { ContactForm } from "@/components/forms/contact-form";
 export default async function EditContactPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const supabase = await createClient();
 
   const {
@@ -33,7 +34,7 @@ export default async function EditContactPage({
   const { data: contact } = await supabase
     .from("contacts")
     .select("*")
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("account_id", userData.account_id)
     .single();
 

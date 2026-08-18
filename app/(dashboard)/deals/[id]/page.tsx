@@ -23,11 +23,12 @@ async function getDealActivities(dealId: string) {
 export default async function DealDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const [deal, activities] = await Promise.all([
-    dealService.getDealById(params.id),
-    getDealActivities(params.id),
+    dealService.getDealById(id),
+    getDealActivities(id),
   ]);
 
   if (!deal) {

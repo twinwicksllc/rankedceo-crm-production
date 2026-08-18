@@ -23,11 +23,12 @@ async function getCompanyActivities(companyId: string) {
 export default async function CompanyDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const [company, activities] = await Promise.all([
-    companyService.getCompanyById(params.id),
-    getCompanyActivities(params.id),
+    companyService.getCompanyById(id),
+    getCompanyActivities(id),
   ]);
 
   if (!company) {

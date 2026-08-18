@@ -17,7 +17,7 @@ import type { CreateProspectAuditInput } from "@/lib/waas/types";
 const AUDIT_EXPIRY_DAYS = 30;
 
 async function getCrmUser() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

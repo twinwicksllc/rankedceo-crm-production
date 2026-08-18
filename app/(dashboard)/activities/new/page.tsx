@@ -3,11 +3,16 @@ import ActivityForm from "@/components/forms/activity-form";
 
 export const dynamic = "force-dynamic";
 
-export default function NewActivityPage({
+export default async function NewActivityPage({
   searchParams,
 }: {
-  searchParams: { contact_id?: string; company_id?: string; deal_id?: string };
+  searchParams: Promise<{
+    contact_id?: string;
+    company_id?: string;
+    deal_id?: string;
+  }>;
 }) {
+  const resolvedSearchParams = await searchParams;
   return (
     <div className="space-y-6">
       <div>
@@ -16,9 +21,9 @@ export default function NewActivityPage({
       </div>
 
       <ActivityForm
-        contactId={searchParams.contact_id}
-        companyId={searchParams.company_id}
-        dealId={searchParams.deal_id}
+        contactId={resolvedSearchParams.contact_id}
+        companyId={resolvedSearchParams.company_id}
+        dealId={resolvedSearchParams.deal_id}
         onSuccess={() => redirect("/activities")}
       />
     </div>

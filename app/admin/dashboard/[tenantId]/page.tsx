@@ -30,22 +30,24 @@ import type { AdminTenantListItem } from "@/lib/waas/actions/admin";
 import type { WaasDomainRequest, WaasPackageTier } from "@/lib/waas/types";
 
 interface PageProps {
-  params: { tenantId: string };
-  searchParams: { tab?: string };
+  params: Promise<{ tenantId: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }
 
 export default async function TenantDetailPage({
   params,
   searchParams,
 }: PageProps) {
-  const result = await getTenantDetail(params.tenantId);
+  const { tenantId } = await params;
+  const resolvedSearchParams = await searchParams;
+  const result = await getTenantDetail(tenantId);
   if (!result.success || !result.data) notFound();
 
   const { tenant, domainRequests, audit, versions, deployments } = result.data;
   const siteConfig = result.data.siteConfig;
   const brand = tenant.brand_config;
   const colors = brand?.colors;
-  const activeTab = searchParams?.tab ?? "overview";
+  const activeTab = resolvedSearchParams?.tab ?? "overview";
   const tokenResult = await ensureClientReviewToken(tenant.id);
   const readinessResult = await getDeployReadiness(tenant.id);
   const variantsResult = await getSiteVariants(tenant.id);
@@ -155,7 +157,7 @@ export default async function TenantDetailPage({
         ].map((tab) => (
           <Link
             key={tab.key}
-            href={`/admin/dashboard/${params.tenantId}?tab=${tab.key}`}
+            href={`/admin/dashboard/${tenantId}?tab=${tab.key}`}
             className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
               activeTab === tab.key
                 ? "bg-white/10 text-white shadow-sm"

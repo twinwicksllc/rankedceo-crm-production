@@ -15,7 +15,7 @@ import type { CreateWaasTenantInput } from "@/lib/waas/types";
 // Auth helper — ensures caller is authenticated CRM user
 // ---------------------------------------------------------------------------
 async function getCrmUser() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

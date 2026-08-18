@@ -67,8 +67,9 @@ async function getActivityStats(accountId: string) {
 export default async function ActivitiesPage({
   searchParams,
 }: {
-  searchParams: { type?: string; status?: string; search?: string };
+  searchParams: Promise<{ type?: string; status?: string; search?: string }>;
 }) {
+  const resolvedSearchParams = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -86,9 +87,9 @@ export default async function ActivitiesPage({
   if (!userData?.account_id) return null;
 
   const filters = {
-    type: searchParams.type,
-    status: searchParams.status,
-    search: searchParams.search,
+    type: resolvedSearchParams.type,
+    status: resolvedSearchParams.status,
+    search: resolvedSearchParams.search,
   };
 
   const [activities, stats] = await Promise.all([

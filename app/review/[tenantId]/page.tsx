@@ -5,9 +5,10 @@ import { ReviewClient } from "./review-client";
 export default async function ReviewPage({
   params,
 }: {
-  params: { tenantId: string };
+  params: Promise<{ tenantId: string }>;
 }) {
-  const sessionResult = await getClientReviewSession(params.tenantId);
+  const { tenantId } = await params;
+  const sessionResult = await getClientReviewSession(tenantId);
   if (!sessionResult.success || !sessionResult.data) notFound();
 
   const session = sessionResult.data;

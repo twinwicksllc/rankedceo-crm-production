@@ -4,12 +4,13 @@ import { submitFormSchema } from "@/lib/validations/form";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const validatedData = submitFormSchema.parse({
-      form_id: params.id,
+      form_id: id,
       ...body,
     });
 

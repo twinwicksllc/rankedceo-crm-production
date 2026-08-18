@@ -17,7 +17,7 @@ import type { WaasTenantUpdate } from "@/lib/waas/supabase";
 import type { UpdateWaasTenantInput } from "@/lib/waas/types";
 
 async function getCrmUser() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -40,9 +40,10 @@ async function getCrmUser() {
 // ---------------------------------------------------------------------------
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const user = await getCrmUser();
     if (!user)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -51,7 +52,7 @@ export async function GET(
     const { data, error } = await waas
       .from("tenants")
       .select("*")
-      .eq("id", params.id)
+      .eq("id", id)
       .is("deleted_at", null)
       .single();
 
@@ -74,9 +75,10 @@ export async function GET(
 // ---------------------------------------------------------------------------
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const user = await getCrmUser();
     if (!user)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -100,7 +102,7 @@ export async function PATCH(
       update.crm_account_id = body.crm_account_id ?? null;
 
     try {
-      const tenant = await updateTenantRecord(params.id, update);
+      const tenant = await updateTenantRecord(id, update);
       if (!tenant) {
         return NextResponse.json(
           { error: "Tenant not found" },
@@ -130,14 +132,15 @@ export async function PATCH(
 // ---------------------------------------------------------------------------
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const user = await getCrmUser();
     if (!user)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const ok = await softDeleteTenant(params.id);
+    const ok = await softDeleteTenant(id);
 
     if (!ok) {
       return NextResponse.json(

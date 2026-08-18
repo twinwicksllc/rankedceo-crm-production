@@ -8,11 +8,12 @@ import { FormService } from "@/lib/services/form-service";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const formService = new FormService();
-    const submissions = await formService.getFormSubmissions(params.id);
+    const submissions = await formService.getFormSubmissions(id);
 
     return NextResponse.json(submissions);
   } catch (error) {
