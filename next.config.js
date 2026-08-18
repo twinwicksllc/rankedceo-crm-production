@@ -1,5 +1,3 @@
-const path = require("path");
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -26,13 +24,8 @@ const nextConfig = {
       ],
     },
   },
-  webpack: (config) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      "@": path.resolve(__dirname),
-    };
-    return config;
-  },
+  // "@/*" is already resolved via tsconfig.json paths, which Turbopack reads natively.
+  turbopack: {},
 };
 
 module.exports = nextConfig;
