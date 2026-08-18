@@ -31,8 +31,8 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 interface PageProps {
-  params: { reviewToken: string };
-  searchParams: { tab?: string; checkout?: string; approve?: string };
+  params: Promise<{ reviewToken: string }>;
+  searchParams: Promise<{ tab?: string; checkout?: string; approve?: string }>;
 }
 // ---------------------------------------------------------------------------
 // Server-only helper: load sections_json for the currently-selected variant
@@ -91,10 +91,11 @@ export default async function ClientEditorPage({
   params,
   searchParams,
 }: PageProps) {
-  const reviewToken = params.reviewToken;
-  const tab = searchParams?.tab ?? "overview";
-  const checkoutSuccess = searchParams?.checkout === "success";
-  const autoOpenApproval = searchParams?.approve === "1";
+  const { reviewToken } = await params;
+  const resolvedSearchParams = await searchParams;
+  const tab = resolvedSearchParams?.tab ?? "overview";
+  const checkoutSuccess = resolvedSearchParams?.checkout === "success";
+  const autoOpenApproval = resolvedSearchParams?.approve === "1";
 
   const result = await resolveClientEditSession(reviewToken);
   if (!result.ok) {

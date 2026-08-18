@@ -79,8 +79,9 @@ function StatusBadge({ status }: { status: WaasTenant["status"] }) {
 export default async function AdminDashboardPage({
   searchParams,
 }: {
-  searchParams?: { review?: string };
+  searchParams?: Promise<{ review?: string }>;
 }) {
+  const resolvedSearchParams = await searchParams;
   const archiveDuplicateAttemptsAction = async () => {
     "use server";
     await archiveDuplicatePendingAttempts();
@@ -113,8 +114,9 @@ export default async function AdminDashboardPage({
   const activeAllCount = tenants.filter((t) => t.status === "active").length;
 
   const reviewFilter =
-    searchParams?.review === "selected" || searchParams?.review === "awaiting"
-      ? searchParams.review
+    resolvedSearchParams?.review === "selected" ||
+    resolvedSearchParams?.review === "awaiting"
+      ? resolvedSearchParams.review
       : "all";
 
   const selectedCount = tenants.filter((t) =>

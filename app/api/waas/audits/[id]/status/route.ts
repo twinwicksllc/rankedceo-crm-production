@@ -9,17 +9,18 @@ import { getAuditStatus } from "@/lib/waas/supabase";
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    if (!params.id) {
+    const { id } = await params;
+    if (!id) {
       return NextResponse.json(
         { error: "Audit ID is required" },
         { status: 400 },
       );
     }
 
-    const result = await getAuditStatus(params.id);
+    const result = await getAuditStatus(id);
 
     if (!result) {
       return NextResponse.json({ error: "Audit not found" }, { status: 404 });

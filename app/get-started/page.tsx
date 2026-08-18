@@ -12,13 +12,16 @@ export const metadata: Metadata = {
 };
 
 interface PageProps {
-  searchParams: { auditId?: string; audit_id?: string; tier?: string };
+  searchParams: Promise<{ auditId?: string; audit_id?: string; tier?: string }>;
 }
 
-export default function OnboardingPage({ searchParams }: PageProps) {
-  const auditId = searchParams.auditId ?? searchParams.audit_id ?? null;
+export default async function OnboardingPage({ searchParams }: PageProps) {
+  const resolvedSearchParams = await searchParams;
+  const auditId =
+    resolvedSearchParams.auditId ?? resolvedSearchParams.audit_id ?? null;
   const tier =
-    (searchParams.tier as "hosting" | "standard" | "premium") ?? "standard";
+    (resolvedSearchParams.tier as "hosting" | "standard" | "premium") ??
+    "standard";
 
   return <OnboardingFlow auditId={auditId} initialTier={tier} />;
 }

@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 interface PreviewProps {
-  params: { reviewToken: string };
+  params: Promise<{ reviewToken: string }>;
 }
 
 // ---------------------------------------------------------------------------
@@ -130,7 +130,8 @@ async function loadPreviewData(session: {
 export default async function ClientEditorPreviewPage({
   params,
 }: PreviewProps) {
-  const sessionResult = await resolveClientEditSession(params.reviewToken);
+  const { reviewToken } = await params;
+  const sessionResult = await resolveClientEditSession(reviewToken);
   if (!sessionResult.ok) notFound();
 
   const data = await loadPreviewData({

@@ -9,10 +9,11 @@ import { ArrowLeft, Edit, Copy } from "lucide-react";
 export default async function EmailTemplateDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const campaignService = new CampaignService();
-  const template = await campaignService.getTemplate(params.id);
+  const template = await campaignService.getTemplate(id);
 
   if (!template) {
     notFound();

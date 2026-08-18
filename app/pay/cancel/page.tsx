@@ -11,11 +11,12 @@ import Link from "next/link";
 import { INDUSTRY_SUBDOMAIN_MAP, PLAN_INFO } from "@/lib/stripe";
 
 interface CancelPageProps {
-  searchParams: { industry?: string };
+  searchParams: Promise<{ industry?: string }>;
 }
 
-export default function PayCancelPage({ searchParams }: CancelPageProps) {
-  const industry = searchParams.industry || "hvac";
+export default async function PayCancelPage({ searchParams }: CancelPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const industry = resolvedSearchParams.industry || "hvac";
   const landingUrl = INDUSTRY_SUBDOMAIN_MAP[industry] || "/";
   const planInfo = PLAN_INFO[industry];
 

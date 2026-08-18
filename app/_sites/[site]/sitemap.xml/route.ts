@@ -73,9 +73,9 @@ function buildSitemap(urls: SitemapUrl[]): string {
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { site: string } },
+  { params }: { params: Promise<{ site: string }> },
 ) {
-  const slug = params.site;
+  const { site: slug } = await params;
 
   try {
     const client = createClient(

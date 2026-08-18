@@ -8,9 +8,10 @@ import { FormSubmissionService } from "@/lib/services/form-submission-service";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const searchParams = request.nextUrl.searchParams;
     const format = (searchParams.get("format") || "csv") as "csv" | "json";
 
@@ -21,13 +22,13 @@ export async function GET(
     let filename: string;
 
     if (format === "csv") {
-      content = await submissionService.exportToCSV(params.id);
+      content = await submissionService.exportToCSV(id);
       contentType = "text/csv";
-      filename = `form-submissions-${params.id}.csv`;
+      filename = `form-submissions-${id}.csv`;
     } else {
-      content = await submissionService.exportToJSON(params.id);
+      content = await submissionService.exportToJSON(id);
       contentType = "application/json";
-      filename = `form-submissions-${params.id}.json`;
+      filename = `form-submissions-${id}.json`;
     }
 
     return new NextResponse(content, {

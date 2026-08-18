@@ -23,11 +23,12 @@ async function getContactActivities(contactId: string) {
 export default async function ContactDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const [contact, activities] = await Promise.all([
-    contactService.getContactById(params.id),
-    getContactActivities(params.id),
+    contactService.getContactById(id),
+    getContactActivities(id),
   ]);
 
   if (!contact) {

@@ -6,11 +6,12 @@ export const dynamic = "force-dynamic";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const service = new AppointmentService();
-    const appointment = await service.getAppointment(params.id);
+    const appointment = await service.getAppointment(id);
 
     if (!appointment) {
       return NextResponse.json(
@@ -31,9 +32,10 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const parsed = updateAppointmentSchema.safeParse(body);
 
@@ -45,7 +47,7 @@ export async function PATCH(
     }
 
     const service = new AppointmentService();
-    const appointment = await service.updateAppointment(params.id, parsed.data);
+    const appointment = await service.updateAppointment(id, parsed.data);
 
     return NextResponse.json({ appointment });
   } catch (error: any) {
@@ -59,11 +61,12 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const service = new AppointmentService();
-    await service.cancelAppointment(params.id);
+    await service.cancelAppointment(id);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

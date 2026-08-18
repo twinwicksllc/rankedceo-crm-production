@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { AuditReportData, WaasAudit } from "@/lib/waas/types";
 
 interface RequestContext {
-  params: { auditId: string };
+  params: Promise<{ auditId: string }>;
 }
 
 // ---------------------------------------------------------------------------
@@ -127,7 +127,7 @@ function kvRow(
 
 export async function GET(_req: NextRequest, context: RequestContext) {
   try {
-    const auditId = context.params.auditId;
+    const { auditId } = await context.params;
 
     // Fetch audit — use service-role client so RLS does not block server-side reads
     const waasAdmin = getWaasAdminClient();

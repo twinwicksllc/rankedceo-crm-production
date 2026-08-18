@@ -6,10 +6,11 @@ import { CampaignForm } from "@/components/forms/campaign-form";
 export default async function EditCampaignPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const campaignService = new CampaignService();
-  const campaign = await campaignService.getCampaign(params.id);
+  const campaign = await campaignService.getCampaign(id);
 
   if (!campaign) {
     notFound();
@@ -18,5 +19,5 @@ export default async function EditCampaignPage({
   // For now, redirect to the campaign detail page
   // The CampaignForm component doesn't accept props for editing
   // We'll need to enhance the form component to support editing in a future update
-  redirect(`/campaigns/${params.id}`);
+  redirect(`/campaigns/${id}`);
 }

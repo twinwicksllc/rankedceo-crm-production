@@ -3,12 +3,13 @@ import { CampaignService } from "@/lib/services/campaign-service";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const campaignService = new CampaignService();
 
-    const campaign = await campaignService.getCampaign(params.id);
+    const campaign = await campaignService.getCampaign(id);
 
     if (!campaign) {
       return NextResponse.json(
@@ -29,14 +30,15 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const campaignService = new CampaignService();
     const body = await request.json();
 
     const updatedCampaign = await campaignService.updateCampaign(
-      params.id,
+      id,
       body,
     );
 
@@ -52,12 +54,13 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const campaignService = new CampaignService();
 
-    await campaignService.deleteCampaign(params.id);
+    await campaignService.deleteCampaign(id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

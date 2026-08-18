@@ -10,8 +10,9 @@ export const dynamic = "force-dynamic";
 export default async function AppointmentDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const supabase = await createClient();
   const {
     data: { user },
@@ -19,7 +20,7 @@ export default async function AppointmentDetailPage({
   if (!user) redirect("/login");
 
   const service = new AppointmentService();
-  const appointment = await service.getAppointment(params.id);
+  const appointment = await service.getAppointment(id);
 
   if (!appointment) notFound();
 

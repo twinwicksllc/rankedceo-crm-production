@@ -10,8 +10,9 @@ import { notFound } from "next/navigation";
 export default async function CommissionDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const supabase = await createClient();
   const {
     data: { user },
@@ -26,7 +27,7 @@ export default async function CommissionDetailPage({
   let commission: any = null;
 
   try {
-    commission = await commissionService.getCommission(params.id);
+    commission = await commissionService.getCommission(id);
   } catch (error) {
     console.error("Error fetching commission:", error);
     notFound();

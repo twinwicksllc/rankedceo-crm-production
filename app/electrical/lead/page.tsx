@@ -32,11 +32,12 @@ async function ElectricalLeadFormWrapper({
 export default async function ElectricalLeadPage({
   searchParams,
 }: {
-  searchParams: { operatorId?: string; company?: string; ref?: string };
+  searchParams: Promise<{ operatorId?: string; company?: string; ref?: string }>;
 }) {
-  const operatorId = searchParams.operatorId;
-  const companyName = searchParams.company;
-  const referralSource = searchParams.ref;
+  const resolvedSearchParams = await searchParams;
+  const operatorId = resolvedSearchParams.operatorId;
+  const companyName = resolvedSearchParams.company;
+  const referralSource = resolvedSearchParams.ref;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-amber-25">
