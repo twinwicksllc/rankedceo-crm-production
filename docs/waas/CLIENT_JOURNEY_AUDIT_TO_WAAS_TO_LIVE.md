@@ -30,9 +30,9 @@ flowchart LR
 
 Primary touchpoints:
 
-- Public entry page: [app/audit/start/page.tsx](app/audit/start/page.tsx)
-- Audit start form: [app/audit/start/audit-start-form.tsx](app/audit/start/audit-start-form.tsx)
-- Run endpoint: [app/api/audit/run/route.ts](app/api/audit/run/route.ts)
+- Public entry page: [app/audit/start/page.tsx](../../app/audit/start/page.tsx)
+- Audit start form: [app/audit/start/audit-start-form.tsx](../../app/audit/start/audit-start-form.tsx)
+- Run endpoint: [app/api/audit/run/route.ts](../../app/api/audit/run/route.ts)
 
 What happens:
 
@@ -48,9 +48,9 @@ Key persisted data:
 
 Primary touchpoints:
 
-- Audit report page: [app/audit/[auditId]/page.tsx](app/audit/[auditId]/page.tsx)
-- Report client view: [app/audit/[auditId]/client.tsx](app/audit/[auditId]/client.tsx)
-- Lead capture endpoint: [app/api/audit/leads/route.ts](app/api/audit/leads/route.ts)
+- Audit report page: [app/audit/[auditId]/page.tsx](../../app/audit/[auditId]/page.tsx)
+- Report client view: [app/audit/[auditId]/client.tsx](../../app/audit/[auditId]/client.tsx)
+- Lead capture endpoint: [app/api/audit/leads/route.ts](../../app/api/audit/leads/route.ts)
 
 What happens:
 
@@ -68,9 +68,9 @@ Audit lifecycle states:
 
 Primary touchpoints:
 
-- Onboarding UI: [app/get-started/onboarding-flow.tsx](app/get-started/onboarding-flow.tsx)
-- Onboarding actions: [lib/waas/actions/onboarding/steps-1-3.ts](lib/waas/actions/onboarding/steps-1-3.ts)
-- Final onboarding actions: [lib/waas/actions/onboarding/steps-final.ts](lib/waas/actions/onboarding/steps-final.ts)
+- Onboarding UI: [app/get-started/onboarding-flow.tsx](../../app/get-started/onboarding-flow.tsx)
+- Onboarding actions: [lib/waas/actions/onboarding/steps-1-3.ts](../../lib/waas/actions/onboarding/steps-1-3.ts)
+- Final onboarding actions: [lib/waas/actions/onboarding/steps-final.ts](../../lib/waas/actions/onboarding/steps-final.ts)
 
 Step-by-step flow:
 
@@ -114,8 +114,8 @@ Tenant status transition at this stage:
 
 Primary touchpoints:
 
-- Initial site generator: [lib/waas/services/generate-initial-site/index.ts](lib/waas/services/generate-initial-site/index.ts)
-- Onboarding final trigger: [lib/waas/actions/onboarding/steps-final.ts](lib/waas/actions/onboarding/steps-final.ts)
+- Initial site generator: [lib/waas/services/generate-initial-site/index.ts](../../lib/waas/services/generate-initial-site/index.ts)
+- Onboarding final trigger: [lib/waas/actions/onboarding/steps-final.ts](../../lib/waas/actions/onboarding/steps-final.ts)
 
 What happens:
 
@@ -127,10 +127,10 @@ What happens:
 
 Primary touchpoints:
 
-- Admin dashboard list: [app/admin/dashboard/page.tsx](app/admin/dashboard/page.tsx)
-- Tenant detail workspace: [app/admin/dashboard/[tenantId]/page.tsx](app/admin/dashboard/[tenantId]/page.tsx)
-- Domain management: [app/admin/dashboard/domain-requests/page.tsx](app/admin/dashboard/domain-requests/page.tsx)
-- Admin action modules: [lib/waas/actions/admin/index.ts](lib/waas/actions/admin/index.ts)
+- Admin dashboard list: [app/admin/dashboard/page.tsx](../../app/admin/dashboard/page.tsx)
+- Tenant detail workspace: [app/admin/dashboard/[tenantId]/page.tsx](../../app/admin/dashboard/[tenantId]/page.tsx)
+- Domain management: [app/admin/dashboard/domain-requests/page.tsx](../../app/admin/dashboard/domain-requests/page.tsx)
+- Admin action modules: [lib/waas/actions/admin/index.ts](../../lib/waas/actions/admin/index.ts)
 
 What ops manages here:
 
@@ -144,10 +144,10 @@ What ops manages here:
 
 Primary touchpoints:
 
-- Review page: [app/review/[tenantId]/page.tsx](app/review/[tenantId]/page.tsx)
-- Client edit portal: [app/edit/[reviewToken]/page.tsx](app/edit/[reviewToken]/page.tsx)
-- Review actions: [lib/waas/actions/admin/client-review.ts](lib/waas/actions/admin/client-review.ts)
-- Client edit actions: [lib/waas/actions/client-edit/index.ts](lib/waas/actions/client-edit/index.ts)
+- Review page: [app/review/[tenantId]/page.tsx](../../app/review/[tenantId]/page.tsx)
+- Client edit portal: [app/edit/[reviewToken]/page.tsx](../../app/edit/[reviewToken]/page.tsx)
+- Review actions: [lib/waas/actions/admin/client-review.ts](../../lib/waas/actions/admin/client-review.ts)
+- Client edit actions: [lib/waas/actions/client-edit/index.ts](../../lib/waas/actions/client-edit/index.ts)
 
 What happens:
 
@@ -165,8 +165,8 @@ Variant lifecycle states:
 
 Primary touchpoints:
 
-- Readiness and deploy actions: [lib/waas/actions/admin/deploy.ts](lib/waas/actions/admin/deploy.ts)
-- Deploy UI trigger: [app/admin/dashboard/[tenantId]/deploy-site-button.tsx](app/admin/dashboard/[tenantId]/deploy-site-button.tsx)
+- Readiness and deploy actions: [lib/waas/actions/admin/deploy.ts](../../lib/waas/actions/admin/deploy.ts)
+- Deploy UI trigger: [app/admin/dashboard/[tenantId]/deploy-site-button.tsx](../../app/admin/dashboard/[tenantId]/deploy-site-button.tsx)
 
 Readiness gate checks include:
 
@@ -188,10 +188,10 @@ Deploy rule:
 
 Primary touchpoints:
 
-- Deploy action: [lib/waas/actions/admin/deploy.ts](lib/waas/actions/admin/deploy.ts)
-- Tenant runtime route: [app/_sites/[site]/page.tsx](app/_sites/[site]/page.tsx)
-- Tenant layout/runtime context: [app/_sites/[site]/layout.tsx](app/_sites/[site]/layout.tsx)
-- Middleware resolver: [middleware.ts](middleware.ts)
+- Deploy action: [lib/waas/actions/admin/deploy.ts](../../lib/waas/actions/admin/deploy.ts)
+- Tenant runtime route: [app/_sites/[site]/page.tsx](../../app/_sites/[site]/page.tsx)
+- Tenant layout/runtime context: [app/_sites/[site]/layout.tsx](../../app/_sites/[site]/layout.tsx)
+- Middleware resolver: [middleware.ts](../../middleware.ts)
 
 What happens on deploy:
 
@@ -209,9 +209,9 @@ Tenant status transition at this stage:
 
 Primary touchpoints:
 
-- Tenant site rendering: [app/_sites/[site]/page.tsx](app/_sites/[site]/page.tsx)
-- SEO routes: [app/_sites/[site]/sitemap.xml/route.ts](app/_sites/[site]/sitemap.xml/route.ts) and [app/_sites/[site]/robots.txt/route.ts](app/_sites/[site]/robots.txt/route.ts)
-- Client portal ongoing edits: [app/edit/[reviewToken]/page.tsx](app/edit/[reviewToken]/page.tsx)
+- Tenant site rendering: [app/_sites/[site]/page.tsx](../../app/_sites/[site]/page.tsx)
+- SEO routes: [app/_sites/[site]/sitemap.xml/route.ts](../../app/_sites/[site]/sitemap.xml/route.ts) and [app/_sites/[site]/robots.txt/route.ts](../../app/_sites/[site]/robots.txt/route.ts)
+- Client portal ongoing edits: [app/edit/[reviewToken]/page.tsx](../../app/edit/[reviewToken]/page.tsx)
 
 Ongoing lifecycle:
 
@@ -244,7 +244,7 @@ Audit statuses:
 
 Source of truth:
 
-- [lib/waas/types.ts](lib/waas/types.ts)
+- [lib/waas/types.ts](../../lib/waas/types.ts)
 
 ## Ownership Model (Recommended)
 
