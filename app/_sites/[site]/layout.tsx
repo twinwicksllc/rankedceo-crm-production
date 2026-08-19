@@ -42,7 +42,6 @@ async function getTenantBySlug(slug: string): Promise<{
     `,
     )
     .eq("slug", slug)
-    .eq("status", "active")
     .single();
 
   if (error || !tenantRow) return null;
@@ -102,10 +101,13 @@ export async function generateMetadata({
   if (!result) return { title: "Not Found" };
 
   const { tenant, siteConfig } = result;
+  const isActive = tenant.status === "active";
   const brandConfig = tenant.brand_config;
   const businessName =
     brandConfig.business_name ?? tenant.legal_name ?? "Local Business";
-  const title = siteConfig?.meta_title ?? businessName;
+  const title = isActive
+    ? (siteConfig?.meta_title ?? businessName)
+    : `${businessName} — Coming Soon`;
   const description =
     siteConfig?.meta_description ??
     tenant.usp ??
@@ -145,9 +147,9 @@ export async function generateMetadata({
       ...(ogImage ? { images: [ogImage] } : {}),
     },
     robots: {
-      index: true,
-      follow: true,
-      googleBot: { index: true, follow: true },
+      index: isActive,
+      follow: isActive,
+      googleBot: { index: isActive, follow: isActive },
     },
   };
 }
@@ -168,6 +170,21 @@ export default async function SiteLayout({
   if (!result) notFound();
 
   const { tenant, siteConfig } = result;
+
+  // Non-active tenants get the full-page placeholder (SiteComingSoon) without
+  // the standard site chrome (header/footer) to avoid double-layout and prevent
+  // exposing header/footer for tenants that are not yet live.
+  if (tenant.status !== "active") {
+    return (
+      <>
+        <ThemeProvider
+          brandConfig={tenant.brand_config}
+          customCss={siteConfig?.custom_css}
+        />
+        {children}
+      </>
+    );
+  }
 
   return (
     <div

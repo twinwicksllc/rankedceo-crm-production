@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Search } from "lucide-react";
@@ -15,6 +15,14 @@ type AuditRunResponse = {
   error?: string;
 };
 
+const AUDIT_STAGES = [
+  "Analyzing your website…",
+  "Checking search rankings…",
+  "Testing page speed…",
+  "Comparing against competitors…",
+  "Building your report…",
+];
+
 function AuditStartFormContent() {
   const router = useRouter();
   const { theme } = useOnboardingTheme();
@@ -23,6 +31,23 @@ function AuditStartFormContent() {
   const [competitors, setCompetitors] = useState<string[]>([""]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [stageIndex, setStageIndex] = useState(0);
+
+  // Cycle through staged copy while the (still-synchronous) audit runs, so
+  // the wait state reads as active progress instead of a stuck spinner.
+  // Timer is tuned to observed step durations — superseded by real progress
+  // once audit processing moves to async (Initiative 6 in
+  // docs/waas/AUDIT_TO_WEBSITE_FLOW_RECOMMENDATIONS.md).
+  useEffect(() => {
+    if (!loading) {
+      setStageIndex(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setStageIndex((i) => Math.min(i + 1, AUDIT_STAGES.length - 1));
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [loading]);
 
   const submitAudit = async (e: FormEvent) => {
     e.preventDefault();
@@ -280,8 +305,21 @@ function AuditStartFormContent() {
                   : "text-[#052230]"
               }`}
             >
-              {loading ? "Running Audit..." : "Run Your Audit"}
+              {loading ? AUDIT_STAGES[stageIndex] : "Run Your Audit"}
             </button>
+
+            {loading && (
+              <div
+                className={`h-1.5 w-full overflow-hidden rounded-full ${isLight ? "bg-slate-200" : "bg-white/10"}`}
+              >
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-emerald-500 transition-all duration-500"
+                  style={{
+                    width: `${((stageIndex + 1) / AUDIT_STAGES.length) * 100}%`,
+                  }}
+                />
+              </div>
+            )}
 
             <div
               className={`mt-2 pt-6 ${isLight ? "border-t border-slate-300/70" : "border-t border-cyan-100/10"}`}

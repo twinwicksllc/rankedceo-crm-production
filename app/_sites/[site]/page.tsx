@@ -10,6 +10,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { SectionRenderer } from "@/components/waas/SectionRenderer";
+import { SiteComingSoon } from "@/components/waas/SiteComingSoon";
 import { getTemplate, resolveSections } from "@/lib/waas/templates/registry";
 import type {
   ResolvedTenant,
@@ -53,7 +54,6 @@ async function getTenantPage(slug: string): Promise<{
     `,
     )
     .eq("slug", slug)
-    .eq("status", "active")
     .single();
 
   if (error || !tenantRow) return null;
@@ -438,6 +438,7 @@ export async function generateMetadata({
   }
 
   const { tenant } = result;
+  const isActive = tenant.status === "active";
   const brand = tenant.brand_config as BrandConfig & {
     tagline?: string;
     logo_url?: string;
@@ -452,7 +453,7 @@ export async function generateMetadata({
   const ogImage = brand.hero_image_url ?? brand.logo_url ?? null;
 
   return {
-    title: name,
+    title: isActive ? name : `${name} — Coming Soon`,
     description,
     metadataBase: new URL(canonical),
     alternates: {
@@ -480,9 +481,9 @@ export async function generateMetadata({
       ...(ogImage ? { images: [ogImage] } : {}),
     },
     robots: {
-      index: true,
-      follow: true,
-      googleBot: { index: true, follow: true },
+      index: isActive,
+      follow: isActive,
+      googleBot: { index: isActive, follow: isActive },
     },
   };
 }
@@ -501,6 +502,11 @@ export default async function SitePage({
   if (!result) notFound();
 
   const { tenant, sections, siteConfig } = result;
+
+  if (tenant.status !== "active") {
+    return <SiteComingSoon tenant={tenant} />;
+  }
+
   const canonical = buildCanonicalUrl(tenant);
   const structuredData = buildStructuredData(tenant, canonical, sections);
 
