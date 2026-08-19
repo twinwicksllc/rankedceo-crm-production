@@ -8,12 +8,9 @@ import type { ResolvedTenant, BrandConfig } from "@/lib/waas/templates/types";
 // =============================================================================
 
 export function SiteComingSoon({ tenant }: { tenant: ResolvedTenant }) {
-  const brand = tenant.brand_config as BrandConfig & {
-    logo_url?: string;
-    primary_color?: string;
-  };
-  const name = brand?.business_name ?? tenant.legal_name ?? "This site";
-  const primary = brand?.primary_color ?? "#2563EB";
+  const brand = tenant.brand_config as BrandConfig;
+  const name = brand.business_name || tenant.legal_name || "This site";
+  const primary = brand.colors?.primary ?? "#2563EB";
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-6 py-16 text-center">
