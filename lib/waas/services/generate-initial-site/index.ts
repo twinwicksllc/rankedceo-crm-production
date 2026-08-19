@@ -8,6 +8,7 @@ import {
 import { runGeminiEnhancement } from "./tier2";
 import { buildProfile } from "./profile";
 import { getAdminClient } from "./_shared";
+import { sendTenantNotification } from "@/lib/waas/services/notifications";
 
 export type { InitialSiteBuildResult } from "./types";
 
@@ -53,6 +54,49 @@ export async function generateInitialSiteFromTemplate(
             },
             { onConflict: "tenant_id" },
           );
+
+          // Initiative 7 (docs/waas/AUDIT_TO_WEBSITE_FLOW_RECOMMENDATIONS.md):
+          // the enhancement pass was previously fire-and-forget with no
+          // client-visible completion signal. Notify now that Tier 2 is done
+          // so the client knows to go look again instead of reviewing a
+          // stale Tier 1 variant. Best-effort — never blocks the DB write.
+          try {
+            const { data: configRow } = await supabase
+              .from("tenant_site_config")
+              .select("client_review_token")
+              .eq("tenant_id", tenantId)
+              .maybeSingle();
+
+            const reviewToken = (configRow as { client_review_token?: string } | null)
+              ?.client_review_token;
+
+            if (reviewToken) {
+              const appUrl =
+                process.env.NEXT_PUBLIC_APP_URL_PROD ??
+                process.env.NEXT_PUBLIC_APP_URL ??
+                "https://crm.rankedceo.com";
+
+              await sendTenantNotification({
+                type: "ai_enhancement_ready",
+                tenantId,
+                data: {
+                  businessName: tenant.brand_config?.business_name ?? tenant.legal_name ?? undefined,
+                  reviewTokenUrl: `${appUrl}/edit/${reviewToken}?tab=overview`,
+                },
+                dedupKey: `ai_enhancement_ready:${tenantId}`,
+                dedupWindowHours: 24,
+              });
+            } else {
+              console.warn(
+                `[WaaS] Tier 2 complete for tenant ${tenantId} but no review token found — skipping notification`,
+              );
+            }
+          } catch (notifyErr) {
+            console.error(
+              `[WaaS] ai_enhancement_ready notification failed for tenant ${tenantId}:`,
+              notifyErr,
+            );
+          }
         })
         .catch(async (err: unknown) => {
           const message =
