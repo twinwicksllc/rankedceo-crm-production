@@ -34,7 +34,7 @@ export function SiteComingSoon({ tenant }: { tenant: ResolvedTenant }) {
       </p>
       <div
         className="mt-8 h-1.5 w-40 overflow-hidden rounded-full"
-        style={{ backgroundColor: `${primary}22` }}
+        style={{ backgroundColor: "rgb(var(--brand-primary-rgb) / 0.13)" }}
       >
         <div
           className="h-full w-1/3 animate-pulse rounded-full"
