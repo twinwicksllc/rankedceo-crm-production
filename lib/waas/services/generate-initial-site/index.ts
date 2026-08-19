@@ -81,7 +81,7 @@ export async function generateInitialSiteFromTemplate(
                 tenantId,
                 data: {
                   businessName: tenant.brand_config?.business_name ?? tenant.legal_name ?? undefined,
-                  reviewTokenUrl: `${appUrl}/edit/${reviewToken}?tab=overview`,
+                  reviewUrl: `${appUrl}/edit/${reviewToken}?tab=overview`,
                 },
                 dedupKey: `ai_enhancement_ready:${tenantId}`,
                 dedupWindowHours: 24,
