@@ -16,6 +16,15 @@ import { sendAuditReportReadyEmail } from "@/lib/waas/services/notifications";
 
 const AUDIT_EXPIRY_DAYS = 30;
 
+// Initiative 1 (docs/waas/AUDIT_TO_WEBSITE_FLOW_RECOMMENDATIONS.md): the
+// worst-case chain here is a site scrape + keyword-gen + parallel Serper
+// calls + a PageSpeed Insights call per target/competitor (up to 4 sites),
+// which commonly exceeds Vercel's default serverless timeout on slow target
+// sites. This is the interim stopgap ahead of the real async migration
+// (Initiative 6) — mirrors the functions.maxDuration override in
+// vercel.json. Tune against real p95 once measured.
+export const maxDuration = 90;
+
 // ---------------------------------------------------------------------------
 // POST /api/audit/run
 // ---------------------------------------------------------------------------
@@ -37,7 +46,7 @@ export async function POST(req: NextRequest) {
       skip_cache,
     } = body;
 
-    // ── Validate inputs ──────────────────────────────────────────────────────
+    // ── Validate inputs ────────────────────────────────────────────────────
     if (!target_url?.trim()) {
       return NextResponse.json(
         { error: "target_url is required" },
@@ -70,7 +79,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ── Check cache for recent identical audit (within 24 hours) ──────────────
+    // ── Check cache for recent identical audit (within 24 hours) ───────────────
     // Skip if skip_cache flag is explicitly set (allows force refresh)
     const { getRecentAuditRecord } = await import("@/lib/waas/supabase");
     if (!skip_cache && !audit_id && process.env.WAAS_SEO_PROVIDER !== 'mock') {
@@ -89,7 +98,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── Create or update audit record (status: running) ──────────────────────
+    // ── Create or update audit record (status: running) ──────────────────
     let auditId: string | null = audit_id ? String(audit_id) : null;
 
     if (auditId) {
@@ -125,7 +134,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── Run the audit engine ─────────────────────────────────────────────────
+    // ── Run the audit engine ─────────────────────────────────────────
     let engineResult;
     try {
       engineResult = await runFullAudit(
@@ -161,7 +170,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ── Save results to Supabase ─────────────────────────────────────────────
+    // ── Save results to Supabase ────────────────────────────────────────
     const updatePayload: WaasAuditUpdate = {
       status: engineResult.manualReview ? "failed" : "completed",
       report_data: engineResult.reportData,
