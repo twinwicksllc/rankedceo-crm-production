@@ -171,6 +171,21 @@ export default async function SiteLayout({
 
   const { tenant, siteConfig } = result;
 
+  // Non-active tenants get the full-page placeholder (SiteComingSoon) without
+  // the standard site chrome (header/footer) to avoid double-layout and prevent
+  // exposing header/footer for tenants that are not yet live.
+  if (tenant.status !== "active") {
+    return (
+      <>
+        <ThemeProvider
+          brandConfig={tenant.brand_config}
+          customCss={siteConfig?.custom_css}
+        />
+        {children}
+      </>
+    );
+  }
+
   return (
     <div
       className="min-h-screen flex flex-col font-brand-body"
