@@ -414,6 +414,34 @@ const TEMPLATES: Record<
       </html>
     `,
   }),
+
+  // Initiative 7 (docs/waas/AUDIT_TO_WEBSITE_FLOW_RECOMMENDATIONS.md) —
+  // sent when Tier 2 (Gemini) AI enhancement finishes, so the client knows
+  // to go look again instead of reviewing a stale Tier 1 variant.
+  ai_enhancement_ready: (data) => ({
+    subject: `Your ${data.businessName || "site"} design just got smarter ✨`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>AI Enhancement Ready</title>
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;">
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h1>Your AI-enhanced design is ready ✨</h1>
+            <p>Hi ${data.businessName || "there"},</p>
+            <p>Our AI just finished polishing the copy and layout on your website. It's ready for a fresh look — what you saw before was just the starting point.</p>
+            <p style="text-align: center; margin: 24px 0;">
+              <a href="${data.reviewTokenUrl ?? "#"}" style="display: inline-block; padding: 14px 32px; background: #7c3aed; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">See Your Updated Site →</a>
+            </p>
+            <p>Best,<br>The RankedCEO Team</p>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
 };
 
 // ---------------------------------------------------------------------------
