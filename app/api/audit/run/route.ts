@@ -132,12 +132,12 @@ export async function POST(req: NextRequest) {
       runAuditJob(auditId, {
         targetUrl: normalizedTarget,
         competitorUrls: normalizedCompetitors,
-        industry: industry ? String(industry) : null,
-        location: location ? String(location) : null,
-        requestorName: requestor_name ? String(requestor_name) : null,
-        requestorEmail: requestor_email ? String(requestor_email) : null,
-        requestorPhone: requestor_phone ? String(requestor_phone) : null,
-        requestorCompany: requestor_company ? String(requestor_company) : null,
+        industry: (industry ? String(industry) : null) as string | null,
+        location: (location ? String(location) : null) as string | null,
+        requestorName: (requestor_name ? String(requestor_name) : null) as string | null,
+        requestorEmail: (requestor_email ? String(requestor_email) : null) as string | null,
+        requestorPhone: (requestor_phone ? String(requestor_phone) : null) as string | null,
+        requestorCompany: (requestor_company ? String(requestor_company) : null) as string | null,
       }),
     );
 

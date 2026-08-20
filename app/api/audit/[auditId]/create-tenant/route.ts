@@ -165,7 +165,7 @@ export async function POST(
     try {
       await adminClient
         .from("audits")
-        .update({ tenant_id: tenantId })
+        .update({ tenant_id: tenantId } as Record<string, unknown>)
         .eq("id", auditId);
     } catch (backfillError) {
       console.error("[create-tenant] Failed to backfill audits.tenant_id:", backfillError);
