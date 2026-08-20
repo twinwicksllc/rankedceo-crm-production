@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createAuthClient } from "@/lib/supabase/server";
-import { createWaasClient, getAdminClient } from "@/lib/waas/supabase";
+import { createWaasClient, getWaasAdminClient } from "@/lib/waas/supabase";
 import { ensureClientReviewToken } from "@/lib/waas/actions/admin";
 import { sendTenantNotification, sendAuditReportReadyEmail } from "@/lib/waas/services/notifications";
 import type { WaasTenantInsert } from "@/lib/waas/supabase";
@@ -33,7 +33,7 @@ export async function POST(
     }
 
     const supabase = createWaasClient();
-    const adminClient = getAdminClient();
+    const adminClient = getWaasAdminClient();
 
     // ── Fetch audit record ──────────────────────────────────────────────────
     const { data: audit, error: auditError } = await supabase
