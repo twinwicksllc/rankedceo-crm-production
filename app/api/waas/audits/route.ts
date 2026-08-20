@@ -8,10 +8,10 @@
 // never picked up). The live, working audit-creation path is
 // /api/audit/run/route.ts, and prospect->tenant conversion now goes through
 // /api/audit/[auditId]/create-tenant/route.ts. Removed rather than finished:
-// grepped the repo for any caller of POST /api/waas/audits and found none —
-// only this doc history and the GET-based status polling route reference
-// the path. Two working audit-creation endpoints were confusing; now there
-// is exactly one.
+// grepped the repo for any *caller* of POST /api/waas/audits and found none —
+// only documentation (e.g. WAAS_FOUNDATION.md + docs/waas/*) and the GET-based
+// status polling route reference the path. Two working audit-creation
+// endpoints were confusing; now there is exactly one.
 // =============================================================================
 
 import { NextRequest, NextResponse } from "next/server";
