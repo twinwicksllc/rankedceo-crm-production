@@ -142,7 +142,7 @@ function statusConfig(status: TenantPortalSiteStatus): {
     };
   }
 
-  // ── Site-build lifecycle ──────────────────────────────────────────────────
+  // ── Site-build lifecycle ─────────────────────────────────────────
   // Tier 1 completed + AI still enhancing in background
   if (
     status.initialBuildCompletedAt &&
@@ -402,6 +402,83 @@ function SiteReadyCTA({
   );
 }
 
+// Deploy readiness checklist — Initiative 8 (docs/waas/AUDIT_TO_WEBSITE_FLOW_RECOMMENDATIONS.md).
+// Same checks admin sees before deploying, surfaced here so the client can
+// fix their own blockers (missing phone number, short meta description,
+// etc.) without waiting on an admin round-trip.
+function DeployReadinessCard({
+  readiness,
+}: {
+  readiness: NonNullable<TenantPortalData["deployReadiness"]>;
+}) {
+  const passCount = readiness.checks.filter((c) => c.status === "pass").length;
+  const warnCount = readiness.checks.filter((c) => c.status === "warn").length;
+
+  return (
+    <div className="mb-5 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
+        <h2 className="text-sm font-semibold text-slate-700">
+          Ready to Go Live?
+        </h2>
+        <span
+          className={`text-[11px] font-medium rounded-full px-2 py-0.5 ${
+            readiness.ready
+              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+              : "bg-amber-50 text-amber-700 border border-amber-200"
+          }`}
+        >
+          {readiness.ready
+            ? warnCount > 0
+              ? `Ready (${warnCount} warning${warnCount === 1 ? "" : "s"})`
+              : "All checks passed"
+            : `${passCount}/${readiness.checks.length} passed`}
+        </span>
+      </div>
+
+      <div className="px-5 divide-y divide-slate-50">
+        {readiness.checks.map((check) => (
+          <div key={check.id} className="flex items-start gap-3 py-2.5">
+            <span
+              className="shrink-0 mt-0.5 text-sm"
+              role="img"
+              aria-label={
+                check.status === "pass"
+                  ? "Passed"
+                  : check.status === "warn"
+                    ? "Warning"
+                    : "Failed"
+              }
+            >
+              {check.status === "pass"
+                ? "✅"
+                : check.status === "warn"
+                  ? "⚠️"
+                  : "❌"}
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[12px] font-medium text-slate-700">
+                {check.label}
+              </p>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                {check.detail}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {!readiness.ready && (
+        <div className="px-5 py-3 bg-amber-50/50 border-t border-amber-100">
+          <p className="text-[11px] text-amber-700">
+            Fix the items above in the Edit tab, then let us know you&apos;re
+            ready — no need to wait on an email back-and-forth.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
@@ -424,8 +501,14 @@ export function PortalHome({
   onGoToHistory,
 }: PortalHomeProps) {
   const [copied, setCopied] = useState(false);
-  const { siteStatus, recentEdits, aiRewriteCount, editCount, billingStatus } =
-    data;
+  const {
+    siteStatus,
+    recentEdits,
+    aiRewriteCount,
+    editCount,
+    billingStatus,
+    deployReadiness,
+  } = data;
 
   const sc = statusConfig(siteStatus);
   const liveUrl = buildLiveUrl(siteStatus);
@@ -672,6 +755,12 @@ export function PortalHome({
             </div>
           </button>
         </div>
+
+        {/* ── Deploy readiness checklist ── shown until the site is live */}
+        {deployReadiness &&
+          !(siteStatus.approvalLocked && siteStatus.tenantStatus === "active") && (
+            <DeployReadinessCard readiness={deployReadiness} />
+          )}
 
         {/* ── Recent edits / first-time state ── */}
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">

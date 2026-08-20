@@ -3,6 +3,12 @@
 import { resolveClientEditSession } from "@/lib/waas/client-edit/edit-session";
 import { getAdminClient } from "./_shared";
 import type { ActionResult, EditType } from "./_shared";
+import {
+  computeDeployReadiness,
+  type DeployReadinessReport,
+} from "@/lib/waas/actions/admin/deploy";
+
+export type { DeployReadinessReport };
 
 // =============================================================================
 // 11. getTenantPortalData
@@ -43,6 +49,10 @@ export interface TenantPortalData {
   editCount: number; // total edits this session (all types)
   billingStatus: TenantPortalBillingStatus | null; // Phase 7.4
   brandConfig: Record<string, unknown> | null; // For Task 2: complete profile card
+  // Initiative 8 (docs/waas/AUDIT_TO_WEBSITE_FLOW_RECOMMENDATIONS.md) — same
+  // readiness checklist admin sees, surfaced to the client. null when the
+  // tenant's site config doesn't exist yet (e.g. still mid-onboarding).
+  deployReadiness: DeployReadinessReport | null;
 }
 
 // Lightweight billing snapshot embedded in portal data
@@ -71,14 +81,26 @@ export async function getTenantPortalData(
   try {
     const supabase = getAdminClient();
 
-    // 1. Tenant domain/status + billing fields (Phase 7.4)
-    const { data: tenantRow } = await supabase
-      .from("tenants")
-      .select(
-        "status, subdomain, domain, package_tier, plan_interval, stripe_subscription_id, brand_config, created_at",
-      )
-      .eq("id", tenantId)
-      .single();
+    // 1. Tenant + tenant_site_config — single query per table, column lists
+    // merged with what computeDeployReadiness() needs (Initiative 8 review
+    // fix) so this function makes exactly one round-trip to each table
+    // instead of fetching the same rows twice.
+    const [{ data: tenantRow }, { data: configRow }] = await Promise.all([
+      supabase
+        .from("tenants")
+        .select(
+          "status, subdomain, domain, package_tier, plan_interval, stripe_subscription_id, brand_config, created_at, calendly_url, submitted_by_email",
+        )
+        .eq("id", tenantId)
+        .single(),
+      supabase
+        .from("tenant_site_config")
+        .select(
+          "initial_build_completed_at, ai_enhancement_status, client_selected_template_slug, meta_title, meta_description, og_image_url, custom_css, active_sections_json, template_id, client_selected_at, client_feedback_submitted_at, client_mix_submitted_at, site_templates(slug, default_layout_json)",
+        )
+        .eq("tenant_id", tenantId)
+        .maybeSingle(), // returns null (not error) if row absent
+    ]);
 
     const tenant = tenantRow as {
       status: string;
@@ -89,20 +111,25 @@ export async function getTenantPortalData(
       stripe_subscription_id: string | null;
       brand_config: Record<string, unknown> | null;
       created_at: string | null;
+      calendly_url: string | null;
+      submitted_by_email: string | null;
     } | null;
+
+    // Deploy readiness (Initiative 8) — computed in-process from the rows
+    // above; null when tenant_site_config doesn't exist yet (e.g. still
+    // mid-onboarding), same as getDeployReadiness()'s "not found" case.
+    const deployReadiness =
+      tenant && configRow
+        ? computeDeployReadiness(
+            tenant as Record<string, unknown>,
+            configRow as Record<string, unknown>,
+          )
+        : null;
 
     // 1b. tenant_site_config build-lifecycle columns (migration 022; schema-gap resilient)
     let initialBuildCompletedAt: string | null = null;
     let rawAiStatus: string | null = null;
     let clientSelectedSlug: string | null = null;
-
-    const { data: configRow } = await supabase
-      .from("tenant_site_config")
-      .select(
-        "initial_build_completed_at, ai_enhancement_status, client_selected_template_slug",
-      )
-      .eq("tenant_id", tenantId)
-      .maybeSingle(); // returns null (not error) if row absent
 
     if (configRow) {
       const cfg = configRow as {
@@ -235,6 +262,7 @@ export async function getTenantPortalData(
         editCount,
         billingStatus,
         brandConfig: tenant?.brand_config ?? null,
+        deployReadiness,
       },
     };
   } catch (err) {
