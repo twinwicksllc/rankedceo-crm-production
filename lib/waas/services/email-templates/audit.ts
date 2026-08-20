@@ -46,6 +46,7 @@ export function auditReportReady(data: NotificationTemplateData): {
   const opportunities = data.topOpportunities ?? [];
   const auditUrl = data.auditUrl ?? "#";
   const pdfUrl = data.pdfUrl ?? "#";
+  const createAccountUrl = data.createAccountUrl ?? "#";
   const gColor = gradeColor(grade);
   const nationalCompetitorNote = data.nationalCompetitorNote;
 
@@ -118,18 +119,22 @@ export function auditReportReady(data: NotificationTemplateData): {
     }
 
     <!-- Primary CTA -->
-    <div style="text-align:center;margin:0 0 16px;">
+    <div style="text-align:center;margin:0 0 12px;">
       <a href="${auditUrl}"
          style="display:inline-block;background:#2563eb;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:10px;letter-spacing:-0.2px;">
         View Full Report →
       </a>
     </div>
 
-    <!-- Secondary CTA -->
-    <div style="text-align:center;margin:0 0 28px;">
+    <!-- Secondary CTAs (smaller) -->
+    <div style="text-align:center;margin:0 0 28px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
       <a href="${pdfUrl}"
-         style="display:inline-block;color:#2563eb;font-size:13px;font-weight:600;text-decoration:none;border:1px solid #bfdbfe;padding:9px 22px;border-radius:8px;">
-        📄 Download PDF Report
+         style="display:inline-block;color:#2563eb;font-size:13px;font-weight:600;text-decoration:none;border:1px solid #bfdbfe;padding:9px 16px;border-radius:8px;">
+        📄 Download PDF
+      </a>
+      <a href="${createAccountUrl}"
+         style="display:inline-block;color:#059669;font-size:13px;font-weight:600;text-decoration:none;border:1px solid #d1fae5;background:#f0fdf4;padding:9px 16px;border-radius:8px;">
+        🚀 Build Your Website
       </a>
     </div>
 

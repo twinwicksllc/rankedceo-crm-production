@@ -237,6 +237,7 @@ export async function POST(req: NextRequest) {
         ((engineResult.reportData as Record<string, unknown>)
           .gap_analysis as { nationalCompetitorNote?: string } | undefined)
           ?.nationalCompetitorNote ?? null;
+      const createAccountUrl = `${baseUrl}/audit/${auditId}/create-account`;
 
       sendAuditReportReadyEmail({
         recipientEmail: String(requestor_email),
@@ -249,6 +250,7 @@ export async function POST(req: NextRequest) {
         auditUrl: fullReportUrl,
         pdfUrl: fullPdfUrl,
         nationalCompetitorNote,
+        createAccountUrl,
       }).catch((err) =>
         console.error("[/api/audit/run] audit_report_ready email failed:", err),
       );
