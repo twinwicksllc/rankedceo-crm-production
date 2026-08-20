@@ -6,10 +6,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createAuthClient } from "@/lib/supabase/server";
-import { createWaasClient, getAdminClient } from "@/lib/waas/supabase";
+import { createWaasClient, getWaasAdminClient, createTenantRecord, updateTenantRecord } from "@/lib/waas/supabase";
 import { ensureClientReviewToken } from "@/lib/waas/actions/admin";
 import { sendTenantNotification, sendAuditReportReadyEmail } from "@/lib/waas/services/notifications";
-import type { WaasTenantInsert } from "@/lib/waas/supabase";
+import type { WaasTenantInsert, WaasTenantUpdate } from "@/lib/waas/supabase";
 import type { WaasTenant } from "@/lib/waas/types";
 
 interface CreateTenantResponse {
@@ -33,7 +33,7 @@ export async function POST(
     }
 
     const supabase = createWaasClient();
-    const adminClient = getAdminClient();
+    const adminClient = getWaasAdminClient();
 
     // ── Fetch audit record ──────────────────────────────────────────────────
     const { data: audit, error: auditError } = await supabase
@@ -111,39 +111,20 @@ export async function POST(
     );
 
     // ── Create new tenant ───────────────────────────────────────────────
+    const slug = `prospect-${auditId.slice(0, 8)}`;
     const insert: WaasTenantInsert = {
-      legal_name: requestorName ?? null,
-      source_audit_id: auditId,
-      submitted_by_email: requestorEmail,
+      slug,
       status: "onboarding",
-      onboarding_step: 1,
+      target_location: location ?? null,
       brand_config: {
-        seo: {
-          service_area: location ?? null,
-          target_keywords: [],
-          key_phrases: [],
-        },
-        content: {},
-        assets: {},
-        inspiration: { urls: null },
-        functionality: {
-          contact_form: true,
-          booking: false,
-          gallery: false,
-          ecommerce: false,
-          blog: false,
-        },
+        business_name: requestorName ?? "New Business",
       },
-      created_at: new Date().toISOString(),
     };
 
-    const { data: newTenant, error: createError } = await adminClient
-      .from("tenants")
-      .insert(insert)
-      .select("id")
-      .single();
-
-    if (createError || !newTenant) {
+    let newTenant: WaasTenant | null = null;
+    try {
+      newTenant = await createTenantRecord(insert);
+    } catch (createError) {
       console.error("[create-tenant] Failed to create tenant:", createError);
       return NextResponse.json(
         { error: "Failed to create tenant" },
@@ -151,7 +132,31 @@ export async function POST(
       );
     }
 
-    const tenantId = (newTenant as { id: string }).id;
+    if (!newTenant) {
+      return NextResponse.json(
+        { error: "Failed to create tenant" },
+        { status: 500 },
+      );
+    }
+
+    const tenantId = newTenant.id;
+
+    // ── Update tenant with audit-specific fields ────────────────────────
+    // Note: legal_name, source_audit_id, submitted_by_email, onboarding_step
+    // exist in the database but aren't in the WaasTenantUpdate type, so we cast
+    const update = {
+      legal_name: requestorName ?? null,
+      source_audit_id: auditId,
+      submitted_by_email: requestorEmail,
+      onboarding_step: 1,
+    } as WaasTenantUpdate;
+
+    try {
+      await updateTenantRecord(tenantId, update);
+    } catch (updateError) {
+      console.error("[create-tenant] Failed to update tenant:", updateError);
+      // Non-blocking: continue even if update fails
+    }
 
     // ── Generate review token ───────────────────────────────────────────
     const tokenResult = await ensureClientReviewToken(tenantId);
