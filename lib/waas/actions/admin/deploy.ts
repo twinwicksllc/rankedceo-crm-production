@@ -249,7 +249,39 @@ export async function getDeployReadiness(
 export async function getClientDeployReadiness(
   tenantId: string,
 ): Promise<ActionResult<DeployReadinessReport>> {
-  return getDeployReadiness(tenantId);
+  const result = await getDeployReadiness(tenantId);
+  if (!result.success || !result.data) return result;
+
+  const { ready, checks, blockers, packageSummary } = result.data;
+  const {
+    selectedTemplateSlug,
+    enabledSections,
+    sectionCount,
+    metaTitle,
+    metaDescription,
+    ogImageUrl,
+    contactHooks,
+    clientSelection,
+  } = packageSummary;
+
+  return {
+    success: true,
+    data: {
+      ready,
+      checks,
+      blockers,
+      packageSummary: {
+        selectedTemplateSlug,
+        enabledSections,
+        sectionCount,
+        metaTitle,
+        metaDescription,
+        ogImageUrl,
+        contactHooks,
+        clientSelection,
+      },
+    },
+  };
 }
 
 export async function deploySite(
