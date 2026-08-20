@@ -158,6 +158,20 @@ export async function POST(
       // Non-blocking: continue even if update fails
     }
 
+    // ── Backfill audits.tenant_id for query-ability ─────────────────────
+    // The original prospect audit is now linked to the new tenant via
+    // tenants.source_audit_id. Backfill the reverse link so tenant-scoped
+    // audit queries (e.g., getTenantAuditHistory) can find it.
+    try {
+      await adminClient
+        .from("audits")
+        .update({ tenant_id: tenantId })
+        .eq("id", auditId);
+    } catch (backfillError) {
+      console.error("[create-tenant] Failed to backfill audits.tenant_id:", backfillError);
+      // Non-blocking: continue even if backfill fails
+    }
+
     // ── Generate review token ───────────────────────────────────────────
     const tokenResult = await ensureClientReviewToken(tenantId);
     if (!tokenResult.success || !tokenResult.data) {

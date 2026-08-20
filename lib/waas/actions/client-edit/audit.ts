@@ -7,7 +7,7 @@ import type { ActionResult } from "./_shared";
 // =============================================================================
 // Phase 8.4 — getTenantAuditHistory
 //
-// Returns a list of completed audits for the tenant (sourced from waas_audits table).
+// Returns a list of completed audits for the tenant (sourced from audits table).
 // Used by the Audit History tab in the tenant portal.
 // =============================================================================
 
@@ -38,7 +38,7 @@ export async function getTenantAuditHistory(
     const supabase = getAdminClient();
 
     const { data, error } = await supabase
-      .from("waas_audits")
+      .from("audits")
       .select("id, status, target_url, report_data, completed_at, audit_type")
       .eq("tenant_id", tenantId)
       .in("status", ["completed", "failed"])
