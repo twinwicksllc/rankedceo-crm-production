@@ -282,16 +282,18 @@ function AuditReportClientContent({
   if (isDataUnavailable) {
     return (
       <PageShell>
-        <ManualAuditState
-          targetUrl={audit.target_url}
-          auditId={audit.id}
-          errorMessage={
-            reportData?.data_unavailable_reason ?? audit.error_message
-          }
-          badgeLabel="Manual Review Queued"
-          title="Automated Scan Incomplete"
-          subtitle={`We couldn't complete every automated data check for ${extractDomain(audit.target_url)} on this run. A strategist has been assigned to finalize your report manually within 1 business day.`}
-        />
+        <div data-testid="audit-manual-review">
+          <ManualAuditState
+            targetUrl={audit.target_url}
+            auditId={audit.id}
+            errorMessage={
+              reportData?.data_unavailable_reason ?? audit.error_message
+            }
+            badgeLabel="Manual Review Queued"
+            title="Automated Scan Incomplete"
+            subtitle={`We couldn't complete every automated data check for ${extractDomain(audit.target_url)} on this run. A strategist has been assigned to finalize your report manually within 1 business day.`}
+          />
+        </div>
       </PageShell>
     );
   }
@@ -300,11 +302,13 @@ function AuditReportClientContent({
   if (isFailed || (isComplete && isManual && !audit.report_data)) {
     return (
       <PageShell>
-        <ManualAuditState
-          targetUrl={audit.target_url}
-          auditId={audit.id}
-          errorMessage={audit.error_message}
-        />
+        <div data-testid="audit-failed">
+          <ManualAuditState
+            targetUrl={audit.target_url}
+            auditId={audit.id}
+            errorMessage={audit.error_message}
+          />
+        </div>
       </PageShell>
     );
   }
@@ -384,7 +388,9 @@ function AuditReportClientContent({
       grade={grade}
       targetDomain={targetDomain}
     >
-      <FullReport audit={audit} userEmail={userEmail} userName={userName} />
+      <div data-testid="audit-complete">
+        <FullReport audit={audit} userEmail={userEmail} userName={userName} />
+      </div>
     </PageShell>
   );
 }

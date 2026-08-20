@@ -131,7 +131,10 @@ export function ReportSkeleton({
         }
       `}</style>
 
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "24px 16px" }}>
+      <div
+        data-testid="audit-pending"
+        style={{ maxWidth: 900, margin: "0 auto", padding: "24px 16px" }}
+      >
         {/* ── Hero status card ─────────────────────────────────────────────── */}
         <div
           style={{
@@ -287,6 +290,7 @@ export function ReportSkeleton({
 
         {/* ── Ghost skeleton cards ──────────────────────────────────────────── */}
         <div
+          data-testid="audit-skeleton-body"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",

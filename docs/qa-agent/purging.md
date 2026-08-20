@@ -6,7 +6,7 @@ This document explains how QA test data is tagged, how to purge it, and what to 
 
 ## Why QA data is tagged
 
-The QA agent runs in the same Supabase project as production, using a dedicated `qa` schema. Every record the agent writes to the database is tagged with a run tag in the format:
+The QA agent runs in the same Supabase project as production (`rankedceo-waas`), using a dedicated `qa` schema. Every record the agent writes to the database is tagged with a run tag in the format:
 
 ```
 qa_agent_YYYYMMDD_HHMMSS_<hex>
