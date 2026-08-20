@@ -9,7 +9,7 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { createAuditRecord, updateAuditRecord } from "@/lib/waas/supabase";
 import type { WaasAuditInsert } from "@/lib/waas/supabase";
 import type { AuditSeoProvider } from "@/lib/waas/types";
-import { runAuditJob } from "@/lib/waas/services/audit-jobs";
+import { runAuditJob, type RunAuditJobParams } from "@/lib/waas/services/audit-jobs";
 
 const AUDIT_EXPIRY_DAYS = 30;
 
@@ -132,13 +132,13 @@ export async function POST(req: NextRequest) {
       runAuditJob(auditId, {
         targetUrl: normalizedTarget,
         competitorUrls: normalizedCompetitors,
-        industry: (industry ? String(industry) : null) as string | null,
-        location: (location ? String(location) : null) as string | null,
-        requestorName: (requestor_name ? String(requestor_name) : null) as string | null,
-        requestorEmail: (requestor_email ? String(requestor_email) : null) as string | null,
-        requestorPhone: (requestor_phone ? String(requestor_phone) : null) as string | null,
-        requestorCompany: (requestor_company ? String(requestor_company) : null) as string | null,
-      }),
+        industry: industry ? String(industry) : null,
+        location: location ? String(location) : null,
+        requestorName: requestor_name ? String(requestor_name) : null,
+        requestorEmail: requestor_email ? String(requestor_email) : null,
+        requestorPhone: requestor_phone ? String(requestor_phone) : null,
+        requestorCompany: requestor_company ? String(requestor_company) : null,
+      } as RunAuditJobParams),
     );
 
     return NextResponse.json(
