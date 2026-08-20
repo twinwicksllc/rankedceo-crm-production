@@ -305,9 +305,9 @@ export function getWaasQaClient(): SupabaseClient {
   _waasQaClient = createClient(url, serviceRole, {
     auth: { persistSession: false, autoRefreshToken: false },
     db: { schema: "qa" },
-  });
+  }) as unknown as SupabaseClient;
 
-  return _waasQaClient;
+  return _waasQaClient as SupabaseClient;
 }
 
 // ---------------------------------------------------------------------------
