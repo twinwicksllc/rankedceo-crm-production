@@ -105,6 +105,36 @@ console.log("Purge complete");
 
 ---
 
+## Purging QA-generated audit rows
+
+The `audit_async` scenario (and any scenario that runs the audit form) creates real rows in the `public.audits` table. These rows are identified by their target URL (`https://example.com`), no requestor email, and audit type `prospect`:
+
+```sql
+-- Identify QA-generated audit rows
+SELECT id, target_url, status, created_at
+FROM public.audits
+WHERE target_url = 'https://example.com'
+  AND requestor_email IS NULL      -- the audit form never collects email
+  AND audit_type = 'prospect'
+ORDER BY created_at DESC;
+```
+
+To purge these rows (older than 30 days, to avoid deleting in-flight runs):
+
+```sql
+-- Manual purge of QA-generated audit rows
+-- Run against rankedceo-waas
+DELETE FROM public.audits
+WHERE target_url = 'https://example.com'
+  AND requestor_email IS NULL
+  AND audit_type = 'prospect'
+  AND created_at < now() - interval '30 days';
+```
+
+> Always run the `SELECT` first to verify you are deleting the right rows. The 30-day window prevents deleting an audit in progress during a concurrent scenario run.
+
+---
+
 ## Purging Stripe test data
 
 If you ran the full lifecycle or billing edge case scenarios in Stripe test mode, test subscriptions, customers, and invoices may have been created in your Stripe test environment. These are completely isolated from production (test mode data never touches live mode).
