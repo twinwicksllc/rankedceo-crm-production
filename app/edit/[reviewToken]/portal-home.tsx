@@ -438,7 +438,17 @@ function DeployReadinessCard({
       <div className="px-5 divide-y divide-slate-50">
         {readiness.checks.map((check) => (
           <div key={check.id} className="flex items-start gap-3 py-2.5">
-            <span className="shrink-0 mt-0.5 text-sm">
+            <span
+              className="shrink-0 mt-0.5 text-sm"
+              role="img"
+              aria-label={
+                check.status === "pass"
+                  ? "Passed"
+                  : check.status === "warn"
+                    ? "Warning"
+                    : "Failed"
+              }
+            >
               {check.status === "pass"
                 ? "✅"
                 : check.status === "warn"
