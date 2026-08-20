@@ -1,40 +1,15 @@
+"use server";
 import { revalidatePath } from "next/cache";
-import type { SectionConfig } from "@/lib/waas/templates/types";
 import { generateIndustryKeywordPlan } from "@/lib/waas/services/keyword-generator";
 import { getAdminClient, isMissingSchemaTable } from "./_shared";
 import type { ActionResult } from "./_shared";
 import { saveTenantSiteVersion } from "./_versioning";
-import { toSectionConfigList, getCoreSectionFailures } from "./_validation";
-
-export interface DeployReadinessCheck {
-  id: string;
-  label: string;
-  status: "pass" | "warn" | "fail";
-  detail: string;
-}
-
-export interface DeployPackageSummary {
-  selectedTemplateSlug: string | null;
-  enabledSections: string[];
-  sectionCount: number;
-  metaTitle: string | null;
-  metaDescription: string | null;
-  ogImageUrl: string | null;
-  contactHooks: { hasCalendly: boolean; hasPhone: boolean; hasEmail: boolean };
-  clientSelection: {
-    templateSlug: string | null;
-    selectedAt: string | null;
-    feedbackSubmittedAt: string | null;
-    mixSubmittedAt: string | null;
-  };
-}
-
-export interface DeployReadinessReport {
-  ready: boolean;
-  checks: DeployReadinessCheck[];
-  blockers: string[];
-  packageSummary: DeployPackageSummary;
-}
+import {
+  computeDeployReadiness,
+  type DeployReadinessCheck,
+  type DeployPackageSummary,
+  type DeployReadinessReport,
+} from "./compute-deploy-readiness";
 
 // ---------------------------------------------------------------------------
 // Pure readiness computation — no I/O. Split out (Initiative 8 review fix)
@@ -208,7 +183,6 @@ export function computeDeployReadiness(
 // getDeployReadiness — admin entry point. Fetches tenant + tenant_site_config
 // itself, then delegates to the pure computeDeployReadiness() above.
 // ---------------------------------------------------------------------------
-"use server";
 export async function getDeployReadiness(
   tenantId: string,
 ): Promise<ActionResult<DeployReadinessReport>> {
@@ -256,7 +230,6 @@ export async function getDeployReadiness(
   }
 }
 
-"use server";
 export async function deploySite(
   tenantId: string,
   deployedBy = "admin_console",
