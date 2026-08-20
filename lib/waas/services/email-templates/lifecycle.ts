@@ -172,3 +172,44 @@ export function siteLive(data: NotificationTemplateData): {
     html: wrapLayout(content, `${name} is now live — see your new website!`),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Template: ai_enhancement_ready
+// Initiative 7 (docs/waas/AUDIT_TO_WEBSITE_FLOW_RECOMMENDATIONS.md) — sent
+// when Tier 2 (Gemini) AI enhancement finishes, so the client knows to go
+// look again instead of reviewing a stale Tier 1 variant.
+// ---------------------------------------------------------------------------
+
+export function aiEnhancementReady(data: NotificationTemplateData): {
+  subject: string;
+  html: string;
+} {
+  const name = data.businessName ?? "there";
+  const reviewUrl = data.reviewUrl ?? "#";
+
+  const subject = `Your ${name} design just got smarter ✨`;
+
+  const content = `
+    <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">
+      Your AI-enhanced design is ready ✨
+    </h1>
+    <p style="margin:0 0 20px;font-size:15px;color:#475569;line-height:1.6;">
+      Hi ${name}, our AI just finished polishing the copy and layout on your
+      website. It's ready for a fresh look — what you saw before was just
+      the starting point.
+    </p>
+
+    <div style="margin-top:24px;text-align:center;">
+      <a href="${reviewUrl}"
+         style="display:inline-block;background:#7c3aed;color:#ffffff;font-size:14px;font-weight:600;
+                text-decoration:none;padding:12px 28px;border-radius:8px;">
+        See Your Updated Site →
+      </a>
+    </div>
+  `;
+
+  return {
+    subject,
+    html: wrapLayout(content, "Your AI-enhanced design is ready to review."),
+  };
+}

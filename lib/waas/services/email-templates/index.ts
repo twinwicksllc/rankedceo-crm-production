@@ -2,7 +2,12 @@
 
 import type { NotificationType } from "../notifications";
 import type { NotificationTemplateData } from "./types";
-import { siteReadyForReview, domainStatusUpdate, siteLive } from "./lifecycle";
+import {
+  siteReadyForReview,
+  domainStatusUpdate,
+  siteLive,
+  aiEnhancementReady,
+} from "./lifecycle";
 import { approvalReceived, clientFirstEdit } from "./admin";
 import { subscriptionActivated, paymentFailed, planChanged } from "./billing";
 import {
@@ -51,6 +56,9 @@ export function renderEmailTemplate(
     // Task 9 — audit report ready
     case "audit_report_ready":
       return auditReportReady(data);
+    // Initiative 7 — Tier 2 AI enhancement completion
+    case "ai_enhancement_ready":
+      return aiEnhancementReady(data);
     default: {
       const _never: never = type;
       return {
@@ -64,7 +72,12 @@ export function renderEmailTemplate(
 // Barrel re-exports
 export type { NotificationTemplateData } from "./types";
 export { wrapLayout } from "./layout";
-export { siteReadyForReview, domainStatusUpdate, siteLive } from "./lifecycle";
+export {
+  siteReadyForReview,
+  domainStatusUpdate,
+  siteLive,
+  aiEnhancementReady,
+} from "./lifecycle";
 export { approvalReceived, clientFirstEdit } from "./admin";
 export { subscriptionActivated, paymentFailed, planChanged } from "./billing";
 export {
@@ -73,3 +86,4 @@ export {
   auditAbandonedStage3,
   auditAbandonedStage4,
 } from "./abandonment";
+export { auditReportReady } from "./audit";

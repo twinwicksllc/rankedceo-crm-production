@@ -168,6 +168,31 @@ export function PortalShell({
                   AI Enhancing
                 </span>
               )}
+            {/* AI Enhanced badge — Tier 2 completed (Initiative 7: give the
+                client a visible completion signal instead of leaving them to
+                stumble onto the improved variant on their own). An email is
+                also sent once, see lib/waas/services/generate-initial-site. */}
+            {!session.approvalLocked &&
+              !session.approvalAt &&
+              portalData?.siteStatus?.aiEnhancementStatus === "completed" && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+                  <svg
+                    className="h-2.5 w-2.5"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 14 14"
+                  >
+                    <path
+                      d="M2 7l3.5 3.5L12 3"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  AI Enhanced
+                </span>
+              )}
           </div>
           {/* Logout button */}
           <a
