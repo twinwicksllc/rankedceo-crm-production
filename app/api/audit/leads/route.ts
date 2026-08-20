@@ -271,11 +271,10 @@ export async function POST(req: NextRequest) {
             ((currentBrandConfig.pdf_downloads as number) ?? 0) + 1,
         };
 
-        await (waasClient.from("tenants") as any)
-          .update({
-            brand_config: updatedBrandConfig,
-            updated_at: new Date().toISOString(),
-          })
+        await ((waasClient.from("tenants") as any).update({
+          brand_config: updatedBrandConfig,
+          updated_at: new Date().toISOString(),
+        }) as any)
           .eq("id", tenantId);
 
         console.log(
