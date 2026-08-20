@@ -6,7 +6,7 @@ This document explains how QA test data is tagged, how to purge it, and what to 
 
 ## Why QA data is tagged
 
-The QA agent runs in the same Supabase project as production, using a dedicated `qa` schema. Every record the agent writes to the database is tagged with a run tag in the format:
+The QA agent runs in the same Supabase project as production (`rankedceo-waas`), using a dedicated `qa` schema. Every record the agent writes to the database is tagged with a run tag in the format:
 
 ```
 qa_agent_YYYYMMDD_HHMMSS_<hex>
@@ -102,6 +102,36 @@ const db = new SupabaseAdapter(
 await db.purgeAgentRecords("qa_agent_20240115_060142_a3f9b2");
 console.log("Purge complete");
 ```
+
+---
+
+## Purging QA-generated audit rows
+
+The `audit_async` scenario (and any scenario that runs the audit form) creates real rows in the `public.audits` table. These rows are identified by their target URL (`https://example.com`), no requestor email, and audit type `prospect`:
+
+```sql
+-- Identify QA-generated audit rows
+SELECT id, target_url, status, created_at
+FROM public.audits
+WHERE target_url = 'https://example.com'
+  AND requestor_email IS NULL      -- the audit form never collects email
+  AND audit_type = 'prospect'
+ORDER BY created_at DESC;
+```
+
+To purge these rows (older than 30 days, to avoid deleting in-flight runs):
+
+```sql
+-- Manual purge of QA-generated audit rows
+-- Run against rankedceo-waas
+DELETE FROM public.audits
+WHERE target_url = 'https://example.com'
+  AND requestor_email IS NULL
+  AND audit_type = 'prospect'
+  AND created_at < now() - interval '30 days';
+```
+
+> Always run the `SELECT` first to verify you are deleting the right rows. The 30-day window prevents deleting an audit in progress during a concurrent scenario run.
 
 ---
 

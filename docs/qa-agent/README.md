@@ -61,7 +61,7 @@ The **Orchestrator** is the central coordinator. It checks the restart gate (ope
 | `QA_ADMIN_EMAIL`                      | ✅                    | Admin user email for the admin Playwright context                    |
 | `QA_ADMIN_PASSWORD`                   | ✅                    | Admin user password                                                  |
 | `QA_CLIENT_REVIEW_TOKEN`              | ✅                    | A valid review token for the client Playwright context               |
-| `QA_SUPABASE_URL`                     | ✅ in CI              | QA Supabase project URL dedicated to QA runs                         |
+| `QA_SUPABASE_URL`                     | ✅ in CI              | Supabase project URL (rankedceo-waas)                                |
 | `QA_SUPABASE_SERVICE_ROLE_KEY`        | ✅ in CI              | QA Supabase service role key (full access to `qa` schema)            |
 | `SUPABASE_URL`                        | ✅ (runtime fallback) | Supabase project URL consumed by the adapter                         |
 | `SUPABASE_SERVICE_ROLE_KEY`           | ✅ (runtime fallback) | Service role key consumed by the adapter                             |

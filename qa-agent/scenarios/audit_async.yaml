@@ -1,0 +1,146 @@
+id: audit_async
+name: Async Audit — POST to 202 + Polling
+description: >
+  Coverage for the async audit submission + polling flow. The audit form now
+  returns 202 with { audit_id, status: "pending", poll_url } and the client
+  redirects to /audit/{id} to poll until the report completes. This scenario
+  exercises the end-to-end async path.
+
+  **DB Assertions:** Not used here. The adaptor runs against the `qa` schema;
+  audits are written to `public.audits`. Schema isolation does not apply to
+  browser-driven writes. See the plan for cleanup strategies and the row
+  identification SQL.
+
+modes:
+  - full
+
+requires_stripe: false
+requires_email: false
+
+steps:
+  # ── Navigate to audit start ─────────────────────────────────────────────────
+  - id: navigate_to_audit_start
+    type: navigate
+    persona: client
+    severity: critical
+    description: Navigate to /audit/start
+    url: /audit/start
+    intent: >
+      The audit start form is at /audit/start. This is the entry point for
+      running a new audit. Confirm the route is reachable.
+
+  # ── Verify form elements ────────────────────────────────────────────────────
+  - id: wait_for_audit_form
+    type: wait_for
+    persona: client
+    severity: critical
+    description: Audit form is visible
+    selector: 'form, input[type="url"], input[type="text"], input[placeholder*="domain"], input[placeholder*="website"], main'
+    timeout_ms: 15000
+    intent: >
+      Assert that the form has hydrated. If the React client component failed
+      to hydrate, the form will not be visible.
+
+  # ── Fill target URL ────────────────────────────────────────────────────────
+  - id: fill_target_url
+    type: fill
+    persona: client
+    severity: critical
+    description: Fill target URL input with https://example.com
+    selector: 'input#targetUrl'
+    value: 'https://example.com'
+    intent: >
+      Fill the target URL field with the well-known example.com domain.
+      This domain is stable, real, and never a prospect, so rows are
+      identifiable post-run for cleanup.
+
+  # ── Fill first competitor ──────────────────────────────────────────────────
+  - id: fill_competitor1
+    type: fill
+    persona: client
+    severity: critical
+    description: Fill first competitor input
+    selector: 'input#competitor1'
+    value: 'https://www.iana.org'
+    intent: >
+      Fill the first competitor field. Using iana.org as a second well-known,
+      stable domain.
+
+  # ── Submit the audit form ──────────────────────────────────────────────────
+  - id: submit_audit_form
+    type: click
+    persona: client
+    severity: critical
+    description: Submit audit form
+    selector: 'button[type="submit"]'
+    intent: >
+      Click the "Run Your Audit" button. The form will change its label to
+      "Starting your audit…" while the POST is in flight. The POST should
+      return 202 with { audit_id, status: "pending", poll_url }, and the
+      client will redirect to /audit/{id}.
+
+  # ── Wait for redirect to report page ──────────────────────────────────────
+  - id: wait_for_audit_report_redirect
+    type: wait_for_url
+    persona: client
+    severity: critical
+    description: Redirected to audit report page (UUID pattern)
+    pattern: '/audit/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+    intent: >
+      Confirm the client was redirected to /audit/{id} with a valid UUID.
+      If the POST succeeded and returned an audit_id, the browser will navigate
+      to the report page.
+
+  # ── Wait for pending state ─────────────────────────────────────────────────
+  - id: wait_for_audit_pending
+    type: wait_for
+    persona: client
+    severity: critical
+    description: Audit pending indicator visible (ReportSkeleton)
+    selector: '[data-testid="audit-pending"]'
+    timeout_ms: 15000
+    intent: >
+      The /audit/{id} page polls GET /api/waas/audits/{id}/status every 4s.
+      While status is "pending", ReportSkeleton renders with the testid
+      "audit-pending". Confirm it appears.
+
+  # ── Wait for skeleton body ──────────────────────────────────────────────────
+  - id: wait_for_skeleton_body
+    type: wait_for
+    persona: client
+    severity: critical
+    description: Skeleton body content visible
+    selector: '[data-testid="audit-skeleton-body"]'
+    timeout_ms: 15000
+    intent: >
+      ReportSkeleton renders a body with shimmer cards (placeholder content
+      for the full report). Confirm this inner container is visible.
+
+  # ── Wait for completion (with long timeout) ───────────────────────────────
+  - id: wait_for_audit_complete
+    type: wait_for
+    persona: client
+    severity: critical
+    description: Audit completed, full report renders
+    selector: '[data-testid="audit-complete"]'
+    timeout_ms: 200000
+    state: attached
+    intent: >
+      The audit engine runs in the background. Poll will eventually return
+      status "completed", at which point AuditReportClientContent renders the
+      full FullReport component with the testid "audit-complete".
+      Timeout: 200s (~3.3 min) to allow for SEO provider calls and engine
+      processing. The engine itself may take up to 2 min on a slow run.
+
+  # ── Verify audit-pending is detached ────────────────────────────────────
+  - id: verify_pending_detached
+    type: wait_for
+    persona: client
+    severity: warning
+    description: Pending state detached after completion
+    selector: '[data-testid="audit-pending"]'
+    timeout_ms: 5000
+    state: detached
+    intent: >
+      Confirm the pending spinner is no longer visible. Once the full report
+      renders, ReportSkeleton unmounts and its testid disappears from the DOM.
