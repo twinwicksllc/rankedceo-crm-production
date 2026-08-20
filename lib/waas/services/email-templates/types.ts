@@ -7,10 +7,15 @@ export interface NotificationTemplateData {
   auditGrade?: string; // For abandonment emails
   topOpportunities?: string[]; // For abandonment emails
   getStartedUrl?: string; // For abandonment emails
+  abandonmentStage?: "stage_1" | "stage_2" | "stage_3" | "stage_4"; // Abandonment email sequence stage
+  auditId?: string; // Audit record ID (used for dedup tracking in notifications)
   variantIndex?: number;
   variantLabel?: string;
+  variantCount?: number; // Total number of variants for this tenant
   domain?: string;
   domainStatus?: string;
+  liveUrl?: string; // Full public URL of the live site
+  siteTitle?: string; // SEO title of the site
   reviewUrl?: string;
   supportEmail?: string;
   adminNotes?: string;

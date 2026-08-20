@@ -49,7 +49,9 @@ export type NotificationType =
   | "audit_abandoned_stage_3" // 48h: social proof + limited-time offer
   | "audit_abandoned_stage_4" // 72h: final call, emphasize urgency
   // Task 9 — audit report ready (sent to requestor when audit completes)
-  | "audit_report_ready";
+  | "audit_report_ready"
+  // Initiative 7 — Tier 2 AI enhancement completion (docs/waas/AUDIT_TO_WEBSITE_FLOW_RECOMMENDATIONS.md)
+  | "ai_enhancement_ready";
 
 export interface SendNotificationArgs {
   type: NotificationType;

@@ -8,6 +8,7 @@ import {
 import { runGeminiEnhancement } from "./tier2";
 import { buildProfile } from "./profile";
 import { getAdminClient } from "./_shared";
+import { sendTenantNotification } from "@/lib/waas/services/notifications";
 
 export type { InitialSiteBuildResult } from "./types";
 
@@ -44,15 +45,65 @@ export async function generateInitialSiteFromTemplate(
     if (tier2Dispatched) {
       runGeminiEnhancement(tenantId, tier1, profile, template)
         .then(async () => {
-          await supabase.from("tenant_site_config").upsert(
-            {
-              tenant_id: tenantId,
-              ai_enhancement_status: "completed",
-              ai_enhancement_completed_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "tenant_id" },
-          );
+          const { data: configRow, error: statusError } = await supabase
+            .from("tenant_site_config")
+            .select("ai_enhancement_status")
+            .eq("tenant_id", tenantId)
+            .maybeSingle();
+
+          if (
+            statusError ||
+            (configRow as { ai_enhancement_status?: string } | null)
+              ?.ai_enhancement_status !== "completed"
+          ) {
+            console.warn(
+              `[WaaS] Tier 2 did not complete for tenant ${tenantId} — skipping notification`,
+            );
+            return;
+          }
+
+          // Initiative 7 (docs/waas/AUDIT_TO_WEBSITE_FLOW_RECOMMENDATIONS.md):
+          // the enhancement pass was previously fire-and-forget with no
+          // client-visible completion signal. Notify now that Tier 2 is done
+          // so the client knows to go look again instead of reviewing a
+          // stale Tier 1 variant. Best-effort — never blocks the DB write.
+          try {
+            const { data: configRow } = await supabase
+              .from("tenant_site_config")
+              .select("client_review_token")
+              .eq("tenant_id", tenantId)
+              .maybeSingle();
+
+            const reviewToken = (configRow as { client_review_token?: string } | null)
+              ?.client_review_token;
+
+            if (reviewToken) {
+              const appUrl =
+                process.env.NEXT_PUBLIC_APP_URL_PROD ??
+                process.env.NEXT_PUBLIC_APP_URL ??
+                "https://crm.rankedceo.com";
+
+              await sendTenantNotification({
+                type: "ai_enhancement_ready",
+                tenantId,
+                data: {
+                  businessName: tenant.brand_config?.business_name ?? tenant.legal_name ?? undefined,
+                  reviewUrl: `${appUrl}/edit/${reviewToken}?tab=overview`,
+                },
+                dedupKey: `ai_enhancement_ready:${tenantId}`,
+                dedupWindowHours: 24,
+              });
+            } else {
+              console.warn(
+                `[WaaS] Tier 2 complete for tenant ${tenantId} but no review token found — skipping notification`,
+              );
+            }
+          } catch (notifyErr) {
+            console.error(
+              `[WaaS] ai_enhancement_ready notification failed for tenant ${tenantId}:`,
+              notifyErr,
+            );
+          }
         })
         .catch(async (err: unknown) => {
           const message =
