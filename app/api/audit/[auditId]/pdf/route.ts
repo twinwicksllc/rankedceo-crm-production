@@ -3,6 +3,7 @@ import PDFDocument from "pdfkit";
 import { getWaasAdminClient } from "@/lib/waas/supabase";
 import { createClient } from "@/lib/supabase/server";
 import type { AuditReportData, WaasAudit } from "@/lib/waas/types";
+import { computeOverallScore } from "@/lib/waas/services/audit-engine/scoring";
 
 interface RequestContext {
   params: Promise<{ auditId: string }>;
@@ -19,24 +20,6 @@ function extractDomain(url: string | null | undefined): string {
   } catch {
     return url;
   }
-}
-
-function calculateScore(summary: any): number {
-  if (!summary) return 0;
-  return Math.round(
-    summary.performance_score * 0.4 +
-      summary.seo_score * 0.3 +
-      summary.mobile_score * 0.2 +
-      summary.accessibility_score * 0.1,
-  );
-}
-
-function getGrade(score: number): "A" | "B" | "C" | "D" | "F" {
-  if (score >= 80) return "A";
-  if (score >= 65) return "B";
-  if (score >= 50) return "C";
-  if (score >= 35) return "D";
-  return "F";
 }
 
 function gradeColor(grade: string): string {
@@ -178,8 +161,15 @@ export async function GET(_req: NextRequest, context: RequestContext) {
     const bufferPromise = streamToBuffer(doc);
 
     const targetDomain = extractDomain(audit.target_url);
-    const score = calculateScore(report.summary);
-    const grade = getGrade(score);
+    // Initiative 2 (docs/waas/AUDIT_TO_WEBSITE_FLOW_RECOMMENDATIONS.md):
+    // use the single shared formula so the on-screen report and this PDF
+    // can never silently desync.
+    const { score, grade } = computeOverallScore(
+      report.summary?.performance_score ?? 0,
+      report.summary?.seo_score ?? 0,
+      report.summary?.mobile_score ?? 0,
+      report.summary?.accessibility_score ?? 0,
+    );
     const gColor = gradeColor(grade);
     const summary = report.summary;
     const keywords = Array.isArray((report as any).keywords_used)

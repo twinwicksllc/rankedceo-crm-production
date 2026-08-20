@@ -1,20 +1,23 @@
 // =============================================================================
 // WaaS API: Audits
 // GET  /api/waas/audits        — List audits (admin: all, public: by email token)
-// POST /api/waas/audits        — Create a prospect audit (public — no auth needed)
+//
+// Initiative 3 (docs/waas/AUDIT_TO_WEBSITE_FLOW_RECOMMENDATIONS.md): the
+// POST handler that used to live here was dormant — it created an audit
+// record but never triggered the SEO engine (a `// TODO (Phase 2)` that was
+// never picked up). The live, working audit-creation path is
+// /api/audit/run/route.ts, and prospect->tenant conversion now goes through
+// /api/audit/[auditId]/create-tenant/route.ts. Removed rather than finished:
+// grepped the repo for any caller of POST /api/waas/audits and found none —
+// only this doc history and the GET-based status polling route reference
+// the path. Two working audit-creation endpoints were confusing; now there
+// is exactly one.
 // =============================================================================
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import {
-  getWaasAdminClient,
-  createProspectAudit,
-  updateAuditRecord,
-} from "@/lib/waas/supabase";
-import type { CreateProspectAuditInput } from "@/lib/waas/types";
-
-const AUDIT_EXPIRY_DAYS = 30;
+import { getWaasAdminClient } from "@/lib/waas/supabase";
 
 async function getCrmUser() {
   const cookieStore = await cookies();
@@ -73,116 +76,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ audits: data, count: data?.length ?? 0 });
   } catch (err) {
     console.error("[WaaS API] GET /audits exception:", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// POST /api/waas/audits — Public (no auth required)
-// Creates a prospect audit and queues it for the SEO worker.
-// Returns the audit ID for client-side polling.
-// ---------------------------------------------------------------------------
-export async function POST(req: NextRequest) {
-  try {
-    const body = (await req.json()) as CreateProspectAuditInput;
-
-    // Validate required fields
-    if (!body.target_url?.trim()) {
-      return NextResponse.json(
-        { error: "target_url is required" },
-        { status: 400 },
-      );
-    }
-
-    // Validate URL format
-    try {
-      new URL(
-        body.target_url.startsWith("http")
-          ? body.target_url
-          : `https://${body.target_url}`,
-      );
-    } catch {
-      return NextResponse.json(
-        { error: "target_url must be a valid URL" },
-        { status: 400 },
-      );
-    }
-
-    // Validate competitor URLs (max 3 for prospect audits)
-    const competitorUrls = (body.competitor_urls ?? []).slice(0, 3);
-    for (const url of competitorUrls) {
-      try {
-        new URL(url.startsWith("http") ? url : `https://${url}`);
-      } catch {
-        return NextResponse.json(
-          { error: `Invalid competitor URL: ${url}` },
-          { status: 400 },
-        );
-      }
-    }
-
-    // Validate email if provided
-    if (body.requestor_email) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(body.requestor_email)) {
-        return NextResponse.json(
-          { error: "Invalid email address" },
-          { status: 400 },
-        );
-      }
-    }
-
-    // Normalize URLs (ensure they have protocol)
-    const normalizedTarget = body.target_url.startsWith("http")
-      ? body.target_url
-      : `https://${body.target_url}`;
-
-    const normalizedCompetitors = competitorUrls.map((url) =>
-      url.startsWith("http") ? url : `https://${url}`,
-    );
-
-    // Create the audit record
-    const auditId = await createProspectAudit({
-      target_url: normalizedTarget,
-      competitor_urls: normalizedCompetitors,
-      requestor_name: body.requestor_name,
-      requestor_email: body.requestor_email,
-      requestor_phone: body.requestor_phone,
-      requestor_company: body.requestor_company,
-    });
-
-    if (!auditId) {
-      return NextResponse.json(
-        { error: "Failed to create audit. Please try again." },
-        { status: 500 },
-      );
-    }
-
-    // Ensure prospect audits from this endpoint match product policy.
-    await updateAuditRecord(auditId, {
-      expires_at: new Date(
-        Date.now() + AUDIT_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
-      ).toISOString(),
-    });
-
-    // TODO (Phase 2): Trigger SEO audit worker via queue/webhook
-    // await triggerAuditWorker(auditId)
-
-    return NextResponse.json(
-      {
-        audit_id: auditId,
-        status: "pending",
-        message: "Audit queued. Poll /api/waas/audits/[id]/status for updates.",
-        poll_url: `/api/waas/audits/${auditId}/status`,
-        expires_in: "30 days",
-      },
-      { status: 201 },
-    );
-  } catch (err) {
-    console.error("[WaaS API] POST /audits exception:", err);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },
