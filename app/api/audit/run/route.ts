@@ -128,8 +128,9 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Dispatch async audit job ────────────────────────────────────────
+    // Note: auditId is guaranteed non-null here (checked at line 122-127)
     after(() =>
-      runAuditJob(auditId, {
+      runAuditJob(auditId as string, {
         targetUrl: normalizedTarget,
         competitorUrls: normalizedCompetitors,
         industry: industry ? String(industry) : null,
@@ -138,7 +139,7 @@ export async function POST(req: NextRequest) {
         requestorEmail: requestor_email ? String(requestor_email) : null,
         requestorPhone: requestor_phone ? String(requestor_phone) : null,
         requestorCompany: requestor_company ? String(requestor_company) : null,
-      } as RunAuditJobParams),
+      }),
     );
 
     return NextResponse.json(

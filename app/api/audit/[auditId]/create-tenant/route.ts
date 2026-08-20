@@ -163,8 +163,7 @@ export async function POST(
     // tenants.source_audit_id. Backfill the reverse link so tenant-scoped
     // audit queries (e.g., getTenantAuditHistory) can find it.
     try {
-      await (adminClient.from("audits") as any)
-        .update({ tenant_id: tenantId })
+      await ((adminClient.from("audits") as any).update({ tenant_id: tenantId }) as any)
         .eq("id", auditId);
     } catch (backfillError) {
       console.error("[create-tenant] Failed to backfill audits.tenant_id:", backfillError);
