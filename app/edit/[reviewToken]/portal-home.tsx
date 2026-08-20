@@ -412,6 +412,7 @@ function DeployReadinessCard({
   readiness: NonNullable<TenantPortalData["deployReadiness"]>;
 }) {
   const passCount = readiness.checks.filter((c) => c.status === "pass").length;
+  const warnCount = readiness.checks.filter((c) => c.status === "warn").length;
 
   return (
     <div className="mb-5 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
@@ -427,7 +428,9 @@ function DeployReadinessCard({
           }`}
         >
           {readiness.ready
-            ? "All checks passed"
+            ? warnCount > 0
+              ? `Ready (${warnCount} warning${warnCount === 1 ? "" : "s"})`
+              : "All checks passed"
             : `${passCount}/${readiness.checks.length} passed`}
         </span>
       </div>
