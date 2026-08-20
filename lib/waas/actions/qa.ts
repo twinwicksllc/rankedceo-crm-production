@@ -9,7 +9,7 @@
 //   /admin/qa-scenarios  — manage scenarios (CRUD)
 // =============================================================================
 
-import { createClient } from "@/lib/supabase/server";
+import { getWaasQaClient } from "@/lib/waas/supabase";
 import { revalidatePath } from "next/cache";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -58,9 +58,8 @@ export async function listQaRuns(
   limit = 20,
 ): Promise<{ data: QaRunSummary[] | null; error?: string }> {
   try {
-    const supabase = await createClient();
+    const supabase = getWaasQaClient();
     const { data, error } = await supabase
-      .schema("qa")
       .from("qa_runs")
       .select(
         "id,run_id,run_tag,scenario,mode,status,started_at,completed_at,total_steps,passed_steps,finding_steps,critical_step,created_at",
@@ -79,9 +78,8 @@ export async function getQaRunDetail(
   runId: string,
 ): Promise<{ data: QaRunDetail | null; error?: string }> {
   try {
-    const supabase = await createClient();
+    const supabase = getWaasQaClient();
     const { data, error } = await supabase
-      .schema("qa")
       .from("qa_runs")
       .select("*")
       .eq("run_id", runId)
@@ -100,9 +98,8 @@ export async function purgeQaRuns(): Promise<{
   error?: string;
 }> {
   try {
-    const supabase = await createClient();
+    const supabase = getWaasQaClient();
     const { data, error } = await supabase
-      .schema("qa")
       .from("qa_runs")
       .delete()
       .like("run_tag", "qa_agent_%")
@@ -123,9 +120,8 @@ export async function listQaScenarios(): Promise<{
   error?: string;
 }> {
   try {
-    const supabase = await createClient();
+    const supabase = getWaasQaClient();
     const { data, error } = await supabase
-      .schema("qa")
       .from("qa_scenarios")
       .select("*")
       .order("created_at", { ascending: false });
@@ -149,9 +145,8 @@ export async function createQaScenario(input: {
   admin_email: string;
 }): Promise<{ data: QaScenario | null; error?: string }> {
   try {
-    const supabase = await createClient();
+    const supabase = getWaasQaClient();
     const { data, error } = await supabase
-      .schema("qa")
       .from("qa_scenarios")
       .insert({
         scenario_id: input.scenario_id,
@@ -191,10 +186,9 @@ export async function updateQaScenario(
   },
 ): Promise<{ data: QaScenario | null; error?: string }> {
   try {
-    const supabase = await createClient();
+    const supabase = getWaasQaClient();
     const { admin_email, ...fields } = input;
     const { data, error } = await supabase
-      .schema("qa")
       .from("qa_scenarios")
       .update({ ...fields, updated_by: admin_email })
       .eq("id", id)
@@ -213,9 +207,8 @@ export async function deleteQaScenario(
   id: string,
 ): Promise<{ error?: string }> {
   try {
-    const supabase = await createClient();
+    const supabase = getWaasQaClient();
     const { error } = await supabase
-      .schema("qa")
       .from("qa_scenarios")
       .delete()
       .eq("id", id);
