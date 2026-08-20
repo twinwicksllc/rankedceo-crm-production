@@ -1,8 +1,33 @@
+/**
+ * RLS Optimization Migration Script
+ *
+ * IMPORTANT: This script requires Supabase credentials to execute migrations.
+ * NEVER commit credentials to the repository. Use environment variables only.
+ *
+ * Required env vars:
+ *   - SUPABASE_PROJECT_REF  — Supabase project ref (e.g., wcednzaxmxwfiijzmjmx)
+ *   - SUPABASE_ACCESS_TOKEN — Supabase Personal Access Token (e.g., sbp_...)
+ *
+ * Usage:
+ *   SUPABASE_PROJECT_REF=<ref> SUPABASE_ACCESS_TOKEN=<token> node run-rls-optimization.js
+ *
+ * The token should only be used locally or in secure CI environments with restricted access.
+ */
+
 const https = require("https");
 const fs = require("fs");
 
-const projectRef = "wcednzaxmxwfiijzmjmx";
-const accessToken = "sbp_6ac5ce26e00f2d47bea8b24b253e70fc960266e9";
+const projectRef = process.env.SUPABASE_PROJECT_REF;
+const accessToken = process.env.SUPABASE_ACCESS_TOKEN;
+
+if (!projectRef || !accessToken) {
+  console.error(
+    "Error: Missing required environment variables.\n" +
+      "Set SUPABASE_PROJECT_REF and SUPABASE_ACCESS_TOKEN before running this script.\n" +
+      "See the header comments for details."
+  );
+  process.exit(1);
+}
 
 async function executeSQL(sql) {
   return new Promise((resolve, reject) => {
