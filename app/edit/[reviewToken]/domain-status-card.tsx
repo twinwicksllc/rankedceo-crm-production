@@ -166,6 +166,15 @@ export function DomainStatusCard({
           <p className="text-sm text-slate-400">No domain configured yet.</p>
         )}
 
+        {/* Timeline info */}
+        {requests.length > 0 && (
+          <div className="rounded-lg bg-sky-50 border border-sky-200 px-3 py-2.5">
+            <p className="text-[11px] text-sky-700 leading-relaxed">
+              <span className="font-semibold">Timeline:</span> Domain requests typically take 1–3 business days from submission to completion. We'll update you as we progress through each stage.
+            </p>
+          </div>
+        )}
+
         {/* Existing requests */}
         {requests.map((req) => (
           <RequestStatusRow key={req.id} req={req} />
