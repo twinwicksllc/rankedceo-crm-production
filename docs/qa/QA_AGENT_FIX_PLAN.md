@@ -13,13 +13,17 @@ So this plan is **drift cleanup plus one real coverage gap**. Nothing here is an
 
 1. **Never push to `main`.** Branch, commit, push the branch, open a PR. Vercel auto-deploys `main`, so a direct push lands in production immediately.
 2. **Never commit `.env.qa`.** Only `.env.qa.example` is tracked.
-3. **Never point QA at the production Supabase project.** All three workflows carry the comment `IMPORTANT: QA workflows must use QA-dedicated Supabase secrets only.` Honour it.
-4. **Do not invent a Supabase project ref.** Task 1 has an open decision flagged — use the placeholder, do not guess. See [Open decision](#open-decision-do-not-resolve-this-yourself).
+3. **QA deliberately shares the production WaaS project, isolated by schema — not by project.** This is decision Q2 (`docs/QA_AGENT_PLAN.md:731`). Understand it before editing anything Supabase-related: see [The QA Supabase model](#the-qa-supabase-model).
+4. **Do not write a Supabase project ref into a tracked file.** The refs are resolvable now, but they belong in GitHub secrets and Vercel env, not in the repo. Use the descriptive project *names*.
 5. You cannot run `npm run build`, `tsc`, or `npm audit` in this workspace (`node_modules/` is absent and the registry hits `SELF_SIGNED_CERT_IN_CHAIN`). **Type/build verification happens on Vercel via the PR.** Do not claim a local build passed.
 
 ### Task order
 
-Tasks 1 → 4 are independent and can go in one PR. **Task 5 must be a separate PR** (higher risk). Task 3 is a hard prerequisite for Task 4 — the scenario in Task 4 targets testids that Task 3 adds.
+Tasks 1 → 3 are independent and can go in one PR. **Task 5 must be a separate PR** (higher risk). **Task 6 is investigate-only** — report before fixing.
+
+Task 3 is a hard prerequisite for Task 4, because the Task 4 scenario targets testids that Task 3 adds. **Task 4 is also blocked on a user decision** about writing real rows to the production WaaS project — see the warning in that task. Ship Tasks 1–3 first; do not hold them up waiting on Task 4.
+
+> **Out of scope but urgent — do not action here.** A live Supabase Personal Access Token is committed at `supabase-mcp-client/run-rls-optimization.js:5` and has been in git history since `6c0f9d5` (PR #178). It is being handled separately and needs revocation, not a code edit. Do not touch that file as part of this plan, and do not paste the token into a commit message, PR description, or issue.
 
 | # | Task | Files | Risk |
 |---|---|---|---|
@@ -28,6 +32,7 @@ Tasks 1 → 4 are independent and can go in one PR. **Task 5 must be a separate 
 | 3 | Add `data-testid` hooks to audit report states | 2 | low |
 | 4 | New QA scenario covering the async audit flow | 2 | low |
 | 5 | Clear `next.config.js` deprecation warnings | 2 | **medium — separate PR** |
+| 6 | QA dashboard reads the `qa` schema from the wrong project | 1 | **investigate first — do not blind-fix** |
 
 ---
 
@@ -42,17 +47,24 @@ git checkout -b fix/qa-agent-currency
 
 ---
 
-## Task 1 — Fix stale Supabase guidance in `.env.qa.example`
+## Task 1 — Resolve the contradictory Supabase docs
 
-**Why:** `qa-agent/.env.qa.example` line 26 tells the reader to point QA at the production project. That directly contradicts all three GitHub workflows, which map every Supabase var to `secrets.QA_SUPABASE_*`. A developer following the example file today would wire QA to production and let QA test runs write against live data. It also uses the bare `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` names, which are only the *fallback* half of the adaptor's lookup.
+**Correction to an earlier version of this plan:** this task previously claimed `.env.qa.example` line 26 was dangerously wrong for saying "use the SAME project as production." **That claim was mistaken.** Line 26 accurately describes decision Q2. `SupabaseAdapter.ts`'s header comment is also correct. **Do not "fix" either to say QA uses a dedicated project — that would make the docs wrong.**
 
-**Reference — `qa-agent/src/adaptors/supabase/SupabaseAdapter.ts` resolves env in this order:**
+**The actual defect** is that two tracked docs contradict each other, and neither says *which* project:
+
+- `qa-agent/.env.qa.example:26` — "Use the SAME project as production, but all QA records go to the `qa` schema" ✅ correct, but doesn't name the project
+- `docs/qa-agent/README.md:64` — "`QA_SUPABASE_URL` … QA Supabase project URL **dedicated to QA runs**" ❌ misleading; implies project-level isolation that does not exist
+
+A developer reading the README would provision a new Supabase project, point QA at it, and get failures because the `qa` schema (and the `QA_AUDIT_ID` fixture row) only exist in `rankedceo-waas`.
+
+`.env.qa.example` also documents only the **fallback** env names. `SupabaseAdapter` resolves:
 - URL: `NEXT_PUBLIC_WAAS_SUPABASE_URL` ?? `SUPABASE_URL`
 - Key: `WAAS_SUPABASE_SERVICE_ROLE_KEY` ?? `SUPABASE_SERVICE_ROLE_KEY`
 
-Both names must be documented, with the preferred one first.
+Both pairs should be documented, preferred first.
 
-**File:** `qa-agent/.env.qa.example`
+### 1a — `qa-agent/.env.qa.example`
 
 **Find this block exactly:**
 
@@ -67,41 +79,56 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 ```
 # ── Supabase ──────────────────────────────────────────────────────────────────
-# IMPORTANT: point this at the QA-dedicated Supabase project, NOT production.
-# QA scenarios insert, count, and purge rows — running them against production
-# data is destructive. CI enforces this: all three workflows in
-# .github/workflows/qa-*.yml map these vars to secrets.QA_SUPABASE_URL and
-# secrets.QA_SUPABASE_SERVICE_ROLE_KEY.
+# Decision Q2 (docs/QA_AGENT_PLAN.md:731): QA runs against the SAME Supabase
+# project as production — specifically the `rankedceo-waas` project, which owns
+# public.audits, public.tenants, and the `qa` schema. Isolation is by SCHEMA,
+# not by project. There is no separate QA Supabase project; do not create one.
 #
-# Within that project, all agent-written records live in the `qa` schema
-# (SupabaseAdapter sets `db: { schema: "qa" }`), so QA rows never mix with
-# app tables in `public` even inside the QA project.
+# The agent's own bookkeeping is confined to the `qa` schema: SupabaseAdapter
+# sets `db: { schema: "qa" }`, so insert/countRows/select/purgeAgentRecords can
+# never reach `public`. The schema is provisioned by
+# supabase/migrations/waas/021_qa_schema.sql, and `qa` must be added to
+# Settings → API → Extra search path for the adaptor to see it.
+#
+# LIMITATION: schema isolation covers only the adaptor. Browser-driven steps
+# make the *application* write to `public` in this same project, so scenarios
+# that drive real forms create real rows. Keep that in mind when authoring.
 #
 # The adaptor prefers the WAAS_-prefixed names and falls back to the bare ones.
 # Set the preferred pair; the fallbacks exist for local one-off runs.
-NEXT_PUBLIC_WAAS_SUPABASE_URL=https://your-qa-project.supabase.co
-WAAS_SUPABASE_SERVICE_ROLE_KEY=your-qa-service-role-key
+NEXT_PUBLIC_WAAS_SUPABASE_URL=https://<rankedceo-waas-ref>.supabase.co
+WAAS_SUPABASE_SERVICE_ROLE_KEY=your-waas-service-role-key
 
 # Fallbacks (only read if the two above are unset)
-SUPABASE_URL=https://your-qa-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-qa-service-role-key
+SUPABASE_URL=https://<rankedceo-waas-ref>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-waas-service-role-key
 ```
 
-**Also update the stale header comment** in `qa-agent/src/adaptors/supabase/SupabaseAdapter.ts`. Find:
+Leave `<rankedceo-waas-ref>` as a placeholder. The real ref belongs in GitHub secrets and Vercel env, not in a tracked file.
+
+### 1b — `docs/qa-agent/README.md` line 64
+
+Change the `QA_SUPABASE_URL` description from `QA Supabase project URL dedicated to QA runs` to:
 
 ```
-Decision (Q2): Same Supabase project, `qa` schema.
+URL of the rankedceo-waas project (shared with production; QA is isolated by the `qa` schema, not by project — see Q2)
 ```
 
-Replace with:
+Apply the same correction to the `QA_SUPABASE_SERVICE_ROLE_KEY` row if it makes the same "dedicated" claim.
+
+### 1c — `docs/qa-agent/purging.md` line 9
+
+Reads "The QA agent runs in the same Supabase project as production, using a dedicated `qa` schema." This is correct — **add** the project name for clarity, don't rewrite the claim:
 
 ```
-Decision (Q2): QA-dedicated Supabase project, `qa` schema. (Revised — the
-original decision was "same project as production"; CI now requires
-QA_SUPABASE_* secrets, so QA must not target the production project.)
+The QA agent runs in the same Supabase project as production (`rankedceo-waas`), using a dedicated `qa` schema.
 ```
 
-**Verify:** `grep -rn "SAME project as production" qa-agent/` returns nothing.
+### 1d — Leave `SupabaseAdapter.ts` alone
+
+Its header comment `Decision (Q2): Same Supabase project, \`qa\` schema.` is accurate. Do not change it.
+
+**Verify:** `grep -rn "dedicated to QA runs" docs/ qa-agent/` returns nothing, and `grep -rn "SAME project as production" qa-agent/` still returns line 26 of `.env.qa.example` (it should — it is correct).
 
 ---
 
@@ -115,12 +142,14 @@ Add this block immediately **after** the onboarding block (around line 23) and *
 
 ```
 # ── Audit fixtures ────────────────────────────────────────────────────────────
-# A UUID of a *completed* audit row in the QA project's public.audits table.
-# Scenarios navigate to /audit/${QA_AUDIT_ID} to assert the report renders.
-# Must already exist and have status='completed' with non-null report_data —
-# scenarios read it, they never create it. Seed one manually in the QA project
-# and keep it long-lived (audits have an expires_at; pick or refresh one that
-# has not expired).
+# A UUID of a *completed* audit row in public.audits of the rankedceo-waas
+# project (the same project QA targets — see Q2; there is no separate QA
+# project). Scenarios navigate to /audit/${QA_AUDIT_ID} to assert the report
+# renders. Must already exist with status='completed' and non-null report_data —
+# scenarios read it, they never create it. Seed one manually and keep it
+# long-lived (audits have an expires_at; pick or refresh one that has not
+# expired). Note this row lives in `public`, not the `qa` schema, so the
+# adaptor cannot see or purge it — treat it as a durable fixture.
 # Set in CI as an environment value on each qa-*.yml workflow.
 QA_AUDIT_ID=00000000-0000-0000-0000-000000000000
 ```
@@ -208,7 +237,17 @@ Coverage must therefore be **UI-driven** — drive the real form, do not try to 
 - submit button label: `Run Your Audit` (becomes `Starting your audit…` while in flight)
 - on success: `router.push(\`/audit/${data.audit_id}\`)`
 
-**Cost / safety:** this scenario triggers a real audit run. Two things make that acceptable, and you must confirm both:
+**⚠️ This scenario writes real rows to the production WaaS project.** Per [The QA Supabase model](#the-qa-supabase-model), the `qa`-schema isolation covers only the adaptor's own bookkeeping — it does **not** cover writes the application makes in response to browser steps. Driving the audit form creates a genuine `public.audits` row in `rankedceo-waas` on every run, and there is no adaptor-level purge that can clean it up (`purgeAgentRecords` is confined to the `qa` schema).
+
+**Do not merge Task 4 until this is settled with the user.** Present these options rather than picking one:
+
+- **(a) Accept the rows.** Weekly cadence, one row per run. Cheapest. Needs a documented way to identify them — the target URL `https://example.com` makes them greppable, and an admin could periodically delete `audits` rows with that target.
+- **(b) Point the QA deployment at a throwaway WaaS project.** Real isolation, but requires provisioning a project, running the full `supabase/migrations/waas/` set including `021_qa_schema.sql`, and reseeding `QA_AUDIT_ID`. This is the only option that makes the async scenario genuinely non-destructive.
+- **(c) Drop the submit steps.** Keep only the read-only half: navigate directly to `/audit/${QA_AUDIT_ID}` and assert the completed-report testid from Task 3. Loses the actual async-dispatch coverage — which is the entire point of the task — but costs nothing.
+
+**Also confirm what `qa.rankedceo.com` points at before running this.** Nothing in the repo documents it (see "Still unverified" in the Supabase model section). If that deployment happens to use the CRM project rather than WaaS, the audit flow will fail for unrelated reasons and the scenario failure will be misleading.
+
+**Cost / safety of the run itself:** two further things must hold, and you must confirm both:
 
 1. **No email is sent.** The form posts only `target_url` and `competitor_urls`. `requestor_email` is therefore `null`, and `runAuditJob` skips the report email when it is null. Confirm this still holds by re-reading the form's POST body before finalising the scenario. If the form has gained an email field, stop and flag it.
 2. **SEO provider quota.** A real run calls the external SEO/PageSpeed providers. Set `WAAS_SEO_PROVIDER=mock` on the QA deployment so the scenario does not burn paid quota on every run. Note that `/api/audit/run` deliberately *skips* its 24h cache lookup when the provider is mock, so each run genuinely exercises the async path rather than short-circuiting to a cache hit — which is what we want here.
@@ -353,13 +392,70 @@ If you are not confident you can verify all four behaviours on the preview deplo
 
 ---
 
-## Open decision — do NOT resolve this yourself
+## Task 6 — QA dashboard reads the `qa` schema through the wrong Supabase client
 
-The user mentioned that "supabase uses `klgvdvryewykzlumbkei` project for the waas build and vercel has a `rankedceo-crm-qa` project," but it was never confirmed whether that Supabase ref is the **QA** project or the **production** project.
+**Investigate before changing anything.** This was found while resolving the Supabase question and is a genuine cross-project mismatch, but the correct fix depends on facts you must confirm first.
 
-**Therefore:** in Task 1, use the literal placeholder `https://your-qa-project.supabase.co`. Do **not** substitute `klgvdvryewykzlumbkei` or any other real ref into a tracked file. Getting this backwards would document production as the QA target — the exact failure Task 1 exists to prevent.
+**The mismatch:**
 
-Raise it in the PR description as an open question for the user to answer.
+| Side | Client | Project | Credential |
+|---|---|---|---|
+| Agent **writes** `qa` schema | `SupabaseAdapter` | `NEXT_PUBLIC_WAAS_SUPABASE_URL` → **rankedceo-waas** | service role |
+| Dashboard **reads** `qa` schema | `lib/waas/actions/qa.ts` → `@/lib/supabase/server` | `NEXT_PUBLIC_SUPABASE_URL` → **rankedceo-crm** | anon key |
+
+`lib/waas/actions/qa.ts` imports `createClient` from `@/lib/supabase/server` (line 12) and calls `.schema("qa")` at **7 sites** against `qa_runs` and `qa_scenarios`. But `lib/supabase/server.ts:8-9` uses `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` — the CRM project — while `CREATE SCHEMA qa` exists only in `supabase/migrations/waas/021_qa_schema.sql`, the WaaS set.
+
+**Two independent reasons this would fail**, so confirm which (or both) applies:
+
+1. **Wrong project** — unless `021_qa_schema.sql` was also manually run against `rankedceo-crm`, the schema simply does not exist there and every dashboard query errors or returns empty.
+2. **Wrong credential** — `021_qa_schema.sql` grants RLS policies to `service_role`. The dashboard uses the **anon** key, so even in the right project, anon reads would be denied.
+
+**Investigate in this order:**
+
+1. Load the QA dashboard in the app. Does it show runs, or is it empty/erroring? If it has *always* been empty, that is the symptom.
+2. Check whether the `qa` schema exists in `rankedceo-crm` (it may have been applied to both projects manually — the migration directory convention is not enforced at runtime).
+3. Check whether `qa` is in Settings → API → Extra search path for whichever project is correct — the adaptor and the dashboard both need this.
+
+**Then choose the fix based on what you found** — do not guess:
+
+- If the schema lives only in WaaS: repoint `lib/waas/actions/qa.ts` at the WaaS client. Check how other WaaS server actions obtain their client (e.g. `createWaasClient` / `getWaasAdminClient` in `lib/waas/supabase.ts`) and match that pattern rather than inventing one.
+- If RLS is the blocker: the read path needs a service-role client, which means it must stay server-side. Confirm these are server actions (they are — `revalidatePath` is imported) before switching credentials, and never expose a service-role key to the client.
+
+**Report findings rather than forcing a fix.** If the dashboard turns out to work fine, say so and close the task — it would mean the schema was applied to both projects, and the only change needed is a comment in `lib/waas/actions/qa.ts` explaining that.
+
+---
+
+## The QA Supabase model
+
+**Read this before touching anything Supabase-related.** It was previously ambiguous and is now resolved.
+
+There are exactly **two** Supabase projects, and **neither is a QA project**:
+
+| Project name | Role | Env vars |
+|---|---|---|
+| `rankedceo-waas` | Audit + website-building components. Owns `public.audits`, `public.tenants`, and the `qa` schema. | `NEXT_PUBLIC_WAAS_SUPABASE_URL` / `WAAS_SUPABASE_SERVICE_ROLE_KEY` |
+| `rankedceo-crm` | The CRM. Currently shared with the `listing-assistant-pro` project, which is planned to migrate out to its own project. | `NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` |
+
+**QA runs against `rankedceo-waas`, isolated by the `qa` schema — not by a separate project.** That is decision Q2, recorded at `docs/QA_AGENT_PLAN.md:731`:
+
+> | 2 | **Database** | Same Supabase project, `qa` schema. All agent records prefixed `qa_agent_YYYYMMDD_HHMMSS_` for easy identification and purge. Real clients are never mixed with agent runs. |
+
+Three independent facts confirm it is the WaaS project specifically:
+
+1. The `qa` schema is created by `supabase/migrations/waas/021_qa_schema.sql` — the **WaaS** migration set. It is the only `CREATE SCHEMA qa` in the repo.
+2. `SupabaseAdapter` prefers WaaS credentials (`NEXT_PUBLIC_WAAS_SUPABASE_URL` first, bare `SUPABASE_URL` only as fallback).
+3. `ReportDispatcher` tells you to run `supabase/migrations/waas/021_qa_schema.sql` when the schema is missing.
+
+### What this means in practice
+
+- **The `QA_SUPABASE_*` GitHub secrets are a naming convention, not a separate project.** The secret name says "QA"; the value is the WaaS project URL. The workflow comment `QA workflows must use QA-dedicated Supabase secrets only` means *use the QA_-prefixed secrets*, not *use a separate project*. Do not read it as evidence of project-level isolation.
+- **Isolation is schema-scoped and covers only the agent's own bookkeeping.** `SupabaseAdapter` runs with `db: { schema: "qa" }`, so every adaptor call — `insert`, `countRows`, `select`, `purgeAgentRecords` — is confined to `qa`. It cannot touch `public`.
+- **Browser-driven steps are NOT isolated.** When a scenario drives the real UI, the *application* writes wherever that deployment's env points — `public` tables in `rankedceo-waas`. Schema isolation does not apply to anything Playwright triggers through the app. This is the model's real limitation and it directly constrains Task 4.
+
+### Still unverified
+
+- The values behind `QA_SUPABASE_URL` / `QA_SUPABASE_SERVICE_ROLE_KEY` are GitHub secrets and cannot be read via the API — only their names are visible. The mapping above is inferred from migrations + code, not read from the secret values. If a QA run behaves as though the `qa` schema is missing, check the secret value first.
+- Nothing in the repo documents what the `qa.rankedceo.com` Vercel deployment uses for Supabase. `git grep -i "rankedceo-crm-qa"` returns nothing; there is no QA section in `docs/deployment/`. The only app-level acknowledgement of the host is `middleware.ts:49-50` (`QA_WAAS_HOST`, `QA_WAAS_TENANT_SLUG`), which is host routing only. **Confirm this in the Vercel dashboard before running Task 4.**
 
 ---
 
@@ -373,7 +469,9 @@ The review confirmed these are current. Leave them alone.
 - **`compiler.reactRemoveProperties: false`** in `next.config.js` — this is what keeps testids in production builds. Never set it to `true`.
 - **`SupabaseAdapter`'s table-agnostic methods** (`countRows`, `insert`, `select`, `purgeAgentRecords`) — being table-agnostic is why the `waas_audits` → `audits` rename did not affect QA. Do not hardcode table names into the adaptor.
 - **The audit-start assertion's generic selector** (`form, input[type="url"], input[type="text"], input[placeholder*="domain"], input[placeholder*="website"], main`) — deliberately broad, survived the form rewrite. Task 4 adds precise selectors in a *new* scenario; do not tighten the existing one.
-- **The `IMPORTANT: QA workflows must use QA-dedicated Supabase secrets only.` comments** in all three workflow files.
+- **The `IMPORTANT: QA workflows must use QA-dedicated Supabase secrets only.` comments** in all three workflow files. These mean *use the `QA_`-prefixed secrets*, not *use a separate project*. Leave the wording as-is.
+- **`SupabaseAdapter.ts`'s `Decision (Q2): Same Supabase project, \`qa\` schema.` header** and **`.env.qa.example:26`'s "SAME project as production"** — both accurate. An earlier draft of this plan wrongly called them stale drift. Task 1 corrects the *other* docs to match these, not the reverse.
+- **`db: { schema: "qa" }` in `SupabaseAdapter`** — this is the entire isolation mechanism. Never widen it or add a `public` fallback.
 
 ---
 
