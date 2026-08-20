@@ -1,4 +1,3 @@
-"use server";
 import { revalidatePath } from "next/cache";
 import type { SectionConfig } from "@/lib/waas/templates/types";
 import { generateIndustryKeywordPlan } from "@/lib/waas/services/keyword-generator";
@@ -209,6 +208,7 @@ export function computeDeployReadiness(
 // getDeployReadiness — admin entry point. Fetches tenant + tenant_site_config
 // itself, then delegates to the pure computeDeployReadiness() above.
 // ---------------------------------------------------------------------------
+"use server";
 export async function getDeployReadiness(
   tenantId: string,
 ): Promise<ActionResult<DeployReadinessReport>> {
@@ -256,6 +256,7 @@ export async function getDeployReadiness(
   }
 }
 
+"use server";
 export async function deploySite(
   tenantId: string,
   deployedBy = "admin_console",
