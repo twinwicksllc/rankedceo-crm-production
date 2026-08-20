@@ -288,6 +288,29 @@ export function getWaasAdminClient(): SupabaseClient<WaasDatabase> {
 }
 
 // ---------------------------------------------------------------------------
+// SERVER-SIDE: Service-role client scoped to the `qa` schema.
+// Untyped on purpose — `WaasDatabase` declares only `public`, so a typed
+// client cannot address `qa`. Scoped via db.schema, mirroring qa-agent's
+// SupabaseAdapter. RLS on qa.* grants to service_role only, so this must
+// never be reachable from the browser.
+// ---------------------------------------------------------------------------
+
+let _waasQaClient: SupabaseClient | null = null;
+
+export function getWaasQaClient(): SupabaseClient {
+  if (_waasQaClient) return _waasQaClient;
+
+  const { url, serviceRole } = getWaasServiceEnvVars();
+
+  _waasQaClient = createClient(url, serviceRole, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    db: { schema: "qa" },
+  });
+
+  return _waasQaClient;
+}
+
+// ---------------------------------------------------------------------------
 // MIDDLEWARE: Lightweight anon client for edge runtime tenant resolution
 // ---------------------------------------------------------------------------
 
