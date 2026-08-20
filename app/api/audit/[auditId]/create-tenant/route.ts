@@ -111,30 +111,18 @@ export async function POST(
     );
 
     // ── Create new tenant ───────────────────────────────────────────────
+    const slug = `prospect-${auditId.slice(0, 8)}`;
     const insert: WaasTenantInsert = {
+      slug,
       legal_name: requestorName ?? null,
       source_audit_id: auditId,
       submitted_by_email: requestorEmail,
       status: "onboarding",
       onboarding_step: 1,
+      target_location: location ?? null,
       brand_config: {
-        seo: {
-          service_area: location ?? null,
-          target_keywords: [],
-          key_phrases: [],
-        },
-        content: {},
-        assets: {},
-        inspiration: { urls: null },
-        functionality: {
-          contact_form: true,
-          booking: false,
-          gallery: false,
-          ecommerce: false,
-          blog: false,
-        },
+        business_name: requestorName ?? "New Business",
       },
-      created_at: new Date().toISOString(),
     };
 
     const { data: newTenant, error: createError } = await adminClient
