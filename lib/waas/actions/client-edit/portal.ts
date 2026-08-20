@@ -3,6 +3,12 @@
 import { resolveClientEditSession } from "@/lib/waas/client-edit/edit-session";
 import { getAdminClient } from "./_shared";
 import type { ActionResult, EditType } from "./_shared";
+import {
+  getClientDeployReadiness,
+  type DeployReadinessReport,
+} from "@/lib/waas/actions/admin/deploy";
+
+export type { DeployReadinessReport };
 
 // =============================================================================
 // 11. getTenantPortalData
@@ -43,6 +49,10 @@ export interface TenantPortalData {
   editCount: number; // total edits this session (all types)
   billingStatus: TenantPortalBillingStatus | null; // Phase 7.4
   brandConfig: Record<string, unknown> | null; // For Task 2: complete profile card
+  // Initiative 8 (docs/waas/AUDIT_TO_WEBSITE_FLOW_RECOMMENDATIONS.md) — same
+  // readiness checklist admin sees, surfaced to the client. null when the
+  // tenant's site config doesn't exist yet (e.g. still mid-onboarding).
+  deployReadiness: DeployReadinessReport | null;
 }
 
 // Lightweight billing snapshot embedded in portal data
@@ -71,14 +81,21 @@ export async function getTenantPortalData(
   try {
     const supabase = getAdminClient();
 
-    // 1. Tenant domain/status + billing fields (Phase 7.4)
-    const { data: tenantRow } = await supabase
-      .from("tenants")
-      .select(
-        "status, subdomain, domain, package_tier, plan_interval, stripe_subscription_id, brand_config, created_at",
-      )
-      .eq("id", tenantId)
-      .single();
+    // 1. Tenant domain/status + billing fields (Phase 7.4) — fetched
+    // alongside deploy readiness (Initiative 8) since both only need tenantId.
+    const [{ data: tenantRow }, deployReadinessResult] = await Promise.all([
+      supabase
+        .from("tenants")
+        .select(
+          "status, subdomain, domain, package_tier, plan_interval, stripe_subscription_id, brand_config, created_at",
+        )
+        .eq("id", tenantId)
+        .single(),
+      getClientDeployReadiness(tenantId),
+    ]);
+    const deployReadiness = deployReadinessResult.success
+      ? deployReadinessResult.data ?? null
+      : null;
 
     const tenant = tenantRow as {
       status: string;
@@ -235,6 +252,7 @@ export async function getTenantPortalData(
         editCount,
         billingStatus,
         brandConfig: tenant?.brand_config ?? null,
+        deployReadiness,
       },
     };
   } catch (err) {

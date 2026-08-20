@@ -232,6 +232,26 @@ export async function getDeployReadiness(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Client-safe wrapper (Initiative 8, docs/waas/AUDIT_TO_WEBSITE_FLOW_RECOMMENDATIONS.md)
+// ---------------------------------------------------------------------------
+// Surfaces the same readiness checklist admin already sees to the client
+// portal, so a client can fix their own blockers (missing phone number,
+// short meta description, etc.) without waiting on an admin round-trip.
+//
+// Audited DeployReadinessReport before exposing it: every field here is
+// either a generic pass/warn/fail completeness check on the tenant's own
+// content config, or a summary of that tenant's own selections. Nothing
+// admin-only, no cost/margin data, no other-tenant data. Kept as an
+// explicit wrapper (rather than exporting getDeployReadiness to client
+// code directly) so a future admin-only field added to this report
+// requires a deliberate decision here instead of silently leaking.
+export async function getClientDeployReadiness(
+  tenantId: string,
+): Promise<ActionResult<DeployReadinessReport>> {
+  return getDeployReadiness(tenantId);
+}
+
 export async function deploySite(
   tenantId: string,
   deployedBy = "admin_console",
