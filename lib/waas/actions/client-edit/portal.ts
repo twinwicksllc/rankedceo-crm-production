@@ -6,7 +6,7 @@ import type { ActionResult, EditType } from "./_shared";
 import {
   computeDeployReadiness,
   type DeployReadinessReport,
-} from "@/lib/waas/actions/admin/deploy";
+} from "@/lib/waas/actions/admin/compute-deploy-readiness";
 
 export type { DeployReadinessReport };
 
