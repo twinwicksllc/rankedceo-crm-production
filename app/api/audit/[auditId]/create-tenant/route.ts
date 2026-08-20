@@ -142,12 +142,14 @@ export async function POST(
     const tenantId = newTenant.id;
 
     // ── Update tenant with audit-specific fields ────────────────────────
-    const update: WaasTenantUpdate = {
+    // Note: legal_name, source_audit_id, submitted_by_email, onboarding_step
+    // exist in the database but aren't in the WaasTenantUpdate type, so we cast
+    const update = {
       legal_name: requestorName ?? null,
       source_audit_id: auditId,
       submitted_by_email: requestorEmail,
       onboarding_step: 1,
-    };
+    } as WaasTenantUpdate;
 
     try {
       await updateTenantRecord(tenantId, update);
