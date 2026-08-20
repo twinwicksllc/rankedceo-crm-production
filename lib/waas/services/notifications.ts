@@ -51,7 +51,10 @@ export type NotificationType =
   // Task 9 — audit report ready (sent to requestor when audit completes)
   | "audit_report_ready"
   // Initiative 7 — Tier 2 AI enhancement completion (docs/waas/AUDIT_TO_WEBSITE_FLOW_RECOMMENDATIONS.md)
-  | "ai_enhancement_ready";
+  | "ai_enhancement_ready"
+  // Task 10 — prospect → tenant conversion flow
+  | "onboarding_started" // Prospect converted: account created, ready to start building
+  | "account_created"; // New user account created (no tenant yet), verify or set password
 
 export interface SendNotificationArgs {
   type: NotificationType;
@@ -397,6 +400,7 @@ export interface AuditReportReadyArgs {
   auditUrl: string;
   pdfUrl: string;
   nationalCompetitorNote?: string | null;
+  createAccountUrl?: string; // Link to /audit/{auditId}/create-account
   /** Prevent duplicate sends (defaults to 72h window) */
   dedupWindowHours?: number;
 }
@@ -415,6 +419,7 @@ export async function sendAuditReportReadyEmail(
     auditUrl,
     pdfUrl,
     nationalCompetitorNote,
+    createAccountUrl,
     dedupWindowHours = 72,
   } = args;
 
@@ -439,6 +444,7 @@ export async function sendAuditReportReadyEmail(
     auditUrl,
     pdfUrl,
     nationalCompetitorNote: nationalCompetitorNote ?? undefined,
+    createAccountUrl: createAccountUrl ?? undefined,
   };
   const { subject, html } = renderEmailTemplate("audit_report_ready", data);
 

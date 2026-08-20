@@ -17,6 +17,7 @@ import {
   auditAbandonedStage4,
 } from "./abandonment";
 import { auditReportReady } from "./audit";
+import { onboardingStarted, accountCreated } from "./onboarding";
 
 // ---------------------------------------------------------------------------
 // Router: renderEmailTemplate
@@ -59,6 +60,11 @@ export function renderEmailTemplate(
     // Initiative 7 — Tier 2 AI enhancement completion
     case "ai_enhancement_ready":
       return aiEnhancementReady(data);
+    // Task 10 — prospect → tenant conversion
+    case "onboarding_started":
+      return onboardingStarted(data);
+    case "account_created":
+      return accountCreated(data);
     default: {
       const _never: never = type;
       return {
@@ -87,3 +93,4 @@ export {
   auditAbandonedStage4,
 } from "./abandonment";
 export { auditReportReady } from "./audit";
+export { onboardingStarted, accountCreated } from "./onboarding";

@@ -35,4 +35,6 @@ export interface NotificationTemplateData {
   targetDomain?: string; // e.g. 'example.com'
   requestorName?: string; // e.g. 'Jane Smith'
   nationalCompetitorNote?: string; // Caveat when tracked competitors aren't local
+  // Task 10 — prospect → tenant conversion
+  createAccountUrl?: string; // Link to create account/tenant from audit
 }
