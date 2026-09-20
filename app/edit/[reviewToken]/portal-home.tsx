@@ -34,6 +34,7 @@ import {
 } from "./complete-profile-card";
 import { PlanCard } from "./plan-card";
 import { StatusStrip } from "./status-strip";
+import { AuditScoreComparisonCard } from "./audit-score-card";
 import { WAAS_PLAN_DISPLAY } from "@/lib/waas/billing-config";
 
 // ---------------------------------------------------------------------------
@@ -508,6 +509,7 @@ export function PortalHome({
     editCount,
     billingStatus,
     deployReadiness,
+    auditComparison,
   } = data;
 
   const sc = statusConfig(siteStatus);
@@ -761,6 +763,14 @@ export function PortalHome({
           !(siteStatus.approvalLocked && siteStatus.tenantStatus === "active") && (
             <DeployReadinessCard readiness={deployReadiness} />
           )}
+
+        {/* ── Audit Score Comparison Card (Initiative 9) ── */}
+        {auditComparison && (
+          <AuditScoreComparisonCard
+            comparison={auditComparison}
+            reviewToken={reviewToken}
+          />
+        )}
 
         {/* ── Recent edits / first-time state ── */}
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">

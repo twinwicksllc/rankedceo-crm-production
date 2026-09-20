@@ -7,14 +7,19 @@ import {
   computeDeployReadiness,
   type DeployReadinessReport,
 } from "@/lib/waas/actions/admin/compute-deploy-readiness";
+import {
+  loadTenantAuditScoreComparison,
+} from "./audit";
+import type { AuditScoreComparison } from "./compute-audit-score-comparison";
 
 export type { DeployReadinessReport };
+export type { AuditScoreComparison };
 
 // =============================================================================
 // 11. getTenantPortalData
 //     Returns the aggregated data needed for the tenant portal home (Phase 6.1).
 //     Includes: site status, domain info, recent edits, AI rewrite usage count,
-//     and deployment info.
+//     deployment info, and before/after audit score comparison (Initiative 9).
 //     Called server-side from the /edit/[reviewToken] page.tsx.
 // =============================================================================
 
@@ -53,6 +58,8 @@ export interface TenantPortalData {
   // readiness checklist admin sees, surfaced to the client. null when the
   // tenant's site config doesn't exist yet (e.g. still mid-onboarding).
   deployReadiness: DeployReadinessReport | null;
+  // Initiative 9: Before/after audit score comparison
+  auditComparison: AuditScoreComparison | null;
 }
 
 // Lightweight billing snapshot embedded in portal data
@@ -81,15 +88,12 @@ export async function getTenantPortalData(
   try {
     const supabase = getAdminClient();
 
-    // 1. Tenant + tenant_site_config — single query per table, column lists
-    // merged with what computeDeployReadiness() needs (Initiative 8 review
-    // fix) so this function makes exactly one round-trip to each table
-    // instead of fetching the same rows twice.
+    // 1. Tenant + tenant_site_config — single query per table, including source_audit_id
     const [{ data: tenantRow }, { data: configRow }] = await Promise.all([
       supabase
         .from("tenants")
         .select(
-          "status, subdomain, domain, package_tier, plan_interval, stripe_subscription_id, brand_config, created_at, calendly_url, submitted_by_email",
+          "status, subdomain, domain, package_tier, plan_interval, stripe_subscription_id, brand_config, created_at, calendly_url, submitted_by_email, source_audit_id",
         )
         .eq("id", tenantId)
         .single(),
@@ -113,7 +117,14 @@ export async function getTenantPortalData(
       created_at: string | null;
       calendly_url: string | null;
       submitted_by_email: string | null;
+      source_audit_id: string | null;
     } | null;
+
+    // Load audit score comparison without resolving token again
+    const auditComparison = await loadTenantAuditScoreComparison(
+      tenantId,
+      tenant?.source_audit_id ?? null,
+    );
 
     // Deploy readiness (Initiative 8) — computed in-process from the rows
     // above; null when tenant_site_config doesn't exist yet (e.g. still
@@ -263,6 +274,7 @@ export async function getTenantPortalData(
         billingStatus,
         brandConfig: tenant?.brand_config ?? null,
         deployReadiness,
+        auditComparison,
       },
     };
   } catch (err) {
