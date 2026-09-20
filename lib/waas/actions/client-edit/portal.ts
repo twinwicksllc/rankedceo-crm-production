@@ -7,14 +7,19 @@ import {
   computeDeployReadiness,
   type DeployReadinessReport,
 } from "@/lib/waas/actions/admin/compute-deploy-readiness";
+import {
+  getAuditScoreComparison,
+  type AuditScoreComparison,
+} from "./audit";
 
 export type { DeployReadinessReport };
+export type { AuditScoreComparison };
 
 // =============================================================================
 // 11. getTenantPortalData
 //     Returns the aggregated data needed for the tenant portal home (Phase 6.1).
 //     Includes: site status, domain info, recent edits, AI rewrite usage count,
-//     and deployment info.
+//     deployment info, and before/after audit score comparison (Initiative 9).
 //     Called server-side from the /edit/[reviewToken] page.tsx.
 // =============================================================================
 
@@ -53,6 +58,8 @@ export interface TenantPortalData {
   // readiness checklist admin sees, surfaced to the client. null when the
   // tenant's site config doesn't exist yet (e.g. still mid-onboarding).
   deployReadiness: DeployReadinessReport | null;
+  // Initiative 9: Before/after audit score comparison
+  auditComparison: AuditScoreComparison | null;
 }
 
 // Lightweight billing snapshot embedded in portal data
@@ -81,11 +88,8 @@ export async function getTenantPortalData(
   try {
     const supabase = getAdminClient();
 
-    // 1. Tenant + tenant_site_config — single query per table, column lists
-    // merged with what computeDeployReadiness() needs (Initiative 8 review
-    // fix) so this function makes exactly one round-trip to each table
-    // instead of fetching the same rows twice.
-    const [{ data: tenantRow }, { data: configRow }] = await Promise.all([
+    // 1. Tenant + tenant_site_config + audit comparison
+    const [{ data: tenantRow }, { data: configRow }, auditComparisonResult] = await Promise.all([
       supabase
         .from("tenants")
         .select(
@@ -100,6 +104,7 @@ export async function getTenantPortalData(
         )
         .eq("tenant_id", tenantId)
         .maybeSingle(), // returns null (not error) if row absent
+      getAuditScoreComparison(reviewToken),
     ]);
 
     const tenant = tenantRow as {
@@ -125,6 +130,10 @@ export async function getTenantPortalData(
             configRow as Record<string, unknown>,
           )
         : null;
+
+    const auditComparison = auditComparisonResult.success
+      ? (auditComparisonResult.data ?? null)
+      : null;
 
     // 1b. tenant_site_config build-lifecycle columns (migration 022; schema-gap resilient)
     let initialBuildCompletedAt: string | null = null;
@@ -263,6 +272,7 @@ export async function getTenantPortalData(
         billingStatus,
         brandConfig: tenant?.brand_config ?? null,
         deployReadiness,
+        auditComparison,
       },
     };
   } catch (err) {
