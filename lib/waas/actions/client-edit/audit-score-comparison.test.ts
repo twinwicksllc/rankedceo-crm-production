@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   buildAuditScoreComparison,
   type RawAuditRow,
-} from "./audit";
+} from "./compute-audit-score-comparison";
 
 describe("Initiative 9: Audit score comparison logic", () => {
   const auditRow = (

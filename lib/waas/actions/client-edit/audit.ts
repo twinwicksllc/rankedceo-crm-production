@@ -3,6 +3,14 @@
 import { resolveClientEditSession } from "@/lib/waas/client-edit/edit-session";
 import { getAdminClient } from "./_shared";
 import type { ActionResult } from "./_shared";
+import {
+  buildAuditScoreComparison,
+  type AuditScoreSnapshot,
+  type AuditScoreComparison,
+  type RawAuditRow,
+} from "./compute-audit-score-comparison";
+
+export type { AuditScoreSnapshot, AuditScoreComparison, RawAuditRow };
 
 // =============================================================================
 // Phase 8.4 & Initiative 9 — Audit History & Before/After Comparison
@@ -23,118 +31,6 @@ export interface TenantAuditHistoryItem {
   completedAt: string | null;
   reportUrl: string;
   auditType: string;
-}
-
-export interface AuditScoreSnapshot {
-  auditId: string;
-  targetUrl: string;
-  overallScore: number;
-  seoScore: number | null;
-  mobileScore: number | null;
-  performanceScore: number | null;
-  completedAt: string | null;
-}
-
-export interface AuditScoreComparison {
-  baseline: AuditScoreSnapshot;
-  latest: AuditScoreSnapshot | null;
-  delta: {
-    overall: number;
-    seo: number | null;
-    mobile: number | null;
-    performance: number | null;
-  } | null;
-  hasReAudit: boolean;
-  totalAuditsCount: number;
-}
-
-export interface RawAuditRow {
-  id: string;
-  status: string;
-  target_url: string;
-  report_data: Record<string, unknown> | null;
-  completed_at: string | null;
-  audit_type: string;
-  created_at: string;
-}
-
-export function parseAuditSnapshot(row: RawAuditRow): AuditScoreSnapshot | null {
-  const summary = (row.report_data?.summary as Record<string, number> | null) ?? null;
-  const overall = summary?.overall_score ?? null;
-  if (overall === null) return null;
-
-  return {
-    auditId: row.id,
-    targetUrl: row.target_url,
-    overallScore: Math.round(overall),
-    seoScore: summary?.seo_score != null ? Math.round(summary.seo_score) : null,
-    mobileScore: summary?.mobile_score != null ? Math.round(summary.mobile_score) : null,
-    performanceScore: summary?.performance_score != null ? Math.round(summary.performance_score) : null,
-    completedAt: row.completed_at,
-  };
-}
-
-export function buildAuditScoreComparison(
-  completedAudits: RawAuditRow[],
-  sourceAuditId: string | null,
-  sourceAuditRow: RawAuditRow | null = null,
-): AuditScoreComparison | null {
-  let baselineRow: RawAuditRow | null = null;
-
-  if (sourceAuditId) {
-    const foundInTenantAudits = completedAudits.find((a) => a.id === sourceAuditId);
-    baselineRow = foundInTenantAudits ?? sourceAuditRow;
-  }
-
-  if (!baselineRow && completedAudits.length > 0) {
-    baselineRow = completedAudits[0];
-  }
-
-  if (!baselineRow) return null;
-  const selectedBaselineRow = baselineRow;
-
-  const baselineSnapshot = parseAuditSnapshot(selectedBaselineRow);
-  if (!baselineSnapshot) return null;
-
-  const remainingAudits = completedAudits.filter((a) => a.id !== selectedBaselineRow.id);
-  const latestRow = remainingAudits.length > 0
-    ? remainingAudits[remainingAudits.length - 1]
-    : null;
-  const latestSnapshot = latestRow ? parseAuditSnapshot(latestRow) : null;
-
-  let delta: AuditScoreComparison["delta"] = null;
-  if (latestSnapshot) {
-    delta = {
-      overall: latestSnapshot.overallScore - baselineSnapshot.overallScore,
-      seo:
-        latestSnapshot.seoScore != null && baselineSnapshot.seoScore != null
-          ? latestSnapshot.seoScore - baselineSnapshot.seoScore
-          : null,
-      mobile:
-        latestSnapshot.mobileScore != null && baselineSnapshot.mobileScore != null
-          ? latestSnapshot.mobileScore - baselineSnapshot.mobileScore
-          : null,
-      performance:
-        latestSnapshot.performanceScore != null && baselineSnapshot.performanceScore != null
-          ? latestSnapshot.performanceScore - baselineSnapshot.performanceScore
-          : null,
-    };
-  }
-
-  const totalCount = completedAudits.length +
-    (sourceAuditId &&
-    !completedAudits.some((a) => a.id === sourceAuditId) &&
-    sourceAuditRow
-      ? 1
-      : 0);
-
-  return {
-    baseline: baselineSnapshot,
-    latest: latestSnapshot,
-    delta,
-    hasReAudit: latestSnapshot !== null,
-    totalAuditsCount: totalCount,
-  };
 }
 
 export async function getTenantAuditHistory(
@@ -175,7 +71,7 @@ export async function getTenantAuditHistory(
         performanceScore: summary?.performance_score != null ? Math.round(summary.performance_score) : null,
         completedAt: row.completed_at,
         reportUrl: `/audit/${row.id}`,
-        auditType: row.audit_type,
+        auditType: row.audit_type ?? "prospect",
       };
     });
 
@@ -187,6 +83,79 @@ export async function getTenantAuditHistory(
         err instanceof Error ? err.message : "Failed to load audit history",
     };
   }
+}
+
+/**
+ * Pure data loader for tenant audit score comparison.
+ * Can be called directly when tenantId & sourceAuditId are already known
+ * to avoid duplicate token resolutions and tenant table reads.
+ */
+export async function loadTenantAuditScoreComparison(
+  tenantId: string,
+  sourceAuditId: string | null,
+): Promise<AuditScoreComparison | null> {
+  const supabase = getAdminClient();
+
+  // Bounded query: fetch total count + earliest completed + latest 2 completed
+  const [
+    { count: totalCount },
+    { data: earliestRows },
+    { data: latestRows },
+  ] = await Promise.all([
+    supabase
+      .from("audits")
+      .select("*", { count: "exact", head: true })
+      .eq("tenant_id", tenantId)
+      .eq("status", "completed"),
+    supabase
+      .from("audits")
+      .select("id, status, target_url, report_data, completed_at, audit_type, created_at")
+      .eq("tenant_id", tenantId)
+      .eq("status", "completed")
+      .order("completed_at", { ascending: true })
+      .limit(1),
+    supabase
+      .from("audits")
+      .select("id, status, target_url, report_data, completed_at, audit_type, created_at")
+      .eq("tenant_id", tenantId)
+      .eq("status", "completed")
+      .order("completed_at", { ascending: false })
+      .limit(2),
+  ]);
+
+  // Combine rows maintaining uniqueness
+  const rowsMap = new Map<string, RawAuditRow>();
+  for (const row of (earliestRows ?? []) as unknown as RawAuditRow[]) {
+    rowsMap.set(row.id, row);
+  }
+  for (const row of (latestRows ?? []) as unknown as RawAuditRow[]) {
+    rowsMap.set(row.id, row);
+  }
+
+  // Sort completed audits chronologically
+  const candidateAudits = Array.from(rowsMap.values()).sort((a, b) => {
+    const timeA = a.completed_at ? new Date(a.completed_at).getTime() : 0;
+    const timeB = b.completed_at ? new Date(b.completed_at).getTime() : 0;
+    return timeA - timeB;
+  });
+
+  let sourceRow: RawAuditRow | null = null;
+  if (sourceAuditId && !rowsMap.has(sourceAuditId)) {
+    const { data } = await supabase
+      .from("audits")
+      .select("id, status, target_url, report_data, completed_at, audit_type, created_at")
+      .eq("id", sourceAuditId)
+      .eq("status", "completed")
+      .maybeSingle();
+    sourceRow = data as unknown as RawAuditRow | null;
+  }
+
+  return buildAuditScoreComparison(
+    candidateAudits,
+    sourceAuditId,
+    sourceRow,
+    (totalCount ?? 0) + (sourceRow && !rowsMap.has(sourceRow.id) ? 1 : 0),
+  );
 }
 
 /**
@@ -206,45 +175,21 @@ export async function getAuditScoreComparison(
 
   try {
     const supabase = getAdminClient();
+    const { data: tenantRow, error: tenantError } = await supabase
+      .from("tenants")
+      .select("source_audit_id")
+      .eq("id", tenantId)
+      .single();
 
-    // Fetch tenant's source_audit_id and all completed audits for this tenant
-    const [{ data: tenantRow }, { data: auditsData, error: auditsError }] = await Promise.all([
-      supabase
-        .from("tenants")
-        .select("source_audit_id")
-        .eq("id", tenantId)
-        .single(),
-      supabase
-        .from("audits")
-        .select("id, status, target_url, report_data, completed_at, audit_type, created_at")
-        .eq("tenant_id", tenantId)
-        .eq("status", "completed")
-        .order("completed_at", { ascending: true }),
-    ]);
-
-    if (auditsError) {
-      return { success: false, error: auditsError.message };
+    if (tenantError) {
+      return { success: false, error: tenantError.message };
     }
 
-    const completedAudits = (auditsData ?? []) as unknown as RawAuditRow[];
     const sourceAuditId =
       (tenantRow as { source_audit_id: string | null } | null)?.source_audit_id ?? null;
 
-    let sourceRow: RawAuditRow | null = null;
-    if (sourceAuditId && !completedAudits.some((a) => a.id === sourceAuditId)) {
-      const { data } = await supabase
-        .from("audits")
-        .select("id, status, target_url, report_data, completed_at, audit_type, created_at")
-        .eq("id", sourceAuditId)
-        .eq("status", "completed")
-        .maybeSingle();
-      sourceRow = data as unknown as RawAuditRow | null;
-    }
-
-    return {
-      success: true,
-      data: buildAuditScoreComparison(completedAudits, sourceAuditId, sourceRow),
-    };
+    const data = await loadTenantAuditScoreComparison(tenantId, sourceAuditId);
+    return { success: true, data };
   } catch (err) {
     return {
       success: false,

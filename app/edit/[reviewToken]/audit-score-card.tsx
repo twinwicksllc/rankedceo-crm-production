@@ -10,7 +10,7 @@
 // =============================================================================
 
 import Link from "next/link";
-import type { AuditScoreComparison } from "@/lib/waas/actions/client-edit/audit";
+import type { AuditScoreComparison } from "@/lib/waas/actions/client-edit/compute-audit-score-comparison";
 
 interface AuditScoreComparisonCardProps {
   comparison: AuditScoreComparison;

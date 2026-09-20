@@ -8,9 +8,9 @@ import {
   type DeployReadinessReport,
 } from "@/lib/waas/actions/admin/compute-deploy-readiness";
 import {
-  getAuditScoreComparison,
-  type AuditScoreComparison,
+  loadTenantAuditScoreComparison,
 } from "./audit";
+import type { AuditScoreComparison } from "./compute-audit-score-comparison";
 
 export type { DeployReadinessReport };
 export type { AuditScoreComparison };
@@ -88,12 +88,12 @@ export async function getTenantPortalData(
   try {
     const supabase = getAdminClient();
 
-    // 1. Tenant + tenant_site_config + audit comparison
-    const [{ data: tenantRow }, { data: configRow }, auditComparisonResult] = await Promise.all([
+    // 1. Tenant + tenant_site_config — single query per table, including source_audit_id
+    const [{ data: tenantRow }, { data: configRow }] = await Promise.all([
       supabase
         .from("tenants")
         .select(
-          "status, subdomain, domain, package_tier, plan_interval, stripe_subscription_id, brand_config, created_at, calendly_url, submitted_by_email",
+          "status, subdomain, domain, package_tier, plan_interval, stripe_subscription_id, brand_config, created_at, calendly_url, submitted_by_email, source_audit_id",
         )
         .eq("id", tenantId)
         .single(),
@@ -104,7 +104,6 @@ export async function getTenantPortalData(
         )
         .eq("tenant_id", tenantId)
         .maybeSingle(), // returns null (not error) if row absent
-      getAuditScoreComparison(reviewToken),
     ]);
 
     const tenant = tenantRow as {
@@ -118,7 +117,14 @@ export async function getTenantPortalData(
       created_at: string | null;
       calendly_url: string | null;
       submitted_by_email: string | null;
+      source_audit_id: string | null;
     } | null;
+
+    // Load audit score comparison without resolving token again
+    const auditComparison = await loadTenantAuditScoreComparison(
+      tenantId,
+      tenant?.source_audit_id ?? null,
+    );
 
     // Deploy readiness (Initiative 8) — computed in-process from the rows
     // above; null when tenant_site_config doesn't exist yet (e.g. still
@@ -130,10 +136,6 @@ export async function getTenantPortalData(
             configRow as Record<string, unknown>,
           )
         : null;
-
-    const auditComparison = auditComparisonResult.success
-      ? (auditComparisonResult.data ?? null)
-      : null;
 
     // 1b. tenant_site_config build-lifecycle columns (migration 022; schema-gap resilient)
     let initialBuildCompletedAt: string | null = null;
