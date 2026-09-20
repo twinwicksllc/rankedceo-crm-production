@@ -465,7 +465,7 @@ function DeployReadinessCard({
               </p>
             </div>
           </div>
-        ))};
+        ))}
       </div>
 
       {!readiness.ready && (
