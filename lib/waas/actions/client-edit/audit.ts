@@ -48,7 +48,7 @@ export interface AuditScoreComparison {
   totalAuditsCount: number;
 }
 
-interface RawAuditRow {
+export interface RawAuditRow {
   id: string;
   status: string;
   target_url: string;
@@ -58,7 +58,7 @@ interface RawAuditRow {
   created_at: string;
 }
 
-function parseAuditSnapshot(row: RawAuditRow): AuditScoreSnapshot | null {
+export function parseAuditSnapshot(row: RawAuditRow): AuditScoreSnapshot | null {
   const summary = (row.report_data?.summary as Record<string, number> | null) ?? null;
   const overall = summary?.overall_score ?? null;
   if (overall === null) return null;
@@ -71,6 +71,69 @@ function parseAuditSnapshot(row: RawAuditRow): AuditScoreSnapshot | null {
     mobileScore: summary?.mobile_score != null ? Math.round(summary.mobile_score) : null,
     performanceScore: summary?.performance_score != null ? Math.round(summary.performance_score) : null,
     completedAt: row.completed_at,
+  };
+}
+
+export function buildAuditScoreComparison(
+  completedAudits: RawAuditRow[],
+  sourceAuditId: string | null,
+  sourceAuditRow: RawAuditRow | null = null,
+): AuditScoreComparison | null {
+  let baselineRow: RawAuditRow | null = null;
+
+  if (sourceAuditId) {
+    const foundInTenantAudits = completedAudits.find((a) => a.id === sourceAuditId);
+    baselineRow = foundInTenantAudits ?? sourceAuditRow;
+  }
+
+  if (!baselineRow && completedAudits.length > 0) {
+    baselineRow = completedAudits[0];
+  }
+
+  if (!baselineRow) return null;
+  const selectedBaselineRow = baselineRow;
+
+  const baselineSnapshot = parseAuditSnapshot(selectedBaselineRow);
+  if (!baselineSnapshot) return null;
+
+  const remainingAudits = completedAudits.filter((a) => a.id !== selectedBaselineRow.id);
+  const latestRow = remainingAudits.length > 0
+    ? remainingAudits[remainingAudits.length - 1]
+    : null;
+  const latestSnapshot = latestRow ? parseAuditSnapshot(latestRow) : null;
+
+  let delta: AuditScoreComparison["delta"] = null;
+  if (latestSnapshot) {
+    delta = {
+      overall: latestSnapshot.overallScore - baselineSnapshot.overallScore,
+      seo:
+        latestSnapshot.seoScore != null && baselineSnapshot.seoScore != null
+          ? latestSnapshot.seoScore - baselineSnapshot.seoScore
+          : null,
+      mobile:
+        latestSnapshot.mobileScore != null && baselineSnapshot.mobileScore != null
+          ? latestSnapshot.mobileScore - baselineSnapshot.mobileScore
+          : null,
+      performance:
+        latestSnapshot.performanceScore != null && baselineSnapshot.performanceScore != null
+          ? latestSnapshot.performanceScore - baselineSnapshot.performanceScore
+          : null,
+    };
+  }
+
+  const totalCount = completedAudits.length +
+    (sourceAuditId &&
+    !completedAudits.some((a) => a.id === sourceAuditId) &&
+    sourceAuditRow
+      ? 1
+      : 0);
+
+  return {
+    baseline: baselineSnapshot,
+    latest: latestSnapshot,
+    delta,
+    hasReAudit: latestSnapshot !== null,
+    totalAuditsCount: totalCount,
   };
 }
 
@@ -164,80 +227,23 @@ export async function getAuditScoreComparison(
     }
 
     const completedAudits = (auditsData ?? []) as unknown as RawAuditRow[];
-    const sourceAuditId = (tenantRow as { source_audit_id: string | null } | null)?.source_audit_id;
+    const sourceAuditId =
+      (tenantRow as { source_audit_id: string | null } | null)?.source_audit_id ?? null;
 
-    let baselineRow: RawAuditRow | null = null;
-
-    // If source_audit_id exists, check if it's already in completedAudits
-    if (sourceAuditId) {
-      const foundInTenantAudits = completedAudits.find((a) => a.id === sourceAuditId);
-      if (foundInTenantAudits) {
-        baselineRow = foundInTenantAudits;
-      } else {
-        // Look up source audit directly if not yet linked with tenant_id
-        const { data: sourceRow } = await supabase
-          .from("audits")
-          .select("id, status, target_url, report_data, completed_at, audit_type, created_at")
-          .eq("id", sourceAuditId)
-          .eq("status", "completed")
-          .maybeSingle();
-
-        if (sourceRow) {
-          baselineRow = sourceRow as unknown as RawAuditRow;
-        }
-      }
+    let sourceRow: RawAuditRow | null = null;
+    if (sourceAuditId && !completedAudits.some((a) => a.id === sourceAuditId)) {
+      const { data } = await supabase
+        .from("audits")
+        .select("id, status, target_url, report_data, completed_at, audit_type, created_at")
+        .eq("id", sourceAuditId)
+        .eq("status", "completed")
+        .maybeSingle();
+      sourceRow = data as unknown as RawAuditRow | null;
     }
-
-    // Fallback: use earliest completed audit as baseline if no explicit source_audit_id
-    if (!baselineRow && completedAudits.length > 0) {
-      baselineRow = completedAudits[0];
-    }
-
-    if (!baselineRow) {
-      return { success: true, data: null };
-    }
-
-    const baselineSnapshot = parseAuditSnapshot(baselineRow);
-    if (!baselineSnapshot) {
-      return { success: true, data: null };
-    }
-
-    // Latest audit is the most recent completed audit different from baseline
-    const remainingAudits = completedAudits.filter((a) => a.id !== baselineRow?.id);
-    const latestRow = remainingAudits.length > 0 ? remainingAudits[remainingAudits.length - 1] : null;
-    const latestSnapshot = latestRow ? parseAuditSnapshot(latestRow) : null;
-
-    let delta: AuditScoreComparison["delta"] = null;
-    if (latestSnapshot) {
-      delta = {
-        overall: latestSnapshot.overallScore - baselineSnapshot.overallScore,
-        seo:
-          latestSnapshot.seoScore != null && baselineSnapshot.seoScore != null
-            ? latestSnapshot.seoScore - baselineSnapshot.seoScore
-            : null,
-        mobile:
-          latestSnapshot.mobileScore != null && baselineSnapshot.mobileScore != null
-            ? latestSnapshot.mobileScore - baselineSnapshot.mobileScore
-            : null,
-        performance:
-          latestSnapshot.performanceScore != null && baselineSnapshot.performanceScore != null
-            ? latestSnapshot.performanceScore - baselineSnapshot.performanceScore
-            : null,
-      };
-    }
-
-    const totalCount = (completedAudits.length > 0 ? completedAudits.length : 0) +
-      (sourceAuditId && !completedAudits.some((a) => a.id === sourceAuditId) && baselineRow ? 1 : 0);
 
     return {
       success: true,
-      data: {
-        baseline: baselineSnapshot,
-        latest: latestSnapshot,
-        delta,
-        hasReAudit: latestSnapshot !== null,
-        totalAuditsCount: totalCount,
-      },
+      data: buildAuditScoreComparison(completedAudits, sourceAuditId, sourceRow),
     };
   } catch (err) {
     return {
