@@ -5,6 +5,7 @@ import type { SectionConfig, SectionId } from "@/lib/waas/templates/types";
 import { getTemplate } from "@/lib/waas/templates/registry";
 import { getAdminClient, isMissingSchemaTable } from "./_shared";
 import type { ActionResult } from "./_shared";
+import { CLIENT_REGEN_DEFAULT_QUOTA } from "./_shared";
 import {
   saveTenantSiteVersion,
   generateReviewToken,
@@ -105,6 +106,32 @@ export interface ClientReviewVersion {
   summary: string | null;
   templateSlug: string | null;
   createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Initiative 12: client-facing variant regeneration + side-by-side compare
+// ---------------------------------------------------------------------------
+// NOTE: CLIENT_REGEN_DEFAULT_QUOTA lives in ./_shared and is re-exported from
+// ./index (the barrel) instead of from here, since this file's "use server"
+// directive only allows exporting async functions, not plain consts.
+
+export interface ClientVariantGeneration {
+  id: string;
+  generationIndex: number;
+  templateSlug: string;
+  sections: SectionConfig[];
+  clientNote: string | null;
+  isSelected: boolean;
+  createdAt: string;
+  /** True for generationIndex 0 — the snapshot taken before any regen request. */
+  isBaseline: boolean;
+}
+
+export interface ClientVariantRegenState {
+  generations: ClientVariantGeneration[];
+  regenCount: number;
+  regenQuota: number;
+  regensRemaining: number;
 }
 
 export async function getClientReviewSession(
@@ -523,10 +550,217 @@ function normalizeSectionOrder(sections: SectionConfig[]): SectionConfig[] {
     .map((section, index) => ({ ...section, order: index + 1 }));
 }
 
+async function resolveTenantIdFromReviewKey(
+  reviewKey: string,
+): Promise<string> {
+  const supabase = getAdminClient();
+  const { data: byToken } = await supabase
+    .from("tenant_site_config")
+    .select("tenant_id")
+    .eq("client_review_token", reviewKey)
+    .single();
+  if (byToken) return (byToken as { tenant_id: string }).tenant_id;
+  return reviewKey;
+}
+
+function mapRegenerationRow(
+  row: Record<string, unknown>,
+): ClientVariantGeneration {
+  const generationIndex =
+    typeof row.generation_index === "number" ? row.generation_index : 0;
+  return {
+    id: typeof row.id === "string" ? row.id : "",
+    generationIndex,
+    templateSlug:
+      typeof row.template_slug === "string" ? row.template_slug : "modern",
+    sections: Array.isArray(row.sections_json)
+      ? (row.sections_json as SectionConfig[])
+      : [],
+    clientNote: typeof row.client_note === "string" ? row.client_note : null,
+    isSelected: row.is_selected === true,
+    createdAt:
+      typeof row.created_at === "string"
+        ? row.created_at
+        : new Date().toISOString(),
+    isBaseline: generationIndex === 0,
+  };
+}
+
+/**
+ * Read all comparable generations (baseline + regens) for a tenant, plus
+ * quota usage. Powers the client portal's side-by-side comparison view.
+ * Returns an empty generation list (not an error) if migration 026 has not
+ * been applied yet in a given environment, matching the backward-compat
+ * pattern used elsewhere in this file (isMissingSchemaTable).
+ */
+export async function getClientVariantRegenState(
+  reviewToken: string,
+): Promise<ActionResult<ClientVariantRegenState>> {
+  try {
+    const supabase = getAdminClient();
+    const tenantId = await resolveTenantIdFromReviewKey(reviewToken);
+
+    const { data: configRow, error: configError } = await supabase
+      .from("tenant_site_config")
+      .select("client_regen_count, client_regen_quota")
+      .eq("tenant_id", tenantId)
+      .maybeSingle();
+
+    const regenCount =
+      !configError &&
+      configRow &&
+      typeof (configRow as Record<string, unknown>).client_regen_count ===
+        "number"
+        ? ((configRow as Record<string, unknown>).client_regen_count as number)
+        : 0;
+    const regenQuota =
+      !configError &&
+      configRow &&
+      typeof (configRow as Record<string, unknown>).client_regen_quota ===
+        "number"
+        ? ((configRow as Record<string, unknown>).client_regen_quota as number)
+        : CLIENT_REGEN_DEFAULT_QUOTA;
+
+    const { data: genRows, error: genError } = await supabase
+      .from("tenant_variant_regenerations")
+      .select(
+        "id, generation_index, template_slug, sections_json, client_note, is_selected, created_at",
+      )
+      .eq("tenant_id", tenantId)
+      .order("generation_index", { ascending: true });
+
+    if (genError) {
+      if (isMissingSchemaTable(genError.message, "tenant_variant_regenerations")) {
+        return {
+          success: true,
+          data: {
+            generations: [],
+            regenCount: 0,
+            regenQuota: CLIENT_REGEN_DEFAULT_QUOTA,
+            regensRemaining: CLIENT_REGEN_DEFAULT_QUOTA,
+          },
+        };
+      }
+      return { success: false, error: genError.message };
+    }
+
+    const generations = ((genRows ?? []) as Array<Record<string, unknown>>).map(
+      mapRegenerationRow,
+    );
+
+    return {
+      success: true,
+      data: {
+        generations,
+        regenCount,
+        regenQuota,
+        regensRemaining: Math.max(0, regenQuota - regenCount),
+      },
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Unknown error",
+    };
+  }
+}
+
+/**
+ * Client marks a specific past generation (baseline or a prior regen) as
+ * their current pick, without spending a regen. Applies its sections as the
+ * live active_sections_json, same as selecting a variant in the original
+ * A/B/C review — but scoped to the regen-comparison generations table.
+ */
+export async function selectClientVariantGeneration(
+  reviewToken: string,
+  generationId: string,
+): Promise<ActionResult<void>> {
+  try {
+    const supabase = getAdminClient();
+    const tenantId = await resolveTenantIdFromReviewKey(reviewToken);
+
+    const { data: genRow, error: genError } = await supabase
+      .from("tenant_variant_regenerations")
+      .select("id, generation_index, template_slug, sections_json")
+      .eq("tenant_id", tenantId)
+      .eq("id", generationId)
+      .single();
+
+    if (genError || !genRow) {
+      return { success: false, error: "Generation not found." };
+    }
+
+    const row = genRow as Record<string, unknown>;
+    const sections = Array.isArray(row.sections_json)
+      ? (row.sections_json as SectionConfig[])
+      : [];
+    const templateSlug =
+      typeof row.template_slug === "string" ? row.template_slug : "modern";
+
+    const { error: updateConfigError } = await supabase
+      .from("tenant_site_config")
+      .update({
+        active_sections_json: sections,
+        client_selected_template_slug: templateSlug,
+        client_selected_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("tenant_id", tenantId);
+
+    if (updateConfigError) {
+      return { success: false, error: updateConfigError.message };
+    }
+
+    // Clear is_selected on all generations, then set it on the chosen one.
+    await supabase
+      .from("tenant_variant_regenerations")
+      .update({ is_selected: false })
+      .eq("tenant_id", tenantId);
+    const { error: markError } = await supabase
+      .from("tenant_variant_regenerations")
+      .update({ is_selected: true })
+      .eq("tenant_id", tenantId)
+      .eq("id", generationId);
+    if (markError) {
+      return { success: false, error: markError.message };
+    }
+
+    await saveTenantSiteVersion(
+      tenantId,
+      "client_selected_variant",
+      `Client selected generation ${row.generation_index} (${templateSlug}) from regen comparison`,
+      {
+        lifecycleMeta: {
+          reasonCategory: "client_request",
+        },
+      },
+    );
+
+    revalidatePath(`/admin/dashboard/${tenantId}`);
+    revalidatePath(`/review/${reviewToken}`);
+    revalidatePath(`/edit/${reviewToken}`);
+    revalidatePath(`/_preview/${tenantId}`);
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Unknown error",
+    };
+  }
+}
+
+export interface RegenerateVariantResult {
+  regenCount: number;
+  regenQuota: number;
+  regensRemaining: number;
+  generationIndex: number;
+}
+
 export async function regenerateSelectedVariantByReviewToken(
   reviewToken: string,
   preferredTemplateSlug?: string,
-): Promise<ActionResult<void>> {
+  clientNote?: string | null,
+): Promise<ActionResult<RegenerateVariantResult>> {
   try {
     const supabase = getAdminClient();
 
@@ -541,6 +775,73 @@ export async function regenerateSelectedVariantByReviewToken(
       tenantId = (byToken as { tenant_id: string }).tenant_id;
     } else {
       tenantId = reviewToken;
+    }
+
+    // ── Initiative 12: enforce the client regen quota ──────────────────
+    // Regens are capped (default 3, see CLIENT_REGEN_DEFAULT_QUOTA / the
+    // client_regen_quota column) so a self-serve "try again" button can't
+    // generate unbounded AI/compute cost. Admins can still bypass this via
+    // the admin dashboard's own variant tools, which don't call this
+    // function's quota path (see ai-variants-panel.tsx).
+    const { data: quotaRow, error: quotaError } = await supabase
+      .from("tenant_site_config")
+      .select(
+        "template_id, client_selected_template_slug, client_feedback_tone, client_feedback_cta_intensity, client_feedback_layout_preference, client_mix_source_templates, client_regen_count, client_regen_quota, active_sections_json, site_templates(slug)",
+      )
+      .eq("tenant_id", tenantId)
+      .single();
+
+    if (quotaError) {
+      return { success: false, error: quotaError.message };
+    }
+
+    const quotaRowData = (quotaRow ?? {}) as Record<string, unknown>;
+    const regenCount =
+      typeof quotaRowData.client_regen_count === "number"
+        ? quotaRowData.client_regen_count
+        : 0;
+    const regenQuota =
+      typeof quotaRowData.client_regen_quota === "number"
+        ? quotaRowData.client_regen_quota
+        : CLIENT_REGEN_DEFAULT_QUOTA;
+
+    if (regenCount >= regenQuota) {
+      return {
+        success: false,
+        error: `You've used all ${regenQuota} regenerations for this site. Please add a note describing what you'd like changed and our team will follow up directly.`,
+      };
+    }
+
+    // Capture the baseline (generation 0) the first time a regen is
+    // requested, so the client always has something to compare their first
+    // regen against — otherwise generation 1 would be the first entry with
+    // nothing "before" it to look at side by side.
+    const { data: existingGenerations } = await supabase
+      .from("tenant_variant_regenerations")
+      .select("generation_index")
+      .eq("tenant_id", tenantId);
+    const hasBaseline = ((existingGenerations ?? []) as Array<{
+      generation_index: number;
+    }>).some((g) => g.generation_index === 0);
+
+    if (!hasBaseline) {
+      const baselineTemplateSlug =
+        (quotaRowData.client_selected_template_slug as string | null) ??
+        (
+          quotaRowData.site_templates as { slug?: string } | null | undefined
+        )?.slug ??
+        "modern";
+      const baselineSections = Array.isArray(quotaRowData.active_sections_json)
+        ? quotaRowData.active_sections_json
+        : [];
+      await supabase.from("tenant_variant_regenerations").insert({
+        tenant_id: tenantId,
+        generation_index: 0,
+        template_slug: baselineTemplateSlug,
+        sections_json: baselineSections,
+        client_note: null,
+        is_selected: false,
+      });
     }
 
     const { data: siteConfig } = await supabase
@@ -650,11 +951,16 @@ export async function regenerateSelectedVariantByReviewToken(
     }
 
     regeneratedSections = normalizeSectionOrder(regeneratedSections);
+    const normalizedNote = clientNote?.trim()
+      ? clientNote.trim().slice(0, 1000)
+      : null;
+    const newGenerationIndex = regenCount + 1;
 
     const { error: updateError } = await supabase
       .from("tenant_site_config")
       .update({
         active_sections_json: regeneratedSections,
+        client_regen_count: newGenerationIndex,
         updated_at: new Date().toISOString(),
       })
       .eq("tenant_id", tenantId);
@@ -663,17 +969,33 @@ export async function regenerateSelectedVariantByReviewToken(
       return { success: false, error: updateError.message };
     }
 
+    // Persist this attempt as its own comparable generation and mark it as
+    // the current pick (clearing the flag on all prior generations first).
+    await supabase
+      .from("tenant_variant_regenerations")
+      .update({ is_selected: false })
+      .eq("tenant_id", tenantId);
+    await supabase.from("tenant_variant_regenerations").insert({
+      tenant_id: tenantId,
+      generation_index: newGenerationIndex,
+      template_slug: baseTemplateSlug,
+      sections_json: regeneratedSections,
+      client_note: normalizedNote,
+      is_selected: true,
+    });
+
     await saveTenantSiteVersion(
       tenantId,
       "client_regenerated_variant",
-      `Regenerated ${baseTemplateSlug} using saved feedback${mixSourceTemplates.length ? ` and mix (${mixSourceTemplates.join(", ")})` : ""}`,
+      `Regenerated ${baseTemplateSlug} using saved feedback${mixSourceTemplates.length ? ` and mix (${mixSourceTemplates.join(", ")})` : ""}${normalizedNote ? ` — client note: "${normalizedNote}"` : ""}`,
       {
         lifecycleMeta: {
           reasonCategory: "client_request",
           reasonText:
-            mixSourceTemplates.length > 0
+            normalizedNote ??
+            (mixSourceTemplates.length > 0
               ? `Regeneration with mix: ${mixSourceTemplates.join(", ")}`
-              : null,
+              : null),
         },
       },
     );
@@ -681,10 +1003,19 @@ export async function regenerateSelectedVariantByReviewToken(
     revalidatePath("/admin/dashboard");
     revalidatePath(`/admin/dashboard/${tenantId}`);
     revalidatePath(`/review/${reviewToken}`);
+    revalidatePath(`/edit/${reviewToken}`);
     revalidatePath("/_sites", "layout");
     revalidatePath(`/_preview/${tenantId}`);
 
-    return { success: true };
+    return {
+      success: true,
+      data: {
+        regenCount: newGenerationIndex,
+        regenQuota,
+        regensRemaining: Math.max(0, regenQuota - newGenerationIndex),
+        generationIndex: newGenerationIndex,
+      },
+    };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     return { success: false, error: msg };

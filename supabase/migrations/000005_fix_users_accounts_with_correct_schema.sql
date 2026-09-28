@@ -5,30 +5,53 @@
 -- 1. Create Accounts Table (IF NOT EXISTS) - with correct schema
 -- ============================================================================
 
+-- NOTE: on a fresh database, migration 000001 already created `accounts`
+-- with only (id, name, created_at, updated_at) — so the CREATE TABLE below
+-- is a no-op there, and slug/status/plan/etc. would never actually get
+-- added before the CREATE INDEX statements further down. On an environment
+-- where 000001 never ran, this CREATE TABLE still creates the full shape.
+-- The ALTER TABLE ADD COLUMN IF NOT EXISTS block that follows is what
+-- guarantees the columns exist either way (idempotent, safe to re-run).
 CREATE TABLE IF NOT EXISTS accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL DEFAULT 'My Account',
-    slug VARCHAR(255) NOT NULL,
-    status VARCHAR(50) DEFAULT 'active',
-    plan VARCHAR(50) DEFAULT 'starter',
-    is_active BOOLEAN DEFAULT true,
-    logo_url TEXT,
-    website_url TEXT,
-    settings JSONB DEFAULT '{}',
-    billing_email VARCHAR(255),
-    stripe_customer_id VARCHAR(255),
-    metadata JSONB DEFAULT '{}',
-    is_deleted BOOLEAN DEFAULT false,
-    user_count INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    timezone VARCHAR(100) DEFAULT 'America/New_York',
-    deleted_at TIMESTAMP WITH TIME ZONE,
-    deleted_by UUID,
-    
-    CONSTRAINT accounts_name_not_empty CHECK (length(trim(name)) > 0),
-    CONSTRAINT accounts_slug_not_empty CHECK (length(trim(slug)) > 0)
+
+    CONSTRAINT accounts_name_not_empty CHECK (length(trim(name)) > 0)
 );
+
+-- Backfill columns that 000001's minimal accounts table doesn't have yet.
+-- Safe/idempotent: only adds a column if it isn't already present.
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS slug VARCHAR(255);
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active';
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS plan VARCHAR(50) DEFAULT 'starter';
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS logo_url TEXT;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS website_url TEXT;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS settings JSONB DEFAULT '{}';
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS billing_email VARCHAR(255);
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(255);
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}';
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT false;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS user_count INTEGER DEFAULT 0;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS timezone VARCHAR(100) DEFAULT 'America/New_York';
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS deleted_by UUID;
+
+-- Backfill slug for any pre-existing rows (e.g. the default account created
+-- by 000001's INSERT) before we enforce NOT NULL + the non-empty check.
+UPDATE accounts
+SET slug = 'account-' || substring(id::text, 1, 8)
+WHERE slug IS NULL OR length(trim(slug)) = 0;
+
+ALTER TABLE accounts ALTER COLUMN slug SET NOT NULL;
+
+DO $$ BEGIN
+  ALTER TABLE accounts ADD CONSTRAINT accounts_slug_not_empty CHECK (length(trim(slug)) > 0);
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_accounts_created_at ON accounts(created_at);
@@ -40,22 +63,29 @@ CREATE INDEX IF NOT EXISTS idx_accounts_plan ON accounts(plan);
 -- 2. Create Users Table (IF NOT EXISTS)
 -- ============================================================================
 
+-- Same no-op risk as accounts above: on a fresh database, migration 000001
+-- already created `users` with only
+-- (id, account_id, full_name, avatar_url, created_at, updated_at) — so this
+-- CREATE TABLE is a no-op there too, and email/role/status/etc. would never
+-- get added before the CREATE INDEX statements further down.
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     full_name VARCHAR(255),
     avatar_url TEXT,
-    email VARCHAR(255),
-    role VARCHAR(50) DEFAULT 'member',
-    status VARCHAR(50) DEFAULT 'active',
-    phone VARCHAR(50),
-    metadata JSONB DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    last_login_at TIMESTAMP WITH TIME ZONE,
-    
+
     CONSTRAINT users_account_id_not_null CHECK (account_id IS NOT NULL)
 );
+
+-- Backfill columns that 000001's minimal users table doesn't have yet.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'member';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP WITH TIME ZONE;
 
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_users_account_id ON users(account_id);

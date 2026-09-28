@@ -106,12 +106,40 @@ async function getVariantSections(
   return sections as SectionConfig[];
 }
 
+// Initiative 12: preview a single stored regeneration ("generation") by its
+// row id, so the client portal's side-by-side comparison view can render
+// each generation (baseline + every regen) in its own iframe.
+async function getRegenerationSections(
+  tenantId: string,
+  generationId: string,
+): Promise<SectionConfig[] | null> {
+  const url = process.env.NEXT_PUBLIC_WAAS_SUPABASE_URL;
+  const key = process.env.WAAS_SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+
+  const client = createClient(url, key);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (client as any)
+    .from("tenant_variant_regenerations")
+    .select("sections_json")
+    .eq("tenant_id", tenantId)
+    .eq("id", generationId)
+    .single();
+
+  if (error || !data) return null;
+
+  const sections = (data as { sections_json?: unknown[] }).sections_json;
+  if (!Array.isArray(sections)) return null;
+  return sections as SectionConfig[];
+}
+
 export default async function PreviewTenantPage({
   params,
   searchParams,
 }: {
   params: Promise<{ tenantId: string }>;
-  searchParams?: Promise<{ template?: string; variant?: string }>;
+  searchParams?: Promise<{ template?: string; variant?: string; generation?: string }>;
 }) {
   const { tenantId } = await params;
   const resolvedSearchParams = await searchParams;
@@ -131,6 +159,17 @@ export default async function PreviewTenantPage({
     );
     if (variantSections && variantSections.length > 0) {
       sections = variantSections;
+    }
+  }
+
+  const generationId = resolvedSearchParams?.generation?.trim();
+  if (generationId) {
+    const generationSections = await getRegenerationSections(
+      tenantId,
+      generationId,
+    );
+    if (generationSections && generationSections.length > 0) {
+      sections = generationSections;
     }
   }
 
