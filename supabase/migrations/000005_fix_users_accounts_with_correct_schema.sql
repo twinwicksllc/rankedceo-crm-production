@@ -63,22 +63,29 @@ CREATE INDEX IF NOT EXISTS idx_accounts_plan ON accounts(plan);
 -- 2. Create Users Table (IF NOT EXISTS)
 -- ============================================================================
 
+-- Same no-op risk as accounts above: on a fresh database, migration 000001
+-- already created `users` with only
+-- (id, account_id, full_name, avatar_url, created_at, updated_at) — so this
+-- CREATE TABLE is a no-op there too, and email/role/status/etc. would never
+-- get added before the CREATE INDEX statements further down.
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     full_name VARCHAR(255),
     avatar_url TEXT,
-    email VARCHAR(255),
-    role VARCHAR(50) DEFAULT 'member',
-    status VARCHAR(50) DEFAULT 'active',
-    phone VARCHAR(50),
-    metadata JSONB DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    last_login_at TIMESTAMP WITH TIME ZONE,
-    
+
     CONSTRAINT users_account_id_not_null CHECK (account_id IS NOT NULL)
 );
+
+-- Backfill columns that 000001's minimal users table doesn't have yet.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'member';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP WITH TIME ZONE;
 
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_users_account_id ON users(account_id);
