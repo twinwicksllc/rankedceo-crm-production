@@ -5,11 +5,14 @@ import type {
   ClientReviewVersion,
   ClientVariantFeedback,
   ClientVariantMix,
+  ClientVariantRegenState,
 } from "@/lib/waas/actions/admin";
 import {
+  getClientVariantRegenState,
   mixClientVariantsByReviewToken,
   regenerateSelectedVariantByReviewToken,
   selectClientVariantByReviewToken,
+  selectClientVariantGeneration,
 } from "@/lib/waas/actions/admin";
 
 type Viewport = "desktop" | "tablet" | "mobile";
@@ -43,6 +46,7 @@ export function ReviewClient({
   initialMix,
   versions,
   variants,
+  initialRegenState,
 }: {
   tenantId: string;
   slug: string;
@@ -59,6 +63,7 @@ export function ReviewClient({
     templateSlug: string;
     status: string;
   }>;
+  initialRegenState: ClientVariantRegenState;
 }) {
   const resolvedVariants = useMemo<ReviewVariant[]>(() => {
     if (variants.length > 0) {
@@ -96,6 +101,16 @@ export function ReviewClient({
     initialMix.sourceTemplates ?? [],
   );
   const [isPending, startTransition] = useTransition();
+
+  // Initiative 12: client-facing regeneration comparison state. Each entry
+  // in `generations` is one "try" the client can look at side by side —
+  // generationIndex 0 is the auto-captured baseline, 1-3 are regens (capped
+  // by regenQuota, default 3).
+  const [regenState, setRegenState] = useState<ClientVariantRegenState>(
+    initialRegenState,
+  );
+  const [regenNote, setRegenNote] = useState<string>("");
+  const [compareViewport, setCompareViewport] = useState<Viewport>("desktop");
 
   const previewBase = useMemo(() => `/_preview/${tenantId}`, [tenantId]);
 
@@ -169,17 +184,50 @@ export function ReviewClient({
       const result = await regenerateSelectedVariantByReviewToken(
         reviewToken,
         templateSlug,
+        regenNote || null,
       );
-      if (!result.success) {
+      if (!result.success || !result.data) {
         setMessage(
           result.error ??
             "Failed to regenerate your selected direction. Please try again.",
         );
         return;
       }
+      const remaining = result.data.regensRemaining;
       setMessage(
-        `Regenerated ${templateSlug} using your saved feedback and preferences.`,
+        `Regenerated ${templateSlug} using your saved feedback and preferences. You now have ${remaining} regeneration${
+          remaining === 1 ? "" : "s"
+        } left.`,
       );
+      setRegenNote("");
+      // Refresh the full comparison list so the new generation shows up
+      // alongside every prior one.
+      const refreshed = await getClientVariantRegenState(reviewToken);
+      if (refreshed.success && refreshed.data) setRegenState(refreshed.data);
+    });
+  };
+
+  const handlePickGeneration = (generationId: string) => {
+    setMessage(null);
+    startTransition(async () => {
+      const result = await selectClientVariantGeneration(
+        reviewToken,
+        generationId,
+      );
+      if (!result.success) {
+        setMessage(
+          result.error ?? "Failed to select this version. Please try again.",
+        );
+        return;
+      }
+      setRegenState((prev) => ({
+        ...prev,
+        generations: prev.generations.map((gen) => ({
+          ...gen,
+          isSelected: gen.id === generationId,
+        })),
+      }));
+      setMessage("Saved as your current pick. Our team has been notified.");
     });
   };
 
@@ -455,23 +503,175 @@ export function ReviewClient({
           })}
         </div>
 
-        <div className="mt-8 text-center text-xs text-white/45">
-          After selection, our team will finalize content polish and deploy your
-          chosen direction.
-          <div className="mt-1">Live path: /_sites/{slug}</div>
-          <div className="mt-4">
+        <section className="mt-8 rounded-2xl border border-white/15 bg-white/[0.03] p-4 backdrop-blur sm:p-5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-lg font-semibold">
+                Not quite right? Try another version
+              </h2>
+              <p className="mt-1 text-sm text-white/60">
+                You can regenerate your selected direction up to{" "}
+                {regenState.regenQuota} times. Every attempt is saved below so
+                you can compare them all side by side and pick your favorite —
+                nothing is overwritten.
+              </p>
+            </div>
+            <span
+              className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${
+                regenState.regensRemaining > 0
+                  ? "border-cyan-300/40 bg-cyan-400/10 text-cyan-200"
+                  : "border-amber-400/40 bg-amber-400/10 text-amber-200"
+              }`}
+            >
+              {regenState.regensRemaining} of {regenState.regenQuota}{" "}
+              regenerations left
+            </span>
+          </div>
+
+          <label className="block text-sm">
+            <div className="mb-2 text-white/70">
+              Note for your next regeneration (optional)
+            </div>
+            <textarea
+              value={regenNote}
+              onChange={(e) => setRegenNote(e.target.value)}
+              maxLength={1000}
+              rows={3}
+              placeholder="Tell us what you're hoping this regeneration will fix or change — e.g. 'make the colors warmer' or 'try a bigger, bolder headline font'."
+              className="w-full rounded-xl border border-white/15 bg-slate-900/80 px-3 py-2 text-white outline-none transition placeholder:text-white/35 focus:border-cyan-400"
+            />
+            <div className="mt-1 text-right text-xs text-white/45">
+              {regenNote.length}/1000
+            </div>
+          </label>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
             <button
               onClick={handleRegenerate}
-              disabled={isPending}
+              disabled={isPending || regenState.regensRemaining <= 0}
               className={`rounded-xl px-4 py-2 text-xs font-semibold transition-all ${
-                isPending
+                isPending || regenState.regensRemaining <= 0
                   ? "cursor-not-allowed bg-white/10 text-white/40"
                   : "bg-amber-500 text-slate-950 hover:bg-amber-400"
               }`}
             >
-              {isPending ? "Regenerating…" : "Regenerate Selected Direction"}
+              {isPending
+                ? "Regenerating…"
+                : regenState.regensRemaining <= 0
+                  ? "No regenerations left"
+                  : "Regenerate Selected Direction"}
             </button>
+            {regenState.regensRemaining <= 0 && (
+              <p className="text-xs text-white/55">
+                You&apos;ve used all your regenerations. Add a note above and our
+                team will reach out to fine-tune the details directly.
+              </p>
+            )}
           </div>
+
+          {regenState.generations.length > 0 && (
+            <div className="mt-6 border-t border-white/10 pt-5">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <h3 className="text-sm font-semibold text-white/90">
+                  Compare all your generations (
+                  {regenState.generations.length})
+                </h3>
+                <div className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 p-1">
+                  {(["desktop", "tablet", "mobile"] as Viewport[]).map(
+                    (mode) => (
+                      <button
+                        key={mode}
+                        onClick={() => setCompareViewport(mode)}
+                        className={`rounded-lg px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition-all ${
+                          compareViewport === mode
+                            ? "bg-cyan-500 text-slate-950"
+                            : "text-white/70 hover:bg-white/10 hover:text-white"
+                        }`}
+                      >
+                        {mode}
+                      </button>
+                    ),
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+                {regenState.generations.map((generation) => (
+                  <div
+                    key={generation.id}
+                    className="rounded-2xl border border-white/15 bg-white/[0.03] p-3"
+                  >
+                    <div className="mb-2 flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold">
+                          {generation.isBaseline
+                            ? "Initial selection"
+                            : `Regeneration ${generation.generationIndex}`}
+                        </p>
+                        <p className="text-[11px] text-white/45">
+                          {new Date(generation.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                      {generation.isSelected && (
+                        <span className="shrink-0 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
+                          Current pick
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mb-3 overflow-hidden rounded-lg border border-white/10 bg-slate-900/70 p-1.5">
+                      <div
+                        className="mx-auto overflow-hidden rounded-md border border-white/10 bg-white"
+                        style={{
+                          width:
+                            compareViewport === "desktop"
+                              ? "100%"
+                              : VIEWPORT_WIDTH[compareViewport],
+                          maxWidth: "100%",
+                        }}
+                      >
+                        <iframe
+                          title={`Generation ${generation.generationIndex} preview`}
+                          src={`${previewBase}?generation=${generation.id}`}
+                          className="h-[380px] w-full border-0"
+                          loading="lazy"
+                          sandbox="allow-same-origin allow-scripts allow-forms"
+                        />
+                      </div>
+                    </div>
+
+                    {generation.clientNote && (
+                      <p className="mb-3 rounded-lg border border-white/10 bg-slate-900/60 px-2.5 py-2 text-[11px] italic text-white/60">
+                        “{generation.clientNote}”
+                      </p>
+                    )}
+
+                    <button
+                      onClick={() => handlePickGeneration(generation.id)}
+                      disabled={isPending || generation.isSelected}
+                      className={`w-full rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
+                        generation.isSelected
+                          ? "cursor-default bg-emerald-500/15 text-emerald-300"
+                          : isPending
+                            ? "cursor-not-allowed bg-white/10 text-white/40"
+                            : "bg-cyan-500 text-slate-950 hover:bg-cyan-400"
+                      }`}
+                    >
+                      {generation.isSelected
+                        ? "This is your current pick"
+                        : "Pick this one"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+
+        <div className="mt-8 text-center text-xs text-white/45">
+          After selection, our team will finalize content polish and deploy your
+          chosen direction.
+          <div className="mt-1">Live path: /_sites/{slug}</div>
         </div>
       </div>
     </main>

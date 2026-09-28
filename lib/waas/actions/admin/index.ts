@@ -3,6 +3,7 @@
 //   import { deploySite } from '@/lib/waas/actions/admin'
 
 export type { ActionResult } from "./_shared";
+export { CLIENT_REGEN_DEFAULT_QUOTA } from "./_shared";
 export type { VariantLifecycleReasonCategory } from "./_versioning";
 
 export * from "./tenants";
