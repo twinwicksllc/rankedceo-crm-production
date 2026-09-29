@@ -38,7 +38,7 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
-RAISE NOTICE '✓ Smile Pool Account verified/created (ID: 00000000-0000-4000-a000-000000000004)';
+DO $$ BEGIN RAISE NOTICE '✓ Smile Pool Account verified/created (ID: 00000000-0000-4000-a000-000000000004)'; END $$;
 
 -- 3. Verify Pool Account exists
 DO $$
@@ -80,7 +80,7 @@ BEGIN
 END;
 $$;
 
-RAISE NOTICE '✓ get_current_smile_account_id() function created';
+DO $$ BEGIN RAISE NOTICE '✓ get_current_smile_account_id() function created'; END $$;
 
 -- 5. Update RLS policies to use account_id
 
@@ -90,7 +90,7 @@ DROP POLICY IF EXISTS "Dentists can update their own assessments" ON public.smil
 DROP POLICY IF EXISTS "Dentists can delete their own assessments" ON public.smile_assessments;
 DROP POLICY IF EXISTS "Allow public insert for patient assessments" ON public.smile_assessments;
 
-RAISE NOTICE '✓ Old policies dropped';
+DO $$ BEGIN RAISE NOTICE '✓ Old policies dropped'; END $$;
 
 -- Create new account-level policies
 
@@ -101,7 +101,7 @@ FOR SELECT
 TO authenticated
 USING (account_id = get_current_smile_account_id());
 
-RAISE NOTICE '✓ SELECT policy created (account-based)';
+DO $$ BEGIN RAISE NOTICE '✓ SELECT policy created (account-based)'; END $$;
 
 -- UPDATE Policy: Users can update assessments in their account
 CREATE POLICY "Users can update account assessments"
@@ -111,7 +111,7 @@ TO authenticated
 USING (account_id = get_current_smile_account_id())
 WITH CHECK (account_id = get_current_smile_account_id());
 
-RAISE NOTICE '✓ UPDATE policy created (account-based)';
+DO $$ BEGIN RAISE NOTICE '✓ UPDATE policy created (account-based)'; END $$;
 
 -- DELETE Policy: Users can delete assessments in their account
 CREATE POLICY "Users can delete account assessments"
@@ -120,7 +120,7 @@ FOR DELETE
 TO authenticated
 USING (account_id = get_current_smile_account_id());
 
-RAISE NOTICE '✓ DELETE policy created (account-based)';
+DO $$ BEGIN RAISE NOTICE '✓ DELETE policy created (account-based)'; END $$;
 
 -- INSERT Policy: Allow authenticated inserts (enforced by WITH CHECK)
 CREATE POLICY "Users can insert account assessments"
@@ -129,7 +129,7 @@ FOR INSERT
 TO authenticated
 WITH CHECK (account_id = get_current_smile_account_id());
 
-RAISE NOTICE '✓ INSERT policy created (account-based)';
+DO $$ BEGIN RAISE NOTICE '✓ INSERT policy created (account-based)'; END $$;
 
 -- Public insert policy for patient submissions
 CREATE POLICY "Allow public insert for patient assessments"
@@ -144,7 +144,7 @@ WITH CHECK (
     )
 );
 
-RAISE NOTICE '✓ Public INSERT policy created with account validation';
+DO $$ BEGIN RAISE NOTICE '✓ Public INSERT policy created with account validation'; END $$;
 
 -- 6. Add indexes for performance
 CREATE INDEX IF NOT EXISTS idx_smile_assessments_account_id 
@@ -153,7 +153,7 @@ ON public.smile_assessments(account_id);
 CREATE INDEX IF NOT EXISTS idx_smile_assessments_auth_user_id 
 ON public.smile_assessments(auth_user_id);
 
-RAISE NOTICE '✓ Performance indexes added';
+DO $$ BEGIN RAISE NOTICE '✓ Performance indexes added'; END $$;
 
 -- 7. Create diagnostic function
 CREATE OR REPLACE FUNCTION diagnose_smile_assessments()
@@ -213,13 +213,13 @@ BEGIN
 END;
 $$;
 
-RAISE NOTICE '✓ Diagnostic function created';
+DO $$ BEGIN RAISE NOTICE '✓ Diagnostic function created'; END $$;
 
 -- 8. Run diagnostics
 SELECT * FROM diagnose_smile_assessments();
 
-RAISE NOTICE '═══════════════════════════════════════════════════════════════';
-RAISE NOTICE 'Smile Assessment Setup Complete!';
-RAISE NOTICE '═══════════════════════════════════════════════════════════════';
-RAISE NOTICE 'To run diagnostics later: SELECT * FROM diagnose_smile_assessments();';
-RAISE NOTICE '═══════════════════════════════════════════════════════════════';
+DO $$ BEGIN RAISE NOTICE '═══════════════════════════════════════════════════════════════'; END $$;
+DO $$ BEGIN RAISE NOTICE 'Smile Assessment Setup Complete!'; END $$;
+DO $$ BEGIN RAISE NOTICE '═══════════════════════════════════════════════════════════════'; END $$;
+DO $$ BEGIN RAISE NOTICE 'To run diagnostics later: SELECT * FROM diagnose_smile_assessments();'; END $$;
+DO $$ BEGIN RAISE NOTICE '═══════════════════════════════════════════════════════════════'; END $$;

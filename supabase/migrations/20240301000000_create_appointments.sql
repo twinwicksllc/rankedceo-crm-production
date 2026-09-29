@@ -36,8 +36,10 @@ ON public.calendly_connections FOR ALL TO authenticated
 USING (account_id = get_current_user_account_id())
 WITH CHECK (account_id = get_current_user_account_id());
 
-CREATE INDEX idx_calendly_connections_account_id ON public.calendly_connections(account_id);
-CREATE INDEX idx_calendly_connections_user_id ON public.calendly_connections(user_id);
+-- These indexes are also created by 000008a_baseline_forward_referenced_crm_tables.sql
+-- (which runs earlier in filename-sorted order), so use IF NOT EXISTS for idempotency.
+CREATE INDEX IF NOT EXISTS idx_calendly_connections_account_id ON public.calendly_connections(account_id);
+CREATE INDEX IF NOT EXISTS idx_calendly_connections_user_id ON public.calendly_connections(user_id);
 
 -- Trigger for updated_at
 CREATE TRIGGER on_calendly_connection_updated

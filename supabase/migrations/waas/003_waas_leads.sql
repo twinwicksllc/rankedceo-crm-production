@@ -4,6 +4,7 @@
 -- Run in the WaaS Supabase project AFTER 002_waas_audits.sql
 -- =============================================================================
 
+DO $$ BEGIN
 CREATE TYPE waas_lead_status AS ENUM (
   'new',          -- Just captured via email form
   'contacted',    -- Darrick/team has reached out
@@ -11,7 +12,11 @@ CREATE TYPE waas_lead_status AS ENUM (
   'converted',    -- Became a paying customer
   'lost'          -- No longer interested
 );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
+DO $$ BEGIN
 CREATE TYPE waas_lead_source AS ENUM (
   'audit_tool',       -- Submitted URL for audit
   'email_capture',    -- Entered email to get report
@@ -19,12 +24,15 @@ CREATE TYPE waas_lead_source AS ENUM (
   'referral',         -- Referred by existing customer
   'manual'            -- Added manually by admin
 );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- ---------------------------------------------------------------------------
 -- LEADS TABLE
 -- ---------------------------------------------------------------------------
 
-CREATE TABLE leads (
+CREATE TABLE IF NOT EXISTS leads (
   id                  UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
 
   -- Contact info
@@ -79,19 +87,20 @@ CREATE TABLE leads (
 -- INDEXES
 -- ---------------------------------------------------------------------------
 
-CREATE UNIQUE INDEX idx_leads_email_audit ON leads (email, audit_id) WHERE audit_id IS NOT NULL;
-CREATE INDEX idx_leads_email       ON leads (email);
-CREATE INDEX idx_leads_status      ON leads (status);
-CREATE INDEX idx_leads_source      ON leads (source);
-CREATE INDEX idx_leads_audit_id    ON leads (audit_id)  WHERE audit_id IS NOT NULL;
-CREATE INDEX idx_leads_tenant_id   ON leads (tenant_id) WHERE tenant_id IS NOT NULL;
-CREATE INDEX idx_leads_created_at  ON leads (created_at DESC);
-CREATE INDEX idx_leads_follow_up   ON leads (follow_up_at) WHERE follow_up_at IS NOT NULL AND status != 'converted';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_email_audit ON leads (email, audit_id) WHERE audit_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_leads_email       ON leads (email);
+CREATE INDEX IF NOT EXISTS idx_leads_status      ON leads (status);
+CREATE INDEX IF NOT EXISTS idx_leads_source      ON leads (source);
+CREATE INDEX IF NOT EXISTS idx_leads_audit_id    ON leads (audit_id)  WHERE audit_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_leads_tenant_id   ON leads (tenant_id) WHERE tenant_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_leads_created_at  ON leads (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_leads_follow_up   ON leads (follow_up_at) WHERE follow_up_at IS NOT NULL AND status != 'converted';
 
 -- ---------------------------------------------------------------------------
 -- UPDATED_AT TRIGGER
 -- ---------------------------------------------------------------------------
 
+DROP TRIGGER IF EXISTS leads_updated_at ON leads;
 CREATE TRIGGER leads_updated_at
   BEFORE UPDATE ON leads
   FOR EACH ROW
@@ -104,6 +113,7 @@ CREATE TRIGGER leads_updated_at
 ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
 
 -- Anon can INSERT (email capture form is public)
+DROP POLICY IF EXISTS "leads_anon_insert" ON leads;
 CREATE POLICY "leads_anon_insert"
   ON leads
   FOR INSERT
@@ -111,6 +121,7 @@ CREATE POLICY "leads_anon_insert"
   WITH CHECK (source IN ('audit_tool', 'email_capture'));
 
 -- Admins can do everything
+DROP POLICY IF EXISTS "leads_admin_all" ON leads;
 CREATE POLICY "leads_admin_all"
   ON leads
   FOR ALL

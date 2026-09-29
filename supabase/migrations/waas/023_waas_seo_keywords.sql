@@ -28,9 +28,13 @@ ALTER TABLE tenant_site_config
 --    (find tenants whose keywords are stale or never generated)
 -- ---------------------------------------------------------------------------
 
+-- Note: index predicates must be IMMUTABLE; NOW() is STABLE and not allowed
+-- in a partial index WHERE clause. We index all rows where the timestamp is
+-- NULL (never generated) and otherwise rely on a plain (non-partial) index
+-- so the "stale" query planner can still use it efficiently via a normal
+-- range scan on seo_last_generated_at.
 CREATE INDEX IF NOT EXISTS idx_tenant_site_config_seo_generated_at
-  ON tenant_site_config (seo_last_generated_at)
-  WHERE seo_last_generated_at IS NULL OR seo_last_generated_at < NOW() - INTERVAL '30 days';
+  ON tenant_site_config (seo_last_generated_at);
 
 -- ---------------------------------------------------------------------------
 -- 3. Comment the new columns for schema documentation
