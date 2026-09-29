@@ -60,12 +60,24 @@ CREATE TABLE IF NOT EXISTS campaigns (
 );
 
 -- Create indexes for campaigns
+-- NOTE: the live production `campaigns` table (this CREATE TABLE is a no-op
+-- there) has a much simpler shape than this migration originally assumed
+-- (no scheduled_at/template_id/etc. columns), so those specific indexes are
+-- guarded below to remain safe on both a fresh database and production.
 CREATE INDEX IF NOT EXISTS idx_campaigns_account_id ON campaigns(account_id);
 CREATE INDEX IF NOT EXISTS idx_campaigns_type ON campaigns(type);
 CREATE INDEX IF NOT EXISTS idx_campaigns_status ON campaigns(status);
-CREATE INDEX IF NOT EXISTS idx_campaigns_scheduled_at ON campaigns(scheduled_at);
 CREATE INDEX IF NOT EXISTS idx_campaigns_created_at ON campaigns(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_campaigns_template_id ON campaigns(template_id);
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'campaigns' AND column_name = 'scheduled_at') THEN
+        CREATE INDEX IF NOT EXISTS idx_campaigns_scheduled_at ON campaigns(scheduled_at);
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'campaigns' AND column_name = 'template_id') THEN
+        CREATE INDEX IF NOT EXISTS idx_campaigns_template_id ON campaigns(template_id);
+    END IF;
+END $$;
 
 -- Create campaign_emails table for tracking individual emails sent
 CREATE TABLE IF NOT EXISTS campaign_emails (
@@ -156,10 +168,23 @@ CREATE TABLE IF NOT EXISTS campaign_sequences (
 );
 
 -- Create indexes for campaign_sequences
-CREATE INDEX IF NOT EXISTS idx_campaign_sequences_account_id ON campaign_sequences(account_id);
+-- NOTE: the live production `campaign_sequences` table (CREATE TABLE above
+-- is a no-op there) has no account_id/step_number/status columns (it uses
+-- campaign_id + order_index instead), so those indexes are guarded.
 CREATE INDEX IF NOT EXISTS idx_campaign_sequences_campaign_id ON campaign_sequences(campaign_id);
-CREATE INDEX IF NOT EXISTS idx_campaign_sequences_step_number ON campaign_sequences(campaign_id, step_number);
-CREATE INDEX IF NOT EXISTS idx_campaign_sequences_status ON campaign_sequences(status);
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'campaign_sequences' AND column_name = 'account_id') THEN
+        CREATE INDEX IF NOT EXISTS idx_campaign_sequences_account_id ON campaign_sequences(account_id);
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'campaign_sequences' AND column_name = 'step_number') THEN
+        CREATE INDEX IF NOT EXISTS idx_campaign_sequences_step_number ON campaign_sequences(campaign_id, step_number);
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'campaign_sequences' AND column_name = 'status') THEN
+        CREATE INDEX IF NOT EXISTS idx_campaign_sequences_status ON campaign_sequences(status);
+    END IF;
+END $$;
 
 -- Create campaign_sequence_executions table for tracking sequence progress
 CREATE TABLE IF NOT EXISTS campaign_sequence_executions (
@@ -188,12 +213,20 @@ CREATE TABLE IF NOT EXISTS campaign_sequence_executions (
 );
 
 -- Create indexes for campaign_sequence_executions
-CREATE INDEX IF NOT EXISTS idx_campaign_sequence_executions_account_id ON campaign_sequence_executions(account_id);
+-- NOTE: live production table (CREATE TABLE above is a no-op there) has no
+-- account_id column, so that index is guarded.
 CREATE INDEX IF NOT EXISTS idx_campaign_sequence_executions_sequence_id ON campaign_sequence_executions(sequence_id);
 CREATE INDEX IF NOT EXISTS idx_campaign_sequence_executions_campaign_id ON campaign_sequence_executions(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_campaign_sequence_executions_contact_id ON campaign_sequence_executions(contact_id);
 CREATE INDEX IF NOT EXISTS idx_campaign_sequence_executions_status ON campaign_sequence_executions(status);
 CREATE INDEX IF NOT EXISTS idx_campaign_sequence_executions_scheduled_at ON campaign_sequence_executions(scheduled_at);
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'campaign_sequence_executions' AND column_name = 'account_id') THEN
+        CREATE INDEX IF NOT EXISTS idx_campaign_sequence_executions_account_id ON campaign_sequence_executions(account_id);
+    END IF;
+END $$;
 
 -- Create campaign_analytics table for aggregated statistics
 CREATE TABLE IF NOT EXISTS campaign_analytics (
@@ -225,8 +258,16 @@ CREATE TABLE IF NOT EXISTS campaign_analytics (
 );
 
 -- Create indexes for campaign_analytics
-CREATE INDEX IF NOT EXISTS idx_campaign_analytics_account_id ON campaign_analytics(account_id);
+-- NOTE: live production table (CREATE TABLE above is a no-op there) has no
+-- account_id column, so that index is guarded.
 CREATE INDEX IF NOT EXISTS idx_campaign_analytics_campaign_id ON campaign_analytics(campaign_id);
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'campaign_analytics' AND column_name = 'account_id') THEN
+        CREATE INDEX IF NOT EXISTS idx_campaign_analytics_account_id ON campaign_analytics(account_id);
+    END IF;
+END $$;
 
 -- Enable Row Level Security
 ALTER TABLE email_templates ENABLE ROW LEVEL SECURITY;
@@ -254,6 +295,15 @@ CREATE POLICY "Users can delete email_templates in their account"
   USING (account_id IN (SELECT account_id FROM users WHERE id = auth.uid()));
 
 -- RLS Policies for campaigns
+-- NOTE: 004_optimize_rls_performance.sql (which runs earlier in filename-sorted
+-- order) already creates policies with these exact same names on campaigns.
+-- Drop them first so this file's CREATE POLICY statements are idempotent when
+-- replayed sequentially against a fresh database.
+DROP POLICY IF EXISTS "Users can view campaigns in their account" ON campaigns;
+DROP POLICY IF EXISTS "Users can create campaigns in their account" ON campaigns;
+DROP POLICY IF EXISTS "Users can update campaigns in their account" ON campaigns;
+DROP POLICY IF EXISTS "Users can delete campaigns in their account" ON campaigns;
+
 CREATE POLICY "Users can view campaigns in their account"
   ON campaigns FOR SELECT
   USING (account_id IN (SELECT account_id FROM users WHERE id = auth.uid()));
@@ -288,55 +338,62 @@ CREATE POLICY "Users can delete campaign_emails in their account"
   USING (account_id IN (SELECT account_id FROM users WHERE id = auth.uid()));
 
 -- RLS Policies for campaign_sequences
+-- NOTE: on live production, campaign_sequences/campaign_sequence_executions/
+-- campaign_analytics have no direct account_id column (the CREATE TABLE
+-- statements above are no-ops there) -- they are scoped to an account only
+-- indirectly via campaign_id -> campaigns.account_id. These policies are
+-- written using a campaign_id join so they work identically whether
+-- account_id exists directly on the table (fresh database) or not
+-- (production), since campaigns.account_id is always authoritative.
 CREATE POLICY "Users can view campaign_sequences in their account"
   ON campaign_sequences FOR SELECT
-  USING (account_id IN (SELECT account_id FROM users WHERE id = auth.uid()));
+  USING (campaign_id IN (SELECT id FROM campaigns WHERE account_id IN (SELECT account_id FROM users WHERE id = auth.uid())));
 
 CREATE POLICY "Users can create campaign_sequences in their account"
   ON campaign_sequences FOR INSERT
-  WITH CHECK (account_id IN (SELECT account_id FROM users WHERE id = auth.uid()));
+  WITH CHECK (campaign_id IN (SELECT id FROM campaigns WHERE account_id IN (SELECT account_id FROM users WHERE id = auth.uid())));
 
 CREATE POLICY "Users can update campaign_sequences in their account"
   ON campaign_sequences FOR UPDATE
-  USING (account_id IN (SELECT account_id FROM users WHERE id = auth.uid()));
+  USING (campaign_id IN (SELECT id FROM campaigns WHERE account_id IN (SELECT account_id FROM users WHERE id = auth.uid())));
 
 CREATE POLICY "Users can delete campaign_sequences in their account"
   ON campaign_sequences FOR DELETE
-  USING (account_id IN (SELECT account_id FROM users WHERE id = auth.uid()));
+  USING (campaign_id IN (SELECT id FROM campaigns WHERE account_id IN (SELECT account_id FROM users WHERE id = auth.uid())));
 
 -- RLS Policies for campaign_sequence_executions
 CREATE POLICY "Users can view campaign_sequence_executions in their account"
   ON campaign_sequence_executions FOR SELECT
-  USING (account_id IN (SELECT account_id FROM users WHERE id = auth.uid()));
+  USING (campaign_id IN (SELECT id FROM campaigns WHERE account_id IN (SELECT account_id FROM users WHERE id = auth.uid())));
 
 CREATE POLICY "Users can create campaign_sequence_executions in their account"
   ON campaign_sequence_executions FOR INSERT
-  WITH CHECK (account_id IN (SELECT account_id FROM users WHERE id = auth.uid()));
+  WITH CHECK (campaign_id IN (SELECT id FROM campaigns WHERE account_id IN (SELECT account_id FROM users WHERE id = auth.uid())));
 
 CREATE POLICY "Users can update campaign_sequence_executions in their account"
   ON campaign_sequence_executions FOR UPDATE
-  USING (account_id IN (SELECT account_id FROM users WHERE id = auth.uid()));
+  USING (campaign_id IN (SELECT id FROM campaigns WHERE account_id IN (SELECT account_id FROM users WHERE id = auth.uid())));
 
 CREATE POLICY "Users can delete campaign_sequence_executions in their account"
   ON campaign_sequence_executions FOR DELETE
-  USING (account_id IN (SELECT account_id FROM users WHERE id = auth.uid()));
+  USING (campaign_id IN (SELECT id FROM campaigns WHERE account_id IN (SELECT account_id FROM users WHERE id = auth.uid())));
 
 -- RLS Policies for campaign_analytics
 CREATE POLICY "Users can view campaign_analytics in their account"
   ON campaign_analytics FOR SELECT
-  USING (account_id IN (SELECT account_id FROM users WHERE id = auth.uid()));
+  USING (campaign_id IN (SELECT id FROM campaigns WHERE account_id IN (SELECT account_id FROM users WHERE id = auth.uid())));
 
 CREATE POLICY "Users can create campaign_analytics in their account"
   ON campaign_analytics FOR INSERT
-  WITH CHECK (account_id IN (SELECT account_id FROM users WHERE id = auth.uid()));
+  WITH CHECK (campaign_id IN (SELECT id FROM campaigns WHERE account_id IN (SELECT account_id FROM users WHERE id = auth.uid())));
 
 CREATE POLICY "Users can update campaign_analytics in their account"
   ON campaign_analytics FOR UPDATE
-  USING (account_id IN (SELECT account_id FROM users WHERE id = auth.uid()));
+  USING (campaign_id IN (SELECT id FROM campaigns WHERE account_id IN (SELECT account_id FROM users WHERE id = auth.uid())));
 
 CREATE POLICY "Users can delete campaign_analytics in their account"
   ON campaign_analytics FOR DELETE
-  USING (account_id IN (SELECT account_id FROM users WHERE id = auth.uid()));
+  USING (campaign_id IN (SELECT id FROM campaigns WHERE account_id IN (SELECT account_id FROM users WHERE id = auth.uid())));
 
 -- Create function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -508,16 +565,46 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Add trigger to campaign_emails for analytics
-CREATE TRIGGER calculate_campaign_analytics_trigger
-AFTER INSERT OR UPDATE ON campaign_emails
+-- NOTE: split into separate INSERT and UPDATE triggers because a WHEN clause
+-- cannot reference OLD values for an INSERT event (OLD is undefined on INSERT),
+-- which caused "INSERT trigger's WHEN condition cannot reference OLD values".
+DROP TRIGGER IF EXISTS calculate_campaign_analytics_trigger ON campaign_emails;
+DROP TRIGGER IF EXISTS calculate_campaign_analytics_insert_trigger ON campaign_emails;
+DROP TRIGGER IF EXISTS calculate_campaign_analytics_update_trigger ON campaign_emails;
+
+CREATE TRIGGER calculate_campaign_analytics_insert_trigger
+AFTER INSERT ON campaign_emails
 FOR EACH ROW
-WHEN (NEW.status != OLD.status OR OLD.status IS NULL)
+EXECUTE FUNCTION trigger_campaign_analytics();
+
+CREATE TRIGGER calculate_campaign_analytics_update_trigger
+AFTER UPDATE ON campaign_emails
+FOR EACH ROW
+WHEN (NEW.status IS DISTINCT FROM OLD.status)
 EXECUTE FUNCTION trigger_campaign_analytics();
 
 -- Create indexes for common query patterns
 CREATE INDEX IF NOT EXISTS idx_campaigns_type_status ON campaigns(type, status);
 CREATE INDEX IF NOT EXISTS idx_campaign_emails_campaign_status ON campaign_emails(campaign_id, status);
-CREATE INDEX IF NOT EXISTS idx_campaign_sequences_campaign_step ON campaign_sequences(campaign_id, step_number);
+
+-- Live production campaign_sequences uses "order_index", not "step_number"
+-- (this table's real CREATE TABLE happened out-of-band, so the assumed
+-- "step_number" column from this migration's own CREATE TABLE IF NOT EXISTS
+-- never actually exists on that live table). Guard accordingly.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'campaign_sequences' AND column_name = 'step_number'
+  ) THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_campaign_sequences_campaign_step ON campaign_sequences(campaign_id, step_number)';
+  ELSIF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'campaign_sequences' AND column_name = 'order_index'
+  ) THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_campaign_sequences_campaign_step ON campaign_sequences(campaign_id, order_index)';
+  END IF;
+END $$;
 
 -- Add comments for documentation
 COMMENT ON TABLE email_templates IS 'Reusable email templates for campaigns';

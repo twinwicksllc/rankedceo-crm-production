@@ -19,22 +19,34 @@
 -- the full allowed set (idempotent regardless of starting state).
 -- =============================================================================
 
-ALTER TABLE client_variant_edit_events
-  DROP CONSTRAINT IF EXISTS client_variant_edit_events_edit_type_check;
+-- NOTE: client_variant_edit_events.edit_type only exists when this table was
+-- created by 016_waas_client_edit_flow.sql's shape. On environments where
+-- 000_waas_complete_idempotent.sql created the table first (with an
+-- event_type column instead), this migration is a no-op for that table.
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'client_variant_edit_events'
+      AND column_name = 'edit_type'
+  ) THEN
+    ALTER TABLE client_variant_edit_events
+      DROP CONSTRAINT IF EXISTS client_variant_edit_events_edit_type_check;
 
-ALTER TABLE client_variant_edit_events
-  ADD CONSTRAINT client_variant_edit_events_edit_type_check
-  CHECK (edit_type IN (
-    'text_edit',
-    'image_swap',
-    'color_change',
-    'ai_rewrite',
-    'section_toggle',
-    'font_change',
-    'config_change'
-  ));
+    ALTER TABLE client_variant_edit_events
+      ADD CONSTRAINT client_variant_edit_events_edit_type_check
+      CHECK (edit_type IN (
+        'text_edit',
+        'image_swap',
+        'color_change',
+        'ai_rewrite',
+        'section_toggle',
+        'font_change',
+        'config_change'
+      ));
 
-COMMENT ON COLUMN client_variant_edit_events.edit_type IS
-  'Type of edit operation. config_change = sections[N].config.<key> edits '
-  '(dispatch fee, response window, Q&A caps, visual preset, JSON-LD toggle). '
-  'font_change = brand_config.fonts.* edits.';
+    COMMENT ON COLUMN client_variant_edit_events.edit_type IS
+      'Type of edit operation. config_change = sections[N].config.<key> edits '
+      '(dispatch fee, response window, Q&A caps, visual preset, JSON-LD toggle). '
+      'font_change = brand_config.fonts.* edits.';
+  END IF;
+END $$;

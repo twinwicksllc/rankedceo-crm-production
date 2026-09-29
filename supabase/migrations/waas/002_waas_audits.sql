@@ -10,6 +10,7 @@
 -- ENUMS
 -- ---------------------------------------------------------------------------
 
+DO $$ BEGIN
 CREATE TYPE waas_audit_status AS ENUM (
   'pending',      -- Audit requested, not yet started
   'running',      -- SEO crawl/analysis in progress
@@ -17,19 +18,26 @@ CREATE TYPE waas_audit_status AS ENUM (
   'failed',       -- Audit encountered an error
   'expired'       -- Past expires_at, archived
 );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
+DO $$ BEGIN
 CREATE TYPE waas_audit_type AS ENUM (
   'prospect',     -- Pre-sale audit of a prospect's site (no tenant yet)
   'tenant',       -- Ongoing audit of a tenant's own site
   'competitor'    -- Audit of a competitor's site
 );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- ---------------------------------------------------------------------------
 -- AUDITS TABLE
 -- Stores SEO/ranking audit reports for tenant sites and prospects.
 -- ---------------------------------------------------------------------------
 
-CREATE TABLE audits (
+CREATE TABLE IF NOT EXISTS audits (
   -- Identity
   id                  UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
 
@@ -120,24 +128,25 @@ CREATE TABLE audits (
 -- ---------------------------------------------------------------------------
 
 -- Tenant → audits lookup
-CREATE INDEX idx_audits_tenant_id     ON audits (tenant_id)   WHERE tenant_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_audits_tenant_id     ON audits (tenant_id)   WHERE tenant_id IS NOT NULL;
 
 -- Status-based queue processing (for worker)
-CREATE INDEX idx_audits_status        ON audits (status, requested_at);
+CREATE INDEX IF NOT EXISTS idx_audits_status        ON audits (status, requested_at);
 
 -- Prospect audit lead lookup by email
-CREATE INDEX idx_audits_requestor     ON audits (requestor_email) WHERE requestor_email IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_audits_requestor     ON audits (requestor_email) WHERE requestor_email IS NOT NULL;
 
 -- Expiry cleanup job
-CREATE INDEX idx_audits_expires_at    ON audits (expires_at)  WHERE status = 'completed';
+CREATE INDEX IF NOT EXISTS idx_audits_expires_at    ON audits (expires_at)  WHERE status = 'completed';
 
 -- Target URL dedup check
-CREATE INDEX idx_audits_target_url    ON audits (target_url, tenant_id);
+CREATE INDEX IF NOT EXISTS idx_audits_target_url    ON audits (target_url, tenant_id);
 
 -- ---------------------------------------------------------------------------
 -- UPDATED_AT TRIGGER
 -- ---------------------------------------------------------------------------
 
+DROP TRIGGER IF EXISTS audits_updated_at ON audits;
 CREATE TRIGGER audits_updated_at
   BEFORE UPDATE ON audits
   FOR EACH ROW
@@ -150,6 +159,7 @@ CREATE TRIGGER audits_updated_at
 ALTER TABLE audits ENABLE ROW LEVEL SECURITY;
 
 -- Anon can INSERT prospect audits (the public audit tool flow)
+DROP POLICY IF EXISTS "audits_anon_insert_prospect" ON audits;
 CREATE POLICY "audits_anon_insert_prospect"
   ON audits
   FOR INSERT
@@ -158,6 +168,7 @@ CREATE POLICY "audits_anon_insert_prospect"
 
 -- Anon can read their own prospect audit by ID (polling for completion)
 -- Uses a URL token pattern — no auth needed for status polling
+DROP POLICY IF EXISTS "audits_anon_read_own" ON audits;
 CREATE POLICY "audits_anon_read_own"
   ON audits
   FOR SELECT
@@ -165,6 +176,7 @@ CREATE POLICY "audits_anon_read_own"
   USING (audit_type = 'prospect' AND tenant_id IS NULL);
 
 -- Authenticated tenant admins can read their own tenant's audits
+DROP POLICY IF EXISTS "audits_tenant_read_own" ON audits;
 CREATE POLICY "audits_tenant_read_own"
   ON audits
   FOR SELECT
@@ -181,6 +193,7 @@ CREATE POLICY "audits_tenant_read_own"
   );
 
 -- Platform admins can do everything
+DROP POLICY IF EXISTS "audits_admin_all" ON audits;
 CREATE POLICY "audits_admin_all"
   ON audits
   FOR ALL

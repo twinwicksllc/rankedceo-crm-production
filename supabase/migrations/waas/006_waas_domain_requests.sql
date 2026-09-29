@@ -4,6 +4,7 @@
 -- Run AFTER 005_waas_onboarding.sql
 -- =============================================================================
 
+DO $$ BEGIN
 CREATE TYPE waas_domain_status AS ENUM (
   'requested',    -- User submitted this domain preference
   'checking',     -- Availability check in progress
@@ -12,6 +13,9 @@ CREATE TYPE waas_domain_status AS ENUM (
   'registered',   -- We registered it for the tenant
   'connected'     -- DNS configured and verified
 );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- ---------------------------------------------------------------------------
 -- DOMAIN REQUESTS TABLE
@@ -64,6 +68,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_domain_requests_updated_at ON domain_requests;
 CREATE TRIGGER trg_domain_requests_updated_at
   BEFORE UPDATE ON domain_requests
   FOR EACH ROW EXECUTE FUNCTION update_domain_requests_updated_at();
@@ -75,6 +80,7 @@ CREATE TRIGGER trg_domain_requests_updated_at
 ALTER TABLE domain_requests ENABLE ROW LEVEL SECURITY;
 
 -- Service role has full access (admin operations)
+DROP POLICY IF EXISTS "service_role_full_access_domain_requests" ON domain_requests;
 CREATE POLICY "service_role_full_access_domain_requests"
   ON domain_requests FOR ALL
   TO service_role
@@ -82,12 +88,14 @@ CREATE POLICY "service_role_full_access_domain_requests"
   WITH CHECK (true);
 
 -- Anon can insert domain requests (during onboarding)
+DROP POLICY IF EXISTS "anon_can_insert_domain_requests" ON domain_requests;
 CREATE POLICY "anon_can_insert_domain_requests"
   ON domain_requests FOR INSERT
   TO anon
   WITH CHECK (true);
 
 -- Anon can read their own tenant's domain requests
+DROP POLICY IF EXISTS "anon_can_read_domain_requests" ON domain_requests;
 CREATE POLICY "anon_can_read_domain_requests"
   ON domain_requests FOR SELECT
   TO anon

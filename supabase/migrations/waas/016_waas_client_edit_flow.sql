@@ -106,11 +106,31 @@ CREATE TABLE IF NOT EXISTS client_variant_edit_events (
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_client_variant_edit_events_tenant
-  ON client_variant_edit_events(tenant_id, created_at DESC);
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'client_variant_edit_events'
+      AND column_name = 'tenant_id'
+  ) THEN
+    CREATE INDEX IF NOT EXISTS idx_client_variant_edit_events_tenant
+      ON client_variant_edit_events(tenant_id, created_at DESC);
+  END IF;
+END $$;
 
-CREATE INDEX IF NOT EXISTS idx_client_variant_edit_events_variant
-  ON client_variant_edit_events(tenant_id, variant_index, created_at DESC);
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'client_variant_edit_events'
+      AND column_name = 'tenant_id'
+  ) AND EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'client_variant_edit_events'
+      AND column_name = 'variant_index'
+  ) THEN
+    CREATE INDEX IF NOT EXISTS idx_client_variant_edit_events_variant
+      ON client_variant_edit_events(tenant_id, variant_index, created_at DESC);
+  END IF;
+END $$;
 
 -- ---------------------------------------------------------------------------
 -- 5. Client asset uploads table
