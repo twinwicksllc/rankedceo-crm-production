@@ -265,7 +265,9 @@ export async function regenerateSection(
     ? (sectionsJson as SectionConfig[])
     : [];
 
-  const section = sections.find((s) => s.section === sectionId);
+  // Paths address the stored array, so use the array index, not `order`.
+  const sectionIndex = sections.findIndex((s) => s.section === sectionId);
+  const section = sectionIndex >= 0 ? sections[sectionIndex] : undefined;
   if (!section) {
     return {
       success: false,
@@ -274,7 +276,6 @@ export async function regenerateSection(
   }
 
   const existingContent = (section.content ?? {}) as Record<string, unknown>;
-  const sectionOrder = section.order;
 
   // --- Extract business context from tenant brand_config ---
   const { data: tenantRow, error: tenantErr } = await supabase
@@ -378,7 +379,7 @@ export async function regenerateSection(
   const fields: RegeneratedField[] = leafFields
     .filter((lf) => rawResponse[lf.key] !== undefined)
     .map((lf) => ({
-      path: `sections[${sectionOrder}].content.${lf.key}`,
+      path: `sections[${sectionIndex}].content.${lf.key}`,
       label: lf.label,
       original:
         existingContent[lf.key] != null ? String(existingContent[lf.key]) : "",
