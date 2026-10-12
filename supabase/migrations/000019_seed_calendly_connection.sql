@@ -9,17 +9,18 @@ DECLARE
   v_user_id       UUID;
   v_account_id    UUID;
   v_connection_id UUID;
+  v_auth_user_id  UUID;
   v_primary_email TEXT := 'dvldawg44@hotmail.com';
   v_fallback_email TEXT := 'twinwicksllc@gmail.com';
 BEGIN
 
-  -- ── 1. Find user by primary email ──────────────────────────
+  -- -- 1. Find user by primary email --------------------------
   SELECT id, account_id INTO v_user_id, v_account_id
   FROM public.users
   WHERE email = v_primary_email
   LIMIT 1;
 
-  -- ── 2. Fallback: try the Calendly/auth email ────────────────
+  -- -- 2. Fallback: try the Calendly/auth email -----------------
   IF v_user_id IS NULL THEN
     SELECT id, account_id INTO v_user_id, v_account_id
     FROM public.users
@@ -32,9 +33,25 @@ BEGIN
     RAISE NOTICE 'Found user: % (id: %)', v_primary_email, v_user_id;
   END IF;
 
-  -- ── 3. If still not found, create user + account ────────────
+  -- -- 3. If still not found, create user + account ------------
+  -- NOTE: public.users.id is a PRIMARY KEY that REFERENCES auth.users(id)
+  -- with no default value, so a new users row can only be created for an
+  -- auth.users row that already exists. On a fresh/preview database there
+  -- is no auth user for this specific production account, so this seed
+  -- (which is account-specific data for one real customer, not schema)
+  -- must safely no-op instead of trying to fabricate a disconnected user.
   IF v_user_id IS NULL THEN
-    RAISE NOTICE 'No user found. Creating account and user for: %', v_primary_email;
+    SELECT id INTO v_auth_user_id
+    FROM auth.users
+    WHERE email IN (v_primary_email, v_fallback_email)
+    LIMIT 1;
+
+    IF v_auth_user_id IS NULL THEN
+      RAISE NOTICE 'Skipping Calendly connection seed: no auth.users row found for % or % (expected on fresh/preview databases).', v_primary_email, v_fallback_email;
+      RETURN;
+    END IF;
+
+    RAISE NOTICE 'No public.users row found. Creating account and user for: %', v_primary_email;
 
     -- Get or create account
     SELECT id INTO v_account_id
@@ -53,10 +70,11 @@ BEGIN
       RAISE NOTICE 'Created account: %', v_account_id;
     END IF;
 
-    -- Create user
+    -- Create user (id must match the existing auth.users row)
     INSERT INTO public.users (
-      account_id, email, name, role, status, last_login_at
+      id, account_id, email, name, role, status, last_login_at
     ) VALUES (
+      v_auth_user_id,
       v_account_id,
       v_primary_email,
       'Twin Wicks Digital Solutions',
@@ -68,7 +86,7 @@ BEGIN
     RAISE NOTICE 'Created user: % (id: %)', v_primary_email, v_user_id;
   END IF;
 
-  -- ── 4. Remove any existing Calendly connections for this user ─
+  -- -- 4. Remove any existing Calendly connections for this user --
   DELETE FROM public.calendly_connections
   WHERE user_id = v_user_id;
 
@@ -76,7 +94,7 @@ BEGIN
   DELETE FROM public.calendly_connections
   WHERE calendly_user_uri = 'https://api.calendly.com/users/76680c9a-afef-48bd-ada4-a335c853ae32';
 
-  -- ── 5. Insert the Calendly connection ───────────────────────
+  -- -- 5. Insert the Calendly connection -------------------------
   INSERT INTO public.calendly_connections (
     account_id,
     user_id,
@@ -98,7 +116,7 @@ BEGIN
     true
   ) RETURNING id INTO v_connection_id;
 
-  RAISE NOTICE '✅ Calendly connection created (id: %)', v_connection_id;
+  RAISE NOTICE 'Calendly connection created (id: %)', v_connection_id;
   RAISE NOTICE '   User ID    : %', v_user_id;
   RAISE NOTICE '   Account ID : %', v_account_id;
   RAISE NOTICE '   Calendly   : https://api.calendly.com/users/76680c9a-afef-48bd-ada4-a335c853ae32';

@@ -30,6 +30,7 @@ $$;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view teammates" ON users;
 DROP POLICY IF EXISTS "Users can update self" ON users;
+DROP POLICY IF EXISTS "Allow system inserts" ON users;
 
 CREATE POLICY "Users can view teammates" ON users FOR SELECT 
 TO authenticated USING (account_id = get_current_user_account_id());
@@ -189,6 +190,7 @@ BEGIN
         DROP POLICY IF EXISTS "Anyone can insert form submissions" ON form_submissions;
         DROP POLICY IF EXISTS "Users can update their account's form submissions" ON form_submissions;
         DROP POLICY IF EXISTS "Users can delete their account's form submissions" ON form_submissions;
+        DROP POLICY IF EXISTS "Public can insert form submissions" ON form_submissions;
 
         CREATE POLICY "Users can view form submissions" ON form_submissions FOR SELECT 
         TO authenticated USING (account_id = get_current_user_account_id());

@@ -132,9 +132,9 @@ BEGIN
 END $$;
 
 -- 4. Display final schema
-RAISE NOTICE '============================================================';
-RAISE NOTICE 'Final smile_assessments table schema:';
-RAISE NOTICE '============================================================';
+DO $$ BEGIN RAISE NOTICE '============================================================'; END $$;
+DO $$ BEGIN RAISE NOTICE 'Final smile_assessments table schema:'; END $$;
+DO $$ BEGIN RAISE NOTICE '============================================================'; END $$;
 
 SELECT 
     column_name,
@@ -146,6 +146,6 @@ WHERE table_schema = 'public'
 AND table_name = 'smile_assessments'
 ORDER BY ordinal_position;
 
-RAISE NOTICE '============================================================';
-RAISE NOTICE 'Migration complete!';
-RAISE NOTICE '============================================================';
+DO $$ BEGIN RAISE NOTICE '============================================================'; END $$;
+DO $$ BEGIN RAISE NOTICE 'Migration complete!'; END $$;
+DO $$ BEGIN RAISE NOTICE '============================================================'; END $$;

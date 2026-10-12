@@ -38,6 +38,10 @@ ALTER TABLE accounts ADD COLUMN IF NOT EXISTS user_count INTEGER DEFAULT 0;
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS timezone VARCHAR(100) DEFAULT 'America/New_York';
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP WITH TIME ZONE;
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS deleted_by UUID;
+-- "test_mode" is referenced by later migrations (e.g. 20240222000001_verify_smile_setup.sql's
+-- Smile Pool Account seed INSERT) but was never added by any tracked migration until now
+-- (it exists on the live production "accounts" table, created out-of-band).
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS test_mode BOOLEAN DEFAULT false;
 
 -- Backfill slug for any pre-existing rows (e.g. the default account created
 -- by 000001's INSERT) before we enforce NOT NULL + the non-empty check.
@@ -86,6 +90,11 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP WITH TIME ZONE;
+-- `name` exists on the live production `users` table (used by 000018/000019's
+-- seed INSERT statements) but was never added by any tracked migration until
+-- now. Default '' keeps this safe/idempotent for any pre-existing rows on a
+-- database where this column is being added for the first time.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(255) NOT NULL DEFAULT '';
 
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_users_account_id ON users(account_id);

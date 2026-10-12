@@ -2,14 +2,38 @@
 -- This renames patient-specific columns to generic lead columns
 -- Date: 2024-03-01
 
+-- NOTE: guarded with existence checks. On a fresh/preview database, the
+-- 20240222000000_create_industry_leads.sql migration's own CREATE TABLE IF
+-- NOT EXISTS creates customer_name/customer_email/customer_phone columns
+-- (not patient_name/patient_email/patient_phone) — this migration's rename
+-- targets only ever existed on the live production table (created out-of-band
+-- with the old dental-specific "patient_*" naming, later renamed here to
+-- "lead_*"). Skip the rename entirely if the source column doesn't exist,
+-- since the target ("lead_name" etc.) already exists on live production.
+
 -- Rename patient_name → lead_name
-ALTER TABLE industry_leads RENAME COLUMN patient_name TO lead_name;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='industry_leads' AND column_name='patient_name') THEN
+    ALTER TABLE industry_leads RENAME COLUMN patient_name TO lead_name;
+  END IF;
+END $$;
 
 -- Rename patient_email → lead_email
-ALTER TABLE industry_leads RENAME COLUMN patient_email TO lead_email;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='industry_leads' AND column_name='patient_email') THEN
+    ALTER TABLE industry_leads RENAME COLUMN patient_email TO lead_email;
+  END IF;
+END $$;
 
 -- Rename patient_phone → lead_phone
-ALTER TABLE industry_leads RENAME COLUMN patient_phone TO lead_phone;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='industry_leads' AND column_name='patient_phone') THEN
+    ALTER TABLE industry_leads RENAME COLUMN patient_phone TO lead_phone;
+  END IF;
+END $$;
 
 -- Update any RLS policies that reference the old column names
 -- (This will be handled by the system automatically, but we'll verify)

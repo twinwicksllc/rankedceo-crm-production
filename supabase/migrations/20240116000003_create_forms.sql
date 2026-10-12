@@ -83,9 +83,28 @@ CREATE TABLE IF NOT EXISTS form_submissions (
 );
 
 -- Create indexes for performance
+-- NOTE: live production "forms" table was created out-of-band with a different
+-- shape (no "status" or "public_url" columns), so this migration's own
+-- CREATE TABLE IF NOT EXISTS forms(...) above is a no-op there. Guard any
+-- index/policy that references columns not present on the real live table.
 CREATE INDEX IF NOT EXISTS idx_forms_account_id ON forms(account_id);
-CREATE INDEX IF NOT EXISTS idx_forms_status ON forms(status);
-CREATE INDEX IF NOT EXISTS idx_forms_public_url ON forms(public_url);
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'forms' AND column_name = 'status'
+  ) THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_forms_status ON forms(status)';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'forms' AND column_name = 'public_url'
+  ) THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_forms_public_url ON forms(public_url)';
+  END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_forms_created_at ON forms(created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_form_fields_form_id ON form_fields(form_id);
@@ -93,7 +112,18 @@ CREATE INDEX IF NOT EXISTS idx_form_fields_field_type ON form_fields(field_type)
 CREATE INDEX IF NOT EXISTS idx_form_fields_order_index ON form_fields(form_id, order_index);
 
 CREATE INDEX IF NOT EXISTS idx_form_submissions_form_id ON form_submissions(form_id);
-CREATE INDEX IF NOT EXISTS idx_form_submissions_submitted_at ON form_submissions(submitted_at DESC);
+
+-- Live production form_submissions has "created_at", not "submitted_at"
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'form_submissions' AND column_name = 'submitted_at'
+  ) THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_form_submissions_submitted_at ON form_submissions(submitted_at DESC)';
+  END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_form_submissions_contact_id ON form_submissions(contact_id);
 
 -- Create trigger function to update updated_at
@@ -228,18 +258,43 @@ CREATE POLICY "Users can delete their account's form submissions"
     ));
 
 -- Allow public submission for published forms
-CREATE POLICY "Anyone can submit to published forms"
-    ON form_submissions FOR INSERT
-    WITH CHECK (form_id IN (
-        SELECT id FROM forms WHERE status = 'published'
-    ));
+-- NOTE: guarded because live production "forms" table lacks a "status"
+-- column (see note above); CREATE POLICY validates column references at
+-- creation time, so this would otherwise fail on replay.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'forms' AND column_name = 'status'
+  ) THEN
+    EXECUTE 'CREATE POLICY "Anyone can submit to published forms" ON form_submissions FOR INSERT WITH CHECK (form_id IN (SELECT id FROM forms WHERE status = ''published''))';
+  END IF;
+END $$;
 
 -- Add helpful comments
+-- NOTE: COMMENT ON COLUMN fails if the column doesn't exist, and the live
+-- production "forms"/"form_submissions" tables have a different shape than
+-- this migration's assumed CREATE TABLE (see notes above), so each column
+-- comment is guarded with an existence check.
 COMMENT ON TABLE forms IS 'Form definitions and settings';
 COMMENT ON TABLE form_fields IS 'Individual form fields with validation';
 COMMENT ON TABLE form_submissions IS 'Form submission data';
-COMMENT ON COLUMN forms.public_url IS 'Public URL for accessing the form';
-COMMENT ON COLUMN forms.notification_emails IS 'List of email addresses to receive submission notifications';
-COMMENT ON COLUMN form_fields.options IS 'Field options for select, radio, checkbox fields';
-COMMENT ON COLUMN form_fields.validation_rules IS 'Validation rules for the field';
-COMMENT ON COLUMN form_submissions.submission_data IS 'Submitted form data as JSON';
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='forms' AND column_name='public_url') THEN
+    EXECUTE 'COMMENT ON COLUMN forms.public_url IS ''Public URL for accessing the form''';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='forms' AND column_name='notification_emails') THEN
+    EXECUTE 'COMMENT ON COLUMN forms.notification_emails IS ''List of email addresses to receive submission notifications''';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='form_fields' AND column_name='options') THEN
+    EXECUTE 'COMMENT ON COLUMN form_fields.options IS ''Field options for select, radio, checkbox fields''';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='form_fields' AND column_name='validation_rules') THEN
+    EXECUTE 'COMMENT ON COLUMN form_fields.validation_rules IS ''Validation rules for the field''';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='form_submissions' AND column_name='submission_data') THEN
+    EXECUTE 'COMMENT ON COLUMN form_submissions.submission_data IS ''Submitted form data as JSON''';
+  END IF;
+END $$;

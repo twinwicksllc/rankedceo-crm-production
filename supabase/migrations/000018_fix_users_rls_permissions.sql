@@ -210,10 +210,13 @@ BEGIN
     RAISE NOTICE 'Created new account with id: %', v_account_id;
   END IF;
 
-  -- Create user record
+  -- Create user record (id must match the existing auth.users row, since
+  -- public.users.id is a PRIMARY KEY that REFERENCES auth.users(id) with
+  -- no default value)
   INSERT INTO public.users (
-    account_id, email, name, role, status, last_login_at
+    id, account_id, email, name, role, status, last_login_at
   ) VALUES (
+    v_auth_id,
     v_account_id,
     v_auth_email,
     v_auth_email,

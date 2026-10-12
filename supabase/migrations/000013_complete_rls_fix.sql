@@ -200,10 +200,10 @@ DROP POLICY IF EXISTS "Users can update sequences for their account's campaigns"
 DROP POLICY IF EXISTS "Users can delete sequences for their account's campaigns" ON campaign_sequences;
 
 CREATE POLICY "Users can view campaign sequences" ON campaign_sequences FOR SELECT 
-TO authenticated USING (account_id = get_current_user_account_id());
+TO authenticated USING (campaign_id IN (SELECT id FROM campaigns WHERE account_id = get_current_user_account_id()));
 
 CREATE POLICY "Users can manage campaign sequences" ON campaign_sequences FOR ALL 
-TO authenticated USING (account_id = get_current_user_account_id());
+TO authenticated USING (campaign_id IN (SELECT id FROM campaigns WHERE account_id = get_current_user_account_id()));
 
 -- 18. SECURE CAMPAIGN_SEQUENCE_EXECUTIONS TABLE
 DROP POLICY IF EXISTS "Users can view executions for their account's campaigns" ON campaign_sequence_executions;
@@ -212,16 +212,16 @@ DROP POLICY IF EXISTS "Users can update executions for their account's campaigns
 DROP POLICY IF EXISTS "Users can delete executions for their account's campaigns" ON campaign_sequence_executions;
 
 CREATE POLICY "Users can view campaign sequence executions" ON campaign_sequence_executions FOR SELECT 
-TO authenticated USING (account_id = get_current_user_account_id());
+TO authenticated USING (campaign_id IN (SELECT id FROM campaigns WHERE account_id = get_current_user_account_id()));
 
 CREATE POLICY "Users can manage campaign sequence executions" ON campaign_sequence_executions FOR ALL 
-TO authenticated USING (account_id = get_current_user_account_id());
+TO authenticated USING (campaign_id IN (SELECT id FROM campaigns WHERE account_id = get_current_user_account_id()));
 
 -- 19. SECURE CAMPAIGN_ANALYTICS TABLE
 DROP POLICY IF EXISTS "Users can view analytics for their account's campaigns" ON campaign_analytics;
 
 CREATE POLICY "Users can view campaign analytics" ON campaign_analytics FOR SELECT 
-TO authenticated USING (account_id = get_current_user_account_id());
+TO authenticated USING (campaign_id IN (SELECT id FROM campaigns WHERE account_id = get_current_user_account_id()));
 
 -- 20. SECURE AI TABLES
 DROP POLICY IF EXISTS "Users can view their account's AI scoring history" ON ai_scoring_history;

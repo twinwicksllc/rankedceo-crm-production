@@ -109,9 +109,11 @@ END;
 $$ language 'plpgsql';
 
 -- Apply updated_at trigger to both tables
+DROP TRIGGER IF EXISTS update_email_threads_updated_at ON email_threads;
 CREATE TRIGGER update_email_threads_updated_at BEFORE UPDATE ON email_threads
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_email_messages_updated_at ON email_messages;
 CREATE TRIGGER update_email_messages_updated_at BEFORE UPDATE ON email_messages
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -136,6 +138,7 @@ END;
 $$ language 'plpgsql';
 
 -- Apply thread stats trigger
+DROP TRIGGER IF EXISTS trigger_update_thread_stats ON email_messages;
 CREATE TRIGGER trigger_update_thread_stats
     AFTER INSERT OR DELETE ON email_messages
     FOR EACH ROW EXECUTE FUNCTION update_thread_stats();
@@ -163,6 +166,7 @@ END;
 $$ language 'plpgsql';
 
 -- Apply contact association trigger before insert
+DROP TRIGGER IF EXISTS trigger_associate_email_with_contact ON email_messages;
 CREATE TRIGGER trigger_associate_email_with_contact
     BEFORE INSERT ON email_messages
     FOR EACH ROW EXECUTE FUNCTION associate_email_with_contact();
@@ -172,24 +176,28 @@ ALTER TABLE email_threads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE email_messages ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for email_threads
+DROP POLICY IF EXISTS "Users can view their account's email threads" ON email_threads;
 CREATE POLICY "Users can view their account's email threads"
     ON email_threads FOR SELECT
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can insert email threads for their account" ON email_threads;
 CREATE POLICY "Users can insert email threads for their account"
     ON email_threads FOR INSERT
     WITH CHECK (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can update their account's email threads" ON email_threads;
 CREATE POLICY "Users can update their account's email threads"
     ON email_threads FOR UPDATE
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can delete their account's email threads" ON email_threads;
 CREATE POLICY "Users can delete their account's email threads"
     ON email_threads FOR DELETE
     USING (account_id IN (
@@ -197,24 +205,28 @@ CREATE POLICY "Users can delete their account's email threads"
     ));
 
 -- RLS Policies for email_messages
+DROP POLICY IF EXISTS "Users can view their account's email messages" ON email_messages;
 CREATE POLICY "Users can view their account's email messages"
     ON email_messages FOR SELECT
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can insert email messages for their account" ON email_messages;
 CREATE POLICY "Users can insert email messages for their account"
     ON email_messages FOR INSERT
     WITH CHECK (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can update their account's email messages" ON email_messages;
 CREATE POLICY "Users can update their account's email messages"
     ON email_messages FOR UPDATE
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can delete their account's email messages" ON email_messages;
 CREATE POLICY "Users can delete their account's email messages"
     ON email_messages FOR DELETE
     USING (account_id IN (
@@ -326,18 +338,49 @@ CREATE TABLE IF NOT EXISTS form_submissions (
 );
 
 -- Create indexes for performance
+-- NOTE: guarded with column-existence checks. Live production "forms" and
+-- "form_submissions" tables were created out-of-band with different shapes
+-- than this migration's assumed CREATE TABLE (forms lacks status/public_url;
+-- form_submissions lacks status/submitted_at), so CREATE TABLE IF NOT EXISTS
+-- above is a no-op there.
 CREATE INDEX IF NOT EXISTS idx_forms_account_id ON forms(account_id);
-CREATE INDEX IF NOT EXISTS idx_forms_status ON forms(status);
-CREATE INDEX IF NOT EXISTS idx_forms_public_url ON forms(public_url);
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='forms' AND column_name='status') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_forms_status ON forms(status)';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='forms' AND column_name='public_url') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_forms_public_url ON forms(public_url)';
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_form_fields_form_id ON form_fields(form_id);
-CREATE INDEX IF NOT EXISTS idx_form_fields_order ON form_fields(form_id, order_index);
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='form_fields' AND column_name='order_index') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_form_fields_order ON form_fields(form_id, order_index)';
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_form_submissions_form_id ON form_submissions(form_id);
-CREATE INDEX IF NOT EXISTS idx_form_submissions_account_id ON form_submissions(account_id);
-CREATE INDEX IF NOT EXISTS idx_form_submissions_contact_id ON form_submissions(contact_id);
-CREATE INDEX IF NOT EXISTS idx_form_submissions_status ON form_submissions(status);
-CREATE INDEX IF NOT EXISTS idx_form_submissions_submitted_at ON form_submissions(submitted_at DESC);
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='form_submissions' AND column_name='account_id') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_form_submissions_account_id ON form_submissions(account_id)';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='form_submissions' AND column_name='contact_id') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_form_submissions_contact_id ON form_submissions(contact_id)';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='form_submissions' AND column_name='status') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_form_submissions_status ON form_submissions(status)';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='form_submissions' AND column_name='submitted_at') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_form_submissions_submitted_at ON form_submissions(submitted_at DESC)';
+  END IF;
+END $$;
 
 -- Function to generate unique public URL
 CREATE OR REPLACE FUNCTION generate_form_public_url()
@@ -364,11 +407,25 @@ END;
 $$ language 'plpgsql';
 
 -- Apply public URL generation trigger
-CREATE TRIGGER trigger_generate_form_public_url
-    BEFORE INSERT OR UPDATE OF name ON forms
-    FOR EACH ROW 
-    WHEN (NEW.public_url IS NULL OR OLD.name IS DISTINCT FROM NEW.name)
-    EXECUTE FUNCTION generate_form_public_url();
+-- NOTE: guarded because live production "forms" table lacks a "public_url"
+-- column (it was created out-of-band with a different shape than this
+-- migration's assumed CREATE TABLE); a trigger's WHEN clause referencing a
+-- nonexistent column fails at CREATE TRIGGER time, not just at execution time.
+DROP TRIGGER IF EXISTS trigger_generate_form_public_url ON forms;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'forms' AND column_name = 'public_url'
+  ) THEN
+    EXECUTE '
+      CREATE TRIGGER trigger_generate_form_public_url
+      BEFORE INSERT OR UPDATE OF name ON forms
+      FOR EACH ROW
+      WHEN (NEW.public_url IS NULL OR OLD.name IS DISTINCT FROM NEW.name)
+      EXECUTE FUNCTION generate_form_public_url()';
+  END IF;
+END $$;
 
 -- Function to update form submission count
 CREATE OR REPLACE FUNCTION update_form_submission_count()
@@ -390,6 +447,7 @@ END;
 $$ language 'plpgsql';
 
 -- Apply submission count trigger
+DROP TRIGGER IF EXISTS trigger_update_form_submission_count ON form_submissions;
 CREATE TRIGGER trigger_update_form_submission_count
     AFTER INSERT OR DELETE ON form_submissions
     FOR EACH ROW EXECUTE FUNCTION update_form_submission_count();
@@ -435,6 +493,7 @@ END;
 $$ language 'plpgsql';
 
 -- Apply contact linking trigger
+DROP TRIGGER IF EXISTS trigger_link_submission_to_contact ON form_submissions;
 CREATE TRIGGER trigger_link_submission_to_contact
     BEFORE INSERT ON form_submissions
     FOR EACH ROW EXECUTE FUNCTION link_submission_to_contact();
@@ -445,24 +504,28 @@ ALTER TABLE form_fields ENABLE ROW LEVEL SECURITY;
 ALTER TABLE form_submissions ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for forms
+DROP POLICY IF EXISTS "Users can view their account's forms" ON forms;
 CREATE POLICY "Users can view their account's forms"
     ON forms FOR SELECT
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can insert forms for their account" ON forms;
 CREATE POLICY "Users can insert forms for their account"
     ON forms FOR INSERT
     WITH CHECK (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can update their account's forms" ON forms;
 CREATE POLICY "Users can update their account's forms"
     ON forms FOR UPDATE
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can delete their account's forms" ON forms;
 CREATE POLICY "Users can delete their account's forms"
     ON forms FOR DELETE
     USING (account_id IN (
@@ -470,6 +533,7 @@ CREATE POLICY "Users can delete their account's forms"
     ));
 
 -- RLS Policies for form_fields
+DROP POLICY IF EXISTS "Users can view fields for their account's forms" ON form_fields;
 CREATE POLICY "Users can view fields for their account's forms"
     ON form_fields FOR SELECT
     USING (form_id IN (
@@ -478,6 +542,7 @@ CREATE POLICY "Users can view fields for their account's forms"
         )
     ));
 
+DROP POLICY IF EXISTS "Users can insert fields for their account's forms" ON form_fields;
 CREATE POLICY "Users can insert fields for their account's forms"
     ON form_fields FOR INSERT
     WITH CHECK (form_id IN (
@@ -486,6 +551,7 @@ CREATE POLICY "Users can insert fields for their account's forms"
         )
     ));
 
+DROP POLICY IF EXISTS "Users can update fields for their account's forms" ON form_fields;
 CREATE POLICY "Users can update fields for their account's forms"
     ON form_fields FOR UPDATE
     USING (form_id IN (
@@ -494,6 +560,7 @@ CREATE POLICY "Users can update fields for their account's forms"
         )
     ));
 
+DROP POLICY IF EXISTS "Users can delete fields for their account's forms" ON form_fields;
 CREATE POLICY "Users can delete fields for their account's forms"
     ON form_fields FOR DELETE
     USING (form_id IN (
@@ -503,22 +570,26 @@ CREATE POLICY "Users can delete fields for their account's forms"
     ));
 
 -- RLS Policies for form_submissions
+DROP POLICY IF EXISTS "Users can view their account's form submissions" ON form_submissions;
 CREATE POLICY "Users can view their account's form submissions"
     ON form_submissions FOR SELECT
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Anyone can insert form submissions" ON form_submissions;
 CREATE POLICY "Anyone can insert form submissions"
     ON form_submissions FOR INSERT
     WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Users can update their account's form submissions" ON form_submissions;
 CREATE POLICY "Users can update their account's form submissions"
     ON form_submissions FOR UPDATE
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can delete their account's form submissions" ON form_submissions;
 CREATE POLICY "Users can delete their account's form submissions"
     ON form_submissions FOR DELETE
     USING (account_id IN (
@@ -588,15 +659,30 @@ CREATE TABLE IF NOT EXISTS activities (
 );
 
 -- Create indexes for performance
+-- NOTE: guarded with column-existence checks. Live production "activities"
+-- table was created out-of-band with a different shape than this migration's
+-- assumed CREATE TABLE (it lacks status/created_by/due_date/updated_at), so
+-- CREATE TABLE IF NOT EXISTS above is a no-op there and any index/trigger
+-- referencing those columns must be conditional.
 CREATE INDEX IF NOT EXISTS idx_activities_account_id ON activities(account_id);
 CREATE INDEX IF NOT EXISTS idx_activities_type ON activities(type);
-CREATE INDEX IF NOT EXISTS idx_activities_status ON activities(status);
 CREATE INDEX IF NOT EXISTS idx_activities_contact_id ON activities(contact_id);
 CREATE INDEX IF NOT EXISTS idx_activities_company_id ON activities(company_id);
 CREATE INDEX IF NOT EXISTS idx_activities_deal_id ON activities(deal_id);
-CREATE INDEX IF NOT EXISTS idx_activities_created_by ON activities(created_by);
-CREATE INDEX IF NOT EXISTS idx_activities_due_date ON activities(due_date);
 CREATE INDEX IF NOT EXISTS idx_activities_created_at ON activities(created_at DESC);
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='activities' AND column_name='status') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_activities_status ON activities(status)';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='activities' AND column_name='created_by') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_activities_created_by ON activities(created_by)';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='activities' AND column_name='due_date') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_activities_due_date ON activities(due_date)';
+  END IF;
+END $$;
 
 -- Create trigger to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_activities_updated_at()
@@ -607,32 +693,49 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
-CREATE TRIGGER trigger_update_activities_updated_at
-    BEFORE UPDATE ON activities
-    FOR EACH ROW EXECUTE FUNCTION update_activities_updated_at();
+DROP TRIGGER IF EXISTS trigger_update_activities_updated_at ON activities;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='activities' AND column_name='updated_at') THEN
+    EXECUTE 'CREATE TRIGGER trigger_update_activities_updated_at
+      BEFORE UPDATE ON activities
+      FOR EACH ROW EXECUTE FUNCTION update_activities_updated_at()';
+  END IF;
+END $$;
 
 -- Enable Row Level Security
 ALTER TABLE activities ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies
+-- NOTE: these exact policy names are also created by earlier-running
+-- migrations (000009/000012/000013/000014/004/20240116000000), so drop them
+-- first for idempotency on sequential replay.
+DROP POLICY IF EXISTS "Users can view activities in their account" ON activities;
+DROP POLICY IF EXISTS "Users can insert activities in their account" ON activities;
+DROP POLICY IF EXISTS "Users can update activities in their account" ON activities;
+DROP POLICY IF EXISTS "Users can delete activities in their account" ON activities;
+
 CREATE POLICY "Users can view activities in their account"
     ON activities FOR SELECT
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can insert activities in their account" ON activities;
 CREATE POLICY "Users can insert activities in their account"
     ON activities FOR INSERT
     WITH CHECK (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can update activities in their account" ON activities;
 CREATE POLICY "Users can update activities in their account"
     ON activities FOR UPDATE
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can delete activities in their account" ON activities;
 CREATE POLICY "Users can delete activities in their account"
     ON activities FOR DELETE
     USING (account_id IN (
@@ -838,7 +941,16 @@ CREATE INDEX IF NOT EXISTS idx_email_templates_category ON email_templates(categ
 CREATE INDEX IF NOT EXISTS idx_campaigns_account_id ON campaigns(account_id);
 CREATE INDEX IF NOT EXISTS idx_campaigns_status ON campaigns(status);
 CREATE INDEX IF NOT EXISTS idx_campaigns_type ON campaigns(type);
-CREATE INDEX IF NOT EXISTS idx_campaigns_scheduled_at ON campaigns(scheduled_at);
+
+-- NOTE: live production "campaigns" table lacks a "scheduled_at" column
+-- (created out-of-band with a different shape than this migration's assumed
+-- CREATE TABLE). Guard accordingly.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='campaigns' AND column_name='scheduled_at') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_campaigns_scheduled_at ON campaigns(scheduled_at)';
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_campaign_emails_campaign_id ON campaign_emails(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_campaign_emails_contact_id ON campaign_emails(contact_id);
@@ -921,6 +1033,7 @@ END;
 $$ language 'plpgsql';
 
 -- Apply campaign stats trigger
+DROP TRIGGER IF EXISTS trigger_update_campaign_stats ON campaign_emails;
 CREATE TRIGGER trigger_update_campaign_stats
     AFTER INSERT OR UPDATE ON campaign_emails
     FOR EACH ROW EXECUTE FUNCTION update_campaign_stats();
@@ -992,6 +1105,7 @@ END;
 $$ language 'plpgsql';
 
 -- Apply analytics calculation trigger
+DROP TRIGGER IF EXISTS trigger_calculate_campaign_analytics ON campaign_emails;
 CREATE TRIGGER trigger_calculate_campaign_analytics
     AFTER INSERT OR UPDATE ON campaign_emails
     FOR EACH ROW EXECUTE FUNCTION calculate_campaign_analytics();
@@ -1005,24 +1119,28 @@ ALTER TABLE campaign_sequence_executions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE campaign_analytics ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for email_templates
+DROP POLICY IF EXISTS "Users can view their account's email templates" ON email_templates;
 CREATE POLICY "Users can view their account's email templates"
     ON email_templates FOR SELECT
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can insert email templates for their account" ON email_templates;
 CREATE POLICY "Users can insert email templates for their account"
     ON email_templates FOR INSERT
     WITH CHECK (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can update their account's email templates" ON email_templates;
 CREATE POLICY "Users can update their account's email templates"
     ON email_templates FOR UPDATE
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can delete their account's email templates" ON email_templates;
 CREATE POLICY "Users can delete their account's email templates"
     ON email_templates FOR DELETE
     USING (account_id IN (
@@ -1030,24 +1148,28 @@ CREATE POLICY "Users can delete their account's email templates"
     ));
 
 -- RLS Policies for campaigns
+DROP POLICY IF EXISTS "Users can view their account's campaigns" ON campaigns;
 CREATE POLICY "Users can view their account's campaigns"
     ON campaigns FOR SELECT
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can insert campaigns for their account" ON campaigns;
 CREATE POLICY "Users can insert campaigns for their account"
     ON campaigns FOR INSERT
     WITH CHECK (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can update their account's campaigns" ON campaigns;
 CREATE POLICY "Users can update their account's campaigns"
     ON campaigns FOR UPDATE
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can delete their account's campaigns" ON campaigns;
 CREATE POLICY "Users can delete their account's campaigns"
     ON campaigns FOR DELETE
     USING (account_id IN (
@@ -1055,24 +1177,28 @@ CREATE POLICY "Users can delete their account's campaigns"
     ));
 
 -- RLS Policies for campaign_emails
+DROP POLICY IF EXISTS "Users can view their account's campaign emails" ON campaign_emails;
 CREATE POLICY "Users can view their account's campaign emails"
     ON campaign_emails FOR SELECT
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can insert campaign emails for their account" ON campaign_emails;
 CREATE POLICY "Users can insert campaign emails for their account"
     ON campaign_emails FOR INSERT
     WITH CHECK (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can update their account's campaign emails" ON campaign_emails;
 CREATE POLICY "Users can update their account's campaign emails"
     ON campaign_emails FOR UPDATE
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can delete their account's campaign emails" ON campaign_emails;
 CREATE POLICY "Users can delete their account's campaign emails"
     ON campaign_emails FOR DELETE
     USING (account_id IN (
@@ -1080,6 +1206,7 @@ CREATE POLICY "Users can delete their account's campaign emails"
     ));
 
 -- RLS Policies for campaign_sequences
+DROP POLICY IF EXISTS "Users can view sequences for their account's campaigns" ON campaign_sequences;
 CREATE POLICY "Users can view sequences for their account's campaigns"
     ON campaign_sequences FOR SELECT
     USING (campaign_id IN (
@@ -1088,6 +1215,7 @@ CREATE POLICY "Users can view sequences for their account's campaigns"
         )
     ));
 
+DROP POLICY IF EXISTS "Users can insert sequences for their account's campaigns" ON campaign_sequences;
 CREATE POLICY "Users can insert sequences for their account's campaigns"
     ON campaign_sequences FOR INSERT
     WITH CHECK (campaign_id IN (
@@ -1096,6 +1224,7 @@ CREATE POLICY "Users can insert sequences for their account's campaigns"
         )
     ));
 
+DROP POLICY IF EXISTS "Users can update sequences for their account's campaigns" ON campaign_sequences;
 CREATE POLICY "Users can update sequences for their account's campaigns"
     ON campaign_sequences FOR UPDATE
     USING (campaign_id IN (
@@ -1104,6 +1233,7 @@ CREATE POLICY "Users can update sequences for their account's campaigns"
         )
     ));
 
+DROP POLICY IF EXISTS "Users can delete sequences for their account's campaigns" ON campaign_sequences;
 CREATE POLICY "Users can delete sequences for their account's campaigns"
     ON campaign_sequences FOR DELETE
     USING (campaign_id IN (
@@ -1113,6 +1243,7 @@ CREATE POLICY "Users can delete sequences for their account's campaigns"
     ));
 
 -- RLS Policies for campaign_sequence_executions
+DROP POLICY IF EXISTS "Users can view executions for their account's campaigns" ON campaign_sequence_executions;
 CREATE POLICY "Users can view executions for their account's campaigns"
     ON campaign_sequence_executions FOR SELECT
     USING (campaign_id IN (
@@ -1121,6 +1252,7 @@ CREATE POLICY "Users can view executions for their account's campaigns"
         )
     ));
 
+DROP POLICY IF EXISTS "Users can insert executions for their account's campaigns" ON campaign_sequence_executions;
 CREATE POLICY "Users can insert executions for their account's campaigns"
     ON campaign_sequence_executions FOR INSERT
     WITH CHECK (campaign_id IN (
@@ -1129,6 +1261,7 @@ CREATE POLICY "Users can insert executions for their account's campaigns"
         )
     ));
 
+DROP POLICY IF EXISTS "Users can update executions for their account's campaigns" ON campaign_sequence_executions;
 CREATE POLICY "Users can update executions for their account's campaigns"
     ON campaign_sequence_executions FOR UPDATE
     USING (campaign_id IN (
@@ -1137,6 +1270,7 @@ CREATE POLICY "Users can update executions for their account's campaigns"
         )
     ));
 
+DROP POLICY IF EXISTS "Users can delete executions for their account's campaigns" ON campaign_sequence_executions;
 CREATE POLICY "Users can delete executions for their account's campaigns"
     ON campaign_sequence_executions FOR DELETE
     USING (campaign_id IN (
@@ -1146,6 +1280,7 @@ CREATE POLICY "Users can delete executions for their account's campaigns"
     ));
 
 -- RLS Policies for campaign_analytics
+DROP POLICY IF EXISTS "Users can view analytics for their account's campaigns" ON campaign_analytics;
 CREATE POLICY "Users can view analytics for their account's campaigns"
     ON campaign_analytics FOR SELECT
     USING (campaign_id IN (
@@ -1331,12 +1466,14 @@ ALTER TABLE ai_model_performance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_insights ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for ai_scoring_history
+DROP POLICY IF EXISTS "Users can view their account's AI scoring history" ON ai_scoring_history;
 CREATE POLICY "Users can view their account's AI scoring history"
     ON ai_scoring_history FOR SELECT
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can insert AI scoring history for their account" ON ai_scoring_history;
 CREATE POLICY "Users can insert AI scoring history for their account"
     ON ai_scoring_history FOR INSERT
     WITH CHECK (account_id IN (
@@ -1344,18 +1481,21 @@ CREATE POLICY "Users can insert AI scoring history for their account"
     ));
 
 -- RLS Policies for ai_model_performance
+DROP POLICY IF EXISTS "Users can view their account's AI model performance" ON ai_model_performance;
 CREATE POLICY "Users can view their account's AI model performance"
     ON ai_model_performance FOR SELECT
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can insert AI model performance for their account" ON ai_model_performance;
 CREATE POLICY "Users can insert AI model performance for their account"
     ON ai_model_performance FOR INSERT
     WITH CHECK (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can update their account's AI model performance" ON ai_model_performance;
 CREATE POLICY "Users can update their account's AI model performance"
     ON ai_model_performance FOR UPDATE
     USING (account_id IN (
@@ -1363,24 +1503,28 @@ CREATE POLICY "Users can update their account's AI model performance"
     ));
 
 -- RLS Policies for ai_insights
+DROP POLICY IF EXISTS "Users can view their account's AI insights" ON ai_insights;
 CREATE POLICY "Users can view their account's AI insights"
     ON ai_insights FOR SELECT
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can insert AI insights for their account" ON ai_insights;
 CREATE POLICY "Users can insert AI insights for their account"
     ON ai_insights FOR INSERT
     WITH CHECK (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can update their account's AI insights" ON ai_insights;
 CREATE POLICY "Users can update their account's AI insights"
     ON ai_insights FOR UPDATE
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can delete their account's AI insights" ON ai_insights;
 CREATE POLICY "Users can delete their account's AI insights"
     ON ai_insights FOR DELETE
     USING (account_id IN (
@@ -1454,12 +1598,14 @@ DROP POLICY IF EXISTS "Users can delete pipelines in their account" ON pipelines
 -- ============================================================================
 
 -- Accounts policies
+DROP POLICY IF EXISTS "Users can view their own account" ON accounts;
 CREATE POLICY "Users can view their own account"
     ON accounts FOR SELECT
     USING (id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can update their own account" ON accounts;
 CREATE POLICY "Users can update their own account"
     ON accounts FOR UPDATE
     USING (id IN (
@@ -1467,33 +1613,39 @@ CREATE POLICY "Users can update their own account"
     ));
 
 -- Users policies
+DROP POLICY IF EXISTS "Users can view their own user record" ON users;
 CREATE POLICY "Users can view their own user record"
     ON users FOR SELECT
     USING (email = (SELECT email FROM auth.users WHERE id = auth.uid()));
 
+DROP POLICY IF EXISTS "Users can update their own user record" ON users;
 CREATE POLICY "Users can update their own user record"
     ON users FOR UPDATE
     USING (email = (SELECT email FROM auth.users WHERE id = auth.uid()));
 
 -- Contacts policies
+DROP POLICY IF EXISTS "Users can view contacts in their account" ON contacts;
 CREATE POLICY "Users can view contacts in their account"
     ON contacts FOR SELECT
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can insert contacts in their account" ON contacts;
 CREATE POLICY "Users can insert contacts in their account"
     ON contacts FOR INSERT
     WITH CHECK (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can update contacts in their account" ON contacts;
 CREATE POLICY "Users can update contacts in their account"
     ON contacts FOR UPDATE
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can delete contacts in their account" ON contacts;
 CREATE POLICY "Users can delete contacts in their account"
     ON contacts FOR DELETE
     USING (account_id IN (
@@ -1501,24 +1653,28 @@ CREATE POLICY "Users can delete contacts in their account"
     ));
 
 -- Companies policies
+DROP POLICY IF EXISTS "Users can view companies in their account" ON companies;
 CREATE POLICY "Users can view companies in their account"
     ON companies FOR SELECT
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can insert companies in their account" ON companies;
 CREATE POLICY "Users can insert companies in their account"
     ON companies FOR INSERT
     WITH CHECK (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can update companies in their account" ON companies;
 CREATE POLICY "Users can update companies in their account"
     ON companies FOR UPDATE
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can delete companies in their account" ON companies;
 CREATE POLICY "Users can delete companies in their account"
     ON companies FOR DELETE
     USING (account_id IN (
@@ -1526,24 +1682,28 @@ CREATE POLICY "Users can delete companies in their account"
     ));
 
 -- Deals policies
+DROP POLICY IF EXISTS "Users can view deals in their account" ON deals;
 CREATE POLICY "Users can view deals in their account"
     ON deals FOR SELECT
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can insert deals in their account" ON deals;
 CREATE POLICY "Users can insert deals in their account"
     ON deals FOR INSERT
     WITH CHECK (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can update deals in their account" ON deals;
 CREATE POLICY "Users can update deals in their account"
     ON deals FOR UPDATE
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can delete deals in their account" ON deals;
 CREATE POLICY "Users can delete deals in their account"
     ON deals FOR DELETE
     USING (account_id IN (
@@ -1551,24 +1711,28 @@ CREATE POLICY "Users can delete deals in their account"
     ));
 
 -- Pipelines policies
+DROP POLICY IF EXISTS "Users can view pipelines in their account" ON pipelines;
 CREATE POLICY "Users can view pipelines in their account"
     ON pipelines FOR SELECT
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can insert pipelines in their account" ON pipelines;
 CREATE POLICY "Users can insert pipelines in their account"
     ON pipelines FOR INSERT
     WITH CHECK (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can update pipelines in their account" ON pipelines;
 CREATE POLICY "Users can update pipelines in their account"
     ON pipelines FOR UPDATE
     USING (account_id IN (
         SELECT account_id FROM users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
     ));
 
+DROP POLICY IF EXISTS "Users can delete pipelines in their account" ON pipelines;
 CREATE POLICY "Users can delete pipelines in their account"
     ON pipelines FOR DELETE
     USING (account_id IN (

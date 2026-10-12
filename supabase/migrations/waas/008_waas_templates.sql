@@ -75,10 +75,29 @@ CREATE TABLE IF NOT EXISTS tenant_site_config (
 -- INDEXES
 -- ---------------------------------------------------------------------------
 
+-- NOTE: guarded with column-existence checks. On a fresh/preview database,
+-- 000_waas_complete_idempotent.sql / 000b_waas_main.sql (which run earlier in
+-- filename-sorted order) already create site_templates/tenant_site_config
+-- with a different shape (status/version instead of is_active/is_default,
+-- sections/layout_config instead of default_layout_json/base_css), so this
+-- migration's own CREATE TABLE IF NOT EXISTS above is a no-op there.
 CREATE INDEX IF NOT EXISTS idx_site_templates_slug      ON site_templates(slug);
-CREATE INDEX IF NOT EXISTS idx_site_templates_is_active ON site_templates(is_active) WHERE is_active = TRUE;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='site_templates' AND column_name='is_active') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_site_templates_is_active ON site_templates(is_active) WHERE is_active = TRUE';
+  END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_tenant_site_config_tenant_id ON tenant_site_config(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_tenant_site_config_template_id ON tenant_site_config(template_id);
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='tenant_site_config' AND column_name='template_id') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_tenant_site_config_template_id ON tenant_site_config(template_id)';
+  END IF;
+END $$;
 
 -- ---------------------------------------------------------------------------
 -- UPDATED_AT TRIGGERS
@@ -104,10 +123,17 @@ ALTER TABLE site_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tenant_site_config ENABLE ROW LEVEL SECURITY;
 
 -- Anyone can read active templates (needed for renderer)
+-- NOTE: guarded because live production "site_templates" lacks an
+-- "is_active" column (it uses "status" instead; see note above).
 DROP POLICY IF EXISTS "site_templates_public_read" ON site_templates;
-CREATE POLICY "site_templates_public_read"
-  ON site_templates FOR SELECT TO anon, authenticated
-  USING (is_active = TRUE);
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='site_templates' AND column_name='is_active') THEN
+    EXECUTE 'CREATE POLICY "site_templates_public_read" ON site_templates FOR SELECT TO anon, authenticated USING (is_active = TRUE)';
+  ELSIF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='site_templates' AND column_name='status') THEN
+    EXECUTE 'CREATE POLICY "site_templates_public_read" ON site_templates FOR SELECT TO anon, authenticated USING (status = ''active'')';
+  END IF;
+END $$;
 
 -- Admins can manage templates
 DROP POLICY IF EXISTS "site_templates_admin_all" ON site_templates;
@@ -144,52 +170,63 @@ CREATE POLICY "tenant_site_config_admin_all"
 -- ---------------------------------------------------------------------------
 -- SEED: 3 starter templates
 -- ---------------------------------------------------------------------------
+-- NOTE: guarded because live production "site_templates" lacks
+-- "is_default"/"default_layout_json" columns (it uses "sections"/
+-- "layout_config"/"status"/"version" instead; see note above). Only run this
+-- INSERT (using the columns this migration's own CREATE TABLE defines) when
+-- those columns actually exist, i.e. on a fresh database where this
+-- migration's CREATE TABLE was not a no-op.
 
-INSERT INTO site_templates (name, slug, description, is_default, default_layout_json)
-VALUES
-(
-  'Modern',
-  'modern',
-  'Clean, minimal design with bold typography and plenty of whitespace. Best for tech-forward trades.',
-  TRUE,
-  '[
-    {"section":"hero",      "enabled":true,  "order":1, "config":{"variant":"centered","showTextmark":true}},
-    {"section":"trust",     "enabled":true,  "order":2, "config":{"variant":"badge-row"}},
-    {"section":"services",  "enabled":true,  "order":3, "config":{"columns":3,"showIcons":true}},
-    {"section":"booking",   "enabled":true,  "order":4, "config":{"variant":"inline"}},
-    {"section":"financing", "enabled":false, "order":5, "config":{}},
-    {"section":"reviews",   "enabled":true,  "order":6, "config":{"showNFC":true}}
-  ]'::jsonb
-),
-(
-  'Bold',
-  'bold',
-  'High-contrast, aggressive CTAs with dark sections. Best for competitive markets like plumbing and HVAC.',
-  FALSE,
-  '[
-    {"section":"hero",      "enabled":true,  "order":1, "config":{"variant":"split","showTextmark":true}},
-    {"section":"services",  "enabled":true,  "order":2, "config":{"columns":2,"showIcons":true}},
-    {"section":"trust",     "enabled":true,  "order":3, "config":{"variant":"full-width"}},
-    {"section":"financing", "enabled":true,  "order":4, "config":{}},
-    {"section":"booking",   "enabled":true,  "order":5, "config":{"variant":"modal-trigger"}},
-    {"section":"reviews",   "enabled":true,  "order":6, "config":{"showNFC":true}}
-  ]'::jsonb
-),
-(
-  'Trust-First',
-  'trust-first',
-  'Social proof-heavy layout leading with reviews and credentials. Best for medical, legal, and high-trust trades.',
-  FALSE,
-  '[
-    {"section":"hero",      "enabled":true,  "order":1, "config":{"variant":"centered","showTextmark":true}},
-    {"section":"reviews",   "enabled":true,  "order":2, "config":{"showNFC":true,"variant":"prominent"}},
-    {"section":"trust",     "enabled":true,  "order":3, "config":{"variant":"badge-row"}},
-    {"section":"services",  "enabled":true,  "order":4, "config":{"columns":3,"showIcons":true}},
-    {"section":"booking",   "enabled":true,  "order":5, "config":{"variant":"inline"}},
-    {"section":"financing", "enabled":false, "order":6, "config":{}}
-  ]'::jsonb
-)
-ON CONFLICT (slug) DO NOTHING;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='site_templates' AND column_name='default_layout_json') THEN
+    INSERT INTO site_templates (name, slug, description, is_default, default_layout_json)
+    VALUES
+    (
+      'Modern',
+      'modern',
+      'Clean, minimal design with bold typography and plenty of whitespace. Best for tech-forward trades.',
+      TRUE,
+      '[
+        {"section":"hero",      "enabled":true,  "order":1, "config":{"variant":"centered","showTextmark":true}},
+        {"section":"trust",     "enabled":true,  "order":2, "config":{"variant":"badge-row"}},
+        {"section":"services",  "enabled":true,  "order":3, "config":{"columns":3,"showIcons":true}},
+        {"section":"booking",   "enabled":true,  "order":4, "config":{"variant":"inline"}},
+        {"section":"financing", "enabled":false, "order":5, "config":{}},
+        {"section":"reviews",   "enabled":true,  "order":6, "config":{"showNFC":true}}
+      ]'::jsonb
+    ),
+    (
+      'Bold',
+      'bold',
+      'High-contrast, aggressive CTAs with dark sections. Best for competitive markets like plumbing and HVAC.',
+      FALSE,
+      '[
+        {"section":"hero",      "enabled":true,  "order":1, "config":{"variant":"split","showTextmark":true}},
+        {"section":"services",  "enabled":true,  "order":2, "config":{"columns":2,"showIcons":true}},
+        {"section":"trust",     "enabled":true,  "order":3, "config":{"variant":"full-width"}},
+        {"section":"financing", "enabled":true,  "order":4, "config":{}},
+        {"section":"booking",   "enabled":true,  "order":5, "config":{"variant":"modal-trigger"}},
+        {"section":"reviews",   "enabled":true,  "order":6, "config":{"showNFC":true}}
+      ]'::jsonb
+    ),
+    (
+      'Trust-First',
+      'trust-first',
+      'Social proof-heavy layout leading with reviews and credentials. Best for medical, legal, and high-trust trades.',
+      FALSE,
+      '[
+        {"section":"hero",      "enabled":true,  "order":1, "config":{"variant":"centered","showTextmark":true}},
+        {"section":"reviews",   "enabled":true,  "order":2, "config":{"showNFC":true,"variant":"prominent"}},
+        {"section":"trust",     "enabled":true,  "order":3, "config":{"variant":"badge-row"}},
+        {"section":"services",  "enabled":true,  "order":4, "config":{"columns":3,"showIcons":true}},
+        {"section":"booking",   "enabled":true,  "order":5, "config":{"variant":"inline"}},
+        {"section":"financing", "enabled":false, "order":6, "config":{}}
+      ]'::jsonb
+    )
+    ON CONFLICT (slug) DO NOTHING;
+  END IF;
+END $$;
 
 -- =============================================================================
 -- END OF MIGRATION 008

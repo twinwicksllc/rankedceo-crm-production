@@ -10,25 +10,33 @@
 -- ENUMS
 -- ---------------------------------------------------------------------------
 
+DO $$ BEGIN
 CREATE TYPE waas_package_tier AS ENUM (
   'hosting',    -- Basic hosting only, no SEO tools
   'standard',   -- Hosting + SEO audit tool + basic reporting
   'premium'     -- Hosting + full SEO suite + AI insights + white-label
 );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
+DO $$ BEGIN
 CREATE TYPE waas_tenant_status AS ENUM (
   'onboarding',   -- Tenant created, setup not complete
   'active',       -- Live and serving traffic
   'suspended',    -- Temporarily disabled (e.g., payment lapsed)
   'cancelled'     -- Permanently deactivated
 );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- ---------------------------------------------------------------------------
 -- TENANTS TABLE
 -- Core multi-tenant isolation unit. One row = one client website.
 -- ---------------------------------------------------------------------------
 
-CREATE TABLE tenants (
+CREATE TABLE IF NOT EXISTS tenants (
   -- Identity
   id                  UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
 
@@ -105,14 +113,14 @@ CREATE TABLE tenants (
 -- ---------------------------------------------------------------------------
 
 -- Primary lookup path: middleware resolves tenant by hostname
-CREATE INDEX idx_tenants_domain    ON tenants (domain)    WHERE domain IS NOT NULL AND deleted_at IS NULL;
-CREATE INDEX idx_tenants_subdomain ON tenants (subdomain) WHERE subdomain IS NOT NULL AND deleted_at IS NULL;
-CREATE INDEX idx_tenants_slug      ON tenants (slug)      WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_tenants_domain    ON tenants (domain)    WHERE domain IS NOT NULL AND deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_tenants_subdomain ON tenants (subdomain) WHERE subdomain IS NOT NULL AND deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_tenants_slug      ON tenants (slug)      WHERE deleted_at IS NULL;
 
 -- Admin queries
-CREATE INDEX idx_tenants_status       ON tenants (status);
-CREATE INDEX idx_tenants_package_tier ON tenants (package_tier);
-CREATE INDEX idx_tenants_crm_account  ON tenants (crm_account_id) WHERE crm_account_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_tenants_status       ON tenants (status);
+CREATE INDEX IF NOT EXISTS idx_tenants_package_tier ON tenants (package_tier);
+CREATE INDEX IF NOT EXISTS idx_tenants_crm_account  ON tenants (crm_account_id) WHERE crm_account_id IS NOT NULL;
 
 -- ---------------------------------------------------------------------------
 -- UPDATED_AT TRIGGER
@@ -126,6 +134,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS tenants_updated_at ON tenants;
 CREATE TRIGGER tenants_updated_at
   BEFORE UPDATE ON tenants
   FOR EACH ROW
@@ -139,6 +148,7 @@ ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;
 
 -- Platform admins (service role) can do anything — handled via service_role key
 -- Anon/public: can only read active tenants (for middleware lookup)
+DROP POLICY IF EXISTS "tenants_public_read_active" ON tenants;
 CREATE POLICY "tenants_public_read_active"
   ON tenants
   FOR SELECT
@@ -147,6 +157,7 @@ CREATE POLICY "tenants_public_read_active"
 
 -- Authenticated platform admins can manage all tenants
 -- (In production, lock this to a specific admin role/claim)
+DROP POLICY IF EXISTS "tenants_admin_all" ON tenants;
 CREATE POLICY "tenants_admin_all"
   ON tenants
   FOR ALL
