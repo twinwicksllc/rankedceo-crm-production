@@ -21,6 +21,7 @@
 // =============================================================================
 
 import { useState } from "react";
+import { formatEditPath } from "@/lib/waas/client-edit/format-path";
 import type {
   TenantPortalData,
   TenantPortalRecentEdit,
@@ -50,15 +51,6 @@ const EDIT_TYPE_ICONS: Record<EditType, string> = {
   font_change: "🔤",
   config_change: "⚙️",
 };
-
-function formatPath(path: string): string {
-  return path
-    .replace(/sections\[(\d+)\]\.content\./, "Section $1 › ")
-    .replace(/brand_config\./, "Brand › ")
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-    .replace(/\s*\.\s*/g, " › ");
-}
 
 function timeAgo(iso: string): string {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -210,7 +202,7 @@ function RecentEditRow({ edit }: { edit: TenantPortalRecentEdit }) {
       </span>
       <div className="flex-1 min-w-0">
         <p className="text-[11px] font-medium text-white/70 truncate">
-          {formatPath(edit.fieldPath)}
+          {formatEditPath(edit.fieldPath)}
         </p>
         {edit.newValue && (
           <p className="text-[10px] text-white/35 truncate mt-0.5">
@@ -760,9 +752,9 @@ export function PortalHome({
 
         {/* ── Deploy readiness checklist ── shown until the site is live */}
         {deployReadiness &&
-          !(siteStatus.approvalLocked && siteStatus.tenantStatus === "active") && (
-            <DeployReadinessCard readiness={deployReadiness} />
-          )}
+          !(
+            siteStatus.approvalLocked && siteStatus.tenantStatus === "active"
+          ) && <DeployReadinessCard readiness={deployReadiness} />}
 
         {/* ── Audit Score Comparison Card (Initiative 9) ── */}
         {auditComparison && (

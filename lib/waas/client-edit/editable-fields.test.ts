@@ -235,6 +235,14 @@ test("toggle path and id use the array index too", () => {
     ["sections[0].enabled", "sections[1].enabled", "sections[2].enabled"],
   );
   assert.deepEqual(
+    toggles.map((t) => t.id),
+    ["sec-0-enabled", "sec-1-enabled", "sec-2-enabled"],
+  );
+  assert.deepEqual(
+    toggles.map((t) => t.sectionOrder),
+    [0, 1, 2],
+  );
+  assert.deepEqual(
     toggles.map((t) => t.sectionId),
     ["hero", "about", "faq"],
   );

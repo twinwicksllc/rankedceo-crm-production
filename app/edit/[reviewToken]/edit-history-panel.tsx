@@ -21,6 +21,7 @@
 // =============================================================================
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { formatEditPath } from "@/lib/waas/client-edit/format-path";
 import {
   getClientEditHistory,
   undoClientEdit,
@@ -51,22 +52,6 @@ const EDIT_TYPE_ICONS: Record<EditType, string> = {
   font_change: "🔤",
   config_change: "⚙️",
 };
-
-function formatPath(path: string): string {
-  // sections[0].content.headline → "Section 1 › Headline"
-  return (
-    path
-      // Path index is 0-based (position in sections_json); show it 1-based.
-      .replace(
-        /sections\[(\d+)\]\.content\./,
-        (_m, n: string) => `Section ${Number(n) + 1} › `,
-      )
-      .replace(/brand_config\./, "Brand › ")
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase())
-      .replace(/\s*\.\s*/g, " › ")
-  );
-}
 
 function formatValue(val: string | null, editType: EditType): string {
   if (val === null) return "—";
@@ -315,7 +300,7 @@ export function EditHistoryPanel({
 
                     {/* Field path */}
                     <p className="text-[11px] text-white/50 mb-1.5 truncate">
-                      {formatPath(event.fieldPath)}
+                      {formatEditPath(event.fieldPath)}
                     </p>
 
                     {/* Value change */}
