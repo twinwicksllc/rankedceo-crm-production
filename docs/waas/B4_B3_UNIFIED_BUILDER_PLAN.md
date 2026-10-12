@@ -1,0 +1,95 @@
+# B4 + B3: One builder, client restructure, admin handoff (plan)
+
+Status: **DRAFT for Tommy's approval. No code written yet.**
+Decisions this plan serves: DEC-0007 (one consistent builder for the client, final handed to admins for review and upsell), B3 (let the client restructure), DEC-0005/0006/0008 (extra pages, lead form, analytics are team-sold).
+Verified against `main` @ `20b5b30` by reading code. Anything not verified is marked **unverified**.
+
+## 1. What exists today (verified)
+
+| Piece | What it is | Where |
+|---|---|---|
+| Section system (the real one) | A site is a list of `SectionConfig { section, enabled, order, config, content }`. 12 section types. Stored as JSON in `tenant_site_variants.sections_json` (3 variants per tenant) and copied to `tenant_site_config.active_sections_json` for the live site. | `lib/waas/templates/types.ts`, `app/_sites/[site]/page.tsx`, `lib/waas/actions/admin/client-review.ts` |
+| Client portal editor | Edits text/color/image/font and on/off per section. Each edit is addressed by a path such as `sections[3].content.headline`. Every edit writes a history event. | `app/edit/[reviewToken]/`, `lib/waas/client-edit/`, `lib/waas/actions/client-edit/content-edit.ts` |
+| Admin reorder | Drag-and-drop reorder panel for the 3 variants, using `@dnd-kit`. Server action `reorderVariantSections` works by section type and rejects duplicates. | `app/admin/dashboard/[tenantId]/section-reorder-panel.tsx`, `lib/waas/actions/admin/variants.ts` |
+| Block builder (the second one) | 8 block types (hero, heading, text, image, button, columns, spacer, divider). Only used in onboarding step 6. Saves `website_blocks` and `website_html` on `tenant_site_config`. | `components/waas/website-builder/`, `lib/waas/website-builder/`, `lib/waas/actions/onboarding/step-builder.ts` |
+
+Key fact for B4: a search of `app/`, `lib/` and `components/` found **no code that reads `website_blocks` or `website_html`** outside the save action. So what a client builds in onboarding step 6 does not feed the portal, the admin review, or the live site. It is a dead end today.
+
+Key fact for B3: reorder already exists for admins, and the library for drag and drop is already installed. The client has no reorder, add or duplicate.
+
+## 2. Bug found while planning (verify before fixing)
+
+Edit paths use the section's `order` value as an array index (`sections[${order}]`). Generators write `order` starting at **1** (`order: index + 1` in `templates/registry.ts`, `generate-initial-site/_shared.ts`, `admin/variants.ts` and others), while arrays start at 0.
+
+I ran the real `buildEditableFields` and `setValueAtPath` on sample sections built the way the generators build them (hero=1, about=2, faq=3):
+
+- Editing the **hero** headline wrote the text into the **about** section.
+- Editing the **last** section's headline appended a stray extra entry at the end of the array instead of changing the section.
+
+The editor's own label code (`order + 1`, so "1. Hero") assumes `order` starts at 0, which supports that the mismatch is unintended.
+
+**Unverified:** whether live `sections_json` rows use 1-based `order` (as the generators suggest) or 0-based. This needs a read-only look at one real variant row, or a look at what the portal does on a live tenant. Until checked, I will not call it confirmed in production.
+
+This must be settled first, because reorder multiplies the problem.
+
+## 3. Recommended design
+
+### 3.1 One model: the section system
+Keep the section system as the single source of truth. It already renders the live site, powers the portal, has versions and history, and has the admin tools. The block builder does none of that.
+
+### 3.2 Stable section IDs
+Add an `id` to every `SectionConfig` (for example `hero`, `about`, `services-2`). Addressing edits by position breaks the moment sections move; addressing by id does not.
+
+- Edit paths gain an id form: `sections[id=services-2].content.headline`. The old numeric form keeps working so existing history rows still display.
+- Existing rows are back-filled when read (first of a type gets `id = type`, later ones `type-2`, `type-3`). It is JSON, so **no database migration is needed**.
+- This also unlocks duplicate: today identity is the section type, so two "services" sections cannot exist.
+
+### 3.3 Client "Layout" tab (B3)
+Same pattern as Shopify, Squarespace and Wix, with guardrails:
+
+1. Drag to reorder (reuse the admin panel's `@dnd-kit` code), plus up/down buttons for keyboard and mobile.
+2. Show/hide each section.
+3. Add a section from a curated library of the 12 types (no blank boxes).
+4. Duplicate a section (limited per type, see guardrails).
+5. Remove a section the client added.
+
+Guardrails (enforced on the server, not only in the UI):
+- Hero is always first and cannot be removed or hidden. Booking cannot be removed or hidden (matches today's `REQUIRED_SECTION_IDS`).
+- Maximum count per type (proposal: 1 for hero, booking, trust, financing, reviews; up to 3 for text-style sections such as services, about, faq, gallery).
+- The reviews section is not offered in the add library until real reviews can be entered (see DEC-0004). Otherwise the client could add the fake placeholder reviews back.
+- Every change creates a version snapshot and a history event, like today's edits, so the team can see and undo it.
+
+One server action, `applyLayoutChange`, validates the whole new layout, renumbers `order` consistently, saves, and writes the version and history rows. It uses the same permission gate as `updateClientVariantContent` (`canClientEditVariant`).
+
+### 3.4 Onboarding step 6
+The block builder stops being a separate product. Options are in section 5, question 1.
+
+### 3.5 Admin handoff (DEC-0007)
+The admin already has client review and variant tools. Proposed addition, later: an "Add-ons" panel on the tenant review page where the team marks what they are selling this client (extra pages, lead form, analytics, Terms/Privacy) so the review conversation and the upsell live in one place. Flags only at first; the add-ons themselves are built when sold (DEC-0005/0006/0008).
+
+## 4. Delivery in small PRs (each reviewed and merged by Tommy)
+
+1. **Fix the order/index mismatch** (small, with tests). Needs the live-data check first.
+2. **Stable ids + id-based paths + back-compat**, with tests for the path patcher and back-fill.
+3. **`applyLayoutChange` server action + validation**, with tests for every guardrail.
+4. **Client Layout tab UI** (reorder, show/hide, add, duplicate, remove).
+5. **Onboarding step 6 replacement** (per question 1).
+6. **Admin Add-ons / handoff panel.**
+
+Each PR runs typecheck, tests and lint on the files it changes before pushing (DEC-0012). PR 1 and 2 are the riskiest because they touch how every edit is saved.
+
+## 5. Questions for Tommy
+
+1. **What should onboarding step 6 become?**
+   - A (recommended): the same Layout editor the client gets later (arrange, show/hide, add from library). One consistent builder.
+   - B: keep free-form blocks, but as one "Custom section" type inside the section system, so block content actually reaches the live site.
+   - C: remove step 6 and let clients edit after the template is chosen.
+2. **Max copies per section type**: accept the proposal in 3.3, or change?
+3. **Admin Add-ons panel**: build in this round, or after the client Layout tab ships?
+
+## 6. Not verified
+
+- Whether live rows use 1-based or 0-based `order` (section 2).
+- Whether any production tenant relies on a duplicated section type.
+- How the portal behaves in production today when editing the last section.
+- Production database state (no Supabase access set up; none needed for this plan).
