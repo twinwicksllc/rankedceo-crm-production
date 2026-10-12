@@ -1,0 +1,40 @@
+# Copilot Review Findings Catalog
+
+Source: 133 top-level Copilot review comments across 36 PRs (#188 to #275), read by hand on 2026-10-12.
+The goal is to stop repeat findings before Copilot sees them. Each theme lists what Copilot flagged, example PRs, and the rule that prevents it.
+
+How to use: read the checklist in `.github/pull_request_template.md` before you push. Add a row here when a new theme shows up in 2 or more PRs.
+
+Note: PR numbers are examples, not complete lists. Keyword counts over the raw comments overlap heavily, so the themes below come from a manual read.
+
+| # | Theme | What Copilot flags | Example PRs | Prevention | Can a tool catch it? |
+|---|-------|--------------------|-------------|------------|----------------------|
+| 1 | Doc claims overstated or unverified | Counts, "verified", dates, links, env var names or behavior stated in a doc that the code does not match | 214, 218, 224, 225, 242, 246, 247, 249, 251, 252, 269, 275 | Before writing a claim, run a command that proves it and note the command in the doc. Say "not verified" if you did not. Re-read every claim against the diff before pushing. | No, needs a human check |
+| 2 | Accessibility | Placeholder-only inputs, decorative glyphs without `aria-hidden`, modals without `role="dialog"` and `aria-modal`, outline removed with no visible focus fallback, status shown by emoji only | 217, 224, 225, 226, 247 | Every input gets a `<label>` or `aria-label`. Decorative icons get `aria-hidden="true"`. Modals get role, `aria-modal`, and a label. Never remove an outline without a replacement. Status needs text. | Partly (`jsx-a11y` rules) |
+| 3 | Non-boolean flag coerced by truthiness | `skip_cache`, `optimization_requested` and similar flags read with `!!x` or `if (x)`, so the string `"false"` counts as true | 213, 221, 222, 224, 225 | Parse request flags with one helper that accepts only `true` or `"true"`. Validate request bodies with a schema. | Partly (schema validation) |
+| 4 | Loading state never reset | A `setLoading(true)` with no reset when the response has no expected field (for example no `audit_id`) or the request throws | 221, 222, 224, 225, 226 | Reset loading in `finally`, not in the success branch only. Test the "response missing a field" path. | No |
+| 5 | Hover handlers use `e.target` | `e.target` can be a child element, so styles apply to the wrong node | 221, 222, 226 | Use `e.currentTarget`, or use CSS `:hover` instead of JS handlers. | Partly (review rule) |
+| 6 | Dead state, unused params or imports | State that is set but never read (`focusedField`), unused map index `i`, unused imports | 218, 224, 226 | Run lint with `no-unused-vars` before pushing. Delete dead code in the same PR. | Yes (ESLint) |
+| 7 | Cache identity incomplete | Cache key or lookup misses an input that changes the result (location, audit type, requestor hints), or uses `created_at` where `completed_at` is meant | 218, 219, 274 | When adding an input to a job, list every place it must appear: request, cache key, lookup, stored row. Add a test that two different inputs do not share a cache hit. | No |
+| 8 | Auth, permissions, PII | Unauthenticated routes using the service-role client, RLS that exposes tokens, PII in URL query strings, HTML email built without escaping | 188, 213, 214, 220 | New route: state who can call it and how it is checked. Never put PII in a URL. Escape every value put into HTML. Service-role client only after an auth check. | No |
+| 9 | SQL and migrations | Nullable boolean columns, NULL inside OR conditions, migrations that are not idempotent | 213 | Boolean columns `NOT NULL DEFAULT`. Use `IS NOT DISTINCT FROM` or `COALESCE` with nullable columns. Use `IF NOT EXISTS`. | No |
+| 10 | Error handling | Server action with no try/catch, `localStorage` access with no try/catch, a catch that swallows every error, a non-fatal write that hides a failure | 188, 225, 226, 229, 275 | Wrap storage access in try/catch. Catch only the errors you expect and rethrow the rest. Log non-fatal failures. | Partly |
+| 11 | CI and workflow config | Nested quotes in a workflow `run` line, missing `engines.node`, `eslint-config-next` version not matching Next | 230, 240 | Keep workflow shell simple, move logic to a script. Pin `engines.node`. Keep tool versions aligned with the framework. | Partly (see E1 PR) |
+| 12 | PR description does not match the diff | The PR body says one thing, the diff does another | 224, 225, 226, 242, 246 | Write the description from `git diff --stat` after the last commit. Re-read it before pushing. | No |
+| 13 | Schema and type drift | New enum case missing from a type (`NotificationType`), QA YAML fields missing from the Zod schema | 229, 244, 252 | When you add a value, search for the type, schema and switch statements that list the others. | Partly (`tsc` exhaustive switch) |
+| 14 | Tests that copy production logic | A test re-implements the function instead of importing it, so it passes even when the real code is wrong | 264 | Tests import the real function. | No |
+| 15 | Stray JSX text | A literal `;` or similar text left in JSX | 264 | Look at the rendered page, not only the code. | Partly |
+| 16 | Date and time zone handling | Calendar slots built from local time instead of the tenant time zone | 188 | Store UTC, convert with the tenant time zone. | No |
+| 17 | Text transform order | Title-casing after lowercasing, which destroys acronyms | 208, 216 | Transform once, in the right order, and test with an acronym. | No |
+| 18 | Duplicate logic | The same formula or rule copied into several files | 228 | Put it in one module and import it. | No |
+| 19 | Race and atomicity | Read, then write, with no lock or transaction | 245 | Use one SQL statement or one RPC. | No |
+
+## What the tools can already catch
+
+Themes 6, 2 (partly), 13 (partly) and 11 (partly) can be caught by `npm run check` (typecheck, lint, tests) before the push and in CI. The rest need the PR template checklist. See the E1 PR for the check script.
+
+## Review of this catalog
+
+Add a new row when Copilot raises the same kind of finding on 2 PRs. Re-run the count every month with:
+
+    gh api repos/twinwicksllc/rankedceo-crm-production/pulls/comments --paginate --jq '.[] | select(.user.login=="Copilot" and .in_reply_to_id==null) | [.pull_request_url,.body[0:80]] | @tsv'
