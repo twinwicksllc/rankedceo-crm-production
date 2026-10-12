@@ -1069,11 +1069,14 @@ function ScoreBreakdown({
       label: "Overall Score",
       value: display.score,
       icon: "🏆",
-      weight: `${display.components.map((c) => c.contribution.toFixed(1)).join(" + ")} = ${display.score}`,
+      weight: `${display.components
+        .filter((c) => c.measured)
+        .map((c) => c.contribution.toFixed(1))
+        .join(" + ")} = ${display.score}`,
     },
     ...display.components.map((c) => ({
       label: c.label,
-      value: c.score ?? 0,
+      value: c.measured ? c.score : null,
       icon: icons[c.label] ?? "•",
       weight: c.measured
         ? `${Math.round(c.weight * 100)}% × ${c.score} = ${c.contribution.toFixed(1)} pts`
@@ -1090,7 +1093,13 @@ function ScoreBreakdown({
       }}
     >
       {metrics.map(({ label, value, icon, weight }, i) => {
-        const color = getScoreColor(value);
+        // Not measured: neutral color and a dash, never a red 0.
+        const color =
+          value == null
+            ? isLight
+              ? "rgba(15,23,42,0.45)"
+              : "rgba(255,255,255,0.45)"
+            : getScoreColor(value);
         const isPrimary = i === 0;
         return (
           <div
@@ -1118,7 +1127,7 @@ function ScoreBreakdown({
                 marginBottom: 6,
               }}
             >
-              {value}
+              {value ?? "—"}
             </div>
             <div
               style={{

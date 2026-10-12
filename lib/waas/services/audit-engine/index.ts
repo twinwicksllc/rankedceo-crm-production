@@ -356,12 +356,16 @@ export async function runFullAudit(
   const accessibilityScore =
     pageSpeed?.mobile.categoryScores.accessibility.score ?? 0;
   const overall = computeOverallScoreV2({
+    // Not measured unless every requested keyword search succeeded.
     visibility: searchVisibilityScore(
       rankReports.map((r) => r.targetResult.position),
+      totalKeywords,
     ),
-    // Only meaningful when we both measured rankings and have competitors.
+    // Only meaningful when every keyword was measured and competitors exist.
     competitive:
-      rankReports.length > 0 && competitorUrls.length > 0
+      rankReports.length > 0 &&
+      failedKeywordFetches === 0 &&
+      competitorUrls.length > 0
         ? 100 - gapAnalysis.opportunityScore
         : null,
     localPack: localPack ? positionToPoints(localPack.target.position) : null,

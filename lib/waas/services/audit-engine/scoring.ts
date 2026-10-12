@@ -68,11 +68,20 @@ export function positionToPoints(position: number | null | undefined): number {
   return 0;
 }
 
-/** Average points over every keyword checked; keywords where the site is not found count as 0. */
+/**
+ * Average points over every keyword requested; keywords where the site is not
+ * found count as 0. Returns null (not measured) when there are no results or
+ * when fewer keyword searches succeeded than were requested: a failed search
+ * is unknown, not "not found", and averaging only the successes would inflate
+ * the score during a partial provider outage.
+ */
 export function searchVisibilityScore(
   positions: Array<number | null>,
+  requestedKeywords: number = positions.length,
 ): number | null {
-  if (positions.length === 0) return null;
+  if (positions.length === 0 || positions.length < requestedKeywords) {
+    return null;
+  }
   const total = positions.reduce<number>(
     (sum, p) => sum + positionToPoints(p),
     0,

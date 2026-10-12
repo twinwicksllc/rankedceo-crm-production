@@ -38,6 +38,14 @@ test("searchVisibilityScore: unranked keywords count as 0, empty is null", () =>
   assert.equal(searchVisibilityScore([null, null, null]), 0);
 });
 
+test("searchVisibilityScore: failed keyword searches make it not measured, not inflated", () => {
+  // 3 keywords requested, only the best one came back
+  assert.equal(searchVisibilityScore([1], 3), null);
+  assert.equal(searchVisibilityScore([1, null, 10], 3), 53);
+  // default keeps the old behaviour (all positions given are all requested)
+  assert.equal(searchVisibilityScore([1]), 100);
+});
+
 test("v2: weights sum to 1 and score matches hand calculation", () => {
   const r = computeOverallScoreV2(full);
   const sum = r.components.reduce((s, c) => s + c.weight, 0);
