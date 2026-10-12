@@ -30,7 +30,7 @@ The editor's own label code (`order + 1`, so "1. Hero") assumes `order` starts a
 
 **Unverified:** whether live `sections_json` rows use 1-based `order` (as the generators suggest) or 0-based. This needs a read-only look at one real variant row, or a look at what the portal does on a live tenant. Until checked, I will not call it confirmed in production.
 
-This must be settled first, because reorder multiplies the problem.
+**Status: fixed in plan PR 1.** Edit paths, field ids and AI-regeneration paths now use the section's index in the stored `sections_json` array, and `order` is used only for display order. The fix is correct whether live rows are 0-based or 1-based, so the live-data check is no longer needed for the fix. It is still worth one look at a live tenant to see whether past client edits landed in the wrong section (see PR 1 notes). Old history events keep their stored paths; undo re-applies them as stored.
 
 ## 3. Recommended design
 

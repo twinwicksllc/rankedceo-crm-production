@@ -50,7 +50,7 @@ export interface EditableField {
   scope: "section" | "brand";
   /** Optional — section id when scope = 'section' */
   sectionId?: SectionId;
-  /** Optional — section order for stable scroll targeting */
+  /** Optional — the section's index in the stored sections_json array (same N as `sections[N]` in `path`) */
   sectionOrder?: number;
   /** Soft character-count hint for the input */
   maxLength?: number;
@@ -471,11 +471,22 @@ const SECTION_ARRAY_FIELDS: Partial<
 // Build editable fields for a single section
 // ---------------------------------------------------------------------------
 
-function fieldsForSection(section: SectionConfig): EditableField[] {
+/**
+ * `index` is the section's position in the STORED sections_json array. Edit
+ * paths (`sections[index]...`) are applied to that array, so they must use the
+ * array index, never `section.order` (which is 1-based in generated data and
+ * can have gaps). `position` is the 0-based display position after sorting by
+ * `order`; it is only used for the "1. Hero" label.
+ */
+function fieldsForSection(
+  section: SectionConfig,
+  index: number,
+  position: number,
+): EditableField[] {
   const out: EditableField[] = [];
-  const order = section.order;
+  const order = index;
   const sid = section.section;
-  const group = sectionLabel(sid, order);
+  const group = sectionLabel(sid, position);
   const content = (section.content ?? {}) as Record<string, unknown>;
 
   // Leaf scalar fields
@@ -777,13 +788,18 @@ export function buildEditableFields(
   const out: EditableField[] = [];
 
   // ---- Section visibility toggles (first group — always at the top) ----
-  const allSections = [...input.sections].sort(
-    (a, b) => (a.order ?? 0) - (b.order ?? 0),
-  );
-  for (const section of allSections) {
-    if (!section) continue;
+  // Keep each section's index in the stored array: edit paths address that
+  // array, while `order` only decides display order.
+  const allSections = input.sections
+    .map((section, index) => ({ section, index }))
+    .filter((entry) => Boolean(entry.section))
+    .sort(
+      (a, b) =>
+        (a.section.order ?? 0) - (b.section.order ?? 0) || a.index - b.index,
+    );
+  for (const { section, index } of allSections) {
     const sid = section.section;
-    const order = section.order;
+    const order = index;
     const label = SECTION_LABELS[sid] ?? sid;
     const isReq = REQUIRED_SECTION_IDS.has(sid);
 
@@ -806,10 +822,10 @@ export function buildEditableFields(
   out.push(...fieldsForBrandConfig(input.brandConfig));
 
   // ---- Per-section editable fields (only for enabled sections) ----
-  const enabledSections = allSections.filter((s) => s && s.enabled !== false);
-  for (const section of enabledSections) {
-    out.push(...fieldsForSection(section));
-  }
+  allSections.forEach(({ section, index }, position) => {
+    if (section.enabled === false) return;
+    out.push(...fieldsForSection(section, index, position));
+  });
 
   return out;
 }

@@ -149,3 +149,123 @@ test("buildEditableFields does not add config fields for sections with no config
   const configFields = fields.filter((f) => f.path.includes(".config."));
   assert.equal(configFields.length, 0);
 });
+
+// ---------------------------------------------------------------------------
+// Edit paths must address the stored array, not the 1-based `order` value.
+// Generators write order = index + 1 (see templates/registry.ts `ordered()`).
+// ---------------------------------------------------------------------------
+
+import { setValueAtPath, getValueAtPath } from "./content-paths";
+import type { JsonValue } from "./content-paths";
+
+function generated(): SectionConfig[] {
+  return [
+    {
+      section: "hero",
+      enabled: true,
+      order: 1,
+      config: {},
+      content: { headline: "HERO headline" },
+    },
+    {
+      section: "about",
+      enabled: true,
+      order: 2,
+      config: {},
+      content: { headline: "ABOUT headline" },
+    },
+    {
+      section: "faq",
+      enabled: true,
+      order: 3,
+      config: {},
+      content: { headline: "FAQ headline" },
+    },
+  ] as SectionConfig[];
+}
+
+function applyEdit(
+  sections: SectionConfig[],
+  path: string,
+  value: string,
+): SectionConfig[] {
+  const wrapped = { sections } as unknown as JsonValue;
+  const res = setValueAtPath(wrapped, path, value);
+  assert.ok(res.ok);
+  return (res as unknown as { result: { sections: SectionConfig[] } }).result
+    .sections;
+}
+
+test("editing a headline changes that section (1-based order data)", () => {
+  const sections = generated();
+  const fields = buildEditableFields({ sections, brandConfig: {} });
+
+  for (const [i, name] of [
+    [0, "HERO"],
+    [1, "ABOUT"],
+    [2, "FAQ"],
+  ] as const) {
+    const field = fields.find(
+      (f) =>
+        f.scope === "section" &&
+        f.path.endsWith(".content.headline") &&
+        f.value === `${name} headline`,
+    );
+    assert.ok(field, `${name} headline field exists`);
+    assert.equal(field?.path, `sections[${i}].content.headline`);
+
+    const after = applyEdit(sections, field!.path, "NEW");
+    assert.equal(after.length, 3, "no stray entry appended");
+    assert.equal((after[i].content as Record<string, string>).headline, "NEW");
+    // the other two are untouched
+    for (const j of [0, 1, 2].filter((x) => x !== i)) {
+      assert.deepEqual(after[j], sections[j]);
+    }
+  }
+});
+
+test("toggle path and id use the array index too", () => {
+  const fields = buildEditableFields({
+    sections: generated(),
+    brandConfig: {},
+  });
+  const toggles = fields.filter((f) => f.kind === "toggle");
+  assert.deepEqual(
+    toggles.map((t) => t.path),
+    ["sections[0].enabled", "sections[1].enabled", "sections[2].enabled"],
+  );
+  assert.deepEqual(
+    toggles.map((t) => t.sectionId),
+    ["hero", "about", "faq"],
+  );
+  // value read back through the same path matches the section
+  const wrapped = { sections: generated() } as unknown as JsonValue;
+  assert.equal(getValueAtPath(wrapped, "sections[1].enabled"), true);
+});
+
+test("array NOT sorted by order: paths follow the array, labels follow order", () => {
+  const [hero, about, faq] = generated();
+  // stored array order: faq, hero, about  (order values 3, 1, 2)
+  const sections = [faq, hero, about];
+  const fields = buildEditableFields({ sections, brandConfig: {} });
+
+  const heroField = fields.find((f) => f.value === "HERO headline");
+  assert.equal(heroField?.path, "sections[1].content.headline");
+  const faqField = fields.find((f) => f.value === "FAQ headline");
+  assert.equal(faqField?.path, "sections[0].content.headline");
+
+  // display group is numbered by sorted position: hero is 1st
+  assert.ok(heroField?.group.startsWith("1."), heroField?.group);
+  assert.ok(faqField?.group.startsWith("3."), faqField?.group);
+
+  const after = applyEdit(sections, heroField!.path, "NEW");
+  assert.equal(after.length, 3);
+  assert.equal((after[1].content as Record<string, string>).headline, "NEW");
+});
+
+test("order values with gaps still address the right array slot", () => {
+  const sections = generated().map((s, i) => ({ ...s, order: (i + 1) * 10 }));
+  const fields = buildEditableFields({ sections, brandConfig: {} });
+  const about = fields.find((f) => f.value === "ABOUT headline");
+  assert.equal(about?.path, "sections[1].content.headline");
+});

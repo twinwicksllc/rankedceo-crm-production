@@ -53,13 +53,19 @@ const EDIT_TYPE_ICONS: Record<EditType, string> = {
 };
 
 function formatPath(path: string): string {
-  // sections[0].content.headline → "Hero › Headline"
-  return path
-    .replace(/sections\[(\d+)\]\.content\./, "Section $1 › ")
-    .replace(/brand_config\./, "Brand › ")
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-    .replace(/\s*\.\s*/g, " › ");
+  // sections[0].content.headline → "Section 1 › Headline"
+  return (
+    path
+      // Path index is 0-based (position in sections_json); show it 1-based.
+      .replace(
+        /sections\[(\d+)\]\.content\./,
+        (_m, n: string) => `Section ${Number(n) + 1} › `,
+      )
+      .replace(/brand_config\./, "Brand › ")
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+      .replace(/\s*\.\s*/g, " › ")
+  );
 }
 
 function formatValue(val: string | null, editType: EditType): string {
