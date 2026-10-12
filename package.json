@@ -9,8 +9,9 @@
     "lint": "eslint . --ext .ts,.tsx",
     "lint:changed": "node scripts/lint-changed.mjs",
     "typecheck": "tsc --noEmit",
+    "typecheck:qa": "npm --prefix qa-agent run typecheck",
     "test": "tsx --test",
-    "check": "npm run typecheck && npm run lint:changed && npm test"
+    "check": "npm run typecheck && npm run typecheck:qa && npm run lint:changed && npm test"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

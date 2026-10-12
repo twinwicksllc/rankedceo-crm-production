@@ -34,6 +34,12 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Install QA agent dependencies
+        run: npm ci --prefix qa-agent
+
+      - name: Typecheck QA agent (excluded from the root tsconfig)
+        run: npm run typecheck:qa
+
       - name: Lint changed files
         run: node scripts/lint-changed.mjs origin/${{ github.base_ref }}
 
