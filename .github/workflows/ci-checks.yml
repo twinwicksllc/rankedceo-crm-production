@@ -1,0 +1,47 @@
+name: CI Checks
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Typecheck, lint (changed files), tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout (full history for changed-file lint)
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v7.0.0
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Install QA agent dependencies
+        run: npm ci --prefix qa-agent
+
+      - name: Typecheck QA agent (excluded from the root tsconfig)
+        run: npm run typecheck:qa
+
+      - name: Lint changed files
+        run: node scripts/lint-changed.mjs origin/${{ github.base_ref }}
+
+      - name: Unit tests
+        run: npm test

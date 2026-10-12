@@ -282,3 +282,16 @@ test("generateSeoDefaults: generates defaults when tenant data is minimal", () =
   assert.ok(defaults.meta_description.length >= 70);
   assert.equal(defaults.og_image_url, null);
 });
+
+test("generateMetaDescription: short USP is kept even when legal_name is very long", () => {
+  const usp = "Best plumbing in town";
+  const tenant = mockTenant({
+    legal_name: "A".repeat(300),
+    usp,
+    city: "Chicago",
+    state: "IL",
+  });
+  const desc = generateMetaDescription(tenant);
+  assert.ok(desc.includes(usp));
+  assert.ok(desc.length >= 70 && desc.length <= 160);
+});

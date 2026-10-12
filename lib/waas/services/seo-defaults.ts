@@ -42,8 +42,9 @@ export function generateMetaTitle(tenant: WaasTenant): string {
   }
 
   // Ensure minimum length
+  // Pad (never replace) so the business name and trade stay in the title.
   if (title.length < 20) {
-    title = businessName;
+    title = `${title} - Official Website`;
   }
 
   return title;
@@ -89,13 +90,12 @@ export function generateMetaDescription(tenant: WaasTenant): string {
     }
   }
 
-  // Ensure minimum length
+  // Ensure minimum length. A short USP/tagline is kept and padded with fixed
+  // generic text (no business name, so a long name can never push it past 160).
+  // The padding is 70+ chars on its own and the description is < 70 here, so
+  // the result is always 70-160 chars and the original text is always kept.
   if (description.length < 70) {
-    description = `${businessName} offers quality ${primaryTrade} services${locationSuffix}. Contact us today to learn more about how we can help your business succeed.`;
-    // Trim again if still too long
-    if (description.length > 160) {
-      description = description.substring(0, 157) + ".";
-    }
+    description = `${description} Contact us today to learn more about our services and how we can help you.`;
   }
 
   return description;
