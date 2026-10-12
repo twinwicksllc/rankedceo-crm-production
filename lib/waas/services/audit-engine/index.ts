@@ -20,7 +20,12 @@ import {
 import type { AuditReportData, AuditSeoProvider } from "../../types";
 import { computeGapAnalysis } from "./gap-analysis";
 import { buildLeaderboard, computeKeywordPerformance } from "./leaderboard";
-import { computeOverallScore } from "./scoring";
+import {
+  computeOverallScoreV2,
+  positionToPoints,
+  searchVisibilityScore,
+  SCORE_VERSION,
+} from "./scoring";
 
 interface CompetitorLocality {
   isLocal: boolean | null;
@@ -345,15 +350,27 @@ export async function runFullAudit(
   const performanceScore =
     pageSpeed?.mobile.categoryScores.performance.score ?? 0;
   const seoScore = pageSpeed?.mobile.categoryScores.seo.score ?? 0;
-  const mobileScore = pageSpeed?.mobile.categoryScores.performance.score ?? 0;
+  // Kept for stored-report compatibility. It is mobile performance (same as
+  // performance_score); the v2 score no longer counts it twice.
+  const mobileScore = performanceScore;
   const accessibilityScore =
     pageSpeed?.mobile.categoryScores.accessibility.score ?? 0;
-  const { score, grade } = computeOverallScore(
-    performanceScore,
-    seoScore,
-    mobileScore,
-    accessibilityScore,
-  );
+  const overall = computeOverallScoreV2({
+    visibility: searchVisibilityScore(
+      rankReports.map((r) => r.targetResult.position),
+    ),
+    // Only meaningful when we both measured rankings and have competitors.
+    competitive:
+      rankReports.length > 0 && competitorUrls.length > 0
+        ? 100 - gapAnalysis.opportunityScore
+        : null,
+    localPack: localPack ? positionToPoints(localPack.target.position) : null,
+    speed: pageSpeed ? performanceScore : null,
+    seo: pageSpeed ? seoScore : null,
+    accessibility: pageSpeed ? accessibilityScore : null,
+    bestPractices: pageSpeed?.mobile.categoryScores.bestPractices.score ?? null,
+  });
+  const { score, grade } = overall;
 
   // ── 4. Build report_data ─────────────────────────────────────────────────────────────────
   const providerMeta = {
@@ -423,34 +440,10 @@ export async function runFullAudit(
       seo_score: seoScore,
       mobile_score: mobileScore,
       accessibility_score: accessibilityScore,
-      overall_score_formula:
-        "0.40*performance + 0.30*seo + 0.20*mobile + 0.10*accessibility",
-      overall_score_components: [
-        {
-          label: "Performance",
-          weight: 0.4,
-          score: performanceScore,
-          contribution: Number((performanceScore * 0.4).toFixed(1)),
-        },
-        {
-          label: "SEO",
-          weight: 0.3,
-          score: seoScore,
-          contribution: Number((seoScore * 0.3).toFixed(1)),
-        },
-        {
-          label: "Mobile",
-          weight: 0.2,
-          score: mobileScore,
-          contribution: Number((mobileScore * 0.2).toFixed(1)),
-        },
-        {
-          label: "Accessibility",
-          weight: 0.1,
-          score: accessibilityScore,
-          contribution: Number((accessibilityScore * 0.1).toFixed(1)),
-        },
-      ],
+      score_version: SCORE_VERSION,
+      overall_score_formula: overall.formula,
+      overall_score_components: overall.components,
+      overall_score_not_measured: overall.notMeasured,
       top_search_result: keywordPerformance.topSearchResult,
       bottom_search_result: keywordPerformance.bottomSearchResult,
       mean_position: keywordPerformance.meanPosition,

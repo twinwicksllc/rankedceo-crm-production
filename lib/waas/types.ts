@@ -302,13 +302,19 @@ export interface AuditSummary {
   seo_score: number;
   mobile_score: number;
   accessibility_score: number;
+  /** 2 = visibility-based score (see audit-engine/scoring.ts). Missing = legacy formula. */
+  score_version?: number;
   overall_score_formula?: string;
   overall_score_components?: Array<{
     label: string;
     weight: number;
-    score: number;
+    /** null = not measured (weight was shared by the other components) */
+    score: number | null;
     contribution: number;
+    key?: string;
+    measured?: boolean;
   }>;
+  overall_score_not_measured?: string[];
   top_search_result?: {
     keyword: string;
     position: number | null;
