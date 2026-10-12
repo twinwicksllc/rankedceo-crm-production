@@ -16,6 +16,7 @@ import { LocationUnresolvedError } from "./audit-engine/location";
 import { extractDomain } from "./serper";
 import { buildAuditReportPath } from "@/lib/waas/utils/audit-report-url";
 import { sendAuditReportReadyEmail } from "./notifications";
+import { getDisplayScore } from "./audit-engine/scoring";
 
 export interface RunAuditJobParams {
   targetUrl: string;
@@ -202,14 +203,7 @@ export async function runAuditJob(
       const fullPdfUrl = `${baseUrl}/api/audit/${auditId}/pdf`;
 
       const summary = engineResult.reportData.summary;
-      const score = summary
-        ? Math.round(
-            summary.performance_score * 0.4 +
-              summary.seo_score * 0.3 +
-              summary.mobile_score * 0.2 +
-              summary.accessibility_score * 0.1,
-          )
-        : 0;
+      const score = summary ? getDisplayScore(summary).score : 0;
       const grade =
         ((engineResult.reportData as Record<string, unknown>)
           .grade as string) ?? "F";

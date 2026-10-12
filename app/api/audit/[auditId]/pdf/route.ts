@@ -3,7 +3,7 @@ import PDFDocument from "pdfkit";
 import { getWaasAdminClient } from "@/lib/waas/supabase";
 import { createClient } from "@/lib/supabase/server";
 import type { AuditReportData, WaasAudit } from "@/lib/waas/types";
-import { computeOverallScore } from "@/lib/waas/services/audit-engine/scoring";
+import { getDisplayScore } from "@/lib/waas/services/audit-engine/scoring";
 
 interface RequestContext {
   params: Promise<{ auditId: string }>;
@@ -164,12 +164,9 @@ export async function GET(_req: NextRequest, context: RequestContext) {
     // Initiative 2 (docs/waas/AUDIT_TO_WEBSITE_FLOW_RECOMMENDATIONS.md):
     // use the single shared formula so the on-screen report and this PDF
     // can never silently desync.
-    const { score, grade } = computeOverallScore(
-      report.summary?.performance_score ?? 0,
-      report.summary?.seo_score ?? 0,
-      report.summary?.mobile_score ?? 0,
-      report.summary?.accessibility_score ?? 0,
-    );
+    const display = report.summary ? getDisplayScore(report.summary) : null;
+    const score = display?.score ?? 0;
+    const grade = display?.grade ?? "F";
     const gColor = gradeColor(grade);
     const summary = report.summary;
     const keywords = Array.isArray((report as any).keywords_used)
@@ -179,8 +176,7 @@ export async function GET(_req: NextRequest, context: RequestContext) {
       ? ((report as any).leaderboard as any[])
       : [];
     const gapAnalysis = (report as any).gap_analysis as
-      | { nationalCompetitorNote?: string }
-      | undefined;
+      { nationalCompetitorNote?: string } | undefined;
     const localPack = (report as any).local_pack as
       | {
           keyword: string;
@@ -317,18 +313,20 @@ export async function GET(_req: NextRequest, context: RequestContext) {
     if (summary) {
       sectionHeader(doc, "Score Breakdown", "📊");
 
-      const metrics = [
-        {
-          label: "Performance (40%)",
-          value: Math.round(summary.performance_score),
-        },
-        { label: "SEO (30%)", value: Math.round(summary.seo_score) },
-        { label: "Mobile (20%)", value: Math.round(summary.mobile_score) },
-        {
-          label: "Accessibility (10%)",
-          value: Math.round(summary.accessibility_score),
-        },
-      ];
+      const metrics = (display?.components ?? [])
+        .filter((c) => c.measured && c.score != null)
+        .map((c) => ({
+          label: `${c.label} (${Math.round(c.weight * 100)}%)`,
+          value: Math.round(c.score as number),
+        }));
+      if (display && display.notMeasured.length > 0) {
+        doc
+          .fontSize(9)
+          .fillColor("#64748b")
+          .text(
+            `Not measured in this audit (their weight is shared by the rest): ${display.notMeasured.join(", ")}`,
+          );
+      }
 
       metrics.forEach((m) => {
         const barColor =
@@ -416,9 +414,14 @@ export async function GET(_req: NextRequest, context: RequestContext) {
           .fillColor("#d97706")
           .fontSize(8)
           .font("Helvetica")
-          .text(`🌍  ${gapAnalysis.nationalCompetitorNote}`, MARGIN, (doc as any).y, {
-            width: CONTENT_W,
-          });
+          .text(
+            `🌍  ${gapAnalysis.nationalCompetitorNote}`,
+            MARGIN,
+            (doc as any).y,
+            {
+              width: CONTENT_W,
+            },
+          );
         doc.moveDown(0.4);
       }
 

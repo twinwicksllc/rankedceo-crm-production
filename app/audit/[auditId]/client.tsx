@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { getAuditFunnelProperties } from "@/lib/analytics/audit-funnel";
 import { trackEvent } from "@/lib/analytics/track-event";
 import type { AuditReportData } from "@/lib/waas/types";
+import { getDisplayScore } from "@/lib/waas/services/audit-engine/scoring";
 import type { WaasAuditRow as WaasAudit } from "@/lib/waas/supabase";
 import { ScoreGauge } from "@/components/audit/score-gauge";
 import { RankingLeaderboard } from "@/components/audit/ranking-leaderboard";
@@ -368,15 +369,9 @@ function AuditReportClientContent({
 
   const report = audit.report_data as ExtendedReportData;
   const summary = report.summary;
-  const score = summary
-    ? Math.round(
-        summary.performance_score * 0.4 +
-          summary.seo_score * 0.3 +
-          summary.mobile_score * 0.2 +
-          summary.accessibility_score * 0.1,
-      )
-    : 0;
-  const grade = report.grade ?? gradeFromScore(score);
+  const display = summary ? getDisplayScore(summary) : null;
+  const score = display?.score ?? 0;
+  const grade = display?.grade ?? gradeFromScore(score);
   const targetDomain = extractDomain(audit.target_url);
 
   // ── Full report ───────────────────────────────────────────────────────────
@@ -429,15 +424,10 @@ function FullReport({
   const report = audit.report_data as ExtendedReportData;
   const targetDomain = extractDomain(audit.target_url);
   const summary = report.summary;
-  const score = summary
-    ? Math.round(
-        summary.performance_score * 0.4 +
-          summary.seo_score * 0.3 +
-          summary.mobile_score * 0.2 +
-          summary.accessibility_score * 0.1,
-      )
-    : 0;
-  const grade: "A" | "B" | "C" | "D" | "F" = gradeFromScore(score);
+  const display = summary ? getDisplayScore(summary) : null;
+  const score = display?.score ?? 0;
+  const grade: "A" | "B" | "C" | "D" | "F" =
+    display?.grade ?? gradeFromScore(score);
   const leaderboard = report.leaderboard ?? [];
   const gapAnalysis = report.gap_analysis;
   const pageSpeed = report.page_speed_full;
@@ -701,15 +691,7 @@ function HeroSection({
   const gradeColor = getGradeColor(grade);
   const scoreColor = getScoreColor(score);
   const isUrgent = score < 50;
-  const performanceScore = summary?.performance_score ?? 0;
-  const seoScore = summary?.seo_score ?? 0;
-  const mobileScore = summary?.mobile_score ?? 0;
-  const accessibilityScore = summary?.accessibility_score ?? 0;
-  const weightedRaw =
-    performanceScore * 0.4 +
-    seoScore * 0.3 +
-    mobileScore * 0.2 +
-    accessibilityScore * 0.1;
+  const display = summary ? getDisplayScore(summary) : null;
   const measuredKeywords = summary?.measured_keywords ?? 0;
   const evaluatedKeywords = summary?.evaluated_keywords ?? 0;
 
@@ -892,9 +874,16 @@ function HeroSection({
             color: isLight ? "rgba(15,23,42,0.82)" : "rgba(255,255,255,0.78)",
           }}
         >
-          (Performance {performanceScore} × 40%) + (SEO {seoScore} × 30%) +
-          (Mobile {mobileScore} × 20%) + (Accessibility {accessibilityScore} ×
-          10%) = {weightedRaw.toFixed(1)} → {score}
+          {display
+            ? display.components
+                .filter((c) => c.measured && c.score != null)
+                .map(
+                  (c) =>
+                    `(${c.label} ${c.score} × ${Math.round(c.weight * 100)}%)`,
+                )
+                .join(" + ")
+            : ""}{" "}
+          = {score}
         </div>
         <div
           style={{
@@ -1062,46 +1051,37 @@ function ScoreBreakdown({
 }) {
   const { theme } = useOnboardingTheme();
   const isLight = theme === "light";
-  const performanceContribution = summary.performance_score * 0.4;
-  const seoContribution = summary.seo_score * 0.3;
-  const mobileContribution = summary.mobile_score * 0.2;
-  const accessibilityContribution = summary.accessibility_score * 0.1;
-  const rawOverall =
-    performanceContribution +
-    seoContribution +
-    mobileContribution +
-    accessibilityContribution;
+  const display = getDisplayScore(summary);
+  const icons: Record<string, string> = {
+    "Google search visibility": "🔎",
+    "Competitive position": "🏁",
+    "Google Maps (local pack)": "📍",
+    "Site speed (mobile)": "⚡",
+    "On-page SEO": "🔍",
+    Accessibility: "♿",
+    "Best practices": "✅",
+    Performance: "⚡",
+    SEO: "🔍",
+    Mobile: "📱",
+  };
   const metrics = [
     {
-      label: "Overall SEO Score",
-      value: Math.round(rawOverall),
+      label: "Overall Score",
+      value: display.score,
       icon: "🏆",
-      weight: `${performanceContribution.toFixed(1)} + ${seoContribution.toFixed(1)} + ${mobileContribution.toFixed(1)} + ${accessibilityContribution.toFixed(1)} = ${rawOverall.toFixed(1)} → ${Math.round(rawOverall)}`,
+      weight: `${display.components
+        .filter((c) => c.measured)
+        .map((c) => c.contribution.toFixed(1))
+        .join(" + ")} = ${display.score}`,
     },
-    {
-      label: "Performance",
-      value: summary.performance_score,
-      icon: "⚡",
-      weight: `40% × ${summary.performance_score} = ${performanceContribution.toFixed(1)} pts`,
-    },
-    {
-      label: "SEO",
-      value: summary.seo_score,
-      icon: "🔍",
-      weight: `30% × ${summary.seo_score} = ${seoContribution.toFixed(1)} pts`,
-    },
-    {
-      label: "Mobile",
-      value: summary.mobile_score,
-      icon: "📱",
-      weight: `20% × ${summary.mobile_score} = ${mobileContribution.toFixed(1)} pts`,
-    },
-    {
-      label: "Accessibility",
-      value: summary.accessibility_score,
-      icon: "♿",
-      weight: `10% × ${summary.accessibility_score} = ${accessibilityContribution.toFixed(1)} pts`,
-    },
+    ...display.components.map((c) => ({
+      label: c.label,
+      value: c.measured ? c.score : null,
+      icon: icons[c.label] ?? "•",
+      weight: c.measured
+        ? `${Math.round(c.weight * 100)}% × ${c.score} = ${c.contribution.toFixed(1)} pts`
+        : "Not measured in this audit",
+    })),
   ];
 
   return (
@@ -1113,7 +1093,13 @@ function ScoreBreakdown({
       }}
     >
       {metrics.map(({ label, value, icon, weight }, i) => {
-        const color = getScoreColor(value);
+        // Not measured: neutral color and a dash, never a red 0.
+        const color =
+          value == null
+            ? isLight
+              ? "rgba(15,23,42,0.45)"
+              : "rgba(255,255,255,0.45)"
+            : getScoreColor(value);
         const isPrimary = i === 0;
         return (
           <div
@@ -1141,7 +1127,7 @@ function ScoreBreakdown({
                 marginBottom: 6,
               }}
             >
-              {value}
+              {value ?? "—"}
             </div>
             <div
               style={{
