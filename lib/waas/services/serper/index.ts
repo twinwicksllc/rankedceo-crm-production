@@ -25,7 +25,7 @@ export async function getSearchRankings(
   targetUrl: string,
   competitorUrls: string[],
   keyword: string,
-  location: string = "Chicago, IL",
+  location: string,
 ): Promise<SearchRankReport | null> {
   const targetDomain = extractDomain(targetUrl);
   const queries = buildQueryCandidates(keyword, location);
@@ -153,7 +153,7 @@ export async function getLocalPackRankings(
   targetUrl: string,
   competitorUrls: string[],
   keyword: string,
-  location: string = "Chicago, IL",
+  location: string,
 ): Promise<LocalPackReport | null> {
   const targetDomain = extractDomain(targetUrl);
 
@@ -208,8 +208,8 @@ export function generateKeywords(
   industry: string | null,
   location: string | null,
 ): string[] {
-  const loc = location ?? "Chicago, IL";
-  const city = loc.split(",")[0].trim();
+  // No default city (DEC-0003). With no location the keywords are generic.
+  const city = location?.split(",")[0]?.trim() ?? "";
 
   const industryKeywords: Record<string, string[]> = {
     plumbing: [
@@ -254,7 +254,9 @@ export function generateKeywords(
   };
 
   const key = industry?.toLowerCase() ?? "default";
-  return industryKeywords[key] ?? industryKeywords.default;
+  const chosen = industryKeywords[key] ?? industryKeywords.default;
+  // Collapse the gap left behind when there is no city.
+  return chosen.map((k) => k.replace(/\s+/g, " ").trim());
 }
 
 // ---------------------------------------------------------------------------

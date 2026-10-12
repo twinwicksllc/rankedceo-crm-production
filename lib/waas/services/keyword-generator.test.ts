@@ -5,6 +5,7 @@ import {
   parseAiKeywordPlanForTest,
   parseGeminiKeywordsForTest,
 } from "./keyword-generator";
+import { fallbackKeywords } from "./keyword-generator/ai-providers";
 
 test("parses valid JSON array keyword output", () => {
   const input = JSON.stringify([
@@ -88,4 +89,24 @@ test("returns null for non-json keyword plan payloads", () => {
   const result = parseAiKeywordPlanForTest(input);
 
   assert.equal(result, null);
+});
+
+test("fallback keywords never invent a city when location is unknown", () => {
+  const keywords = fallbackKeywords("https://example.com", "plumbing", null, 8);
+  assert.ok(keywords.length > 0);
+  for (const k of keywords) {
+    assert.doesNotMatch(k, /chicago/i);
+    assert.equal(k, k.trim());
+    assert.doesNotMatch(k, /\s{2,}/);
+  }
+});
+
+test("fallback keywords use the given city when known", () => {
+  const keywords = fallbackKeywords(
+    "https://example.com",
+    "plumbing",
+    "Nashville, TN",
+    8,
+  );
+  assert.ok(keywords.some((k) => /nashville/i.test(k)));
 });

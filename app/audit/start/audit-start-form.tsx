@@ -19,6 +19,7 @@ function AuditStartFormContent() {
   const { theme } = useOnboardingTheme();
   const isLight = theme === "light";
   const [targetUrl, setTargetUrl] = useState("");
+  const [location, setLocation] = useState("");
   const [competitors, setCompetitors] = useState<string[]>([""]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -37,6 +38,7 @@ function AuditStartFormContent() {
         body: JSON.stringify({
           target_url: targetUrl,
           competitor_urls: cleanedCompetitors,
+          location: location.trim() || undefined,
         }),
       });
 
@@ -191,6 +193,39 @@ function AuditStartFormContent() {
                     : "border border-cyan-200/15 bg-[#13284d] text-slate-100 placeholder:text-slate-500 focus:border-cyan-300/40 focus:ring-cyan-400/20"
                 }`}
               />
+            </div>
+
+            <div>
+              <label
+                htmlFor="location"
+                className={`mb-2 flex items-center gap-2 text-base font-semibold ${isLight ? "text-slate-700" : "text-slate-100"}`}
+              >
+                <span className={isLight ? "text-cyan-600" : "text-cyan-300"}>
+                  ◎
+                </span>
+                City, State{" "}
+                <span className="text-sm font-normal opacity-70">
+                  (optional)
+                </span>
+              </label>
+              <input
+                id="location"
+                type="text"
+                placeholder="e.g. Nashville, TN"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                className={`h-12 w-full rounded-xl px-4 outline-none transition focus:ring-2 ${
+                  isLight
+                    ? "border border-slate-300 bg-white text-slate-800 placeholder:text-slate-400 focus:border-cyan-400/70 focus:ring-cyan-400/20"
+                    : "border border-cyan-200/15 bg-[#13284d] text-slate-100 placeholder:text-slate-500 focus:border-cyan-300/40 focus:ring-cyan-400/20"
+                }`}
+              />
+              <p
+                className={`mt-1.5 text-sm ${isLight ? "text-slate-500" : "text-slate-400"}`}
+              >
+                We read this from your website when we can. Add it if your
+                site doesn&apos;t show your city.
+              </p>
             </div>
 
             <div>

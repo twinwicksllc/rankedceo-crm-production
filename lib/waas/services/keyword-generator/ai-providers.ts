@@ -1,7 +1,7 @@
 // lib/waas/services/keyword-generator/ai-providers.ts
 
 import { generateKeywords } from "../serper";
-import { GEMINI_API_BASE, GEMINI_MODEL, DEFAULT_LOCATION } from "./types";
+import { GEMINI_API_BASE, GEMINI_MODEL } from "./types";
 import type { SiteSignals, AiKeywordPlan } from "./types";
 import { normalizeKeyword, dedupeAndLimit } from "./text-utils";
 
@@ -77,12 +77,15 @@ export function fallbackKeywords(
   max: number,
 ): string[] {
   const seed = generateKeywords(targetUrl, industry, location);
-  const city = (location ?? DEFAULT_LOCATION).split(",")[0]?.trim() || "local";
+  // No default city: when the location is unknown the keywords are generic.
+  // The audit engine refuses to search without a resolved location anyway.
+  const city = location?.split(",")[0]?.trim() ?? "";
+  const join = (...parts: string[]) => parts.filter(Boolean).join(" ");
 
   const extras = [
-    `${industry ?? "local business"} near me ${city}`,
-    `${industry ?? "service"} ${city} reviews`,
-    `${industry ?? "service"} ${city}`,
+    join(industry ?? "local business", "near me", city),
+    join(industry ?? "service", city, "reviews"),
+    join(industry ?? "service", city),
   ];
 
   return dedupeAndLimit([...seed, ...extras], max);

@@ -722,6 +722,8 @@ function HeroSection({
         body: JSON.stringify({
           target_url: audit.target_url,
           competitor_urls: audit.competitor_urls,
+          // Keep the market the audit was run for (DEC-0003).
+          location: audit.location_detected ?? undefined,
           skip_cache: true,
         }),
       });

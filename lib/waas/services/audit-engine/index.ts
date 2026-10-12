@@ -9,6 +9,7 @@ import {
   type LocalPackReport,
 } from "../serper";
 import { extractCityFromAddress } from "../serper/location-utils";
+import { LocationUnresolvedError, resolveAuditLocation } from "./location";
 import { generateIndustryKeywordPlan } from "../keyword-generator";
 import { collectSiteSignals } from "../keyword-generator/site-scraper";
 import {
@@ -106,11 +107,18 @@ export async function runFullAudit(
     location,
     5,
   );
-  const detectedLocation =
-    location ?? keywordPlan.detectedLocation ?? "Chicago, IL";
-  const searchLocation =
-    extractCityFromAddress(keywordPlan.detectedAddress ?? null) ??
-    detectedLocation;
+  // DEC-0003: location comes from the intake form or the client's website.
+  // There is no default city. If we cannot resolve one, stop before spending
+  // any search/PageSpeed calls and send the audit to manual review.
+  const resolvedLocation = resolveAuditLocation({
+    explicit: location,
+    detectedLocation: keywordPlan.detectedLocation,
+    detectedAddress: keywordPlan.detectedAddress,
+  });
+  if (!resolvedLocation) {
+    throw new LocationUnresolvedError();
+  }
+  const { detectedLocation, searchLocation } = resolvedLocation;
   const keywords = keywordPlan.keywords;
   const totalKeywords = keywords.length;
   let manualReview = false;

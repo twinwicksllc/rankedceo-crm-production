@@ -1,6 +1,5 @@
 // lib/waas/services/keyword-generator/index.ts
 
-import { DEFAULT_LOCATION } from "./types";
 import type { KeywordGenerationResult, AiKeywordPlan } from "./types";
 import { normalizeTargetUrl, dedupeAndLimit } from "./text-utils";
 import { collectSiteSignals } from "./site-scraper";
@@ -33,7 +32,7 @@ export async function generateIndustryKeywordPlan(
   const siteSignals = await collectSiteSignals(normalizedUrl);
 
   const fallbackLocation =
-    location ?? siteSignals.locationHint ?? DEFAULT_LOCATION;
+    location ?? siteSignals.locationHint ?? null;
   const fallbackIndustry = industry ?? null;
   const fallback = fallbackKeywords(
     normalizedUrl,
