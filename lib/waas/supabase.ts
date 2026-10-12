@@ -16,6 +16,7 @@ import type {
   AuditSeoProvider,
   AuditReportData,
 } from "./types";
+import { locationMatchesRequest } from "./services/audit-engine/location";
 
 // ---------------------------------------------------------------------------
 // Extended audit row — includes columns added in migrations 003 & 004
@@ -417,6 +418,7 @@ export async function resolveTenantByHostname(
 export async function getRecentAuditRecord(
   targetUrl: string,
   competitorUrls: string[],
+  requestedLocation?: string | null,
 ): Promise<string | null> {
   try {
     const client = getRawAdminClient();
@@ -425,7 +427,7 @@ export async function getRecentAuditRecord(
     // Convert to sorted array strings to compare exactly (or reasonably close)
     const { data, error } = await client
       .from("audits")
-      .select("id, competitor_urls")
+      .select("id, competitor_urls, location_detected")
       .eq("target_url", targetUrl)
       .eq("status", "completed")
       .gte("created_at", twentyFourHoursAgo)
@@ -446,7 +448,9 @@ export async function getRecentAuditRecord(
       const sortedDbComps = [...dbComps].sort();
       if (
         sortedTargetComps.length === sortedDbComps.length &&
-        sortedTargetComps.every((val, index) => val === sortedDbComps[index])
+        sortedTargetComps.every((val, index) => val === sortedDbComps[index]) &&
+        // A cached audit is only reusable for the same market (DEC-0003).
+        locationMatchesRequest(requestedLocation, record.location_detected)
       ) {
         return record.id;
       }

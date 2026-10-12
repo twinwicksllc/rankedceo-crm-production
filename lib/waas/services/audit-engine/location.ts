@@ -44,11 +44,34 @@ function clean(value: string | null | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
+/** Normalizes a location for comparison ("Nashville,  TN" == "nashville, tn"). */
+export function normalizeLocationKey(value: string | null | undefined): string {
+  return (value ?? "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .replace(/\s*,\s*/g, ",")
+    .trim();
+}
+
+/**
+ * True when a cached audit's stored market matches the requested one.
+ * No requested location means "any market is fine" (the site decides).
+ */
+export function locationMatchesRequest(
+  requested: string | null | undefined,
+  stored: string | null | undefined,
+): boolean {
+  const want = normalizeLocationKey(requested);
+  if (!want) return true;
+  return normalizeLocationKey(stored) === want;
+}
+
 /**
  * Returns the resolved location, or null when none can be determined.
- * Precedence for the label: intake > site/AI detected > site address city.
- * The search location prefers the city parsed from the site address, which
- * matches how the engine behaved before this change.
+ * The label and the search location both follow the same precedence:
+ * intake > city parsed from the site address > site/AI detected.
+ * (Without an intake value the site address city is preferred for search,
+ * which matches how the engine behaved before this change.)
  */
 export function resolveAuditLocation(
   input: ResolveAuditLocationInput,
@@ -68,7 +91,8 @@ export function resolveAuditLocation(
 
   return {
     detectedLocation,
-    searchLocation: addressCity ?? detectedLocation,
+    // An explicit intake location is never overridden by the site address.
+    searchLocation: explicit ?? addressCity ?? detectedLocation,
     source,
   };
 }

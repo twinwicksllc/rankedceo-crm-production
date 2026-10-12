@@ -1,7 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { LocationUnresolvedError, resolveAuditLocation } from "./location";
+import {
+  LocationUnresolvedError,
+  locationMatchesRequest,
+  normalizeLocationKey,
+  resolveAuditLocation,
+} from "./location";
 
 test("returns null when nothing is known (no default city)", () => {
   const result = resolveAuditLocation({
@@ -67,7 +72,7 @@ test("falls back to the city parsed from the site address", () => {
   assert.equal(result.source, "site_address");
 });
 
-test("search location prefers the site address city", () => {
+test("without intake, search location prefers the site address city", () => {
   const result = resolveAuditLocation({
     explicit: null,
     detectedLocation: "Nashville",
@@ -76,6 +81,34 @@ test("search location prefers the site address city", () => {
   assert.ok(result);
   assert.equal(result.detectedLocation, "Nashville");
   assert.equal(result.searchLocation, "Franklin, TN");
+});
+
+test("intake location is never overridden by the site address", () => {
+  const result = resolveAuditLocation({
+    explicit: "Nashville, TN",
+    detectedLocation: "Austin, TX",
+    detectedAddress: "123 Main St, Franklin, TN 37064",
+  });
+  assert.ok(result);
+  assert.equal(result.detectedLocation, "Nashville, TN");
+  assert.equal(result.searchLocation, "Nashville, TN");
+  assert.equal(result.source, "intake");
+});
+
+test("normalizeLocationKey ignores case and spacing", () => {
+  assert.equal(normalizeLocationKey(" Nashville ,  TN "), "nashville,tn");
+  assert.equal(normalizeLocationKey(null), "");
+});
+
+test("cache: no requested location accepts any stored market", () => {
+  assert.equal(locationMatchesRequest(null, "Austin, TX"), true);
+  assert.equal(locationMatchesRequest("  ", null), true);
+});
+
+test("cache: requested market must match the stored market", () => {
+  assert.equal(locationMatchesRequest("Nashville, TN", "nashville,  tn"), true);
+  assert.equal(locationMatchesRequest("Nashville, TN", "Austin, TX"), false);
+  assert.equal(locationMatchesRequest("Nashville, TN", null), false);
 });
 
 test("LocationUnresolvedError has a client-actionable message", () => {
