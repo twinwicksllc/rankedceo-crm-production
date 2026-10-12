@@ -3,7 +3,6 @@
 export const GEMINI_API_BASE =
   "https://generativelanguage.googleapis.com/v1beta";
 export const GEMINI_MODEL = "gemini-2.5-flash";
-export const DEFAULT_LOCATION = "Chicago, IL";
 export const SITE_FETCH_TIMEOUT_MS = 12000;
 export const MAX_SITE_TEXT_CHARS = 12000;
 

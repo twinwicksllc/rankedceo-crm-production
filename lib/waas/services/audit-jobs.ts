@@ -12,6 +12,7 @@
 import { updateAuditRecord } from "@/lib/waas/supabase";
 import type { WaasAuditUpdate } from "@/lib/waas/supabase";
 import { runFullAudit } from "./audit-engine";
+import { LocationUnresolvedError } from "./audit-engine/location";
 import { extractDomain } from "./serper";
 import { buildAuditReportPath } from "@/lib/waas/utils/audit-report-url";
 import { sendAuditReportReadyEmail } from "./notifications";
@@ -133,11 +134,17 @@ export async function runAuditJob(
     } catch (engineErr) {
       console.error(`[Audit Jobs] Engine error for audit ${auditId}:`, engineErr);
 
+      const locationMissing = engineErr instanceof LocationUnresolvedError;
+
       await updateAuditRecord(auditId, {
         status: "failed",
-        error_message: String(engineErr).slice(0, 500),
+        error_message: locationMissing
+          ? engineErr.message
+          : String(engineErr).slice(0, 500),
         manual_review: true,
-        manual_review_note: `Engine exception: ${String(engineErr).slice(0, 300)}`,
+        manual_review_note: locationMissing
+          ? engineErr.message
+          : `Engine exception: ${String(engineErr).slice(0, 300)}`,
       });
 
       await notifyAdminAuditFailure(
