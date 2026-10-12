@@ -1,6 +1,6 @@
 # B4 + B3: One builder, client restructure, admin handoff (plan)
 
-Status: **DRAFT for Tommy's approval. No code written yet.**
+Status: **APPROVED by Tommy (2026-10-12). No code written yet.** Decisions are in section 5.
 Decisions this plan serves: DEC-0007 (one consistent builder for the client, final handed to admins for review and upsell), B3 (let the client restructure), DEC-0005/0006/0008 (extra pages, lead form, analytics are team-sold).
 Verified against `main` @ `20b5b30` by reading code. Anything not verified is marked **unverified**.
 
@@ -55,37 +55,33 @@ Same pattern as Shopify, Squarespace and Wix, with guardrails:
 
 Guardrails (enforced on the server, not only in the UI):
 - Hero is always first and cannot be removed or hidden. Booking cannot be removed or hidden (matches today's `REQUIRED_SECTION_IDS`).
-- Maximum count per type (proposal: 1 for hero, booking, trust, financing, reviews; up to 3 for text-style sections such as services, about, faq, gallery).
+- Maximum copies per section type: **3**, the same number as the client's regeneration limit (DEC-0015). Hero and booking are limited to 1 because they are locked. The limit is one constant in code (`MAX_SECTIONS_PER_TYPE = 3`), not tied to the `client_regen_quota` database column, so changing one does not change the other.
 - The reviews section is not offered in the add library until real reviews can be entered (see DEC-0004). Otherwise the client could add the fake placeholder reviews back.
 - Every change creates a version snapshot and a history event, like today's edits, so the team can see and undo it.
 
 One server action, `applyLayoutChange`, validates the whole new layout, renumbers `order` consistently, saves, and writes the version and history rows. It uses the same permission gate as `updateClientVariantContent` (`canClientEditVariant`).
 
 ### 3.4 Onboarding step 6
-The block builder stops being a separate product. Options are in section 5, question 1.
+The block builder stops being a separate product. Onboarding step 6 becomes the same Layout editor the client gets later (DEC-0014). The 8-block editor and its `website_blocks` / `website_html` columns are retired in PR 5 (the columns stay in the database untouched; no migration).
 
 ### 3.5 Admin handoff (DEC-0007)
-The admin already has client review and variant tools. Proposed addition, later: an "Add-ons" panel on the tenant review page where the team marks what they are selling this client (extra pages, lead form, analytics, Terms/Privacy) so the review conversation and the upsell live in one place. Flags only at first; the add-ons themselves are built when sold (DEC-0005/0006/0008).
+Out of scope for this stage (DEC-0016). The admin already has client review and variant tools. What admins do after a client onboards (review, upsell, add-ons such as extra pages, lead form, analytics, Terms/Privacy) is a separate, larger piece of planning and will get its own plan. This plan only has to make sure the client's finished layout is saved in the same section model the admin tools already read, so the handoff needs no conversion.
 
 ## 4. Delivery in small PRs (each reviewed and merged by Tommy)
 
-1. **Fix the order/index mismatch** (small, with tests). Needs the live-data check first.
+1. **Fix the order/index mismatch** (small, with tests). Needs the live-data check first (see section 6).
 2. **Stable ids + id-based paths + back-compat**, with tests for the path patcher and back-fill.
 3. **`applyLayoutChange` server action + validation**, with tests for every guardrail.
 4. **Client Layout tab UI** (reorder, show/hide, add, duplicate, remove).
-5. **Onboarding step 6 replacement** (per question 1).
-6. **Admin Add-ons / handoff panel.**
+5. **Onboarding step 6 replacement** with the Layout editor (DEC-0014).
 
 Each PR runs typecheck, tests and lint on the files it changes before pushing (DEC-0012). PR 1 and 2 are the riskiest because they touch how every edit is saved.
 
-## 5. Questions for Tommy
+## 5. Decisions (Tommy, 2026-10-12)
 
-1. **What should onboarding step 6 become?**
-   - A (recommended): the same Layout editor the client gets later (arrange, show/hide, add from library). One consistent builder.
-   - B: keep free-form blocks, but as one "Custom section" type inside the section system, so block content actually reaches the live site.
-   - C: remove step 6 and let clients edit after the template is chosen.
-2. **Max copies per section type**: accept the proposal in 3.3, or change?
-3. **Admin Add-ons panel**: build in this round, or after the client Layout tab ships?
+- **DEC-0014:** Onboarding step 6 becomes the same Layout editor the client gets later. One consistent builder.
+- **DEC-0015:** Maximum copies per section type = 3, matching the client regeneration limit (verified: `client_regen_quota` defaults to 3 in `supabase/migrations/waas/026_waas_variant_regenerations.sql`). Hero and booking: 1.
+- **DEC-0016:** The admin Add-ons panel is not part of client onboarding. It moves to a separate "what do admins do once a client onboards" plan.
 
 ## 6. Not verified
 
