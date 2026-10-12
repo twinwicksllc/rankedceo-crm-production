@@ -15,8 +15,18 @@ import {
   serializeForHistory,
   type JsonValue,
 } from "@/lib/waas/client-edit/content-paths";
+import {
+  resolveEditPathForVariant,
+  SECTION_ID_PATTERN,
+} from "@/lib/waas/sections/section-ids";
+import type { SectionConfig } from "@/lib/waas/templates/types";
 import { getAdminClient, classifyEditType } from "./_shared";
 import type { ActionResult, EditType } from "./_shared";
+
+// `sections[N].config.<key>` or `sections[id=<id>].config.<key>`
+const CONFIG_PATH_RE = new RegExp(
+  `^sections\\[(?:\\d+|id=${SECTION_ID_PATTERN})\\]\\.config\\.([a-zA-Z0-9_]+)$`,
+);
 
 // =============================================================================
 // 1. getClientEditSession
@@ -81,7 +91,7 @@ export async function updateClientVariantContent(
   // drive real runtime behavior (dispatch fee, response window, Q&A caps,
   // JSON-LD toggle), so we also validate the *value* independent of any
   // client-side coercion, mirroring the NaN-guard fix in section rendering.
-  const configKeyMatch = path.match(/^sections\[\d+\]\.config\.([a-zA-Z0-9_]+)$/);
+  const configKeyMatch = path.match(CONFIG_PATH_RE);
   if (configKeyMatch) {
     const valueCheck = validateConfigValue(configKeyMatch[1], newValue);
     if (!valueCheck.valid) {
@@ -118,15 +128,28 @@ export async function updateClientVariantContent(
       client_edit_count: number | null;
     };
 
-    // Wrap the array in { sections: [...] } so path semantics read naturally
-    const wrapped = {
-      sections: Array.isArray(variant.sections_json)
-        ? variant.sections_json
-        : [],
-    };
+    // Numeric paths are only accepted while the variant has no stable ids
+    // (a numeric path could point at a different section after a reorder).
+    // Ids themselves are written by generation and by the one-time backfill
+    // (scripts/backfill-section-ids.ts), never as a side effect of an edit.
+    const storedSections = Array.isArray(variant.sections_json)
+      ? (variant.sections_json as unknown as SectionConfig[])
+      : [];
+    const resolved = resolveEditPathForVariant(storedSections, path);
+    if (!resolved.ok) {
+      return { success: false, error: resolved.error };
+    }
+    const patchPath = resolved.path;
 
-    const oldValue = getValueAtPath(wrapped as JsonValue, path);
-    const patchResult = setValueAtPath(wrapped as JsonValue, path, newValue);
+    // Wrap the array in { sections: [...] } so path semantics read naturally
+    const wrapped = { sections: storedSections };
+
+    const oldValue = getValueAtPath(wrapped as unknown as JsonValue, patchPath);
+    const patchResult = setValueAtPath(
+      wrapped as unknown as JsonValue,
+      patchPath,
+      newValue,
+    );
 
     if (!patchResult.ok) {
       return { success: false, error: patchResult.error };
@@ -143,6 +166,9 @@ export async function updateClientVariantContent(
       .update({
         sections_json: newSections,
         client_last_edited_at: now,
+        // No updated_at trigger for this table in the repo migrations, so set it
+        // here; concurrent writers (e.g. the section-id backfill) rely on it.
+        updated_at: now,
         client_edit_count: (variant.client_edit_count ?? 0) + 1,
       })
       .eq("id", variant.id);

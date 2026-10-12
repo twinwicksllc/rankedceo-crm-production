@@ -13,6 +13,10 @@ import {
   serializeForHistory,
   type JsonValue,
 } from "@/lib/waas/client-edit/content-paths";
+import {
+  isNumericSectionPath,
+  isPathUndoable,
+} from "@/lib/waas/sections/section-ids";
 import { getAdminClient } from "./_shared";
 import type { ActionResult, EditType } from "./_shared";
 import { updateClientVariantContent } from "./content-edit";
@@ -33,7 +37,17 @@ export interface EditHistoryEvent {
   aiIntent: string | null;
   createdAt: string;
   variantIndex: number;
+  /**
+   * False for an old position-based path (`sections[3]...`) on a variant that
+   * now has stable section ids: the position may point at a different section
+   * after a reorder, so the edit is shown read-only and cannot be undone.
+   */
+  undoable: boolean;
 }
+
+/** Message shown when an old position-based edit can no longer be undone. */
+const LEGACY_PATH_UNDO_MESSAGE =
+  "This older edit can no longer be undone because the layout has changed since.";
 
 export async function getClientEditHistory(
   reviewToken: string,
@@ -79,6 +93,21 @@ export async function getClientEditHistory(
       };
     }
 
+    // Each variant's stored sections (decides if an old numeric path is undoable)
+    const sectionsByVariant = new Map<number, unknown[]>();
+    const { data: variantRows } = await supabase
+      .from("tenant_site_variants")
+      .select("variant_index, sections_json")
+      .eq("tenant_id", tenantId);
+    for (const v of (variantRows ?? []) as Array<{
+      variant_index: number;
+      sections_json: unknown;
+    }>) {
+      if (Array.isArray(v.sections_json)) {
+        sectionsByVariant.set(v.variant_index, v.sections_json);
+      }
+    }
+
     const events: EditHistoryEvent[] = (rows ?? []).map((row) => {
       const r = row as {
         id: string;
@@ -101,6 +130,10 @@ export async function getClientEditHistory(
         aiIntent: r.ai_intent,
         createdAt: r.created_at,
         variantIndex: r.variant_index,
+        undoable: isPathUndoable(
+          r.field_path,
+          sectionsByVariant.get(r.variant_index) ?? [],
+        ),
       };
     });
 
@@ -282,6 +315,21 @@ export async function undoClientEdit(
     // Security: must belong to this tenant and this review token
     if (ev.tenant_id !== tenantId || ev.review_token_hash !== tokenHash) {
       return { success: false, error: "Edit event not found." };
+    }
+
+    // Old position-based paths are unsafe once sections have stable ids.
+    if (isNumericSectionPath(ev.field_path)) {
+      const { data: variantRow } = await supabase
+        .from("tenant_site_variants")
+        .select("sections_json")
+        .eq("tenant_id", tenantId)
+        .eq("variant_index", ev.variant_index)
+        .maybeSingle();
+      const stored = (variantRow as { sections_json?: unknown } | null)
+        ?.sections_json;
+      if (Array.isArray(stored) && !isPathUndoable(ev.field_path, stored)) {
+        return { success: false, error: LEGACY_PATH_UNDO_MESSAGE };
+      }
     }
 
     // Cannot undo if there is no previous value to restore

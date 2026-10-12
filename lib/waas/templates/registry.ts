@@ -1570,19 +1570,25 @@ export function resolveSections(
     return [...templateSections].sort((a, b) => a.order - b.order);
   }
 
-  // Build a map of tenant overrides by section id
-  const overrideMap = new Map(tenantOverrides.map((s) => [s.section, s]));
+  // Group tenant overrides by section type. A type can appear more than once
+  // (duplicated sections), so this is a list per type, not a single entry.
+  const overridesByType = new Map<string, SectionConfig[]>();
+  for (const override of tenantOverrides) {
+    const list = overridesByType.get(override.section) ?? [];
+    list.push(override);
+    overridesByType.set(override.section, list);
+  }
 
-  // Merge: tenant overrides win, template fills missing
-  const merged = templateSections.map((templateSection) => {
-    const override = overrideMap.get(templateSection.section);
-    return override
-      ? {
-          ...templateSection,
-          ...override,
-          config: { ...templateSection.config, ...override.config },
-        }
-      : templateSection;
+  // Merge: tenant overrides win, template fills missing types. Every tenant
+  // section of a type is kept (each merged over the template defaults).
+  const merged = templateSections.flatMap((templateSection) => {
+    const overrides = overridesByType.get(templateSection.section);
+    if (!overrides) return [templateSection];
+    return overrides.map((override) => ({
+      ...templateSection,
+      ...override,
+      config: { ...templateSection.config, ...override.config },
+    }));
   });
 
   // Include override-only sections not in the base template

@@ -2,6 +2,7 @@
 
 import { resolveClientEditSession } from "@/lib/waas/client-edit/edit-session";
 import type { SectionConfig, SectionId } from "@/lib/waas/templates/types";
+import { isValidSectionId } from "@/lib/waas/sections/section-ids";
 import { getAdminClient } from "./_shared";
 import type { ActionResult } from "./_shared";
 
@@ -29,6 +30,12 @@ export interface RegenerateSectionArgs {
   variantIndex: number;
   /** The section id to regenerate, e.g. "hero", "about", "faq". */
   sectionId: SectionId;
+  /**
+   * The section's stable id (e.g. "services-k3f9"). When present it picks the
+   * exact section, so a duplicate is not confused with the first of its type.
+   * Falls back to `sectionId` (type) for variants that have no ids yet.
+   */
+  sectionRef?: string;
   /**
    * Optional freeform client hint forwarded to the model verbatim,
    * e.g. "make it punchier" or "focus on 24/7 emergency service".
@@ -192,7 +199,7 @@ function buildSectionRegeneratePrompt(
 export async function regenerateSection(
   args: RegenerateSectionArgs,
 ): Promise<ActionResult<RegenerateSectionResult>> {
-  const { reviewToken, variantIndex, sectionId, hint } = args;
+  const { reviewToken, variantIndex, sectionId, sectionRef, hint } = args;
 
   // --- Permission gate ---
   const sessionResult = await resolveClientEditSession(reviewToken);
@@ -266,7 +273,11 @@ export async function regenerateSection(
     : [];
 
   // Paths address the stored array, so use the array index, not `order`.
-  const sectionIndex = sections.findIndex((s) => s.section === sectionId);
+  const sectionIndex = sections.findIndex((s) =>
+    sectionRef && isValidSectionId(sectionRef)
+      ? s?.id === sectionRef && s.section === sectionId
+      : s?.section === sectionId,
+  );
   const section = sectionIndex >= 0 ? sections[sectionIndex] : undefined;
   if (!section) {
     return {
@@ -379,7 +390,9 @@ export async function regenerateSection(
   const fields: RegeneratedField[] = leafFields
     .filter((lf) => rawResponse[lf.key] !== undefined)
     .map((lf) => ({
-      path: `sections[${sectionIndex}].content.${lf.key}`,
+      path: `sections[${
+        isValidSectionId(section.id) ? `id=${section.id}` : sectionIndex
+      }].content.${lf.key}`,
       label: lf.label,
       original:
         existingContent[lf.key] != null ? String(existingContent[lf.key]) : "",

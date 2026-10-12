@@ -1,5 +1,6 @@
 // RankedCEO WaaS — Section validation & normalisation helpers (no 'use server')
 import type { SectionConfig, SectionId } from "@/lib/waas/templates/types";
+import { assignMissingIds } from "@/lib/waas/sections/section-ids";
 
 export function toSectionConfigList(value: unknown): SectionConfig[] {
   if (!Array.isArray(value)) return [];
@@ -24,7 +25,7 @@ export function getCoreSectionFailures(enabledSections: string[]): string[] {
 export function normalizeVariantSections(
   sections: SectionConfig[],
 ): SectionConfig[] {
-  return [...sections]
+  const normalized = [...sections]
     .sort((a, b) => a.order - b.order)
     .map((section, index) => ({
       ...section,
@@ -34,6 +35,8 @@ export function normalizeVariantSections(
           ? section.config
           : {},
     }));
+  // Every saved layout carries stable ids (existing ids are kept).
+  return assignMissingIds(normalized);
 }
 
 function readContentString(content: unknown, key: string): string | null {

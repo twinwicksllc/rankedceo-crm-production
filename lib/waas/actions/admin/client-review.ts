@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import type { SiteVariantRecord } from "@/lib/waas/types";
 import type { SectionConfig, SectionId } from "@/lib/waas/templates/types";
+import { assignMissingIds } from "@/lib/waas/sections/section-ids";
 import { getTemplate } from "@/lib/waas/templates/registry";
 import { getAdminClient, isMissingSchemaTable } from "./_shared";
 import type { ActionResult } from "./_shared";
@@ -545,9 +546,11 @@ function setSectionConfig(
 }
 
 function normalizeSectionOrder(sections: SectionConfig[]): SectionConfig[] {
-  return [...sections]
-    .sort((a, b) => a.order - b.order)
-    .map((section, index) => ({ ...section, order: index + 1 }));
+  return assignMissingIds(
+    [...sections]
+      .sort((a, b) => a.order - b.order)
+      .map((section, index) => ({ ...section, order: index + 1 })),
+  );
 }
 
 async function resolveTenantIdFromReviewKey(

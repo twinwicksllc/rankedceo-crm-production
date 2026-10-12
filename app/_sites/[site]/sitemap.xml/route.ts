@@ -137,9 +137,10 @@ export async function GET(
         : [];
 
     const isSectionEnabled = (id: string): boolean => {
-      const found = activeSections.find((s) => s.section === id);
+      // A type can appear more than once; the anchor is live if any copy is on.
+      const copies = activeSections.filter((s) => s.section === id);
       // If no override found, default to enabled (template default)
-      return found ? found.enabled : true;
+      return copies.length > 0 ? copies.some((s) => s.enabled) : true;
     };
 
     // Build URL list

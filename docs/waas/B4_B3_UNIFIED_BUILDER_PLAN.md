@@ -1,6 +1,6 @@
 # B4 + B3: One builder, client restructure, admin handoff (plan)
 
-Status: **APPROVED by Tommy (2026-10-12). No code written yet.** Decisions are in section 5.
+Status: **APPROVED by Tommy (2026-10-12). PR 1 merged (#279); PR 2 (stable ids) open as a draft.** Decisions are in section 5.
 Decisions this plan serves: DEC-0007 (one consistent builder for the client, final handed to admins for review and upsell), B3 (let the client restructure), DEC-0005/0006/0008 (extra pages, lead form, analytics are team-sold).
 Verified against `main` @ `20b5b30` by reading code. Anything not verified is marked **unverified**.
 
@@ -41,7 +41,7 @@ Keep the section system as the single source of truth. It already renders the li
 Add an `id` to every `SectionConfig` (for example `hero`, `about`, `services-2`). Addressing edits by position breaks the moment sections move; addressing by id does not.
 
 - Edit paths gain an id form: `sections[id=services-2].content.headline`. Numeric paths are still accepted for display only (see "Legacy history and undo" below).
-- **Ids are written once and never reused.** A one-time JSON backfill gives every existing section an id (the first of a type gets `id = type`) and saves it. After that the id is permanent: removing a section never renumbers the others, and a newly added section gets a fresh id from a per-variant counter stored with the sections (`nextSectionSeq`), never a reused suffix. Computing ids on read is not enough, because deleting the first duplicate would renumber the rest and old history could then point at new content.
+- **Ids are written once and never reused.** A one-time JSON backfill gives every existing section an id (the first of a type gets `id = type`) and saves it. After that the id is permanent: removing a section never renumbers the others, and a newly added section gets a fresh id with a random 6-character suffix (`newSectionId`, for example `services-k3f9a2`) that is checked against the ids in use, so no counter needs to be stored and a removed id is not reused in practice. (Changed from the first draft of this plan, which used a stored counter `nextSectionSeq`.) Computing ids on read is not enough, because deleting the first duplicate would renumber the rest and old history could then point at new content.
 - No database schema migration is needed for the ids themselves (it is JSON), but the backfill is a real data write and is its own PR (PR 2), run on QA first.
 - This also unlocks duplicate: today identity is the section type, so two "services" sections cannot exist. Note that existing code keyed by section type (`reorderVariantSections` in `admin/variants.ts`, `section-regen.ts`, the sitemap) assumes one section per type, so PR 2 must move each of them to ids before duplicates are allowed.
 
@@ -50,6 +50,8 @@ Undo re-applies a stored event's `field_path` as is (`history.ts`). An old event
 - In the same step as the id backfill, each existing event for that variant is rewritten from its numeric path to the id path, resolved by **array position** (because the editor writes the number straight into the array; see section 2), not by the `order` field.
 - An event whose position cannot be resolved (for example the stray entry the section 2 bug can append) is marked not undoable, and the history panel shows it as read-only.
 - Undo rejects any numeric path once the variant has ids, so it can never apply a position-based path after a reorder.
+
+**Status: implemented in plan PR 2 (draft PR).** What is in it: `lib/waas/sections/section-ids.ts` (id rules, path resolver, undo guard), `lib/waas/sections/backfill.ts` and `scripts/backfill-section-ids.ts` (dry run by default; writes only with `--apply`), id edit paths in the editor, history and regeneration, and the type-keyed code moved to ids (`reorderVariantSections`, the reorder panel, `resolveSections`, the sitemap, `section-regen`). Generation and admin saves now assign ids. Not changed yet: `setSectionConfig` and `upsertSection` still look up a section by type, which is only correct for the first section of a type (that one keeps `id = type`); this must be revisited in PR 3 before the Layout tab can add duplicates. The backfill has not been run against any database.
 
 ### 3.3 Client "Layout" tab (B3)
 Same pattern as Shopify, Squarespace and Wix, with guardrails:

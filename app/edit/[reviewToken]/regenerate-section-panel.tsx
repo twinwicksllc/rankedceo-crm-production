@@ -30,6 +30,8 @@ const RATE_LIMIT_MS = 8_000; // 8-second cooldown between calls
 interface RegenerateSectionPanelProps {
   /** e.g. "hero", "about", "faq" */
   sectionId: SectionId;
+  /** Stable id of the exact section (absent for variants without ids) */
+  sectionRef?: string;
   /** e.g. "1. Hero" — used in the header */
   sectionLabel: string;
   reviewToken: string;
@@ -40,6 +42,7 @@ interface RegenerateSectionPanelProps {
 
 export function RegenerateSectionPanel({
   sectionId,
+  sectionRef,
   sectionLabel,
   reviewToken,
   variantIndex,
@@ -84,6 +87,7 @@ export function RegenerateSectionPanel({
         reviewToken,
         variantIndex,
         sectionId,
+        sectionRef,
         hint: hint.trim() || undefined,
       });
 
@@ -104,7 +108,15 @@ export function RegenerateSectionPanel({
         RATE_LIMIT_MS,
       );
     }
-  }, [hint, loading, cooldown, reviewToken, variantIndex, sectionId]);
+  }, [
+    hint,
+    loading,
+    cooldown,
+    reviewToken,
+    variantIndex,
+    sectionId,
+    sectionRef,
+  ]);
 
   // Cmd/Ctrl+Enter triggers generate
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

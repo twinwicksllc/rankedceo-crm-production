@@ -1,5 +1,6 @@
 import type { GeneratedSiteVariant, WaasTenant } from "@/lib/waas/types";
 import { getTemplate } from "@/lib/waas/templates/registry";
+import { assignMissingIds } from "@/lib/waas/sections/section-ids";
 import type {
   AboutSectionContent,
   FAQSectionContent,
@@ -82,9 +83,11 @@ function upsertSection(
 }
 
 function normalizeOrder(sections: SectionConfig[]): SectionConfig[] {
-  return [...sections]
-    .sort((a, b) => a.order - b.order)
-    .map((section, index) => ({ ...section, order: index + 1 }));
+  return assignMissingIds(
+    [...sections]
+      .sort((a, b) => a.order - b.order)
+      .map((section, index) => ({ ...section, order: index + 1 })),
+  );
 }
 
 function buildProfile(tenant: WaasTenant): GenerationProfile {

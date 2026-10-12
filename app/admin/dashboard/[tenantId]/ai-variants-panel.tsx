@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import type { SectionConfig } from "@/lib/waas/templates/types";
-import type { SectionId } from "@/lib/waas/templates/types";
+import { sectionKey } from "@/lib/waas/sections/section-ids";
 import type {
   AdminSiteVariant,
   VariantLifecycleReasonCategory,
@@ -724,7 +724,7 @@ export function AIVariantsPanel({
 
     // 3. Persist — fire-and-forget with error toast
     startTransition(async () => {
-      const orderedIds = reordered.map((s) => s.section as SectionId);
+      const orderedIds = reordered.map((s) => sectionKey(s));
       const result = await reorderVariantSections(tenantId, vIdx, orderedIds);
       if (!result.success) {
         setMessage(`Reorder failed: ${result.error}`);

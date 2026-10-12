@@ -37,7 +37,11 @@ interface FieldNavigatorProps {
   onFieldClick: (f: EditableField) => void;
   onToggle: (f: EditableField, enabled: boolean) => void;
   /** PR #102: called when the user clicks "Regenerate with AI" for a section */
-  onRegenerateSection?: (sectionId: SectionId, sectionLabel: string) => void;
+  onRegenerateSection?: (
+    sectionId: SectionId,
+    sectionLabel: string,
+    sectionRef?: string,
+  ) => void;
   disabled?: boolean;
 }
 
@@ -141,6 +145,7 @@ export function FieldNavigator({
             (f) => f.scope === "section" && f.sectionId,
           );
           const sectionId = firstSectionField?.sectionId;
+          const sectionRef = firstSectionField?.sectionRef;
           const canRegen =
             !disabled &&
             !!sectionId &&
@@ -161,7 +166,11 @@ export function FieldNavigator({
                     title={`Regenerate all text in "${group.group}" with AI`}
                     aria-label={`Regenerate ${group.group} section with AI`}
                     onClick={() =>
-                      onRegenerateSection!(sectionId as SectionId, group.group)
+                      onRegenerateSection!(
+                        sectionId as SectionId,
+                        group.group,
+                        sectionRef,
+                      )
                     }
                     className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-medium text-violet-700 hover:bg-violet-100 hover:border-violet-300 transition-colors focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-1"
                   >

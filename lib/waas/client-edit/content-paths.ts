@@ -10,6 +10,8 @@
 //   "brand_config.business_name"
 // =============================================================================
 
+import { SECTION_ID_PATTERN } from "@/lib/waas/sections/section-ids";
+
 export type JsonValue =
   string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
@@ -84,6 +86,11 @@ export function setValueAtPath(
   newValue: JsonValue,
 ): PatchResult {
   try {
+    if (path.includes("[id=")) {
+      // The patcher works on array positions; callers must resolve id paths
+      // with resolveSectionPath() first.
+      return { ok: false, error: "Section id paths must be resolved first" };
+    }
     const segments = parsePath(path);
     if (segments.length === 0) {
       return { ok: false, error: "Path is empty" };
@@ -376,6 +383,8 @@ export function validateConfigValue(
   return validator(value);
 }
 
+const ID_REF_RE = new RegExp(`^sections\\[id=(${SECTION_ID_PATTERN})\\]`);
+
 export type PathValidationResult =
   { valid: true } | { valid: false; reason: string };
 
@@ -402,6 +411,14 @@ export function validateEditPath(path: string): PathValidationResult {
     };
   }
 
+  // Id form `sections[id=<id>]...` is checked with the same patterns as the
+  // numeric form: swap the id (strictly validated) for a position.
+  const idRef = path.match(ID_REF_RE);
+  if (path.startsWith("sections[id=") && !idRef) {
+    return { valid: false, reason: "Section id in path is not valid" };
+  }
+  const shape = idRef ? path.replace(ID_REF_RE, "sections[0]") : path;
+
   // Brand config paths — check against explicit allowlist
   if (path.startsWith("brand_config.")) {
     if (!ALLOWED_BRAND_KEYS.has(path)) {
@@ -415,7 +432,7 @@ export function validateEditPath(path: string): PathValidationResult {
 
   // Section content paths — validate the leaf key
   // Pattern 1: sections[N].content.<allowed_key>
-  const sectionContentMatch = path.match(
+  const sectionContentMatch = shape.match(
     /^sections\[\d+\]\.content\.([a-zA-Z0-9_]+)$/,
   );
   if (sectionContentMatch) {
@@ -431,7 +448,7 @@ export function validateEditPath(path: string): PathValidationResult {
 
   // Section config paths — validate the leaf key against the config allow-list
   // Pattern: sections[N].config.<allowed_key>  (Phase 8.6 — audit finding 2.1)
-  const sectionConfigMatch = path.match(
+  const sectionConfigMatch = shape.match(
     /^sections\[\d+\]\.config\.([a-zA-Z0-9_]+)$/,
   );
   if (sectionConfigMatch) {
@@ -449,7 +466,7 @@ export function validateEditPath(path: string): PathValidationResult {
   //   e.g. sections[2].content.items[0].title
   //        sections[3].content.steps[1].description
   //        sections[4].content.badges[0].label
-  const arrayItemMatch = path.match(
+  const arrayItemMatch = shape.match(
     /^sections\[\d+\]\.content\.([a-zA-Z0-9_]+)\[\d+\]\.([a-zA-Z0-9_]+)$/,
   );
   if (arrayItemMatch) {
@@ -478,19 +495,19 @@ export function validateEditPath(path: string): PathValidationResult {
   }
 
   // Pattern 3: sections[N].content.highlights[M]  (string array, no leaf key)
-  const highlightMatch = path.match(
+  const highlightMatch = shape.match(
     /^sections\[\d+\]\.content\.highlights\[\d+\]$/,
   );
   if (highlightMatch) return { valid: true };
 
   // Pattern 4: sections[N].content.items[M].keyFacts[K] (answer-first-aeo)
-  const keyFactsMatch = path.match(
+  const keyFactsMatch = shape.match(
     /^sections\[\d+\]\.content\.items\[\d+\]\.keyFacts\[\d+\]$/,
   );
   if (keyFactsMatch) return { valid: true };
 
   // sections[N].enabled is also allowed (section toggle)
-  const sectionEnabledMatch = path.match(/^sections\[\d+\]\.enabled$/);
+  const sectionEnabledMatch = shape.match(/^sections\[\d+\]\.enabled$/);
   if (sectionEnabledMatch) return { valid: true };
 
   return {

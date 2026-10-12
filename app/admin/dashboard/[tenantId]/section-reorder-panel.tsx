@@ -35,6 +35,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { SectionConfig, SectionId } from "@/lib/waas/templates/types";
+import { sectionKey } from "@/lib/waas/sections/section-ids";
 
 // ---------------------------------------------------------------------------
 // Section display labels (mirrors editable-fields.ts SECTION_LABELS)
@@ -106,7 +107,7 @@ function SortableRow({ section, position, total, disabled }: SortableRowProps) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: section.section, disabled });
+  } = useSortable({ id: sectionKey(section), disabled });
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -184,7 +185,7 @@ export function SectionReorderPanel({
 }: SectionReorderPanelProps) {
   const dndId = useId();
   const ordered = [...sections].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-  const ids = ordered.map((s) => s.section);
+  const ids = ordered.map((s) => sectionKey(s));
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -200,8 +201,8 @@ export function SectionReorderPanel({
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const oldIndex = ordered.findIndex((s) => s.section === active.id);
-    const newIndex = ordered.findIndex((s) => s.section === over.id);
+    const oldIndex = ordered.findIndex((s) => sectionKey(s) === active.id);
+    const newIndex = ordered.findIndex((s) => sectionKey(s) === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
 
     const next = arrayMove(ordered, oldIndex, newIndex).map(
@@ -235,7 +236,7 @@ export function SectionReorderPanel({
           <div className="flex flex-col gap-1.5">
             {ordered.map((section, index) => (
               <SortableRow
-                key={section.section}
+                key={sectionKey(section)}
                 section={section}
                 position={index + 1}
                 total={ordered.length}
