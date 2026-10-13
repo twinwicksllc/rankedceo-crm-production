@@ -8,32 +8,34 @@ import {
   FileText,
 } from "lucide-react";
 
-const footerLinks: Record<string, { label: string; href: string }[]> = {
+// href is optional: entries with no destination render as plain text, so they
+// are not keyboard-focusable dead links (review on #283).
+const footerLinks: Record<string, { label: string; href?: string }[]> = {
   Product: [
-    { label: "Features", href: "#" },
-    { label: "Pricing", href: "#" },
-    { label: "Membership", href: "#" },
-    { label: "Financing", href: "#" },
+    { label: "Features" },
+    { label: "Pricing" },
+    { label: "Membership" },
+    { label: "Financing" },
   ],
   Company: [
-    { label: "About Us", href: "#" },
-    { label: "Careers", href: "#" },
-    { label: "Press", href: "#" },
-    { label: "Partners", href: "#" },
-    { label: "Contact", href: "#" },
+    { label: "About Us" },
+    { label: "Careers" },
+    { label: "Press" },
+    { label: "Partners" },
+    { label: "Contact" },
   ],
   Resources: [
-    { label: "Blog", href: "#" },
-    { label: "Guides", href: "#" },
-    { label: "Before & After Gallery", href: "#" },
-    { label: "FAQ", href: "#" },
-    { label: "Help Center", href: "#" },
+    { label: "Blog" },
+    { label: "Guides" },
+    { label: "Before & After Gallery" },
+    { label: "FAQ" },
+    { label: "Help Center" },
   ],
   Legal: [
     { label: "Privacy Policy", href: "https://crm.rankedceo.com/privacy" },
     { label: "Terms of Service", href: "https://crm.rankedceo.com/terms" },
-    { label: "HIPAA Compliance", href: "#" },
-    { label: "BAA", href: "#" },
+    { label: "HIPAA Compliance" },
+    { label: "BAA" },
   ],
 };
 
@@ -120,12 +122,18 @@ export function Footer() {
               <ul className="space-y-2">
                 {links.map((link) => (
                   <li key={link.label}>
-                    <a
-                      href={link.href}
-                      className="text-sm text-white/60 hover:text-white transition-colors"
-                    >
-                      {link.label}
-                    </a>
+                    {link.href ? (
+                      <a
+                        href={link.href}
+                        className="text-sm text-white/60 hover:text-white transition-colors"
+                      >
+                        {link.label}
+                      </a>
+                    ) : (
+                      <span className="text-sm text-white/60">
+                        {link.label}
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
