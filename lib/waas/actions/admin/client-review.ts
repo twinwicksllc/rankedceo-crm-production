@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import type { SiteVariantRecord } from "@/lib/waas/types";
 import type { SectionConfig, SectionId } from "@/lib/waas/templates/types";
+import { assignMissingIds } from "@/lib/waas/sections/section-ids";
 import { getTemplate } from "@/lib/waas/templates/registry";
 import { getAdminClient, isMissingSchemaTable } from "./_shared";
 import type { ActionResult } from "./_shared";
@@ -545,9 +546,11 @@ function setSectionConfig(
 }
 
 function normalizeSectionOrder(sections: SectionConfig[]): SectionConfig[] {
-  return [...sections]
-    .sort((a, b) => a.order - b.order)
-    .map((section, index) => ({ ...section, order: index + 1 }));
+  return assignMissingIds(
+    [...sections]
+      .sort((a, b) => a.order - b.order)
+      .map((section, index) => ({ ...section, order: index + 1 })),
+  );
 }
 
 async function resolveTenantIdFromReviewKey(
@@ -691,9 +694,13 @@ export async function selectClientVariantGeneration(
     }
 
     const row = genRow as Record<string, unknown>;
-    const sections = Array.isArray(row.sections_json)
-      ? (row.sections_json as SectionConfig[])
-      : [];
+    // A generation saved before section ids existed has none; add them so this
+    // write cannot put position-only sections back into the active layout.
+    const sections = assignMissingIds(
+      Array.isArray(row.sections_json)
+        ? (row.sections_json as SectionConfig[])
+        : [],
+    );
     const templateSlug =
       typeof row.template_slug === "string" ? row.template_slug : "modern";
 

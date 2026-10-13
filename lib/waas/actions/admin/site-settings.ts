@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import type { SectionConfig } from "@/lib/waas/templates/types";
+import { assignMissingIds } from "@/lib/waas/sections/section-ids";
 import { ALL_TEMPLATES, getTemplate } from "@/lib/waas/templates/registry";
 import { generateIndustryKeywordPlan } from "@/lib/waas/services/keyword-generator";
 import { getAdminClient, isMissingSchemaTable } from "./_shared";
@@ -311,7 +312,11 @@ export async function rollbackTenantSiteVersion(
     }
     const payload: Record<string, unknown> = {
       template_id: templateId,
-      active_sections_json: snapshot.active_sections_json ?? [],
+      // Old snapshots may predate section ids; add them so a restore cannot
+      // put position-only sections back into the live layout.
+      active_sections_json: Array.isArray(snapshot.active_sections_json)
+        ? assignMissingIds(snapshot.active_sections_json as SectionConfig[])
+        : [],
       custom_css: snapshot.custom_css ?? null,
       meta_title: snapshot.meta_title ?? null,
       meta_description: snapshot.meta_description ?? null,

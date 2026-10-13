@@ -84,6 +84,7 @@ export function EditorShell({
   // PR #102 — per-section regenerate state
   const [regenPanel, setRegenPanel] = useState<{
     sectionId: SectionId;
+    sectionRef?: string;
     sectionLabel: string;
   } | null>(null);
 
@@ -438,8 +439,12 @@ export function EditorShell({
             groups={groups}
             onFieldClick={(f) => setActiveF(f)}
             onToggle={handleToggle}
-            onRegenerateSection={(sid, label) =>
-              setRegenPanel({ sectionId: sid, sectionLabel: label })
+            onRegenerateSection={(sid, label, ref) =>
+              setRegenPanel({
+                sectionId: sid,
+                sectionRef: ref,
+                sectionLabel: label,
+              })
             }
             disabled={session.permissions.isLocked}
           />
@@ -518,6 +523,7 @@ export function EditorShell({
       {regenPanel && session.selectedVariantIndex != null && (
         <RegenerateSectionPanel
           sectionId={regenPanel.sectionId}
+          sectionRef={regenPanel.sectionRef}
           sectionLabel={regenPanel.sectionLabel}
           reviewToken={session.reviewToken}
           variantIndex={session.selectedVariantIndex}

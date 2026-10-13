@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import type { SectionConfig, SectionId } from "@/lib/waas/templates/types";
+import { assignMissingIds } from "@/lib/waas/sections/section-ids";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -72,7 +73,9 @@ export function upsertSection(
 }
 
 export function normalizeOrder(sections: SectionConfig[]): SectionConfig[] {
-  return [...sections]
-    .sort((a, b) => a.order - b.order)
-    .map((s, i) => ({ ...s, order: i + 1 }));
+  return assignMissingIds(
+    [...sections]
+      .sort((a, b) => a.order - b.order)
+      .map((s, i) => ({ ...s, order: i + 1 })),
+  );
 }

@@ -269,7 +269,11 @@ export function EditHistoryPanel({
                 const isUndo = isUndoEvent(event);
                 const isUndoing = undoingId === event.id;
                 const canUndo =
-                  !isLocked && !isUndo && event.oldValue !== null && !isPending;
+                  !isLocked &&
+                  !isUndo &&
+                  event.undoable &&
+                  event.oldValue !== null &&
+                  !isPending;
 
                 return (
                   <div
@@ -368,6 +372,12 @@ export function EditHistoryPanel({
                     {isUndo && (
                       <p className="text-[10px] text-white/25 text-center">
                         Undo applied
+                      </p>
+                    )}
+
+                    {!isUndo && !event.undoable && (
+                      <p className="text-[10px] text-white/25 text-center">
+                        Read-only: the layout has changed since this edit
                       </p>
                     )}
                   </div>

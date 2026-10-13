@@ -8,6 +8,10 @@
 // =============================================================================
 
 import type { SectionConfig, SectionId } from "@/lib/waas/templates/types";
+import {
+  SECTION_ID_PATTERN,
+  isValidSectionId,
+} from "@/lib/waas/sections/section-ids";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -50,6 +54,8 @@ export interface EditableField {
   scope: "section" | "brand";
   /** Optional — section id when scope = 'section' */
   sectionId?: SectionId;
+  /** Optional — the section's stable id (absent until the id backfill has run) */
+  sectionRef?: string;
   /** Optional — the section's index in the stored sections_json array (same N as `sections[N]` in `path`) */
   sectionOrder?: number;
   /** Soft character-count hint for the input */
@@ -100,7 +106,7 @@ export interface BrandConfigLike {
 // Section-level label map (friendly names for the navigator groups)
 // ---------------------------------------------------------------------------
 
-const SECTION_LABELS: Record<string, string> = {
+export const SECTION_LABELS: Record<string, string> = {
   hero: "Hero",
   "answer-first-aeo": "Answer-First AEO",
   "bento-emergency": "Bento Emergency",
@@ -121,6 +127,20 @@ const REQUIRED_SECTION_IDS = new Set<string>(["hero", "booking"]);
 function sectionLabel(id: string, order: number): string {
   const base = SECTION_LABELS[id] ?? id;
   return `${order + 1}. ${base}`;
+}
+
+/**
+ * How an edit path and field id refer to a section. A section with a stable id
+ * is addressed by it (`sections[id=services-k3f9]`), which stays correct after
+ * reordering. Before the id backfill we fall back to the array index.
+ */
+function sectionRef(
+  section: SectionConfig,
+  index: number,
+): { pathRef: string; keyRef: string } {
+  return isValidSectionId(section.id)
+    ? { pathRef: `id=${section.id}`, keyRef: `id-${section.id}` }
+    : { pathRef: String(index), keyRef: String(index) };
 }
 
 // ---------------------------------------------------------------------------
@@ -484,7 +504,9 @@ function fieldsForSection(
   position: number,
 ): EditableField[] {
   const out: EditableField[] = [];
-  const order = index;
+  const order = index; // array index; reported as `sectionOrder`
+  const { pathRef, keyRef } = sectionRef(section, index);
+  const refId = isValidSectionId(section.id) ? section.id : undefined;
   const sid = section.section;
   const group = sectionLabel(sid, position);
   const content = (section.content ?? {}) as Record<string, unknown>;
@@ -495,8 +517,8 @@ function fieldsForSection(
     const current = content[leaf.key];
     if (current === undefined) continue; // only surface fields the variant populated
     out.push({
-      id: `sec-${order}-${leaf.key}`,
-      path: `sections[${order}].content.${leaf.key}`,
+      id: `sec-${keyRef}-${leaf.key}`,
+      path: `sections[${pathRef}].content.${leaf.key}`,
       label: leaf.label,
       value: current == null ? "" : String(current),
       kind: leaf.kind,
@@ -504,6 +526,7 @@ function fieldsForSection(
       scope: "section",
       sectionId: sid,
       sectionOrder: order,
+      sectionRef: refId,
       maxLength: leaf.maxLength,
     });
   }
@@ -524,8 +547,8 @@ function fieldsForSection(
           ? current.join(", ")
           : String(current);
     out.push({
-      id: `sec-${order}-config-${def.key}`,
-      path: `sections[${order}].config.${def.key}`,
+      id: `sec-${keyRef}-config-${def.key}`,
+      path: `sections[${pathRef}].config.${def.key}`,
       label: def.label,
       value,
       kind: def.kind,
@@ -533,6 +556,7 @@ function fieldsForSection(
       scope: "section",
       sectionId: sid,
       sectionOrder: order,
+      sectionRef: refId,
       min: def.min,
       max: def.max,
       options: def.options,
@@ -552,8 +576,8 @@ function fieldsForSection(
           const current = itemObj[leaf.key];
           if (current === undefined) continue;
           out.push({
-            id: `sec-${order}-${arrayDef.arrayKey}-${i}-${leaf.key}`,
-            path: `sections[${order}].content.${arrayDef.arrayKey}[${i}].${leaf.key}`,
+            id: `sec-${keyRef}-${arrayDef.arrayKey}-${i}-${leaf.key}`,
+            path: `sections[${pathRef}].content.${arrayDef.arrayKey}[${i}].${leaf.key}`,
             label: `${arrayDef.itemLabel(i)} — ${leaf.label}`,
             value: current == null ? "" : String(current),
             kind: leaf.kind,
@@ -561,6 +585,7 @@ function fieldsForSection(
             scope: "section",
             sectionId: sid,
             sectionOrder: order,
+            sectionRef: refId,
             maxLength: leaf.maxLength,
           });
         }
@@ -571,8 +596,8 @@ function fieldsForSection(
           if (Array.isArray(keyFacts)) {
             keyFacts.forEach((fact, factIndex) => {
               out.push({
-                id: `sec-${order}-${arrayDef.arrayKey}-${i}-keyFacts-${factIndex}`,
-                path: `sections[${order}].content.${arrayDef.arrayKey}[${i}].keyFacts[${factIndex}]`,
+                id: `sec-${keyRef}-${arrayDef.arrayKey}-${i}-keyFacts-${factIndex}`,
+                path: `sections[${pathRef}].content.${arrayDef.arrayKey}[${i}].keyFacts[${factIndex}]`,
                 label: `${arrayDef.itemLabel(i)} — Key Fact ${factIndex + 1}`,
                 value: fact == null ? "" : String(fact),
                 kind: "text",
@@ -580,6 +605,7 @@ function fieldsForSection(
                 scope: "section",
                 sectionId: sid,
                 sectionOrder: order,
+                sectionRef: refId,
                 maxLength: 140,
               });
             });
@@ -595,8 +621,8 @@ function fieldsForSection(
     if (Array.isArray(highlights)) {
       highlights.forEach((h, i) => {
         out.push({
-          id: `sec-${order}-highlights-${i}`,
-          path: `sections[${order}].content.highlights[${i}]`,
+          id: `sec-${keyRef}-highlights-${i}`,
+          path: `sections[${pathRef}].content.highlights[${i}]`,
           label: `Highlight ${i + 1}`,
           value: h == null ? "" : String(h),
           kind: "text",
@@ -604,6 +630,7 @@ function fieldsForSection(
           scope: "section",
           sectionId: sid,
           sectionOrder: order,
+          sectionRef: refId,
           maxLength: 120,
         });
       });
@@ -800,12 +827,14 @@ export function buildEditableFields(
   for (const { section, index } of allSections) {
     const sid = section.section;
     const order = index;
+    const { pathRef, keyRef } = sectionRef(section, index);
+    const refId = isValidSectionId(section.id) ? section.id : undefined;
     const label = SECTION_LABELS[sid] ?? sid;
     const isReq = REQUIRED_SECTION_IDS.has(sid);
 
     out.push({
-      id: `sec-${order}-enabled`,
-      path: `sections[${order}].enabled`,
+      id: `sec-${keyRef}-enabled`,
+      path: `sections[${pathRef}].enabled`,
       label: `${label}`,
       value: String(section.enabled !== false),
       kind: "toggle",
@@ -813,6 +842,7 @@ export function buildEditableFields(
       scope: "section",
       sectionId: sid,
       sectionOrder: order,
+      sectionRef: refId,
       // Encode whether this section is required in maxLength (convention: -1 = required)
       maxLength: isReq ? -1 : undefined,
     });
@@ -871,22 +901,30 @@ export function assetSlotFromPath(path: string): string {
   if (path === "brand_config.logo_url") return "brand-logo";
   if (path === "brand_config.hero_image_url") return "brand-hero"; // Phase 7.2
 
+  // `sections[3]` or `sections[id=services-k3f9]` -> "3" / "id-services-k3f9"
+  const ref = `(\\d+|id=${SECTION_ID_PATTERN})`;
+  const slugRef = (r: string) => r.replace(/^id=/, "id-");
+
   // sections[N].content.image_url
-  const simple = path.match(/^sections\[(\d+)\]\.content\.([a-z_]+)$/);
+  const simple = path.match(
+    new RegExp(`^sections\\[${ref}\\]\\.content\\.([a-z_]+)$`),
+  );
   if (simple) {
     const [, idx, key] = simple;
     const baseKey = key.replace(/_url$/, "").replace(/_/g, "-");
-    return `section-${idx}-${baseKey}`;
+    return `section-${slugRef(idx)}-${baseKey}`;
   }
 
   // sections[N].content.items[M].image_url
   const nested = path.match(
-    /^sections\[(\d+)\]\.content\.([a-z_]+)\[(\d+)\]\.([a-z_]+)$/,
+    new RegExp(
+      `^sections\\[${ref}\\]\\.content\\.([a-z_]+)\\[(\\d+)\\]\\.([a-z_]+)$`,
+    ),
   );
   if (nested) {
     const [, secIdx, arrKey, itemIdx, key] = nested;
     const baseKey = key.replace(/_url$/, "").replace(/_/g, "-");
-    return `section-${secIdx}-${arrKey}-${itemIdx}-${baseKey}`;
+    return `section-${slugRef(secIdx)}-${arrKey}-${itemIdx}-${baseKey}`;
   }
 
   // Fallback: sanitise the whole path

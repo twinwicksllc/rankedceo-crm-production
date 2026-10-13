@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { assignMissingIds } from "@/lib/waas/sections/section-ids";
 import type { SectionConfig } from "@/lib/waas/templates/types";
 import { generateIndustryKeywordPlan } from "@/lib/waas/services/keyword-generator";
 import { getAdminClient } from "./_shared";
@@ -120,9 +121,10 @@ export async function deploySite(
         (selectedVariant as { sections_json?: unknown[] }).sections_json,
       )
     ) {
-      selectedVariantSections = (
-        selectedVariant as { sections_json: SectionConfig[] }
-      ).sections_json;
+      // Variants not yet backfilled have no ids; add them before they go live.
+      selectedVariantSections = assignMissingIds(
+        (selectedVariant as { sections_json: SectionConfig[] }).sections_json,
+      );
     }
     const [{ error: tenantUpdateError }, { error: configUpdateError }] =
       await Promise.all([

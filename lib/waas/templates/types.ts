@@ -155,6 +155,13 @@ export type SectionContent =
 // ---------------------------------------------------------------------------
 
 export interface SectionConfig {
+  /**
+   * Stable, permanent id (e.g. "hero", "services-k3f9"). Written once and never
+   * reused, so edit paths and history can address a section even after it is
+   * moved. Optional only until the one-time backfill has run; see
+   * lib/waas/sections/section-ids.ts.
+   */
+  id?: string;
   section: SectionId;
   enabled: boolean;
   order: number;

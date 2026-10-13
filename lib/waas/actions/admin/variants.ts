@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import type { SiteVariantRecord } from "@/lib/waas/types";
 import type { SectionConfig, SectionId } from "@/lib/waas/templates/types";
+import { sectionKey } from "@/lib/waas/sections/section-ids";
 import { generateSiteVariants } from "@/lib/waas/services/generate-site-content";
 import { getAdminClient, isMissingSchemaTable } from "./_shared";
 import type { ActionResult } from "./_shared";
@@ -685,7 +686,7 @@ function normalizeSectionOrder(sections: SectionConfig[]): SectionConfig[] {
 export async function reorderVariantSections(
   tenantId: string,
   variantIndex: number,
-  orderedIds: SectionId[],
+  orderedIds: string[],
 ): Promise<ActionResult<void>> {
   try {
     if (!tenantId) return { success: false, error: "Missing tenantId" };
@@ -713,8 +714,10 @@ export async function reorderVariantSections(
         success: false,
         error: `Variant ${variantIndex} not found for tenant ${tenantId}`,
       };
+    // Identity is the stable id (type for legacy data without ids), so two
+    // sections of the same type can be reordered independently.
     const sectionMap = new Map<string, SectionConfig>(
-      variant.sections_json.map((s) => [s.section, s]),
+      variant.sections_json.map((s) => [sectionKey(s), s]),
     );
     for (const id of orderedIds) {
       if (!sectionMap.has(id))
@@ -729,7 +732,7 @@ export async function reorderVariantSections(
     }));
     let tail = variant.sections_json.length + 1;
     for (const section of variant.sections_json) {
-      if (!seen.has(section.section))
+      if (!seen.has(sectionKey(section)))
         reordered.push({ ...section, order: tail++ });
     }
     return updateSiteVariant(tenantId, variantIndex, { sections: reordered });
