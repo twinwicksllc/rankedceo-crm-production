@@ -3,6 +3,7 @@
 // Handles OAuth flow, event types, availability, and booking
 // ============================================================
 
+import { createHmac, timingSafeEqual } from "crypto";
 import type {
   CalendlyConnection,
   CalendlyEventType,
@@ -230,11 +231,10 @@ export function verifyCalendlyWebhook(
   signingKey: string,
 ): boolean {
   try {
-    const crypto = require("crypto");
-    const hmac = crypto.createHmac("sha256", signingKey);
+    const hmac = createHmac("sha256", signingKey);
     hmac.update(payload);
     const expectedSignature = hmac.digest("hex");
-    return crypto.timingSafeEqual(
+    return timingSafeEqual(
       Buffer.from(signature),
       Buffer.from(expectedSignature),
     );
