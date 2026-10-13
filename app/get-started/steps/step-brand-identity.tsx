@@ -510,10 +510,13 @@ export function StepBrandIdentity({
       </div>
 
       {/* Logo Section */}
-      <div className="mb-8">
-        <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-3">
+      <div role="group" aria-labelledby="brand-logo-label" className="mb-8">
+        <span
+          id="brand-logo-label"
+          className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-3"
+        >
           Logo
-        </label>
+        </span>
 
         <div className="grid sm:grid-cols-2 gap-4">
           {/* Upload option */}
@@ -659,11 +662,14 @@ export function StepBrandIdentity({
       {/* ================================================================
           Color Palette — Curated Industry System
           ================================================================ */}
-      <div className="mb-8">
+      <div role="group" aria-labelledby="brand-palette-label" className="mb-8">
         <div className="flex items-center justify-between mb-3">
-          <label className="block text-sm font-medium text-slate-700 dark:text-white/70">
+          <span
+            id="brand-palette-label"
+            className="block text-sm font-medium text-slate-700 dark:text-white/70"
+          >
             Color Palette
-          </label>
+          </span>
           <span className="text-xs text-slate-400 dark:text-white/30">
             {logoColorsSuggested
               ? "✨ Colors suggested from your logo"
@@ -754,11 +760,15 @@ export function StepBrandIdentity({
           </p>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-slate-600 dark:text-white/50 mb-1.5">
+              <label
+                htmlFor="brand-primary-color"
+                className="block text-xs font-medium text-slate-600 dark:text-white/50 mb-1.5"
+              >
                 Primary Color
               </label>
               <div className="flex items-center gap-3 h-11 px-3 rounded-xl bg-white dark:bg-white/5 border border-slate-300 dark:border-white/10 focus-within:border-blue-500/60 transition-all">
                 <input
+                  id="brand-primary-color"
                   type="color"
                   value={primaryColor}
                   onChange={(e) => handlePrimaryChange(e.target.value)}
@@ -773,11 +783,15 @@ export function StepBrandIdentity({
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 dark:text-white/50 mb-1.5">
+              <label
+                htmlFor="brand-secondary-color"
+                className="block text-xs font-medium text-slate-600 dark:text-white/50 mb-1.5"
+              >
                 Secondary / Accent Color
               </label>
               <div className="flex items-center gap-3 h-11 px-3 rounded-xl bg-white dark:bg-white/5 border border-slate-300 dark:border-white/10 focus-within:border-blue-500/60 transition-all">
                 <input
+                  id="brand-secondary-color"
                   type="color"
                   value={secondaryColor}
                   onChange={(e) => {
@@ -792,11 +806,15 @@ export function StepBrandIdentity({
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 dark:text-white/50 mb-1.5">
+              <label
+                htmlFor="brand-text-color"
+                className="block text-xs font-medium text-slate-600 dark:text-white/50 mb-1.5"
+              >
                 Text Color
               </label>
               <div className="flex items-center gap-3 h-11 px-3 rounded-xl bg-white dark:bg-white/5 border border-slate-300 dark:border-white/10 focus-within:border-blue-500/60 transition-all">
                 <input
+                  id="brand-text-color"
                   type="color"
                   value={textColor}
                   onChange={(e) => setTextColor(e.target.value)}

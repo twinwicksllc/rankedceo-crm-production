@@ -186,10 +186,14 @@ export function AiRewritePanel({
       <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
         {/* Intent */}
         <div>
-          <label className="block text-sm font-medium text-slate-800 mb-1.5">
+          <label
+            htmlFor="ai-rewrite-intent"
+            className="block text-sm font-medium text-slate-800 mb-1.5"
+          >
             What do you want to change?
           </label>
           <textarea
+            id="ai-rewrite-intent"
             ref={intentRef}
             value={intent}
             onChange={(e) => setIntent(e.target.value)}

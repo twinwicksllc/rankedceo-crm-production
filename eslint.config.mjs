@@ -23,6 +23,16 @@ const a11yRules = Object.fromEntries(
   ]),
 );
 
+// jsx-a11y/label-has-associated-control misses labels whose text mixes
+// `{" "}` and nested elements (found by review on #282), so this is a second,
+// stricter check: a <label> must have htmlFor or contain its own
+// input/select/textarea. Group headings should be a <span> with
+// role="group" + aria-labelledby on the container, not a <label>.
+const labelSelector =
+  "JSXElement[openingElement.name.name='label']" +
+  ":not(:has(JSXOpeningElement[name.name=/^(input|select|textarea)$/]))" +
+  ":not(:has(JSXAttribute[name.name='htmlFor']))";
+
 const eslintConfig = [
   {
     ignores: [
@@ -42,6 +52,14 @@ const eslintConfig = [
       "@typescript-eslint/no-unused-vars": "error",
       ...a11yRules,
       "jsx-a11y/label-has-for": "off",
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: labelSelector,
+          message:
+            "<label> needs htmlFor (and a matching id on the control) or must wrap its input. For group headings use <span id> + role=group aria-labelledby.",
+        },
+      ],
     },
   },
 ];

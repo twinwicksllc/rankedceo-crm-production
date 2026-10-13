@@ -282,11 +282,15 @@ export function ApprovalPanel({
         <div className="p-6">
           {mode === "approve" && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              <label
+                htmlFor="approval-note"
+                className="block text-sm font-medium text-slate-700 mb-1.5"
+              >
                 Anything else you&apos;d like us to know?{" "}
                 <span className="text-slate-400 font-normal">(optional)</span>
               </label>
               <textarea
+                id="approval-note"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 rows={4}

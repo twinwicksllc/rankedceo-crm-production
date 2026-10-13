@@ -10,7 +10,7 @@
 // validated to ensure it contains at least 10 digits before submission.
 // =============================================================================
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useOnboardingTheme } from "@/app/get-started/theme-context";
 
 interface EmailCaptureFormProps {
@@ -93,6 +93,7 @@ export function EmailCaptureForm({
   userName,
   onCaptured,
 }: EmailCaptureFormProps) {
+  const phoneFieldId = useId();
   const { theme } = useOnboardingTheme();
   const isLight = theme === "light";
 
@@ -414,6 +415,7 @@ export function EmailCaptureForm({
           {/* Phone — always required, auto-formatted */}
           <div>
             <label
+              htmlFor={phoneFieldId}
               style={{
                 display: "block",
                 fontSize: "0.72rem",
@@ -427,6 +429,7 @@ export function EmailCaptureForm({
               Phone *
             </label>
             <input
+              id={phoneFieldId}
               type="tel"
               inputMode="numeric"
               placeholder="(555) 123-4567"
@@ -566,9 +569,11 @@ function FormField({
   disabled?: boolean;
   hint?: string;
 }) {
+  const inputId = useId();
   return (
     <div>
       <label
+        htmlFor={inputId}
         style={{
           display: "block",
           fontSize: "0.72rem",
@@ -594,6 +599,7 @@ function FormField({
         )}
       </label>
       <input
+        id={inputId}
         type={type}
         placeholder={placeholder}
         value={value}

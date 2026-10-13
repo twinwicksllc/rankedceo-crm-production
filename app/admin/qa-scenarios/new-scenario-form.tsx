@@ -128,10 +128,14 @@ export function NewScenarioForm() {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Scenario ID */}
         <div>
-          <label className="block text-xs text-white/50 mb-1">
+          <label
+            htmlFor="new-scenario-id"
+            className="block text-xs text-white/50 mb-1"
+          >
             Scenario ID <span className="text-red-400">*</span>
           </label>
           <input
+            id="new-scenario-id"
             type="text"
             value={form.scenario_id}
             onChange={(e) =>
@@ -145,10 +149,14 @@ export function NewScenarioForm() {
 
         {/* Name */}
         <div>
-          <label className="block text-xs text-white/50 mb-1">
+          <label
+            htmlFor="new-scenario-name"
+            className="block text-xs text-white/50 mb-1"
+          >
             Name <span className="text-red-400">*</span>
           </label>
           <input
+            id="new-scenario-name"
             type="text"
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -160,10 +168,14 @@ export function NewScenarioForm() {
 
         {/* Description */}
         <div>
-          <label className="block text-xs text-white/50 mb-1">
+          <label
+            htmlFor="new-scenario-description"
+            className="block text-xs text-white/50 mb-1"
+          >
             Description
           </label>
           <input
+            id="new-scenario-description"
             type="text"
             value={form.description}
             onChange={(e) =>
@@ -176,10 +188,17 @@ export function NewScenarioForm() {
 
         {/* Modes */}
         <div>
-          <label className="block text-xs text-white/50 mb-2">
+          <span
+            id="new-scenario-modes-label"
+            className="block text-xs text-white/50 mb-2"
+          >
             Modes <span className="text-red-400">*</span>
-          </label>
-          <div className="flex gap-2">
+          </span>
+          <div
+            role="group"
+            aria-labelledby="new-scenario-modes-label"
+            className="flex gap-2"
+          >
             {(["smoke", "full"] as const).map((m) => (
               <button
                 key={m}
@@ -225,11 +244,15 @@ export function NewScenarioForm() {
 
         {/* YAML editor */}
         <div>
-          <label className="block text-xs text-white/50 mb-1">
+          <label
+            htmlFor="new-scenario-yaml"
+            className="block text-xs text-white/50 mb-1"
+          >
             YAML Content <span className="text-red-400">*</span>
             <span className="ml-2 text-white/20">(validated on save)</span>
           </label>
           <textarea
+            id="new-scenario-yaml"
             value={form.yaml_content}
             onChange={(e) =>
               setForm((f) => ({ ...f, yaml_content: e.target.value }))

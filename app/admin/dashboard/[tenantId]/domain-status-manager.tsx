@@ -4,7 +4,7 @@
 // Domain Status Manager — inline status update for domain requests
 // =============================================================================
 
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 import { updateDomainStatus } from "@/lib/waas/actions/admin";
 import type { WaasDomainRequest } from "@/lib/waas/types";
 
@@ -54,6 +54,9 @@ interface Props {
 }
 
 export function DomainStatusManager({ request }: Props) {
+  const fieldId = useId();
+  const statusId = `${fieldId}-status`;
+  const notesId = `${fieldId}-notes`;
   const [status, setStatusState] = useState(request.status);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -130,10 +133,14 @@ export function DomainStatusManager({ request }: Props) {
       {editing && (
         <div className="mt-4 pt-4 border-t border-white/10 space-y-3">
           <div>
-            <label className="block text-xs text-white/40 mb-1.5">
+            <label
+              htmlFor={statusId}
+              className="block text-xs text-white/40 mb-1.5"
+            >
               Update Status
             </label>
             <select
+              id={statusId}
               value={newStatus}
               onChange={(e) =>
                 setNewStatus(e.target.value as WaasDomainRequest["status"])
@@ -148,10 +155,14 @@ export function DomainStatusManager({ request }: Props) {
             </select>
           </div>
           <div>
-            <label className="block text-xs text-white/40 mb-1.5">
+            <label
+              htmlFor={notesId}
+              className="block text-xs text-white/40 mb-1.5"
+            >
               Notes (optional)
             </label>
             <input
+              id={notesId}
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}

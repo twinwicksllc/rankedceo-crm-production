@@ -120,13 +120,17 @@ export function StepDomainWishlist({
 
       {/* Domain input */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-3">
+        <label
+          htmlFor="domain-wishlist-input"
+          className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-3"
+        >
           Enter a domain name
         </label>
         <div className="flex gap-3">
           {/* Domain input */}
           <div className="flex-1 flex items-center h-14 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus-within:border-blue-500/60 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all overflow-hidden">
             <input
+              id="domain-wishlist-input"
               type="text"
               value={domainInput}
               onChange={(e) => setDomainInput(e.target.value)}

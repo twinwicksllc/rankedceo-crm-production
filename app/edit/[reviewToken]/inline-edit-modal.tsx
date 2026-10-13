@@ -151,10 +151,14 @@ export function InlineEditModal({
 
             {/* URL fallback */}
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">
+              <label
+                htmlFor="inline-edit-image-url"
+                className="block text-xs font-medium text-slate-600 mb-1"
+              >
                 Or paste an image URL
               </label>
               <input
+                id="inline-edit-image-url"
                 ref={inputRef}
                 type="url"
                 value={value}
