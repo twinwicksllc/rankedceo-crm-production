@@ -620,7 +620,8 @@ body {
   margin-bottom: 10px;
 }
 
-.footer-col ul li a {
+.footer-col ul li a,
+.footer-col ul li span {
   font-size: 13px;
   color: rgba(255, 255, 255, 0.6);
   text-decoration: none;

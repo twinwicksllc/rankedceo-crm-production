@@ -246,6 +246,9 @@ export default function ThankYouContent() {
           font-weight: 700;
           color: #fff;
           text-decoration: none;
+          border: none;
+          cursor: pointer;
+          font-family: inherit;
           transition: opacity 0.2s;
         }
 
@@ -290,13 +293,14 @@ export default function ThankYouContent() {
                   </a>
                 </div>
               </div>
-              <a
-                href="javascript:history.back()"
+              <button
+                type="button"
+                onClick={() => window.history.back()}
                 className="ty-back-btn"
                 style={{ background: config.color }}
               >
                 ← Try Again
-              </a>
+              </button>
             </>
           ) : (
             <>

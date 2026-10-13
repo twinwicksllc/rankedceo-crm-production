@@ -33,6 +33,18 @@ const labelSelector =
   ":not(:has(JSXOpeningElement[name.name=/^(input|select|textarea)$/]))" +
   ":not(:has(JSXAttribute[name.name='htmlFor']))";
 
+const labelMessage =
+  "<label> needs htmlFor (and a matching id on the control) or must wrap its input. For group headings use <span id> + role=group aria-labelledby.";
+
+// jsx-a11y/anchor-is-valid only sees literal href values. A link list like
+// `{ label: "Blog", href: "#" }` rendered as `href={link.href}` slips past it
+// (found by review on #283), so ban placeholder hrefs in data objects too.
+const placeholderHrefSelector =
+  "Property[key.name='href'][value.value=/^(#|javascript:.*)$/]";
+
+const placeholderHrefMessage =
+  "Placeholder href. Use a real URL, or leave href out and render the item as text.";
+
 const eslintConfig = [
   {
     ignores: [
@@ -52,15 +64,22 @@ const eslintConfig = [
       "@typescript-eslint/no-unused-vars": "error",
       ...a11yRules,
       "jsx-a11y/label-has-for": "off",
+      // Also check next/link: <Link href="#"> is the same problem as <a href="#">.
+      "jsx-a11y/anchor-is-valid": ["error", { components: ["Link"] }],
       "no-restricted-syntax": [
         "error",
-        {
-          selector: labelSelector,
-          message:
-            "<label> needs htmlFor (and a matching id on the control) or must wrap its input. For group headings use <span id> + role=group aria-labelledby.",
-        },
+        { selector: labelSelector, message: labelMessage },
+        { selector: placeholderHrefSelector, message: placeholderHrefMessage },
       ],
     },
+  },
+  {
+    // The website-builder button block ships with href: "#" as the default
+    // until the editor sets a real URL (ButtonBlock.href is required, and
+    // export-html.ts renders it). Intentional placeholder, not a link list.
+    // Fix belongs with the builder work, not this a11y PR.
+    files: ["lib/waas/website-builder/blocks.ts"],
+    rules: { "no-restricted-syntax": "off" },
   },
 ];
 

@@ -80,13 +80,12 @@ export function CompleteStep() {
           <ArrowRight className="ml-2 h-5 w-5" />
         </Button>
         <p className="text-sm text-gray-500">
-          Need help? Check out our{" "}
-          <a href="#" className="text-blue-600 hover:underline">
-            documentation
-          </a>{" "}
-          or{" "}
-          <a href="#" className="text-blue-600 hover:underline">
-            contact support
+          Need help? Email{" "}
+          <a
+            href="mailto:support@rankedceo.com"
+            className="text-blue-600 hover:underline"
+          >
+            support@rankedceo.com
           </a>
         </p>
       </div>
