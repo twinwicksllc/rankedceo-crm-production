@@ -229,7 +229,8 @@ function AuditStartFormContent() {
             </div>
 
             <div>
-              <label
+              <span
+                id="competitor-websites-label"
                 className={`mb-2 flex items-center gap-2 text-base font-semibold ${isLight ? "text-slate-700" : "text-slate-100"}`}
               >
                 <span
@@ -243,9 +244,13 @@ function AuditStartFormContent() {
                 >
                   (up to 3)
                 </span>
-              </label>
+              </span>
 
-              <div className="space-y-3">
+              <div
+                role="group"
+                aria-labelledby="competitor-websites-label"
+                className="space-y-3"
+              >
                 {competitors.map((value, index) => (
                   <div key={`competitor-${index}`} className="relative">
                     <input

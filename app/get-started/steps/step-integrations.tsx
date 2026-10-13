@@ -55,7 +55,10 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
       <div className="space-y-6">
         {/* Calendly URL */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-1">
+          <label
+            htmlFor="integrations-calendly-url"
+            className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-1"
+          >
             Booking / Scheduling URL
           </label>
           <p className="text-slate-500 dark:text-white/35 text-xs mb-2">
@@ -88,6 +91,7 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
               </svg>
             </div>
             <input
+              id="integrations-calendly-url"
               {...register("calendly_url")}
               type="url"
               placeholder="https://calendly.com/yourbusiness"
@@ -107,9 +111,9 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
 
         {/* Financing Toggle */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-3">
+          <span className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-3">
             Financing Integration
-          </label>
+          </span>
           <label className="flex items-start gap-4 p-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 cursor-pointer hover:bg-slate-200 dark:hover:bg-white/10 transition-all group">
             <div className="relative mt-0.5 shrink-0">
               <input
@@ -150,7 +154,10 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
 
         {/* USP */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-1">
+          <label
+            htmlFor="integrations-usp"
+            className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-1"
+          >
             Your Unique Selling Proposition{" "}
             <span className="text-red-400">*</span>
           </label>
@@ -160,6 +167,7 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
           </p>
           <textarea
             {...register("usp")}
+            id="integrations-usp"
             rows={4}
             placeholder="e.g. We're the only HVAC company in Chicago that offers same-day service with a 100% satisfaction guarantee. Our technicians are NATE-certified and we've never missed an appointment in 12 years."
             className={`w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-white/5 border ${
@@ -189,7 +197,10 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+          <label
+            htmlFor="integrations-value-propositions"
+            className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2"
+          >
             Value Propositions{" "}
             <span className="text-slate-400 dark:text-white/30">
               (optional)
@@ -197,6 +208,7 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
           </label>
           <textarea
             {...register("value_propositions")}
+            id="integrations-value-propositions"
             rows={2}
             placeholder="3-5 bullet-style selling points separated by commas"
             className="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
@@ -204,7 +216,10 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+          <label
+            htmlFor="integrations-about-narrative"
+            className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2"
+          >
             About Us Narrative{" "}
             <span className="text-slate-400 dark:text-white/30">
               (optional)
@@ -212,6 +227,7 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
           </label>
           <textarea
             {...register("about_narrative")}
+            id="integrations-about-narrative"
             rows={3}
             placeholder="A short paragraph about your story, team, and values"
             className="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
@@ -220,7 +236,10 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
 
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+            <label
+              htmlFor="integrations-primary-cta"
+              className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2"
+            >
               Primary CTA{" "}
               <span className="text-slate-400 dark:text-white/30">
                 (optional)
@@ -228,13 +247,17 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
             </label>
             <input
               {...register("primary_cta")}
+              id="integrations-primary-cta"
               type="text"
               placeholder="Book My Free Estimate"
               className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+            <label
+              htmlFor="integrations-service-area"
+              className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2"
+            >
               Service Area{" "}
               <span className="text-slate-400 dark:text-white/30">
                 (optional)
@@ -242,13 +265,17 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
             </label>
             <input
               {...register("service_area")}
+              id="integrations-service-area"
               type="text"
               placeholder="Chicago, Evanston, Oak Park"
               className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+            <label
+              htmlFor="integrations-tone"
+              className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2"
+            >
               Brand Tone{" "}
               <span className="text-slate-400 dark:text-white/30">
                 (optional)
@@ -256,6 +283,7 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
             </label>
             <select
               {...register("tone")}
+              id="integrations-tone"
               className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all [&_option]:bg-[#0A0F1E]"
             >
               <option
@@ -291,7 +319,10 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+            <label
+              htmlFor="integrations-font-preference"
+              className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2"
+            >
               Typography Style{" "}
               <span className="text-slate-400 dark:text-white/30">
                 (optional)
@@ -299,6 +330,7 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
             </label>
             <select
               {...register("font_preference")}
+              id="integrations-font-preference"
               className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all [&_option]:bg-[#0A0F1E]"
             >
               <option
@@ -330,7 +362,10 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+          <label
+            htmlFor="integrations-target-keywords"
+            className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2"
+          >
             Target Keywords{" "}
             <span className="text-slate-400 dark:text-white/30">
               (optional)
@@ -338,6 +373,7 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
           </label>
           <input
             {...register("target_keywords")}
+            id="integrations-target-keywords"
             type="text"
             placeholder="emergency plumber chicago, sewer repair, water heater replacement"
             className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
@@ -345,7 +381,10 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+          <label
+            htmlFor="integrations-key-phrases"
+            className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2"
+          >
             Key Phrases{" "}
             <span className="text-slate-400 dark:text-white/30">
               (optional)
@@ -353,6 +392,7 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
           </label>
           <input
             {...register("key_phrases")}
+            id="integrations-key-phrases"
             type="text"
             placeholder="same-day service, family-owned, licensed & insured"
             className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
@@ -360,7 +400,10 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+          <label
+            htmlFor="integrations-inspiration-urls"
+            className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2"
+          >
             Inspiration URLs{" "}
             <span className="text-slate-400 dark:text-white/30">
               (optional)
@@ -368,6 +411,7 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
           </label>
           <textarea
             {...register("inspiration_urls")}
+            id="integrations-inspiration-urls"
             rows={2}
             placeholder="Paste 1-3 websites you like, separated by commas"
             className="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-white/25 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
@@ -375,7 +419,10 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+          <label
+            htmlFor="integrations-hero-image-preference"
+            className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2"
+          >
             Hero Image Preference{" "}
             <span className="text-slate-400 dark:text-white/30">
               (optional)
@@ -383,6 +430,7 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
           </label>
           <select
             {...register("hero_image_preference")}
+            id="integrations-hero-image-preference"
             className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:border-blue-500/60 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all [&_option]:bg-[#0A0F1E]"
           >
             <option
@@ -407,13 +455,20 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-3">
+          <span
+            id="integrations-functionality-label"
+            className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-3"
+          >
             Website Functionality{" "}
             <span className="text-slate-400 dark:text-white/30">
               (optional)
             </span>
-          </label>
-          <div className="grid sm:grid-cols-2 gap-3">
+          </span>
+          <div
+            role="group"
+            aria-labelledby="integrations-functionality-label"
+            className="grid sm:grid-cols-2 gap-3"
+          >
             {functionalityOptions.map((option) => (
               <label
                 key={option.key}

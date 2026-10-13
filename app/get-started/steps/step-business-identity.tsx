@@ -181,7 +181,10 @@ export function StepBusinessIdentity({
         {/* Legal Name */}
         <div>
           <div className="flex items-center justify-between gap-2 mb-2">
-            <label className="block text-sm font-medium text-slate-700 dark:text-white/70">
+            <label
+              htmlFor="bi-legal-name"
+              className="block text-sm font-medium text-slate-700 dark:text-white/70"
+            >
               Business Legal Name <span className="text-red-400">*</span>
             </label>
             {preFilledFields.business_name && (
@@ -192,6 +195,7 @@ export function StepBusinessIdentity({
           </div>
           <input
             {...register("legal_name")}
+            id="bi-legal-name"
             type="text"
             placeholder="e.g. Acme Plumbing LLC"
             className={inputClass(!!errors.legal_name)}
@@ -206,11 +210,15 @@ export function StepBusinessIdentity({
 
         {/* Email */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+          <label
+            htmlFor="bi-email"
+            className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2"
+          >
             Your Email Address <span className="text-red-400">*</span>
           </label>
           <input
             {...register("email")}
+            id="bi-email"
             type="email"
             placeholder="you@yourbusiness.com"
             className={inputClass(!!errors.email)}
@@ -224,11 +232,15 @@ export function StepBusinessIdentity({
 
         {/* Physical Address */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+          <label
+            htmlFor="bi-physical-address"
+            className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2"
+          >
             Business Address <span className="text-red-400">*</span>
           </label>
           <input
             {...register("physical_address")}
+            id="bi-physical-address"
             type="text"
             placeholder="123 Main Street"
             className={inputClass(!!errors.physical_address)}
@@ -244,7 +256,10 @@ export function StepBusinessIdentity({
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           <div className="col-span-2 sm:col-span-1">
             <div className="flex items-center justify-between gap-2 mb-2">
-              <label className="block text-sm font-medium text-slate-700 dark:text-white/70">
+              <label
+                htmlFor="bi-city"
+                className="block text-sm font-medium text-slate-700 dark:text-white/70"
+              >
                 City <span className="text-red-400">*</span>
               </label>
               {preFilledFields.city && (
@@ -255,6 +270,7 @@ export function StepBusinessIdentity({
             </div>
             <input
               {...register("city")}
+              id="bi-city"
               type="text"
               placeholder="Chicago"
               className={inputClass(!!errors.city)}
@@ -267,7 +283,10 @@ export function StepBusinessIdentity({
           </div>
           <div>
             <div className="flex items-center justify-between gap-2 mb-2">
-              <label className="block text-sm font-medium text-slate-700 dark:text-white/70">
+              <label
+                htmlFor="bi-state"
+                className="block text-sm font-medium text-slate-700 dark:text-white/70"
+              >
                 State <span className="text-red-400">*</span>
               </label>
               {preFilledFields.state && (
@@ -278,6 +297,7 @@ export function StepBusinessIdentity({
             </div>
             <input
               {...register("state")}
+              id="bi-state"
               type="text"
               placeholder="IL"
               maxLength={2}
@@ -290,11 +310,15 @@ export function StepBusinessIdentity({
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+            <label
+              htmlFor="bi-zip"
+              className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2"
+            >
               ZIP <span className="text-red-400">*</span>
             </label>
             <input
               {...register("zip")}
+              id="bi-zip"
               type="text"
               placeholder="60601"
               maxLength={10}
@@ -310,11 +334,15 @@ export function StepBusinessIdentity({
 
         {/* Primary Trade */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+          <label
+            htmlFor="bi-primary-trade"
+            className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2"
+          >
             Primary Trade / Service <span className="text-red-400">*</span>
           </label>
           <select
             {...register("primary_trade")}
+            id="bi-primary-trade"
             className={inputClass(!!errors.primary_trade) + " cursor-pointer"}
           >
             <option value="">Select your trade…</option>
@@ -333,11 +361,15 @@ export function StepBusinessIdentity({
 
         {selectedTrade === "Other" && (
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+            <label
+              htmlFor="bi-primary-trade-other"
+              className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2"
+            >
               Industry Type <span className="text-red-400">*</span>
             </label>
             <input
               {...register("primary_trade_other")}
+              id="bi-primary-trade-other"
               type="text"
               placeholder="e.g. Junk Removal"
               className={inputClass(!!errors.primary_trade_other)}
@@ -383,7 +415,10 @@ export function StepBusinessIdentity({
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <label className="block text-sm font-medium text-slate-700 dark:text-white/70">
+                    <label
+                      htmlFor="bi-tagline"
+                      className="block text-sm font-medium text-slate-700 dark:text-white/70"
+                    >
                       Tagline
                     </label>
                     {preFilledFields.tagline && (
@@ -394,6 +429,7 @@ export function StepBusinessIdentity({
                   </div>
                   <input
                     {...register("tagline")}
+                    id="bi-tagline"
                     type="text"
                     placeholder="e.g. Fast, honest service done right"
                     className={inputClass(!!errors.tagline)}
@@ -405,11 +441,15 @@ export function StepBusinessIdentity({
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+                  <label
+                    htmlFor="bi-business-type"
+                    className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2"
+                  >
                     Business Type
                   </label>
                   <input
                     {...register("business_type")}
+                    id="bi-business-type"
                     type="text"
                     placeholder="e.g. Local service business"
                     className={inputClass(!!errors.business_type)}
@@ -421,11 +461,15 @@ export function StepBusinessIdentity({
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+                  <label
+                    htmlFor="bi-phone"
+                    className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2"
+                  >
                     Phone Number
                   </label>
                   <input
                     {...register("phone")}
+                    id="bi-phone"
                     type="tel"
                     placeholder="(312) 555-1212"
                     className={inputClass(!!errors.phone)}
@@ -437,11 +481,15 @@ export function StepBusinessIdentity({
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+                  <label
+                    htmlFor="bi-business-hours"
+                    className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2"
+                  >
                     Business Hours
                   </label>
                   <input
                     {...register("business_hours")}
+                    id="bi-business-hours"
                     type="text"
                     placeholder="Mon-Fri 8AM-6PM, Sat 9AM-2PM"
                     className={inputClass(!!errors.business_hours)}
@@ -456,7 +504,10 @@ export function StepBusinessIdentity({
 
               <div>
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-white/70">
+                  <label
+                    htmlFor="bi-services-offered"
+                    className="block text-sm font-medium text-slate-700 dark:text-white/70"
+                  >
                     Services / Products
                   </label>
                   {preFilledFields.services_offered && (
@@ -467,6 +518,7 @@ export function StepBusinessIdentity({
                 </div>
                 <textarea
                   {...register("services_offered")}
+                  id="bi-services-offered"
                   rows={3}
                   placeholder="List your top services (comma separated), e.g. Drain cleaning, water heater repair, sewer line replacement"
                   className={inputClass(!!errors.services_offered)}
@@ -479,11 +531,15 @@ export function StepBusinessIdentity({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2">
+                <label
+                  htmlFor="bi-target-audience"
+                  className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-2"
+                >
                   Target Audience
                 </label>
                 <input
                   {...register("target_audience")}
+                  id="bi-target-audience"
                   type="text"
                   placeholder="e.g. Homeowners in Chicago metro"
                   className={inputClass(!!errors.target_audience)}

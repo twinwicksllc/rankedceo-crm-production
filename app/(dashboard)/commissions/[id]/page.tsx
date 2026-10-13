@@ -71,32 +71,32 @@ export default async function CommissionDetailPage({
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-muted-foreground">
+              <span className="text-sm font-medium text-muted-foreground">
                 Amount
-              </label>
+              </span>
               <p className="text-2xl font-bold">
                 {formatCurrency(commission.amount)}
               </p>
             </div>
 
             <div>
-              <label className="text-sm font-medium text-muted-foreground">
+              <span className="text-sm font-medium text-muted-foreground">
                 Commission Rate
-              </label>
+              </span>
               <p className="text-lg">{commission.rate}%</p>
             </div>
 
             <div>
-              <label className="text-sm font-medium text-muted-foreground">
+              <span className="text-sm font-medium text-muted-foreground">
                 Deal Value
-              </label>
+              </span>
               <p className="text-lg">{formatCurrency(commission.deal_value)}</p>
             </div>
 
             <div>
-              <label className="text-sm font-medium text-muted-foreground">
+              <span className="text-sm font-medium text-muted-foreground">
                 Status
-              </label>
+              </span>
               <div className="mt-1">
                 <Badge className={getStatusColor(commission.status)}>
                   {commission.status}
@@ -106,17 +106,17 @@ export default async function CommissionDetailPage({
 
             {commission.paid_at && (
               <div>
-                <label className="text-sm font-medium text-muted-foreground">
+                <span className="text-sm font-medium text-muted-foreground">
                   Paid At
-                </label>
+                </span>
                 <p className="text-lg">{formatDate(commission.paid_at)}</p>
               </div>
             )}
 
             <div>
-              <label className="text-sm font-medium text-muted-foreground">
+              <span className="text-sm font-medium text-muted-foreground">
                 Created
-              </label>
+              </span>
               <p className="text-sm">{formatDate(commission.created_at)}</p>
             </div>
           </CardContent>
@@ -128,9 +128,9 @@ export default async function CommissionDetailPage({
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-muted-foreground">
+              <span className="text-sm font-medium text-muted-foreground">
                 Sales Rep
-              </label>
+              </span>
               <p className="text-lg font-semibold">
                 {commission.user?.name || "Unknown"}
               </p>
@@ -140,9 +140,9 @@ export default async function CommissionDetailPage({
             </div>
 
             <div>
-              <label className="text-sm font-medium text-muted-foreground">
+              <span className="text-sm font-medium text-muted-foreground">
                 Deal
-              </label>
+              </span>
               <p className="text-lg font-semibold">
                 {commission.deal?.title || "Unknown Deal"}
               </p>
@@ -160,9 +160,9 @@ export default async function CommissionDetailPage({
 
             {commission.notes && (
               <div>
-                <label className="text-sm font-medium text-muted-foreground">
+                <span className="text-sm font-medium text-muted-foreground">
                   Notes
-                </label>
+                </span>
                 <p className="text-sm mt-1">{commission.notes}</p>
               </div>
             )}
