@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useIsClient } from "@/hooks/use-is-client";
+import { hardNavigate } from "@/lib/navigation";
 import {
   Calendar,
   CheckCircle2,
@@ -113,7 +114,7 @@ export function IntegrationsSettings() {
   }
 
   function handleConnect() {
-    window.location.href = "/api/calendly/connect";
+    hardNavigate("/api/calendly/connect");
   }
 
   return (

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import "./style.css";
 
 export default function PlumbingLandingPage() {
@@ -14,7 +15,13 @@ export default function PlumbingLandingPage() {
           }}
         >
           <div className="logo">
-            <img src="/logos/plumbing-logo.png" alt="Plumb Pro Logo" />
+            <Image
+              src="/logos/plumbing-logo.png"
+              priority
+              width={800}
+              height={288}
+              alt="Plumb Pro Logo"
+            />
           </div>
           <div className="header-right">
             <p>
@@ -31,8 +38,11 @@ export default function PlumbingLandingPage() {
       </header>
 
       <section className="hero">
-        <img
+        <Image
           src="/landing-page/plumber_hero.jpg"
+          priority
+          width={1024}
+          height={1526}
           alt="Hero background"
           className="hero-image"
         />
@@ -175,8 +185,10 @@ export default function PlumbingLandingPage() {
 
           <div className="gallery">
             <div className="gallery-item gallery-wide">
-              <img
+              <Image
                 src="/landing-page/plumbing_projects.jpg"
+                width={1200}
+                height={509}
                 alt="Plumbing Project Results – Before & After"
                 className="gallery-image"
               />
@@ -227,8 +239,10 @@ export default function PlumbingLandingPage() {
               <button className="blue-button">
                 BOOK FREE PLUMBING CONSULTATION
               </button>
-              <img
+              <Image
                 src="/landing-page/plumbing_collage.jpg"
+                width={1200}
+                height={670}
                 alt="Real Plumbing Transformations – Clean, Reliable, Professional"
                 className="collage-image"
               />

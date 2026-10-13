@@ -1,3 +1,4 @@
+import Image from "next/image";
 import "./style.css";
 
 export default function HvacLandingPage() {
@@ -14,7 +15,13 @@ export default function HvacLandingPage() {
           }}
         >
           <div className="logo">
-            <img src="/logos/hvac-logo.png" alt="HVAC Pro Logo" />
+            <Image
+              src="/logos/hvac-logo.png"
+              priority
+              width={800}
+              height={289}
+              alt="HVAC Pro Logo"
+            />
           </div>
           <div className="header-right">
             <p>
@@ -31,8 +38,11 @@ export default function HvacLandingPage() {
       </header>
 
       <section className="hero">
-        <img
+        <Image
           src="/landing-page/hvac_hero.jpg"
+          priority
+          width={1024}
+          height={1037}
           alt="Hero background"
           className="hero-image"
         />
@@ -177,8 +187,10 @@ export default function HvacLandingPage() {
 
           <div className="gallery">
             <div className="gallery-item gallery-wide">
-              <img
+              <Image
                 src="/landing-page/hvac_projects.jpg"
+                width={1200}
+                height={509}
                 alt="HVAC Project Results – Before & After"
                 className="gallery-image"
               />
@@ -232,8 +244,10 @@ export default function HvacLandingPage() {
               <button className="blue-button">
                 BOOK FREE HVAC CONSULTATION
               </button>
-              <img
+              <Image
                 src="/landing-page/hvac_collage.jpg"
+                width={1200}
+                height={670}
                 alt="Real HVAC Transformations – Real Comfort, Real Results"
                 className="collage-image"
               />

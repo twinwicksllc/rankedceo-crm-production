@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createAuditClient } from "@/lib/supabase/audit-client";
+import { hardNavigate } from "@/lib/navigation";
 
 /**
  * Audit Auth Confirm Page 
@@ -76,7 +77,7 @@ export default function AuditAuthConfirmPage() {
           setStatus("success");
 
           setTimeout(() => {
-            window.location.href = "/audit/start";
+            hardNavigate("/audit/start");
           }, 600);
           return;
         }
@@ -112,7 +113,7 @@ export default function AuditAuthConfirmPage() {
           // --- Step 3: Hard navigate to /audit/start ---
           // Full page load so server component re-runs auth check with new cookies
           setTimeout(() => {
-            window.location.href = "/audit/start";
+            hardNavigate("/audit/start");
           }, 600);
         } else {
           // No tokens in hash — maybe session already exists, try getSession
@@ -126,7 +127,7 @@ export default function AuditAuthConfirmPage() {
           if (session) {
             setStatus("success");
             setTimeout(() => {
-              window.location.href = "/audit/start";
+              hardNavigate("/audit/start");
             }, 600);
           } else {
             // Let detectSessionInUrl handle it via onAuthStateChange
@@ -136,7 +137,7 @@ export default function AuditAuthConfirmPage() {
               if (event === "SIGNED_IN" && session) {
                 setStatus("success");
                 setTimeout(() => {
-                  window.location.href = "/audit/start";
+                  hardNavigate("/audit/start");
                 }, 600);
                 subscription.unsubscribe();
               } else if (event === "SIGNED_OUT") {
@@ -148,7 +149,7 @@ export default function AuditAuthConfirmPage() {
             setTimeout(() => {
               subscription.unsubscribe();
               if (status === "loading") {
-                window.location.href = "/login?error=timeout";
+                hardNavigate("/login?error=timeout");
               }
             }, 5000);
           }
@@ -160,7 +161,7 @@ export default function AuditAuthConfirmPage() {
         setStatus("error");
         setErrorMsg(msg);
         setTimeout(() => {
-          window.location.href = "/login?error=" + encodeURIComponent(msg);
+          hardNavigate("/login?error=" + encodeURIComponent(msg));
         }, 2500);
       }
     }

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import "./style.css";
 
 export default function ElectricalLandingPage() {
@@ -14,7 +15,13 @@ export default function ElectricalLandingPage() {
           }}
         >
           <div className="logo">
-            <img src="/logos/electrical-logo.png" alt="Spark Pro Logo" />
+            <Image
+              src="/logos/electrical-logo.png"
+              priority
+              width={800}
+              height={295}
+              alt="Spark Pro Logo"
+            />
           </div>
           <div className="header-right">
             <p>
@@ -31,8 +38,11 @@ export default function ElectricalLandingPage() {
       </header>
 
       <section className="hero">
-        <img
+        <Image
           src="/landing-page/electrician_hero.jpg"
+          priority
+          width={1024}
+          height={1526}
           alt="Hero background"
           className="hero-image"
         />
@@ -175,8 +185,10 @@ export default function ElectricalLandingPage() {
 
           <div className="gallery">
             <div className="gallery-item gallery-wide">
-              <img
+              <Image
                 src="/landing-page/electrical_projects.jpg"
+                width={1200}
+                height={509}
                 alt="Electrical Project Results – Before & After"
                 className="gallery-image"
               />
@@ -233,8 +245,10 @@ export default function ElectricalLandingPage() {
               <button className="blue-button">
                 BOOK FREE ELECTRICAL CONSULTATION
               </button>
-              <img
+              <Image
                 src="/landing-page/electrical_collage.jpg"
+                width={1200}
+                height={655}
                 alt="Real Electrical Transformations – Safe, Modern, Efficient"
                 className="collage-image"
               />
