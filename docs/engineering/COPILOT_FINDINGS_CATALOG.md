@@ -31,7 +31,7 @@ Note: PR numbers are examples, not complete lists. Keyword counts over the raw c
 
 ## What the tools can already catch
 
-Themes 6, 2 (partly), 13 (partly) and 11 (partly) can be caught by typecheck, lint and tests. The `npm run check` script and the CI workflow that runs it (`.github/workflows/ci-checks.yml`) are added by the E1 PR (#277); until that is merged, run `npx tsc --noEmit && npm test` before pushing. The rest need the PR template checklist.
+Themes 6, 2 (partly), 13 (partly) and 11 (partly) can be caught by typecheck, lint and tests. The `npm run check` script and the CI workflow that runs it (`.github/workflows/ci-checks.yml`) are added by the E1 PR (#277); until that is merged, run `npx tsc --noEmit && npm test` before pushing. Accessibility (theme 2) is now partly enforced by the `jsx-a11y` recommended rules in `eslint.config.mjs`: a changed file may not get more errors of any of those rules than it had on `main`. It does not check everything (for example `aria-hidden` on decorative icons, or role and `aria-modal` on modals, still need the checklist). The rest need the PR template checklist.
 
 ## Review of this catalog
 

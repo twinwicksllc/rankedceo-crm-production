@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint . --ext .ts,.tsx",
+    "lint": "eslint .",
     "lint:changed": "node scripts/lint-changed.mjs",
     "typecheck": "tsc --noEmit",
     "typecheck:qa": "npm --prefix qa-agent run typecheck",
@@ -95,8 +95,9 @@
     "@types/pdfkit": "^0.17.6",
     "@typescript-eslint/eslint-plugin": "^8.59.0",
     "@typescript-eslint/parser": "^8.59.0",
-    "eslint": "^8.56.0",
-    "eslint-config-next": "14.2.18",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.4.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
     "tsx": "^4.22.4"
   },
   "engines": {
