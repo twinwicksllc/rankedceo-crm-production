@@ -11,6 +11,7 @@
 // =============================================================================
 
 import { useState, useTransition } from "react";
+import { useEscapeKey } from "@/hooks/use-escape-key";
 import {
   submitClientApproval,
   revokeClientApproval,
@@ -32,6 +33,7 @@ function PaymentGate({
   reviewToken: string;
   onClose: () => void;
 }) {
+  useEscapeKey(onClose);
   const [interval, setInterval] = useState<"month" | "year">("year");
   const [tier, setTier] = useState<"standard" | "premium">("standard");
   const [isPending, start] = useTransition();
@@ -62,12 +64,17 @@ function PaymentGate({
 
   return (
     <div
+      role="presentation"
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4"
-      onClick={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Subscribe to publish"
         className="w-full max-w-lg rounded-xl bg-white shadow-2xl ring-1 ring-slate-200"
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="border-b border-slate-200 px-6 py-4">
@@ -220,6 +227,10 @@ export function ApprovalPanel({
   const [error, setError] = useState<string | null>(null);
   const [isPending, start] = useTransition();
 
+  // PaymentGate has its own Escape handler, so only listen here when it is not
+  // the one being shown. Must stay above the early return (rules of hooks).
+  useEscapeKey(onClose, !(mode === "approve" && !isPaid));
+
   // Task 8: gate approval behind payment when not yet subscribed
   if (mode === "approve" && !isPaid) {
     return (
@@ -261,12 +272,19 @@ export function ApprovalPanel({
 
   return (
     <div
+      role="presentation"
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4"
-      onClick={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={
+          mode === "approve" ? "Approve and publish" : "Undo approval"
+        }
         className="w-full max-w-md rounded-lg bg-white shadow-2xl ring-1 ring-slate-200"
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="border-b border-slate-200 px-6 py-4">
           <div className="text-base font-semibold text-slate-900">

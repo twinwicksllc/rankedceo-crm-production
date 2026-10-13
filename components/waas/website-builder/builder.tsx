@@ -1035,7 +1035,11 @@ export function Builder({
               <Eye className="size-3.5" />
               Canvas preview — drag blocks from the left panel
             </div>
+            {/* Clicking empty canvas deselects (pointer convenience). There is
+                no keyboard deselect; selection follows focus on a block's drag
+                handle, so Tabbing to another block changes the selection. */}
             <div
+              role="presentation"
               className="flex-1 overflow-y-auto p-6"
               onClick={() => setSelectedId(null)}
             >
@@ -1055,6 +1059,9 @@ export function Builder({
                     </div>
                   ) : (
                     <div
+                      // Only stops a block click from reaching the deselect
+                      // handler above; it is not itself interactive.
+                      role="presentation"
                       className="flex flex-col gap-2"
                       onClick={(e) => e.stopPropagation()}
                     >

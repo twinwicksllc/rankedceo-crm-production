@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
+import { useEscapeKey } from "@/hooks/use-escape-key";
 
 const WELCOME_MODAL_KEY = "waas-builder-welcome-shown";
 
@@ -28,6 +29,8 @@ export function BuilderWelcomeModal({ onDismiss }: { onDismiss: () => void }) {
     onDismiss();
   };
 
+  useEscapeKey(handleDismiss, isVisible);
+
   const handleShowAgain = () => {
     localStorage.removeItem(WELCOME_MODAL_KEY);
     setIsVisible(false);
@@ -37,6 +40,7 @@ export function BuilderWelcomeModal({ onDismiss }: { onDismiss: () => void }) {
 
   return (
     <div
+      role="presentation"
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
       style={{
         backdropFilter: "blur(4px)",
@@ -48,6 +52,9 @@ export function BuilderWelcomeModal({ onDismiss }: { onDismiss: () => void }) {
     >
       {/* Modal card */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Welcome to the website builder"
         className="relative w-full max-w-md rounded-2xl border bg-white p-8 shadow-2xl"
         style={{
           borderColor: "var(--brand-block-border)",
