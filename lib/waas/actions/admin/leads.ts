@@ -25,7 +25,7 @@ export async function getAdminLeads(): Promise<ActionResult<AdminLeadListItem[]>
 
     if (error) throw new Error(error.message);
 
-    const leads = (data || []).map((lead: any) => ({
+    const leads = (data || []).map((lead) => ({
       ...lead,
       audit_status: lead.audits?.status,
     }));

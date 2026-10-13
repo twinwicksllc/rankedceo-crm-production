@@ -19,7 +19,7 @@ interface EmailFiltersProps {
 }
 
 export function EmailFilters({ filters, onFiltersChange }: EmailFiltersProps) {
-  const updateFilter = (key: keyof EmailFilters, value: any) => {
+  const updateFilter = (key: keyof EmailFilters, value: unknown) => {
     onFiltersChange({ ...filters, [key]: value });
   };
 

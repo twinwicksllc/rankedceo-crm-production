@@ -227,16 +227,20 @@ export class SubscriptionService {
       return;
     }
 
-    // Log the event (upsert)
+    // Log the event (upsert). The object shape differs per event type, so read
+    // the three ids we need defensively instead of asserting a Stripe type.
+    const eventObject = event.data.object as unknown as {
+      customer?: string;
+      subscription?: string;
+      id?: string;
+    } | null;
     await this.supabase.from("crm_billing_events").upsert({
       stripe_event_id: event.id,
       stripe_event_type: event.type,
-      stripe_customer_id: (event.data.object as any)?.customer || null,
+      stripe_customer_id: eventObject?.customer || null,
       stripe_subscription_id:
-        (event.data.object as any)?.subscription ||
-        (event.data.object as any)?.id ||
-        null,
-      payload: event as any,
+        eventObject?.subscription || eventObject?.id || null,
+      payload: event,
       processed: false,
     });
 

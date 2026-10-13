@@ -50,6 +50,16 @@ export type EditSessionResult =
 // Approval grace period (ms) — client can un-approve within this window
 // ---------------------------------------------------------------------------
 
+/** Columns selected from tenant_site_config in the tenant_id fallback lookup. */
+interface TenantSiteConfigFallbackRow {
+  tenant_id: string;
+  client_review_token: string | null;
+  client_selected_template_slug: string | null;
+  client_edit_session_started_at: string | null;
+  client_approval_at: string | null;
+  client_approval_locked: boolean | null;
+}
+
 export const APPROVAL_GRACE_PERIOD_MS = 60 * 60 * 1000; // 1 hour
 
 // ---------------------------------------------------------------------------
@@ -139,14 +149,16 @@ export async function resolveClientEditSession(
 
         if (!fallbackErr && fallbackRow) {
           // Found by tenant_id — patch the row with a proper token so future visits work
-          const newToken = (fallbackRow as any).client_review_token;
+          // Same object as fallbackRow (cast only, no copy), so the token patch below is preserved.
+          const patchedConfig =
+            fallbackRow as unknown as TenantSiteConfigFallbackRow;
+          const newToken = patchedConfig.client_review_token;
           if (!newToken) {
             console.warn(
               "[resolveClientEditSession] tenant_id fallback succeeded but no token stored; row needs ensureClientReviewToken re-run",
             );
           }
           // Normalise the fallback row — ensure token field is populated
-          const patchedConfig = fallbackRow as any;
           if (!patchedConfig.client_review_token) {
             patchedConfig.client_review_token = reviewToken;
           }
@@ -155,7 +167,7 @@ export async function resolveClientEditSession(
             await supabase
               .from("tenants")
               .select("id, slug, brand_config, status")
-              .eq("id", (patchedConfig as any).tenant_id)
+              .eq("id", patchedConfig.tenant_id)
               .single();
 
           if (tenantErrFallback || !tenantRowFallback) {
@@ -177,7 +189,7 @@ export async function resolveClientEditSession(
             typeof brandConfigFb.business_name === "string"
               ? brandConfigFb.business_name
               : "Your Business";
-          const configFb = patchedConfig as any;
+          const configFb = patchedConfig;
 
           const approvalAtFb = configFb.client_approval_at;
           const isApprovalLockedFb = configFb.client_approval_locked === true;

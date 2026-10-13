@@ -7,7 +7,13 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-async function getActivities(filters: any, accountId: string) {
+interface ActivityFilters {
+  type?: string;
+  status?: string;
+  search?: string;
+}
+
+async function getActivities(filters: ActivityFilters, accountId: string) {
   const supabase = await createClient();
 
   let query = supabase
@@ -55,7 +61,7 @@ async function getActivityStats(accountId: string) {
     total: activities.length,
     completed: activities.filter((a) => a.status === "completed").length,
     pending: activities.filter((a) => a.status === "pending").length,
-    byType: activities.reduce((acc: any, activity) => {
+    byType: activities.reduce<Record<string, number>>((acc, activity) => {
       acc[activity.type] = (acc[activity.type] || 0) + 1;
       return acc;
     }, {}),

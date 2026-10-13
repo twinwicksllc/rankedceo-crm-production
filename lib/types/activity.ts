@@ -20,7 +20,7 @@ export interface Activity {
   duration_minutes?: number | null;
   location?: string | null;
   attendees?: string[] | null;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ActivityWithRelations extends Activity {
@@ -52,7 +52,7 @@ export interface CreateActivityInput {
   duration_minutes?: number;
   location?: string;
   attendees?: string[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface UpdateActivityInput {
@@ -65,7 +65,7 @@ export interface UpdateActivityInput {
   duration_minutes?: number;
   location?: string;
   attendees?: string[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ActivityFilters {

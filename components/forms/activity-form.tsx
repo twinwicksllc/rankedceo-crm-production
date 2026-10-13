@@ -11,6 +11,7 @@ import {
   ActivityStatus,
   CreateActivityInput,
 } from "@/lib/types/activity";
+import { getErrorMessage } from "@/lib/errors";
 
 interface ActivityFormProps {
   initialData?: Partial<CreateActivityInput>;
@@ -63,7 +64,7 @@ export default function ActivityForm({
 
   const [attendeeInput, setAttendeeInput] = useState("");
 
-  const handleChange = (field: keyof CreateActivityInput, value: any) => {
+  const handleChange = (field: keyof CreateActivityInput, value: unknown) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -105,8 +106,8 @@ export default function ActivityForm({
       } else {
         router.back();
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to create activity");
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to create activity"));
     } finally {
       setIsLoading(false);
     }

@@ -130,11 +130,11 @@ export async function GET(
       : new Date().toISOString().split("T")[0];
 
     // Determine which anchor sections are enabled
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const activeSectionsJson = (
+      siteConfigRow as { active_sections_json?: unknown } | null
+    )?.active_sections_json;
     const activeSections: Array<{ section: string; enabled: boolean }> =
-      Array.isArray((siteConfigRow as any)?.active_sections_json)
-        ? (siteConfigRow as any).active_sections_json
-        : [];
+      Array.isArray(activeSectionsJson) ? activeSectionsJson : [];
 
     const isSectionEnabled = (id: string): boolean => {
       // A type can appear more than once; the anchor is live if any copy is on.

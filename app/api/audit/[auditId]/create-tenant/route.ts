@@ -5,6 +5,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient as createAuthClient } from "@/lib/supabase/server";
 import { createWaasClient, getWaasAdminClient, createTenantRecord, updateTenantRecord } from "@/lib/waas/supabase";
 import { ensureClientReviewToken } from "@/lib/waas/actions/admin";
@@ -162,7 +163,10 @@ export async function POST(
     // tenants.source_audit_id. Backfill the reverse link so tenant-scoped
     // audit queries (e.g., getTenantAuditHistory) can find it.
     try {
-      await ((adminClient.from("audits") as any).update({ tenant_id: tenantId }) as any)
+      // Typed client rejects this payload at compile time; same instance, viewed as untyped.
+      await (adminClient as unknown as SupabaseClient)
+        .from("audits")
+        .update({ tenant_id: tenantId })
         .eq("id", auditId);
     } catch (backfillError) {
       console.error("[create-tenant] Failed to backfill audits.tenant_id:", backfillError);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { triageBookSchema } from "@/lib/validations/triage-booking";
 import { CalendarRoutingService } from "@/lib/services/calendar-routing-service";
+import { getErrorMessage } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -42,9 +43,11 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 },
     );
-  } catch (error: any) {
-    const message =
-      error?.message || "Failed to create triage booking appointment";
+  } catch (error) {
+    const message = getErrorMessage(
+      error,
+      "Failed to create triage booking appointment",
+    );
     const status = message.includes("no longer available") ? 409 : 500;
 
     console.error("[Triage Book] Error:", error);

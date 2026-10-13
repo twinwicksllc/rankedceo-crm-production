@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
       new URL(`/thank-you?industry=${industryLower}`, request.url),
       { status: 303 }, // 303 See Other — correct for POST → GET redirect
     );
-  } catch (err: any) {
+  } catch (err) {
     console.error("[Landing Quote] Unexpected error:", err);
     return NextResponse.redirect(
       new URL("/thank-you?status=error&reason=server_error", request.url),

@@ -31,7 +31,9 @@ export function getPoolAccountId(industry: PoolIndustry): string {
  * Useful for admin dashboards to identify unattributed leads.
  */
 export function isPoolAccount(accountId: string): boolean {
-  return Object.values(POOL_ACCOUNTS).includes(accountId as any);
+  return (Object.values(POOL_ACCOUNTS) as readonly string[]).includes(
+    accountId,
+  );
 }
 
 /**

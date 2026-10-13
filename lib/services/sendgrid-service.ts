@@ -2,6 +2,12 @@
 import { MailDataRequired } from "@sendgrid/mail";
 import sgMail from "@sendgrid/mail";
 import { createHmac, timingSafeEqual } from "crypto";
+import { getErrorMessage } from "@/lib/errors";
+
+/** Shape of the error @sendgrid/mail throws for non-2xx responses. */
+interface SendGridResponseError {
+  response?: { body?: { errors?: Array<{ message: string }> } };
+}
 
 interface SendGridEmailOptions {
   to: string;
@@ -11,7 +17,7 @@ interface SendGridEmailOptions {
   subject: string;
   html: string;
   text?: string;
-  customArgs?: Record<string, any>;
+  customArgs?: Record<string, unknown>;
   trackingSettings?: {
     clickTracking?: { enable: boolean };
     openTracking?: { enable: boolean };
@@ -25,10 +31,34 @@ interface SendGridResponse {
   errors?: string[];
 }
 
+/**
+ * Raw event object as posted by the SendGrid Event Webhook. Only the fields
+ * read by parseWebhookEvents are listed; some keys use hyphens.
+ */
+interface SendGridRawWebhookEvent {
+  email: string;
+  event: string;
+  message_id?: string;
+  sg_message_id?: string;
+  timestamp?: number;
+  campaign_id?: string;
+  "campaign-id"?: string;
+  campaign_email_id?: string;
+  "campaign-email-id"?: string;
+  url?: string;
+  reason?: string;
+  response?: string;
+  sg_event_id?: string;
+  useragent?: string;
+  ip?: string;
+  category?: string[];
+}
+
 interface SendGridWebhookEvent {
   email: string;
   event: string;
-  message_id: string;
+  // Absent when the raw event has neither message_id nor sg_message_id.
+  message_id?: string;
   timestamp: number;
   campaign_id?: string;
   campaign_email_id?: string;
@@ -84,14 +114,16 @@ export class SendGridService {
         success: true,
         messageId,
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error("[SendGrid Service] Error sending email:", error);
 
       const errors: string[] = [];
-      if (error.response?.body?.errors) {
-        errors.push(...error.response.body.errors.map((e: any) => e.message));
+      const apiErrors = (error as SendGridResponseError | null)?.response?.body
+        ?.errors;
+      if (apiErrors) {
+        errors.push(...apiErrors.map((e) => e.message));
       } else {
-        errors.push(error.message || "Unknown error sending email");
+        errors.push(getErrorMessage(error, "Unknown error sending email"));
       }
 
       return {
@@ -127,8 +159,10 @@ export class SendGridService {
   /**
    * Parse SendGrid webhook events
    */
-  static parseWebhookEvents(events: any[]): SendGridWebhookEvent[] {
-    return events.map((event: any) => ({
+  static parseWebhookEvents(
+    events: SendGridRawWebhookEvent[],
+  ): SendGridWebhookEvent[] {
+    return events.map((event) => ({
       email: event.email,
       event: event.event,
       message_id: event.message_id || event.sg_message_id,
@@ -180,14 +214,16 @@ export class SendGridService {
   /**
    * Extract campaign ID from SendGrid custom args
    */
-  static extractCampaignData(customArgs: Record<string, any>): {
+  static extractCampaignData(customArgs: Record<string, unknown>): {
     campaignId?: string;
     campaignEmailId?: string;
   } {
+    const pick = (value: unknown): string | undefined =>
+      typeof value === "string" ? value : undefined;
     return {
-      campaignId: customArgs.campaign_id || customArgs.campaignId,
+      campaignId: pick(customArgs.campaign_id) || pick(customArgs.campaignId),
       campaignEmailId:
-        customArgs.campaign_email_id || customArgs.campaignEmailId,
+        pick(customArgs.campaign_email_id) || pick(customArgs.campaignEmailId),
     };
   }
 
@@ -238,7 +274,7 @@ export class SendGridService {
    */
   static replaceTemplateVariables(
     content: string,
-    variables: Record<string, any>,
+    variables: Record<string, unknown>,
   ): string {
     let result = content;
 

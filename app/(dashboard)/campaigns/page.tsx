@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Mail, Users, Send, TrendingUp, Calendar } from "lucide-react";
 import Link from "next/link";
+import type { CampaignWithRelations } from "@/lib/types/campaign";
 
 export default async function CampaignsPage() {
   const supabase = await createClient();
@@ -175,7 +176,7 @@ async function CampaignsList({ accountId }: { accountId: string }) {
   );
 }
 
-function CampaignCard({ campaign }: { campaign: any }) {
+function CampaignCard({ campaign }: { campaign: CampaignWithRelations }) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":

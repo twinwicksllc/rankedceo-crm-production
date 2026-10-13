@@ -28,8 +28,8 @@ export default async function AppointmentsPage() {
       })),
   ]);
 
-  const upcoming = appointments.filter((a: any) => a.status === "scheduled");
-  const past = appointments.filter((a: any) => a.status !== "scheduled");
+  const upcoming = appointments.filter((a) => a.status === "scheduled");
+  const past = appointments.filter((a) => a.status !== "scheduled");
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -114,7 +114,7 @@ export default async function AppointmentsPage() {
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {upcoming.map((appt: any) => (
+            {upcoming.map((appt) => (
               <Link key={appt.id} href={`/appointments/${appt.id}`}>
                 <AppointmentCard appointment={appt} />
               </Link>
@@ -129,7 +129,7 @@ export default async function AppointmentsPage() {
             Past Appointments ({past.length})
           </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {past.slice(0, 9).map((appt: any) => (
+            {past.slice(0, 9).map((appt) => (
               <Link key={appt.id} href={`/appointments/${appt.id}`}>
                 <AppointmentCard appointment={appt} />
               </Link>

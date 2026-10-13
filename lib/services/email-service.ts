@@ -1,5 +1,7 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import {
+  EmailMessage,
   EmailMessageWithThread,
   EmailThreadWithMessages,
   CreateEmailMessageInput,
@@ -12,7 +14,7 @@ import {
 import { EmailParser } from "@/lib/services/email-parser";
 
 export class EmailService {
-  private supabase: any;
+  private supabase: SupabaseClient;
 
   constructor() {
     this.supabase = createClient();
@@ -177,7 +179,7 @@ export class EmailService {
     // Sort messages by received date
     if (thread.messages) {
       thread.messages.sort(
-        (a: any, b: any) =>
+        (a: EmailMessage, b: EmailMessage) =>
           new Date(a.received_at).getTime() - new Date(b.received_at).getTime(),
       );
     }

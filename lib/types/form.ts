@@ -89,7 +89,7 @@ export interface FormWithFields extends Form {
 export interface FormSubmission {
   id: string;
   form_id: string;
-  submission_data: Record<string, any>;
+  submission_data: Record<string, unknown>;
   submitted_at: string;
   ip_address?: string | null;
   user_agent?: string | null;
@@ -164,7 +164,7 @@ export interface UpdateFormInput {
 
 export interface SubmitFormInput {
   form_id: string;
-  submission_data: Record<string, any>;
+  submission_data: Record<string, unknown>;
   recaptcha_token?: string;
 }
 

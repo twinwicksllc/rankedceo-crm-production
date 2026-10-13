@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import {
   Activity,
@@ -15,11 +16,10 @@ import {
 } from "@/lib/validations/activity";
 
 export class ActivityService {
-  private supabase;
+  private supabase: SupabaseClient | null = null;
 
   constructor() {
     // Don't initialize client in constructor - will be lazy-loaded
-    this.supabase = null as any;
   }
 
   private async getClient() {
@@ -264,7 +264,7 @@ export class ActivityService {
       completed: 0,
     };
 
-    data?.forEach((activity: any) => {
+    data?.forEach((activity) => {
       // Count by type
       const type = activity.type as ActivityType;
       if (!stats.byType[type]) {

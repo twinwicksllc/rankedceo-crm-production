@@ -8,6 +8,11 @@ import { NotificationSettings } from "@/components/settings/notification-setting
 import { SecuritySettings } from "@/components/settings/security-settings";
 import { IntegrationsSettings } from "@/components/settings/integrations-settings";
 import { redirect } from "next/navigation";
+import type {
+  AccountSettings as AccountSettingsData,
+  TeamMember,
+  UserProfile,
+} from "@/lib/types/settings";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -21,9 +26,9 @@ export default async function SettingsPage() {
 
   const settingsService = new SettingsService();
 
-  let profile: any = null;
-  let accountSettings: any = null;
-  let teamMembers: any[] = [];
+  let profile: UserProfile | null = null;
+  let accountSettings: AccountSettingsData | null = null;
+  let teamMembers: TeamMember[] = [];
 
   try {
     [profile, accountSettings, teamMembers] = await Promise.all([

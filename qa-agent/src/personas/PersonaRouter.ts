@@ -260,11 +260,11 @@ export class PersonaRouter {
    * Handles DNS resolution failures, connection timeouts, etc.
    */
   private async gotoWithRetry(
-    page: any,
+    page: Page,
     url: string,
-    options?: any,
+    options?: Parameters<Page["goto"]>[1],
     maxAttempts: number = 3,
-  ): Promise<any> {
+  ): Promise<Awaited<ReturnType<Page["goto"]>>> {
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -273,18 +273,19 @@ export class PersonaRouter {
           `[PersonaRouter] Navigating to ${url} (attempt ${attempt}/${maxAttempts})`,
         );
         return await page.goto(url, options);
-      } catch (err: any) {
-        lastError = err;
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        const message = lastError.message;
         const isNetworkError =
-          err.message?.includes("ERR_NAME_NOT_RESOLVED") ||
-          err.message?.includes("ERR_CONNECTION_REFUSED") ||
-          err.message?.includes("ERR_NETWORK_CHANGED") ||
-          err.message?.includes("net::");
+          message.includes("ERR_NAME_NOT_RESOLVED") ||
+          message.includes("ERR_CONNECTION_REFUSED") ||
+          message.includes("ERR_NETWORK_CHANGED") ||
+          message.includes("net::");
 
         if (isNetworkError && attempt < maxAttempts) {
           const delayMs = Math.pow(2, attempt - 1) * 1000; // exponential backoff: 1s, 2s, 4s
           console.warn(
-            `[PersonaRouter] Network error on attempt ${attempt}: ${err.message}. Retrying in ${delayMs}ms...`,
+            `[PersonaRouter] Network error on attempt ${attempt}: ${message}. Retrying in ${delayMs}ms...`,
           );
           await new Promise((resolve) => setTimeout(resolve, delayMs));
           continue;

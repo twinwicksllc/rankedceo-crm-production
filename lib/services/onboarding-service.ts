@@ -1,5 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
-import type { OnboardingStatus, CompanyInfo } from "@/lib/types/onboarding";
+import type {
+  AccountInfo,
+  OnboardingStatus,
+  CompanyInfo,
+} from "@/lib/types/onboarding";
 
 export class OnboardingService {
   private async getUserInfo() {
@@ -115,7 +119,7 @@ export class OnboardingService {
     }
   }
 
-  async getAccountInfo(): Promise<any> {
+  async getAccountInfo(): Promise<AccountInfo> {
     const supabase = await createClient();
     const { account_id } = await this.getUserInfo();
 
@@ -129,6 +133,6 @@ export class OnboardingService {
       throw new Error(`Failed to fetch account info: ${error.message}`);
     }
 
-    return data;
+    return data as AccountInfo;
   }
 }

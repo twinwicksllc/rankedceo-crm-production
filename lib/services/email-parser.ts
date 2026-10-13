@@ -6,12 +6,40 @@ import { ParsedEmail } from "@/lib/types/email";
  * and extracts structured information.
  */
 
+/**
+ * Shape of the SendGrid Inbound Parse payload (multipart form fields or JSON).
+ * Fields are documented as strings; anything else is tolerated but ignored.
+ */
+export interface SendGridInboundData {
+  from?: string;
+  to?: string;
+  cc?: string;
+  bcc?: string;
+  subject?: string;
+  text?: string;
+  html?: string;
+  headers?: unknown;
+  attachments?: unknown;
+  [key: string]: unknown;
+}
+
+interface SendGridInboundAttachment {
+  filename?: string;
+  type?: string;
+  content?: string;
+}
+
+/** Return the value when it is a non-empty string, otherwise undefined. */
+function headerString(value: unknown): string | undefined {
+  return typeof value === "string" && value ? value : undefined;
+}
+
 export class EmailParser {
   /**
    * Parse email from SendGrid Inbound Parse webhook
    */
-  static parseFromSendGrid(webhookData: any): ParsedEmail {
-    const headers: Record<string, any> = this.extractHeaders(webhookData);
+  static parseFromSendGrid(webhookData: SendGridInboundData): ParsedEmail {
+    const headers: Record<string, unknown> = this.extractHeaders(webhookData);
 
     const parsedEmail: ParsedEmail = {
       from_address: this.extractEmail(webhookData.from || ""),
@@ -25,7 +53,10 @@ export class EmailParser {
       body_plain: webhookData.text || null,
       body_html: webhookData.html || null,
       message_id: this.getMessageId(headers),
-      in_reply_to: headers["in-reply-to"] || headers["In-Reply-To"] || null,
+      in_reply_to:
+        headerString(headers["in-reply-to"]) ||
+        headerString(headers["In-Reply-To"]) ||
+        null,
       references: this.parseReferences(
         headers["references"] || headers["References"],
       ),
@@ -42,7 +73,7 @@ export class EmailParser {
   static parseFromMIME(rawMIME: string): ParsedEmail {
     // This is a simplified parser. For production, use a library like `mailparser`
     const lines = rawMIME.split("\n");
-    const headers: Record<string, any> = {};
+    const headers: Record<string, unknown> = {};
     let headerEndIndex = 0;
 
     // Parse headers
@@ -64,16 +95,20 @@ export class EmailParser {
     const body = lines.slice(headerEndIndex + 1).join("\n");
 
     return {
-      from_address: this.extractEmail(headers["From"] || ""),
-      from_name: this.extractName(headers["From"] || ""),
-      to_addresses: this.extractEmails(headers["To"] || ""),
-      cc_addresses: headers["Cc"] ? this.extractEmails(headers["Cc"]) : null,
-      bcc_addresses: headers["Bcc"] ? this.extractEmails(headers["Bcc"]) : null,
-      subject: headers["Subject"] || "No Subject",
+      from_address: this.extractEmail(headerString(headers["From"]) || ""),
+      from_name: this.extractName(headerString(headers["From"]) || ""),
+      to_addresses: this.extractEmails(headerString(headers["To"]) || ""),
+      cc_addresses: headerString(headers["Cc"])
+        ? this.extractEmails(headerString(headers["Cc"]) as string)
+        : null,
+      bcc_addresses: headerString(headers["Bcc"])
+        ? this.extractEmails(headerString(headers["Bcc"]) as string)
+        : null,
+      subject: headerString(headers["Subject"]) || "No Subject",
       body_plain: body || null,
       body_html: null, // Would need proper MIME parsing to separate HTML
       message_id: this.getMessageId(headers),
-      in_reply_to: headers["In-Reply-To"] || null,
+      in_reply_to: headerString(headers["In-Reply-To"]) || null,
       references: this.parseReferences(headers["References"]),
       headers,
     };
@@ -82,14 +117,18 @@ export class EmailParser {
   /**
    * Extract headers from webhook data
    */
-  private static extractHeaders(webhookData: any): Record<string, any> {
-    const headers: Record<string, any> = {};
+  private static extractHeaders(
+    webhookData: SendGridInboundData,
+  ): Record<string, unknown> {
+    const headers: Record<string, unknown> = {};
 
     if (webhookData.headers) {
       if (Array.isArray(webhookData.headers)) {
-        webhookData.headers.forEach((header: any) => {
-          headers[header.name] = header.value;
-        });
+        webhookData.headers.forEach(
+          (header: { name: string; value: unknown }) => {
+            headers[header.name] = header.value;
+          },
+        );
       } else if (typeof webhookData.headers === "object") {
         Object.assign(headers, webhookData.headers);
       }
@@ -163,9 +202,11 @@ export class EmailParser {
   /**
    * Get Message-ID from headers
    */
-  private static getMessageId(headers: Record<string, any>): string {
+  private static getMessageId(headers: Record<string, unknown>): string {
     const messageId =
-      headers["Message-ID"] || headers["message-id"] || headers["Message-Id"];
+      headerString(headers["Message-ID"]) ||
+      headerString(headers["message-id"]) ||
+      headerString(headers["Message-Id"]);
     if (messageId) {
       return messageId.replace(/[<>]/g, "").trim();
     }
@@ -177,22 +218,22 @@ export class EmailParser {
   /**
    * Parse References header into array
    */
-  private static parseReferences(references: any): string[] | null {
+  private static parseReferences(references: unknown): string[] | null {
     if (!references) return null;
 
-    const refs = Array.isArray(references)
+    const refs: unknown[] = Array.isArray(references)
       ? references
-      : references.toString().split(/\s+/);
+      : String(references).split(/\s+/);
 
     return refs
-      .map((ref: string) => ref.replace(/[<>]/g, "").trim())
-      .filter((ref: string) => ref.length > 0);
+      .map((ref) => String(ref).replace(/[<>]/g, "").trim())
+      .filter((ref) => ref.length > 0);
   }
 
   /**
    * Parse attachments from webhook data
    */
-  private static parseAttachments(attachments: any[]): Array<{
+  private static parseAttachments(attachments: unknown): Array<{
     filename: string;
     content_type: string;
     content: string;
@@ -200,7 +241,7 @@ export class EmailParser {
   }> {
     if (!attachments || !Array.isArray(attachments)) return [];
 
-    return attachments.map((att: any) => ({
+    return (attachments as SendGridInboundAttachment[]).map((att) => ({
       filename: att.filename || "unknown",
       content_type: att.type || "application/octet-stream",
       content: att.content || "",

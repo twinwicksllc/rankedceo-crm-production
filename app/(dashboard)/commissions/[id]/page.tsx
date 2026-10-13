@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { notFound } from "next/navigation";
+import type { CommissionWithDetails } from "@/lib/types/commission";
 
 export default async function CommissionDetailPage({
   params,
@@ -24,7 +25,7 @@ export default async function CommissionDetailPage({
 
   const commissionService = new CommissionService();
 
-  let commission: any = null;
+  let commission: CommissionWithDetails | null = null;
 
   try {
     commission = await commissionService.getCommission(id);

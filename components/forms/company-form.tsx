@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/alert";
 import { createClient } from "@/lib/supabase/client";
+import { getErrorMessage } from "@/lib/errors";
 
 interface CompanyFormProps {
   accountId: string;
@@ -84,9 +85,9 @@ export default function CompanyForm({ accountId, company }: CompanyFormProps) {
       }
 
       router.refresh();
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error saving company:", err);
-      setError(err.message || "Failed to save company");
+      setError(getErrorMessage(err, "Failed to save company"));
     } finally {
       setLoading(false);
     }

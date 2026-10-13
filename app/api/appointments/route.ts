@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AppointmentService } from "@/lib/services/appointment-service";
 import { createAppointmentSchema } from "@/lib/validations/appointment";
+import { getErrorMessage } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -28,10 +29,10 @@ export async function GET(request: NextRequest) {
     const stats = await service.getStats();
 
     return NextResponse.json({ appointments, stats });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[Appointments GET] Error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to fetch appointments" },
+      { error: getErrorMessage(error, "Failed to fetch appointments") },
       { status: 500 },
     );
   }
@@ -79,10 +80,10 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ appointment }, { status: 201 });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[Appointments POST] Error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to create appointment" },
+      { error: getErrorMessage(error, "Failed to create appointment") },
       { status: 500 },
     );
   }

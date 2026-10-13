@@ -12,10 +12,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { COMPANY_SIZES, INDUSTRIES } from "@/lib/types/onboarding";
+import {
+  COMPANY_SIZES,
+  INDUSTRIES,
+  type AccountInfo,
+} from "@/lib/types/onboarding";
 
 interface CompanyInfoStepProps {
-  accountInfo: any;
+  accountInfo: AccountInfo | undefined;
 }
 
 export function CompanyInfoStep({ accountInfo }: CompanyInfoStepProps) {

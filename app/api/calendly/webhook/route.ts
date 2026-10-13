@@ -2,6 +2,31 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import * as crypto from "crypto";
 
+/**
+ * Subset of the Calendly webhook body this handler reads. All fields are
+ * optional because the shape varies by event type and is not validated here.
+ */
+interface CalendlyWebhookPayload {
+  event?: string;
+  payload?: {
+    event?: string;
+    uri?: string;
+    invitee?: string;
+    name?: string;
+    email?: string;
+    timezone?: string;
+    cancel_url?: string;
+    reschedule_url?: string;
+    questions_and_answers?: Array<{ question?: string; answer?: string }>;
+    scheduled_event?: {
+      start_time?: string;
+      end_time?: string;
+      location?: { join_url?: string; location?: string };
+      event_memberships?: Array<{ user?: string }>;
+    };
+  };
+}
+
 export const dynamic = "force-dynamic";
 
 // ── Signature Verification ───────────────────────────────────────────────────
@@ -101,7 +126,7 @@ export async function POST(request: NextRequest) {
   }
 
   // 4. Parse payload
-  let payload: any;
+  let payload: CalendlyWebhookPayload;
   try {
     payload = JSON.parse(rawBody);
   } catch (err) {
@@ -138,10 +163,13 @@ export async function POST(request: NextRequest) {
         const normalizedInviteeUri = inviteeUri?.replace(/\/$/, "");
 
         // Capture invitee notes/questions
-        const questionsAndAnswers = eventData?.questions_and_answers || [];
+        const questionsAndAnswers: Array<{
+          question?: string;
+          answer?: string;
+        }> = eventData?.questions_and_answers || [];
         const notes = questionsAndAnswers
-          .filter((qa: any) => qa.answer && qa.answer.trim())
-          .map((qa: any) => `${qa.question}: ${qa.answer}`)
+          .filter((qa) => qa.answer && qa.answer.trim())
+          .map((qa) => `${qa.question}: ${qa.answer}`)
           .join("\n");
 
         console.log(

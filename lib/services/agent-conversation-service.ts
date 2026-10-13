@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 // ============================================================
 // Agent Conversation Service
 // Manages AI chat conversations with persistent storage
@@ -12,7 +13,7 @@ import type {
 } from "@/lib/types/appointment";
 
 export class AgentConversationService {
-  private supabase: any = null;
+  private supabase: SupabaseClient | null = null;
 
   private async getClient() {
     if (!this.supabase) {
@@ -128,7 +129,7 @@ export class AgentConversationService {
     conversationId: string,
     role: "user" | "assistant" | "system",
     content: string,
-    metadata?: Record<string, any>,
+    metadata?: Record<string, unknown>,
   ): Promise<boolean> {
     const supabase = await this.getClient();
 
@@ -181,7 +182,7 @@ export class AgentConversationService {
     const supabase = await this.getClient();
 
     try {
-      const updateData: any = {
+      const updateData: Record<string, string> = {
         status,
         updated_at: new Date().toISOString(),
       };
@@ -333,7 +334,7 @@ export class AgentConversationService {
         bySource: {} as Record<string, number>,
       };
 
-      conversations.forEach((conv: any) => {
+      conversations.forEach((conv) => {
         // Count by status
         if (conv.status === "active") stats.active++;
         else if (conv.status === "booked") stats.booked++;

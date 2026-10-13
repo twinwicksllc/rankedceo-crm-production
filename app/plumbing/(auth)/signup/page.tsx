@@ -18,6 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { getErrorMessage } from "@/lib/errors";
 
 export default function PlumbingSignupPage() {
   const router = useRouter();
@@ -70,9 +71,9 @@ export default function PlumbingSignupPage() {
       if (signUpError) throw signUpError;
       router.push("/onboarding");
       router.refresh();
-    } catch (err: any) {
-      console.error("[PlumbingSignup] Error:", err.message);
-      setError(err.message || "Failed to sign up");
+    } catch (err) {
+      console.error("[PlumbingSignup] Error:", getErrorMessage(err));
+      setError(getErrorMessage(err, "Failed to sign up"));
     } finally {
       setLoading(false);
     }

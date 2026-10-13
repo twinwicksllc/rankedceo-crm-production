@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { chat, extractLeadInfo } from "@/lib/services/ai-agent-service";
 import { getEventTypes } from "@/lib/services/calendly-service";
 import { agentConversationService } from "@/lib/services/agent-conversation-service";
 import { agentChatSchema } from "@/lib/validations/appointment";
-import type { AgentMessage, AppointmentSource } from "@/lib/types/appointment";
+import type {
+  AgentMessage,
+  AppointmentSource,
+  CalendlyEventType,
+} from "@/lib/types/appointment";
 import type { IndustryType } from "@/lib/types/industry-lead";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +18,7 @@ const DEFAULT_ACCOUNT_ID =
   process.env.DEFAULT_ACCOUNT_ID || "00000000-0000-4000-a000-000000000001";
 
 async function upsertChatLead(
-  supabase: any,
+  supabase: SupabaseClient,
   accountId: string,
   source: AppointmentSource,
   leadInfo: { name?: string; email?: string; phone?: string },
@@ -36,7 +41,12 @@ async function upsertChatLead(
       return null;
     }
 
-    let existingLead: any = null;
+    let existingLead: {
+      id: string;
+      lead_name: string | null;
+      lead_email: string | null;
+      lead_phone: string | null;
+    } | null = null;
 
     if (leadInfo.email) {
       console.log(
@@ -80,7 +90,7 @@ async function upsertChatLead(
         console.error("[Agent Chat] Phone lookup error:", error);
       } else if (phoneLeads) {
         existingLead =
-          phoneLeads.find((lead: any) => {
+          phoneLeads.find((lead: { lead_phone: string | null }) => {
             const storedNormalized = (lead.lead_phone || "").replace(/\D/g, "");
             return (
               storedNormalized === normalizedPhone &&
@@ -99,7 +109,9 @@ async function upsertChatLead(
         "[Agent Chat] Existing lead found, updating:",
         existingLead.id,
       );
-      const updates: any = { updated_at: new Date().toISOString() };
+      const updates: Record<string, string> = {
+        updated_at: new Date().toISOString(),
+      };
       if (
         leadInfo.name &&
         leadInfo.name !== "Unknown" &&
@@ -229,7 +241,7 @@ export async function POST(request: NextRequest) {
 
     const messages: AgentMessage[] = conversation?.messages || [];
 
-    let eventTypes: any[] = [];
+    let eventTypes: CalendlyEventType[] = [];
     let calendlySchedulingUrl: string | null = null;
     try {
       const { data: connection } = await supabase
@@ -266,9 +278,12 @@ export async function POST(request: NextRequest) {
       },
       availableEventTypes: eventTypes,
       // Company referral personalization
-      companyName: companyName || (conversation?.metadata as any)?.companyName,
+      companyName:
+        companyName ||
+        (conversation?.metadata?.companyName as string | undefined),
       referralSource:
-        referralSource || (conversation?.metadata as any)?.referralSource,
+        referralSource ||
+        (conversation?.metadata?.referralSource as string | undefined),
     };
 
     const response = await chat(message, messages, context, eventTypes);

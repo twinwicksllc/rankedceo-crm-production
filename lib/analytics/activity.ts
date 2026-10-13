@@ -1,6 +1,13 @@
 // Activity Analytics
 import { createClient } from "@/lib/supabase/server";
+import type { Activity } from "@/lib/types/activity";
 import { startOfDay, endOfDay, subDays } from "date-fns";
+
+/** Activity row plus the joined contact/company names (as returned by the select). */
+export type UpcomingActivity = Activity & {
+  contact: { name: string } | null;
+  company: { name: string } | null;
+};
 
 export interface ActivityByType {
   type: string;
@@ -136,7 +143,15 @@ export async function getActivityLeaderboard(
 
   const activityByUser = new Map<string, { userName: string; count: number }>();
 
-  data?.forEach((activity: any) => {
+  // many-to-one join: PostgREST returns a single object, but the untyped client
+  // infers an array, so go through `unknown` (same shape the code always assumed;
+  // not verified against live data).
+  const rows = data as unknown as Array<{
+    user_id: string;
+    user: { name: string | null } | null;
+  }> | null;
+
+  rows?.forEach((activity) => {
     const userId = activity.user_id;
     const userName = activity.user?.name || "Unknown";
 
@@ -162,7 +177,7 @@ export async function getActivityLeaderboard(
 export async function getUpcomingActivities(
   accountId: string,
   days: number = 7,
-): Promise<any[]> {
+): Promise<UpcomingActivity[]> {
   const supabase = await createClient();
 
   const startDate = startOfDay(new Date());
@@ -192,7 +207,8 @@ export async function getUpcomingActivities(
     return [];
   }
 
-  return data || [];
+  // Joined rows are inferred as arrays by the untyped client; shape not verified against live data.
+  return (data as unknown as UpcomingActivity[] | null) || [];
 }
 
 /**

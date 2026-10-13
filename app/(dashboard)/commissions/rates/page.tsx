@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
+import type { CommissionRate } from "@/lib/types/commission";
 
 export default async function CommissionRatesPage() {
   const supabase = await createClient();
@@ -18,7 +19,7 @@ export default async function CommissionRatesPage() {
 
   const commissionService = new CommissionService();
 
-  let rates: any[] = [];
+  let rates: CommissionRate[] = [];
 
   try {
     rates = await commissionService.getCommissionRates();

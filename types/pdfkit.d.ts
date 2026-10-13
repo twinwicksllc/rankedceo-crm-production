@@ -8,6 +8,10 @@ declare module "pdfkit" {
   class PDFDocument extends Stream {
     constructor(options?: PDFDocumentOptions);
 
+    // Cursor position (read/write, as in pdfkit)
+    x: number;
+    y: number;
+
     // Core methods
     fontSize(size: number): PDFDocument;
     font(name: string): PDFDocument;
@@ -25,6 +29,8 @@ declare module "pdfkit" {
     ): PDFDocument;
 
     fillColor(color: string | number): PDFDocument;
+    strokeColor(color: string | number): PDFDocument;
+    lineWidth(width: number): PDFDocument;
     moveDown(lines?: number): PDFDocument;
     addPage(): PDFDocument;
     rect(x: number, y: number, w: number, h: number): PDFDocument;
@@ -41,7 +47,8 @@ declare module "pdfkit" {
     pipe(destination: Stream): Stream;
 
     // Utilities
-    on(event: string, callback: (...args: any[]) => void): void;
+    // `never[]` args accept any listener signature without using `any`.
+    on(event: string, callback: (...args: never[]) => void): void;
     end(): void;
 
     // Line drawing
@@ -53,20 +60,20 @@ declare module "pdfkit" {
     size?: string | [number, number];
     margin?: number | [number, number, number, number];
     layout?: "portrait" | "landscape";
-    [key: string]: any;
+    [key: string]: unknown;
   }
 
   interface TextOptions {
     align?: "left" | "center" | "right";
     width?: number;
     height?: number;
-    [key: string]: any;
+    [key: string]: unknown;
   }
 
   interface ImageOptions {
     width?: number;
     height?: number;
-    [key: string]: any;
+    [key: string]: unknown;
   }
 
   export default PDFDocument;

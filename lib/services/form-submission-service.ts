@@ -1,10 +1,11 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
-import { FormSubmission, SubmitFormInput } from "@/lib/types/form";
+import { Form, FormSubmission, SubmitFormInput } from "@/lib/types/form";
 import { FormValidationService } from "./form-validation-service";
 import { FormService } from "./form-service";
 
 export class FormSubmissionService {
-  private supabase: any;
+  private supabase: SupabaseClient;
   private formService: FormService;
 
   constructor() {
@@ -115,7 +116,7 @@ export class FormSubmissionService {
   /**
    * Extract email from submission data
    */
-  private extractEmail(data: Record<string, any>): string | null {
+  private extractEmail(data: Record<string, unknown>): string | null {
     // Look for common email field names
     const emailFields = [
       "email",
@@ -125,10 +126,11 @@ export class FormSubmissionService {
     ];
 
     for (const field of emailFields) {
-      if (data[field] && typeof data[field] === "string") {
+      const value = data[field];
+      if (value && typeof value === "string") {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (emailRegex.test(data[field])) {
-          return data[field];
+        if (emailRegex.test(value)) {
+          return value;
         }
       }
     }
@@ -164,7 +166,7 @@ export class FormSubmissionService {
    * Send notification email
    */
   private async sendNotification(
-    form: any,
+    form: Pick<Form, "notification_emails">,
     submission: FormSubmission,
   ): Promise<void> {
     // This would integrate with SendGrid to send notification

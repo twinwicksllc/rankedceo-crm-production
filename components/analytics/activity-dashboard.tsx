@@ -19,6 +19,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Activity, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
+import type {
+  ActivityByType,
+  ActivityLeaderboard,
+} from "@/lib/analytics/activity";
 
 interface ActivityDashboardProps {
   accountId: string;
@@ -30,9 +34,9 @@ export function ActivityDashboard({
   dateRange,
 }: ActivityDashboardProps) {
   const [loading, setLoading] = useState(true);
-  const [activityByType, setActivityByType] = useState<any[]>([]);
+  const [activityByType, setActivityByType] = useState<ActivityByType[]>([]);
   const [completionRate, setCompletionRate] = useState(0);
-  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [leaderboard, setLeaderboard] = useState<ActivityLeaderboard[]>([]);
   const [stats, setStats] = useState({
     total: 0,
     completed: 0,
@@ -171,7 +175,7 @@ export function ActivityDashboard({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {leaderboard.slice(0, 10).map((user: any, index: number) => (
+            {leaderboard.slice(0, 10).map((user, index) => (
               <div
                 key={user.userId}
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"

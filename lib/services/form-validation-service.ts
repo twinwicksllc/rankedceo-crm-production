@@ -6,7 +6,7 @@ export class FormValidationService {
    */
   static validateFormData(
     fields: FormField[],
-    data: Record<string, any>,
+    data: Record<string, unknown>,
   ): { valid: boolean; errors: Record<string, string> } {
     const errors: Record<string, string> = {};
 
@@ -28,7 +28,7 @@ export class FormValidationService {
   /**
    * Validate a single field value
    */
-  static validateField(field: FormField, value: any): string[] {
+  static validateField(field: FormField, value: unknown): string[] {
     const errors: string[] = [];
 
     // Get validation rules
@@ -63,7 +63,7 @@ export class FormValidationService {
    */
   private static applyValidationRule(
     rule: ValidationRule,
-    value: any,
+    value: unknown,
     field: FormField,
   ): string | null {
     switch (rule.type) {
@@ -157,23 +157,23 @@ export class FormValidationService {
    */
   private static validateByFieldType(
     fieldType: string,
-    value: any,
+    value: unknown,
   ): string | null {
     switch (fieldType) {
       case "email":
-        if (!this.isValidEmail(value)) {
+        if (!this.isValidEmail(String(value))) {
           return "Please enter a valid email address";
         }
         break;
 
       case "url":
-        if (!this.isValidUrl(value)) {
+        if (!this.isValidUrl(String(value))) {
           return "Please enter a valid URL";
         }
         break;
 
       case "phone":
-        if (!this.isValidPhone(value)) {
+        if (!this.isValidPhone(String(value))) {
           return "Please enter a valid phone number";
         }
         break;
@@ -224,8 +224,10 @@ export class FormValidationService {
   /**
    * Sanitize form data
    */
-  static sanitizeFormData(data: Record<string, any>): Record<string, any> {
-    const sanitized: Record<string, any> = {};
+  static sanitizeFormData(
+    data: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const sanitized: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(data)) {
       if (typeof value === "string") {
@@ -246,7 +248,10 @@ export class FormValidationService {
   /**
    * Get field default value
    */
-  static getFieldValue(field: FormField, data: Record<string, any>): any {
+  static getFieldValue(
+    field: FormField,
+    data: Record<string, unknown>,
+  ): unknown {
     return data[field.field_key] !== undefined
       ? data[field.field_key]
       : field.default_value;
