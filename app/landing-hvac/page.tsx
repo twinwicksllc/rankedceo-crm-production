@@ -279,19 +279,19 @@ export default function HvacLandingPage() {
               <h4>Services</h4>
               <ul>
                 <li>
-                  <a href="#">AC Repair</a>
+                  <span>AC Repair</span>
                 </li>
                 <li>
-                  <a href="#">Heating Repair</a>
+                  <span>Heating Repair</span>
                 </li>
                 <li>
-                  <a href="#">System Installation</a>
+                  <span>System Installation</span>
                 </li>
                 <li>
-                  <a href="#">Tune-Ups</a>
+                  <span>Tune-Ups</span>
                 </li>
                 <li>
-                  <a href="#">Air Quality</a>
+                  <span>Air Quality</span>
                 </li>
               </ul>
             </div>
@@ -299,16 +299,16 @@ export default function HvacLandingPage() {
               <h4>Company</h4>
               <ul>
                 <li>
-                  <a href="#">About Us</a>
+                  <span>About Us</span>
                 </li>
                 <li>
-                  <a href="#">Careers</a>
+                  <span>Careers</span>
                 </li>
                 <li>
-                  <a href="#">Partners</a>
+                  <span>Partners</span>
                 </li>
                 <li>
-                  <a href="#">Contact</a>
+                  <span>Contact</span>
                 </li>
               </ul>
             </div>
@@ -316,16 +316,16 @@ export default function HvacLandingPage() {
               <h4>Resources</h4>
               <ul>
                 <li>
-                  <a href="#">Blog</a>
+                  <span>Blog</span>
                 </li>
                 <li>
-                  <a href="#">HVAC Guides</a>
+                  <span>HVAC Guides</span>
                 </li>
                 <li>
-                  <a href="#">FAQ</a>
+                  <span>FAQ</span>
                 </li>
                 <li>
-                  <a href="#">Help Center</a>
+                  <span>Help Center</span>
                 </li>
               </ul>
             </div>
@@ -339,7 +339,7 @@ export default function HvacLandingPage() {
                   <a href="https://crm.rankedceo.com/terms">Terms of Service</a>
                 </li>
                 <li>
-                  <a href="#">Licensing</a>
+                  <span>Licensing</span>
                 </li>
               </ul>
             </div>

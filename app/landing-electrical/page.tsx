@@ -280,19 +280,19 @@ export default function ElectricalLandingPage() {
               <h4>Services</h4>
               <ul>
                 <li>
-                  <a href="#">Panel Upgrades</a>
+                  <span>Panel Upgrades</span>
                 </li>
                 <li>
-                  <a href="#">Wiring Repair</a>
+                  <span>Wiring Repair</span>
                 </li>
                 <li>
-                  <a href="#">EV Charger Install</a>
+                  <span>EV Charger Install</span>
                 </li>
                 <li>
-                  <a href="#">Outlet &amp; Switch</a>
+                  <span>Outlet &amp; Switch</span>
                 </li>
                 <li>
-                  <a href="#">Emergency Service</a>
+                  <span>Emergency Service</span>
                 </li>
               </ul>
             </div>
@@ -300,16 +300,16 @@ export default function ElectricalLandingPage() {
               <h4>Company</h4>
               <ul>
                 <li>
-                  <a href="#">About Us</a>
+                  <span>About Us</span>
                 </li>
                 <li>
-                  <a href="#">Careers</a>
+                  <span>Careers</span>
                 </li>
                 <li>
-                  <a href="#">Partners</a>
+                  <span>Partners</span>
                 </li>
                 <li>
-                  <a href="#">Contact</a>
+                  <span>Contact</span>
                 </li>
               </ul>
             </div>
@@ -317,16 +317,16 @@ export default function ElectricalLandingPage() {
               <h4>Resources</h4>
               <ul>
                 <li>
-                  <a href="#">Blog</a>
+                  <span>Blog</span>
                 </li>
                 <li>
-                  <a href="#">Electrical Guides</a>
+                  <span>Electrical Guides</span>
                 </li>
                 <li>
-                  <a href="#">FAQ</a>
+                  <span>FAQ</span>
                 </li>
                 <li>
-                  <a href="#">Help Center</a>
+                  <span>Help Center</span>
                 </li>
               </ul>
             </div>
@@ -340,7 +340,7 @@ export default function ElectricalLandingPage() {
                   <a href="https://crm.rankedceo.com/terms">Terms of Service</a>
                 </li>
                 <li>
-                  <a href="#">Licensing</a>
+                  <span>Licensing</span>
                 </li>
               </ul>
             </div>

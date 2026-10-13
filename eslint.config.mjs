@@ -60,6 +60,8 @@ const eslintConfig = [
             "<label> needs htmlFor (and a matching id on the control) or must wrap its input. For group headings use <span id> + role=group aria-labelledby.",
         },
       ],
+      // Also check next/link: <Link href="#"> is the same problem as <a href="#">.
+      "jsx-a11y/anchor-is-valid": ["error", { components: ["Link"] }],
     },
   },
 ];

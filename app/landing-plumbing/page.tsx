@@ -274,19 +274,19 @@ export default function PlumbingLandingPage() {
               <h4>Services</h4>
               <ul>
                 <li>
-                  <a href="#">Drain Cleaning</a>
+                  <span>Drain Cleaning</span>
                 </li>
                 <li>
-                  <a href="#">Pipe Repair</a>
+                  <span>Pipe Repair</span>
                 </li>
                 <li>
-                  <a href="#">Water Heaters</a>
+                  <span>Water Heaters</span>
                 </li>
                 <li>
-                  <a href="#">Leak Detection</a>
+                  <span>Leak Detection</span>
                 </li>
                 <li>
-                  <a href="#">Emergency Service</a>
+                  <span>Emergency Service</span>
                 </li>
               </ul>
             </div>
@@ -294,16 +294,16 @@ export default function PlumbingLandingPage() {
               <h4>Company</h4>
               <ul>
                 <li>
-                  <a href="#">About Us</a>
+                  <span>About Us</span>
                 </li>
                 <li>
-                  <a href="#">Careers</a>
+                  <span>Careers</span>
                 </li>
                 <li>
-                  <a href="#">Partners</a>
+                  <span>Partners</span>
                 </li>
                 <li>
-                  <a href="#">Contact</a>
+                  <span>Contact</span>
                 </li>
               </ul>
             </div>
@@ -311,16 +311,16 @@ export default function PlumbingLandingPage() {
               <h4>Resources</h4>
               <ul>
                 <li>
-                  <a href="#">Blog</a>
+                  <span>Blog</span>
                 </li>
                 <li>
-                  <a href="#">Plumbing Guides</a>
+                  <span>Plumbing Guides</span>
                 </li>
                 <li>
-                  <a href="#">FAQ</a>
+                  <span>FAQ</span>
                 </li>
                 <li>
-                  <a href="#">Help Center</a>
+                  <span>Help Center</span>
                 </li>
               </ul>
             </div>
@@ -334,7 +334,7 @@ export default function PlumbingLandingPage() {
                   <a href="https://crm.rankedceo.com/terms">Terms of Service</a>
                 </li>
                 <li>
-                  <a href="#">Licensing</a>
+                  <span>Licensing</span>
                 </li>
               </ul>
             </div>

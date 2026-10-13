@@ -43,10 +43,7 @@ export function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         {/* Quick Access Buttons */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-16">
-          <a
-            href="#"
-            className="flex items-center justify-center gap-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl p-6 transition-all group"
-          >
+          <div className="flex items-center justify-center gap-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl p-6 transition-all group">
             <div className="w-12 h-12 rounded-full bg-[#5a67d8] flex items-center justify-center group-hover:scale-110 transition-transform">
               <Users className="w-6 h-6 text-white" />
             </div>
@@ -54,11 +51,8 @@ export function Footer() {
               <h3 className="font-bold text-lg">Member Lookup</h3>
               <p className="text-sm text-white/70">Access your membership</p>
             </div>
-          </a>
-          <a
-            href="#"
-            className="flex items-center justify-center gap-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl p-6 transition-all group"
-          >
+          </div>
+          <div className="flex items-center justify-center gap-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl p-6 transition-all group">
             <div className="w-12 h-12 rounded-full bg-[#5a67d8] flex items-center justify-center group-hover:scale-110 transition-transform">
               <Stethoscope className="w-6 h-6 text-white" />
             </div>
@@ -66,7 +60,7 @@ export function Footer() {
               <h3 className="font-bold text-lg">Dentist Sign Up</h3>
               <p className="text-sm text-white/70">Join our network</p>
             </div>
-          </a>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-6 gap-8 mb-12">
