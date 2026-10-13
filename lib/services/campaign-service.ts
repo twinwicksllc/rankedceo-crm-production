@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 // Campaign Service for RankedCEO CRM
 import { createClient } from "@/lib/supabase/server";
 import { SendGridService } from "./sendgrid-service";
@@ -20,7 +21,8 @@ import {
 } from "@/lib/validations/campaign";
 
 export class CampaignService {
-  private supabase!: any;
+  // Assigned lazily by getClient(); getUserInfo() always calls it before any query.
+  private supabase!: SupabaseClient;
   private sendGridService: SendGridService;
 
   constructor() {
@@ -28,7 +30,6 @@ export class CampaignService {
       process.env.SENDGRID_API_KEY || "",
     );
     // Don't initialize client in constructor - will be lazy-loaded
-    this.supabase = null as any;
   }
 
   private async getClient() {
@@ -72,7 +73,7 @@ export class CampaignService {
     try {
       const { accountId } = await this.getUserInfo();
 
-      let query = await this.supabase
+      let query = this.supabase
         .from("email_templates")
         .select("*")
         .eq("account_id", accountId)
@@ -205,7 +206,7 @@ export class CampaignService {
   async getCampaigns(filters?: CampaignFilters): Promise<Campaign[]> {
     const { accountId } = await this.getUserInfo();
 
-    let query = await this.supabase
+    let query = this.supabase
       .from("campaigns")
       .select("*")
       .eq("account_id", accountId)
@@ -347,18 +348,17 @@ export class CampaignService {
     const emails = emailsResult.data || [];
 
     const totalOpens = emails.reduce(
-      (sum: number, email: any) => sum + (email.opens || 0),
+      (sum: number, email) => sum + (email.opens || 0),
       0,
     );
     const totalClicks = emails.reduce(
-      (sum: number, email: any) => sum + (email.clicks || 0),
+      (sum: number, email) => sum + (email.clicks || 0),
       0,
     );
 
     return {
       totalCampaigns: campaigns.length,
-      activeCampaigns: campaigns.filter((c: any) => c.status === "active")
-        .length,
+      activeCampaigns: campaigns.filter((c) => c.status === "active").length,
       totalEmailsSent: emails.length,
       totalOpens,
       totalClicks,

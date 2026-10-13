@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { triageSlotValidationSchema } from "@/lib/validations/triage-booking";
 import { CalendarRoutingService } from "@/lib/services/calendar-routing-service";
+import { getErrorMessage } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -34,10 +35,10 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ valid: true, provider: result.provider });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[Triage Validate Slot] Error:", error);
     return NextResponse.json(
-      { error: error?.message || "Failed to validate slot" },
+      { error: getErrorMessage(error, "Failed to validate slot") },
       { status: 500 },
     );
   }

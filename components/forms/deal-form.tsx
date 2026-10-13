@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/alert";
 import { createClient } from "@/lib/supabase/client";
+import { getErrorMessage } from "@/lib/errors";
 
 interface DealFormProps {
   accountId: string;
@@ -101,9 +102,9 @@ export default function DealForm({
       }
 
       router.refresh();
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error saving deal:", err);
-      setError(err.message || "Failed to save deal");
+      setError(getErrorMessage(err, "Failed to save deal"));
     } finally {
       setLoading(false);
     }

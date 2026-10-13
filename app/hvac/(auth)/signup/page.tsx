@@ -18,6 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { getErrorMessage } from "@/lib/errors";
 
 export default function HvacSignupPage() {
   const router = useRouter();
@@ -80,9 +81,9 @@ export default function HvacSignupPage() {
 
       router.push("/onboarding");
       router.refresh();
-    } catch (err: any) {
-      console.error("[HvacSignup] Error:", err.message);
-      setError(err.message || "Failed to sign up");
+    } catch (err) {
+      console.error("[HvacSignup] Error:", getErrorMessage(err));
+      setError(getErrorMessage(err, "Failed to sign up"));
     } finally {
       setLoading(false);
     }

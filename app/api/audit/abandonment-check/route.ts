@@ -12,7 +12,7 @@
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { sendTenantNotification } from "@/lib/waas/services/notifications";
 import type {
   NotificationType,
@@ -39,7 +39,7 @@ function getTimeAgo(hours: number): string {
 }
 
 async function getAuditDetails(
-  supabase: any,
+  supabase: SupabaseClient,
   auditId: string,
 ): Promise<{
   businessName?: string;

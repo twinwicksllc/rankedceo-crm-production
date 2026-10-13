@@ -7,6 +7,7 @@ import {
   type TriageSlotValidationInput,
 } from "@/lib/validations/triage-booking";
 import { CalendarRoutingService } from "@/lib/services/calendar-routing-service";
+import { getErrorMessage } from "@/lib/errors";
 
 export async function validateTriageSlotAction(input: TriageSlotValidationInput) {
   const parsed = triageSlotValidationSchema.safeParse(input);
@@ -46,10 +47,10 @@ export async function bookTriageAppointmentAction(input: TriageBookInput) {
       ok: true,
       ...result,
     };
-  } catch (error: any) {
+  } catch (error) {
     return {
       ok: false,
-      error: error?.message || "Failed to book triage appointment",
+      error: getErrorMessage(error, "Failed to book triage appointment"),
     };
   }
 }

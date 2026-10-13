@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import {
   Company,
@@ -9,12 +10,16 @@ import {
   updateCompanySchema,
 } from "@/lib/validations/company";
 
+/** Filters accepted by getCompanies(). */
+export interface CompanyFilters {
+  search?: string;
+}
+
 export class CompanyService {
-  private supabase;
+  private supabase: SupabaseClient | null = null;
 
   constructor() {
     // Don't initialize client in constructor - will be lazy-loaded
-    this.supabase = null as any;
   }
 
   private async getClient() {
@@ -63,7 +68,7 @@ export class CompanyService {
     return data as Company;
   }
 
-  async getCompanies(filters: any = {}): Promise<Company[]> {
+  async getCompanies(filters: CompanyFilters = {}): Promise<Company[]> {
     const client = await this.getClient();
 
     let query = client
@@ -149,7 +154,7 @@ export class CompanyService {
       prospect: 0,
     };
 
-    data?.forEach((company: any) => {
+    data?.forEach((company) => {
       if (company.status === "active") stats.active++;
       if (company.status === "inactive") stats.inactive++;
       if (company.status === "prospect") stats.prospect++;

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { recaptchaService } from "@/lib/services/recaptcha-service";
+import { getErrorMessage, getErrorStack } from "@/lib/errors";
 
 export async function POST(request: NextRequest) {
   try {
@@ -70,17 +71,17 @@ export async function POST(request: NextRequest) {
       valid: true,
       score,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[reCAPTCHA] Verification error:", {
-      message: error.message,
-      stack: error.stack,
+      message: getErrorMessage(error),
+      stack: getErrorStack(error),
       timestamp: new Date().toISOString(),
     });
 
     return NextResponse.json(
       {
         error: "Internal server error during reCAPTCHA verification",
-        details: error.message,
+        details: getErrorMessage(error),
       },
       { status: 500 },
     );

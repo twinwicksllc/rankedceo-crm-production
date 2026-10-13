@@ -20,7 +20,7 @@ export interface AccountSettings {
   website: string | null;
   phone: string | null;
   address: string | null;
-  settings: any;
+  settings: Record<string, unknown>;
 }
 
 export interface NotificationSettings {

@@ -1,13 +1,20 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { Deal, CreateDealInput, UpdateDealInput } from "@/lib/types/deal";
 import { createDealSchema, updateDealSchema } from "@/lib/validations/deal";
 
+/** Filters accepted by getDeals(). */
+export interface DealFilters {
+  search?: string;
+  pipeline_id?: string;
+  stage?: string;
+}
+
 export class DealService {
-  private supabase;
+  private supabase: SupabaseClient | null = null;
 
   constructor() {
     // Don't initialize client in constructor - will be lazy-loaded
-    this.supabase = null as any;
   }
 
   private async getClient() {
@@ -56,7 +63,7 @@ export class DealService {
     return data as Deal;
   }
 
-  async getDeals(filters: any = {}): Promise<Deal[]> {
+  async getDeals(filters: DealFilters = {}): Promise<Deal[]> {
     const client = await this.getClient();
 
     let query = client
@@ -152,7 +159,7 @@ export class DealService {
       activeCount: 0,
     };
 
-    data?.forEach((deal: any) => {
+    data?.forEach((deal) => {
       stats.totalValue += deal.value || 0;
 
       if (deal.stage === "Won") {

@@ -59,7 +59,7 @@ export interface Appointment {
   reminder_sent_at?: string | null;
 
   notes?: string | null;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface AppointmentWithRelations extends Appointment {
@@ -112,7 +112,7 @@ export interface CreateAppointmentInput {
   source_lead_id?: string;
   agent_conversation?: AgentMessage[];
   notes?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface UpdateAppointmentInput {
@@ -121,7 +121,7 @@ export interface UpdateAppointmentInput {
   contact_id?: string;
   company_id?: string;
   deal_id?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface AppointmentFilters {
@@ -193,7 +193,7 @@ export interface AgentMessage {
   role: AgentMessageRole;
   content: string;
   timestamp?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface AgentConversationMetadata {

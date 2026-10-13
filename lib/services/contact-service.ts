@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import {
   Contact,
@@ -9,12 +10,17 @@ import {
   updateContactSchema,
 } from "@/lib/validations/contact";
 
+/** Filters accepted by getContacts(). */
+export interface ContactFilters {
+  search?: string;
+  company_id?: string;
+}
+
 export class ContactService {
-  private supabase;
+  private supabase: SupabaseClient | null = null;
 
   constructor() {
     // Don't initialize client in constructor - will be lazy-loaded
-    this.supabase = null as any;
   }
 
   private async getClient() {
@@ -63,7 +69,7 @@ export class ContactService {
     return data as Contact;
   }
 
-  async getContacts(filters: any = {}): Promise<Contact[]> {
+  async getContacts(filters: ContactFilters = {}): Promise<Contact[]> {
     const client = await this.getClient();
 
     let query = client
@@ -153,7 +159,7 @@ export class ContactService {
       prospect: 0,
     };
 
-    data?.forEach((contact: any) => {
+    data?.forEach((contact) => {
       if (contact.status === "active") stats.active++;
       if (contact.status === "inactive") stats.inactive++;
       if (contact.status === "prospect") stats.prospect++;

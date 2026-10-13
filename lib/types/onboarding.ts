@@ -5,6 +5,20 @@ export interface OnboardingStatus {
   onboarding_completed_at: string | null;
 }
 
+/**
+ * Subset of the `accounts` row the onboarding steps read to prefill forms.
+ * Columns can be null in the database, hence the nullable fields.
+ */
+export interface AccountInfo {
+  name?: string | null;
+  company_size?: string | null;
+  industry?: string | null;
+  website?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  timezone?: string | null;
+}
+
 export interface CompanyInfo {
   name: string;
   company_size?: string;

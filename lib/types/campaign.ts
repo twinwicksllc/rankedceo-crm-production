@@ -60,7 +60,7 @@ export interface Campaign {
   target_contacts: string[];
   target_companies: string[];
   target_deals: string[];
-  segments: any[];
+  segments: unknown[];
 
   // Scheduling
   scheduled_at?: string;
@@ -68,7 +68,7 @@ export interface Campaign {
 
   // A/B Testing
   is_ab_test: boolean;
-  ab_test_variants: any[];
+  ab_test_variants: unknown[];
   ab_test_winner_variant?: number;
   ab_test_declared_at?: string;
 
@@ -103,10 +103,10 @@ export interface CreateCampaignInput {
   target_contacts?: string[];
   target_companies?: string[];
   target_deals?: string[];
-  segments?: any[];
+  segments?: unknown[];
   scheduled_at?: string;
   is_ab_test?: boolean;
-  ab_test_variants?: any[];
+  ab_test_variants?: unknown[];
 }
 
 export interface UpdateCampaignInput {
@@ -122,10 +122,10 @@ export interface UpdateCampaignInput {
   target_contacts?: string[];
   target_companies?: string[];
   target_deals?: string[];
-  segments?: any[];
+  segments?: unknown[];
   scheduled_at?: string;
   is_ab_test?: boolean;
-  ab_test_variants?: any[];
+  ab_test_variants?: unknown[];
   ab_test_winner_variant?: number;
 }
 
@@ -234,7 +234,7 @@ export interface CampaignSequence {
   delay_from: "campaign_start" | "previous_step" | "custom_date";
 
   // Trigger conditions
-  trigger_condition: any;
+  trigger_condition: unknown;
   trigger_event?: string;
 
   // Status
@@ -267,7 +267,7 @@ export interface CreateCampaignSequenceInput {
   delay_value: number;
   delay_unit: "minutes" | "hours" | "days" | "weeks";
   delay_from?: "campaign_start" | "previous_step" | "custom_date";
-  trigger_condition?: any;
+  trigger_condition?: unknown;
   trigger_event?: string;
   status?: CampaignSequenceStatus;
 }
@@ -282,7 +282,7 @@ export interface UpdateCampaignSequenceInput {
   delay_value?: number;
   delay_unit?: "minutes" | "hours" | "days" | "weeks";
   delay_from?: "campaign_start" | "previous_step" | "custom_date";
-  trigger_condition?: any;
+  trigger_condition?: unknown;
   trigger_event?: string;
   status?: CampaignSequenceStatus;
 }

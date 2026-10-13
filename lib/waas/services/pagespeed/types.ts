@@ -5,6 +5,25 @@
 // Free API key: https://console.cloud.google.com (PageSpeed Insights API)
 // =========================================================================
 
+// Subset of the Lighthouse result returned by the PageSpeed Insights API
+// that the extractors read. Every field is optional because the API may omit it.
+export interface LighthouseAudit {
+  title?: string;
+  description?: string;
+  score?: number | null;
+  numericValue?: number;
+  details?: { overallSavingsMs?: number };
+}
+
+export interface LighthouseResult {
+  audits?: Record<string, LighthouseAudit | undefined>;
+  categories?: Record<string, { score?: number | null } | undefined>;
+}
+
+export interface PageSpeedApiResponse {
+  lighthouseResult?: LighthouseResult;
+}
+
 export interface PageSpeedMetrics {
   // Core Web Vitals
   lcp: number; // Largest Contentful Paint (ms)
@@ -80,6 +99,6 @@ export interface PageSpeedFetchError {
 }
 
 export interface PageSpeedFetchResult {
-  data: Record<string, any> | null;
+  data: PageSpeedApiResponse | null;
   error: PageSpeedFetchError | null;
 }

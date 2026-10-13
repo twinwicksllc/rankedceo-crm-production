@@ -5,6 +5,7 @@
 // ALSO: Updates tenant's brand_config with captured contact info.
 // =============================================================================
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import {
   updateAuditRecord,
@@ -225,7 +226,7 @@ export async function POST(req: NextRequest) {
         .eq("id", String(audit_id))
         .single()) as {
         data: Pick<WaasAudit, "tenant_id" | "id"> | null;
-        error: any;
+        error: unknown;
       };
 
       let tenantId = audit?.tenant_id;
@@ -236,7 +237,7 @@ export async function POST(req: NextRequest) {
           .from("tenants")
           .select("id")
           .eq("source_audit_id", String(audit_id))
-          .single()) as { data: Pick<WaasTenant, "id"> | null; error: any };
+          .single()) as { data: Pick<WaasTenant, "id"> | null; error: unknown };
         tenantId = tenantByAudit?.id;
       }
 
@@ -248,7 +249,7 @@ export async function POST(req: NextRequest) {
           .eq("id", tenantId)
           .single()) as {
           data: Pick<WaasTenant, "brand_config"> | null;
-          error: any;
+          error: unknown;
         };
 
         const currentBrandConfig =
@@ -271,10 +272,14 @@ export async function POST(req: NextRequest) {
             ((currentBrandConfig.pdf_downloads as number) ?? 0) + 1,
         };
 
-        await ((waasClient.from("tenants") as any).update({
-          brand_config: updatedBrandConfig,
-          updated_at: new Date().toISOString(),
-        }) as any)
+        // The typed WaasDatabase client rejects this update payload at compile
+        // time; use the same client instance viewed as untyped (no runtime change).
+        await (waasClient as unknown as SupabaseClient)
+          .from("tenants")
+          .update({
+            brand_config: updatedBrandConfig,
+            updated_at: new Date().toISOString(),
+          })
           .eq("id", tenantId);
 
         console.log(

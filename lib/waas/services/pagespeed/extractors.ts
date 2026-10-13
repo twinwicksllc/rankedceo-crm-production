@@ -1,5 +1,6 @@
 // lib/waas/services/pagespeed/extractors.ts
 import {
+  LighthouseResult,
   PageSpeedMetrics,
   PageSpeedCategoryScores,
   PageSpeedOpportunity,
@@ -23,7 +24,7 @@ export function scoreToGrade(score: number): "A" | "B" | "C" | "D" | "F" {
 // Extract metrics from PageSpeed API response
 // ----------------------------------------------------------------------------
 export function extractMetrics(
-  lighthouseResult: Record<string, any>,
+  lighthouseResult: LighthouseResult,
 ): PageSpeedMetrics {
   const audits = lighthouseResult?.audits ?? {};
 
@@ -44,7 +45,7 @@ export function extractMetrics(
 // Extract category scores
 // ----------------------------------------------------------------------------
 export function extractCategoryScores(
-  lighthouseResult: Record<string, any>,
+  lighthouseResult: LighthouseResult,
   strategy: "mobile" | "desktop",
 ): PageSpeedCategoryScores {
   const cats = lighthouseResult?.categories ?? {};
@@ -91,7 +92,7 @@ export function extractCategoryScores(
 // Extract improvement opportunities
 // ----------------------------------------------------------------------------
 export function extractOpportunities(
-  lighthouseResult: Record<string, any>,
+  lighthouseResult: LighthouseResult,
 ): PageSpeedOpportunity[] {
   const audits = lighthouseResult?.audits ?? {};
   const opportunities: PageSpeedOpportunity[] = [];
@@ -129,7 +130,7 @@ export function extractOpportunities(
 // Extract SEO diagnostics
 // ----------------------------------------------------------------------------
 export function extractDiagnostics(
-  lighthouseResult: Record<string, any>,
+  lighthouseResult: LighthouseResult,
 ): PageSpeedDiagnostic[] {
   const audits = lighthouseResult?.audits ?? {};
   const diagnosticIds = [
@@ -147,15 +148,15 @@ export function extractDiagnostics(
   ];
 
   return diagnosticIds
-    .filter((id) => audits[id])
-    .map((id) => ({
+    .flatMap((id) => {
+      const audit = audits[id];
+      return audit ? [{ id, audit }] : [];
+    })
+    .map(({ id, audit }) => ({
       id,
-      title: audits[id].title ?? id,
-      description: audits[id].description ?? "",
-      score:
-        audits[id].score !== null
-          ? Math.round((audits[id].score ?? 0) * 100)
-          : null,
+      title: audit.title ?? id,
+      description: audit.description ?? "",
+      score: audit.score !== null ? Math.round((audit.score ?? 0) * 100) : null,
     }))
     .filter((d) => d.score !== null && d.score < 100)
     .slice(0, 8);

@@ -2,8 +2,64 @@ import { NextRequest, NextResponse } from "next/server";
 import PDFDocument from "pdfkit";
 import { getWaasAdminClient } from "@/lib/waas/supabase";
 import { createClient } from "@/lib/supabase/server";
-import type { AuditReportData, WaasAudit } from "@/lib/waas/types";
+import type {
+  AuditLocalPack,
+  AuditOpportunity,
+  AuditPageSpeed,
+  AuditReportData,
+  AuditTechnicalIssue,
+  WaasAudit,
+} from "@/lib/waas/types";
 import { getDisplayScore } from "@/lib/waas/services/audit-engine/scoring";
+
+/**
+ * report_data as persisted by the audit engine. The engine stores a few fields
+ * beyond the base AuditReportData shape (same extension the on-screen report uses
+ * in app/audit/[auditId]/client.tsx). All are optional: this is DB JSON.
+ */
+interface PdfLeaderboardEntry {
+  rank?: number;
+  url?: string;
+  domain?: string;
+  bestPosition?: number | null;
+  isTarget?: boolean;
+}
+
+interface PdfPageSpeedFull {
+  mobile?: {
+    lcp?: number | null;
+    cls?: number | null;
+    categoryScores?: { performance?: { score?: number | null } };
+  };
+  desktop?: { lcp?: number | null; cls?: number | null };
+}
+
+interface ExtendedReportData extends AuditReportData {
+  keywords_used?: string[];
+  leaderboard?: PdfLeaderboardEntry[];
+  gap_analysis?: { nationalCompetitorNote?: string };
+  local_pack?: AuditLocalPack | null;
+  page_speed_full?: PdfPageSpeedFull;
+}
+
+type PdfDoc = InstanceType<typeof PDFDocument>;
+
+/**
+ * The PDF reads opportunity/issue rows with legacy field names (title, impact,
+ * priority) that the audit engine does not emit (it emits type/description/
+ * estimated_impact and type/description/severity). Behavior is kept as-is here;
+ * these optional fields only make the existing lookups type-check.
+ */
+type PdfOpportunity = AuditOpportunity & {
+  title?: string;
+  impact?: string;
+  priority?: string;
+};
+type PdfTechIssue = Omit<AuditTechnicalIssue, "severity"> & {
+  severity?: string;
+  title?: string;
+  impact?: string;
+};
 
 interface RequestContext {
   params: Promise<{ auditId: string }>;
@@ -46,7 +102,7 @@ function formatMs(ms: number): string {
   return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${Math.round(ms)}ms`;
 }
 
-async function streamToBuffer(stream: any): Promise<Buffer> {
+async function streamToBuffer(stream: PdfDoc): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     stream.on("data", (chunk: Buffer) => chunks.push(chunk));
@@ -64,15 +120,15 @@ const MARGIN = 40;
 const CONTENT_W = PAGE_WIDTH - MARGIN * 2;
 
 // Draw a horizontal rule
-function hr(doc: any, y?: number): void {
-  const yPos = y ?? (doc as any).y;
+function hr(doc: PdfDoc, y?: number): void {
+  const yPos = y ?? doc.y;
   doc.moveTo(MARGIN, yPos).lineTo(PAGE_WIDTH - MARGIN, yPos);
-  (doc as any).strokeColor("#e2e8f0").lineWidth(0.5).stroke();
+  doc.strokeColor("#e2e8f0").lineWidth(0.5).stroke();
 }
 
 // Section header: colored left bar + bold title
-function sectionHeader(doc: any, title: string, emoji: string): void {
-  const y = (doc as any).y + 6;
+function sectionHeader(doc: PdfDoc, title: string, emoji: string): void {
+  const y = doc.y + 6;
   doc.rect(MARGIN, y, 3, 16).fillColor("#2563eb").fill();
   doc
     .fillColor("#0f172a")
@@ -84,13 +140,13 @@ function sectionHeader(doc: any, title: string, emoji: string): void {
 
 // Key-value row
 function kvRow(
-  doc: any,
+  doc: PdfDoc,
   label: string,
   value: string,
   labelColor = "#64748b",
   valueColor = "#0f172a",
 ): void {
-  const y = (doc as any).y;
+  const y = doc.y;
   doc
     .fillColor(labelColor)
     .fontSize(9)
@@ -118,7 +174,7 @@ export async function GET(_req: NextRequest, context: RequestContext) {
       .from("audits")
       .select("*")
       .eq("id", auditId)
-      .single()) as { data: WaasAudit | null; error: any };
+      .single()) as { data: WaasAudit | null; error: unknown };
 
     if (error || !audit) {
       console.error("PDF: audit fetch failed", { auditId, error });
@@ -148,7 +204,7 @@ export async function GET(_req: NextRequest, context: RequestContext) {
       }
     }
 
-    const report = (audit as any).report_data as AuditReportData | null;
+    const report = audit.report_data as ExtendedReportData | null;
     if (!report) {
       console.error("PDF: no report_data", { auditId });
       return NextResponse.json({ error: "No report data" }, { status: 400 });
@@ -169,30 +225,16 @@ export async function GET(_req: NextRequest, context: RequestContext) {
     const grade = display?.grade ?? "F";
     const gColor = gradeColor(grade);
     const summary = report.summary;
-    const keywords = Array.isArray((report as any).keywords_used)
-      ? ((report as any).keywords_used as string[])
+    const keywords = Array.isArray(report.keywords_used)
+      ? report.keywords_used
       : [];
-    const leaderboard = Array.isArray((report as any).leaderboard)
-      ? ((report as any).leaderboard as any[])
+    const leaderboard = Array.isArray(report.leaderboard)
+      ? report.leaderboard
       : [];
-    const gapAnalysis = (report as any).gap_analysis as
-      { nationalCompetitorNote?: string } | undefined;
-    const localPack = (report as any).local_pack as
-      | {
-          keyword: string;
-          places: Array<{
-            position: number;
-            title: string;
-            address?: string;
-            rating?: number;
-            ratingCount?: number;
-          }>;
-          target: { position: number | null; title: string | null };
-        }
-      | null
-      | undefined;
-    const opportunities = report.opportunities ?? [];
-    const techIssues = report.technical_issues ?? [];
+    const gapAnalysis = report.gap_analysis;
+    const localPack = report.local_pack;
+    const opportunities: PdfOpportunity[] = report.opportunities ?? [];
+    const techIssues: PdfTechIssue[] = report.technical_issues ?? [];
     const completedDate = audit.completed_at
       ? new Date(audit.completed_at).toLocaleDateString("en-US", {
           month: "long",
@@ -250,12 +292,12 @@ export async function GET(_req: NextRequest, context: RequestContext) {
       });
 
     // Move below header
-    (doc as any).y = 90;
+    doc.y = 90;
 
     // ==========================================================================
     // SECTION 2 — SCORE CARD
     // ==========================================================================
-    const scoreCardY = (doc as any).y;
+    const scoreCardY = doc.y;
 
     // Score card background
     doc.rect(MARGIN, scoreCardY, CONTENT_W, 80).fillColor("#f8fafc").fill();
@@ -304,7 +346,7 @@ export async function GET(_req: NextRequest, context: RequestContext) {
         width: CONTENT_W - 100,
       });
 
-    (doc as any).y = scoreCardY + 88;
+    doc.y = scoreCardY + 88;
     doc.moveDown(0.5);
 
     // ==========================================================================
@@ -356,14 +398,14 @@ export async function GET(_req: NextRequest, context: RequestContext) {
         .fillColor("#64748b")
         .fontSize(8)
         .font("Helvetica")
-        .text(`Rankings for: "${primaryKw}"`, MARGIN, (doc as any).y, {
+        .text(`Rankings for: "${primaryKw}"`, MARGIN, doc.y, {
           width: CONTENT_W,
         });
       doc.moveDown(0.4);
 
-      leaderboard.slice(0, 8).forEach((entry: any, i: number) => {
+      leaderboard.slice(0, 8).forEach((entry, i: number) => {
         const isTarget = entry.isTarget === true;
-        const rowY = (doc as any).y;
+        const rowY = doc.y;
 
         if (isTarget) {
           doc
@@ -414,14 +456,9 @@ export async function GET(_req: NextRequest, context: RequestContext) {
           .fillColor("#d97706")
           .fontSize(8)
           .font("Helvetica")
-          .text(
-            `🌍  ${gapAnalysis.nationalCompetitorNote}`,
-            MARGIN,
-            (doc as any).y,
-            {
-              width: CONTENT_W,
-            },
-          );
+          .text(`🌍  ${gapAnalysis.nationalCompetitorNote}`, MARGIN, doc.y, {
+            width: CONTENT_W,
+          });
         doc.moveDown(0.4);
       }
 
@@ -446,13 +483,13 @@ export async function GET(_req: NextRequest, context: RequestContext) {
             ? `${targetDomain} appears in the Local Pack at position #${localPack.target.position}`
             : `${targetDomain} does not currently appear in the Google Maps Local Pack for "${localPack.keyword}"`,
           MARGIN,
-          (doc as any).y,
+          doc.y,
           { width: CONTENT_W },
         );
       doc.moveDown(0.4);
 
       localPack.places.slice(0, 5).forEach((place) => {
-        const rowY = (doc as any).y;
+        const rowY = doc.y;
         const isTarget = place.title === localPack.target.title && inPack;
         doc
           .fillColor(isTarget ? "#1d4ed8" : "#94a3b8")
@@ -496,7 +533,7 @@ export async function GET(_req: NextRequest, context: RequestContext) {
         .fillColor("#334155")
         .fontSize(9)
         .font("Helvetica")
-        .text(keywords.slice(0, 8).join("  ·  "), MARGIN, (doc as any).y, {
+        .text(keywords.slice(0, 8).join("  ·  "), MARGIN, doc.y, {
           width: CONTENT_W,
         });
       doc.moveDown(1);
@@ -549,8 +586,9 @@ export async function GET(_req: NextRequest, context: RequestContext) {
     // ==========================================================================
     // SECTION 7 — PAGE SPEED
     // ==========================================================================
-    const pageSpeedFull = (report as any).page_speed_full;
-    const pageSpeed = pageSpeedFull ?? (report as any).page_speed;
+    const pageSpeedFull = report.page_speed_full;
+    const pageSpeed: PdfPageSpeedFull | AuditPageSpeed | undefined =
+      pageSpeedFull ?? report.page_speed;
 
     if (pageSpeed) {
       sectionHeader(doc, "Page Speed", "⚡");
@@ -601,7 +639,7 @@ export async function GET(_req: NextRequest, context: RequestContext) {
     if (opportunities.length > 0) {
       sectionHeader(doc, "Top Opportunities", "💡");
 
-      opportunities.slice(0, 8).forEach((opp: any, i: number) => {
+      opportunities.slice(0, 8).forEach((opp, i: number) => {
         const title = opp.title ?? opp.description ?? String(opp);
         const impact = opp.impact ?? opp.priority ?? "";
         const impColor =
@@ -611,7 +649,7 @@ export async function GET(_req: NextRequest, context: RequestContext) {
               ? "#d97706"
               : "#2563eb";
 
-        const rowY = (doc as any).y;
+        const rowY = doc.y;
         doc
           .fillColor("#94a3b8")
           .fontSize(9)
@@ -648,7 +686,7 @@ export async function GET(_req: NextRequest, context: RequestContext) {
     if (techIssues.length > 0) {
       sectionHeader(doc, "Technical Issues", "🔧");
 
-      techIssues.slice(0, 6).forEach((issue: any) => {
+      techIssues.slice(0, 6).forEach((issue) => {
         const desc = issue.description ?? issue.title ?? String(issue);
         const severity = issue.severity ?? issue.impact ?? "";
         const sevColor =
@@ -676,7 +714,7 @@ export async function GET(_req: NextRequest, context: RequestContext) {
     doc.moveDown(0.5);
 
     // CTA box
-    const ctaY = (doc as any).y;
+    const ctaY = doc.y;
     doc.rect(MARGIN, ctaY, CONTENT_W, 52).fillColor("#eff6ff").fill();
     doc
       .fillColor("#1d4ed8")
@@ -701,7 +739,7 @@ export async function GET(_req: NextRequest, context: RequestContext) {
         { width: CONTENT_W - 24 },
       );
 
-    (doc as any).y = ctaY + 60;
+    doc.y = ctaY + 60;
     doc.moveDown(0.5);
 
     doc
@@ -711,7 +749,7 @@ export async function GET(_req: NextRequest, context: RequestContext) {
       .text(
         `© ${new Date().getFullYear()} RankedCEO · Twin-Wicks Digital Solutions · Report ID: ${shortId}`,
         MARGIN,
-        (doc as any).y,
+        doc.y,
         { align: "center", width: CONTENT_W },
       );
 

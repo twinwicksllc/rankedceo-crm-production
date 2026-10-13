@@ -85,13 +85,32 @@ export async function refreshAccessToken(refreshToken: string): Promise<{
   return response.json();
 }
 
+// Raw shapes returned by the Calendly v2 API (only the fields we read).
+interface CalendlyApiEventType {
+  uri: string;
+  name: string;
+  description_plain?: string | null;
+  duration: number;
+  slug: string;
+  scheduling_url: string;
+  active: boolean;
+  kind: "solo" | "group";
+  color?: string;
+}
+
+interface CalendlyApiSlot {
+  start_time: string;
+  end_time: string;
+  invitees_remaining?: number;
+}
+
 // ── Calendly API helper ──────────────────────────────────────
 
-async function calendlyFetch(
+async function calendlyFetch<T>(
   path: string,
   accessToken: string,
   options: RequestInit = {},
-): Promise<any> {
+): Promise<T> {
   const response = await fetch(`${CALENDLY_API_BASE}${path}`, {
     ...options,
     headers: {
@@ -106,7 +125,7 @@ async function calendlyFetch(
     throw new Error(`Calendly API error ${response.status}: ${error}`);
   }
 
-  return response.json();
+  return response.json() as Promise<T>;
 }
 
 // ── User Info ────────────────────────────────────────────────
@@ -117,7 +136,14 @@ export async function getCalendlyUser(accessToken: string): Promise<{
   email: string;
   organization: string;
 }> {
-  const data = await calendlyFetch("/users/me", accessToken);
+  const data = await calendlyFetch<{
+    resource: {
+      uri: string;
+      name: string;
+      email: string;
+      current_organization: string;
+    };
+  }>("/users/me", accessToken);
   return {
     uri: data.resource.uri,
     name: data.resource.name,
@@ -138,9 +164,12 @@ export async function getEventTypes(
     count: "20",
   });
 
-  const data = await calendlyFetch(`/event_types?${params}`, accessToken);
+  const data = await calendlyFetch<{ collection?: CalendlyApiEventType[] }>(
+    `/event_types?${params}`,
+    accessToken,
+  );
 
-  return (data.collection || []).map((et: any) => ({
+  return (data.collection || []).map((et) => ({
     uri: et.uri,
     name: et.name,
     description: et.description_plain || null,
@@ -167,12 +196,12 @@ export async function getAvailableSlots(
     end_time: endTime,
   });
 
-  const data = await calendlyFetch(
+  const data = await calendlyFetch<{ collection?: CalendlyApiSlot[] }>(
     `/event_type_available_times?${params}`,
     accessToken,
   );
 
-  return (data.collection || []).map((slot: any) => ({
+  return (data.collection || []).map((slot) => ({
     start_time: slot.start_time,
     end_time: slot.end_time,
     status: "available" as const,
@@ -195,7 +224,9 @@ export async function createInvitee(
 ): Promise<CalendlyBookingResult> {
   // Calendly v2 uses one-off event scheduling
   // We create a scheduling link and then book via the invitee endpoint
-  const data = await calendlyFetch("/one_off_event_types", accessToken, {
+  const data = await calendlyFetch<{
+    resource?: { uri?: string; booking_url?: string };
+  }>("/one_off_event_types", accessToken, {
     method: "POST",
     body: JSON.stringify({
       name: `Meeting with ${invitee.name}`,

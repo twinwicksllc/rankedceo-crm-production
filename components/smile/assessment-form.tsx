@@ -93,7 +93,7 @@ export function SmileAssessmentForm({ onSubmit }: SmileAssessmentFormProps) {
 
   const totalSteps = 5;
 
-  const updateField = (field: keyof AssessmentFormData, value: any) => {
+  const updateField = (field: keyof AssessmentFormData, value: unknown) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (errors[field]) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { EmailMessageWithThread } from "@/lib/types/email";
+import { EmailMessage, EmailMessageWithThread } from "@/lib/types/email";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,10 @@ import {
 import { formatDistanceToNow } from "date-fns";
 
 interface EmailCardProps {
-  email: EmailMessageWithThread;
+  // Only contact/company/deal are read from the joined data; `thread` is not used,
+  // so thread messages (plain EmailMessage rows) are accepted too.
+  email: EmailMessage &
+    Pick<EmailMessageWithThread, "contact" | "company" | "deal">;
   onView?: (emailId: string) => void;
   onMarkAsRead?: (emailId: string) => void;
 }

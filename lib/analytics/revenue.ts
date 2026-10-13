@@ -124,7 +124,16 @@ export async function getRevenueByUser(
     { userName: string; revenue: number }
   >();
 
-  data?.forEach((deal: any) => {
+  // many-to-one join: PostgREST returns a single object, but the untyped client
+  // infers an array, so go through `unknown` (same shape the code always assumed;
+  // not verified against live data).
+  const rows = data as unknown as Array<{
+    user_id: string;
+    value: number | null;
+    user: { name: string | null } | null;
+  }> | null;
+
+  rows?.forEach((deal) => {
     const userId = deal.user_id;
     const userName = deal.user?.name || "Unknown";
     const value = deal.value || 0;

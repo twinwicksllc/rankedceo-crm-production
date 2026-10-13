@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 // ============================================================
 // Appointment Service - CRUD operations with Supabase
 // ============================================================
@@ -13,7 +14,7 @@ import type {
 } from "@/lib/types/appointment";
 
 export class AppointmentService {
-  private supabase: any = null;
+  private supabase: SupabaseClient | null = null;
 
   private async getClient() {
     if (!this.supabase) {
@@ -193,15 +194,11 @@ export class AppointmentService {
     const appointments = data || [];
     return {
       total: appointments.length,
-      scheduled: appointments.filter((a: any) => a.status === "scheduled")
+      scheduled: appointments.filter((a) => a.status === "scheduled").length,
+      completed: appointments.filter((a) => a.status === "completed").length,
+      cancelled: appointments.filter((a) => a.status === "cancelled").length,
+      this_week: appointments.filter((a) => new Date(a.start_time) >= weekStart)
         .length,
-      completed: appointments.filter((a: any) => a.status === "completed")
-        .length,
-      cancelled: appointments.filter((a: any) => a.status === "cancelled")
-        .length,
-      this_week: appointments.filter(
-        (a: any) => new Date(a.start_time) >= weekStart,
-      ).length,
     };
   }
 

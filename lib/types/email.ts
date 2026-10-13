@@ -41,7 +41,7 @@ export interface EmailMessage {
   company_id: string | null;
   deal_id: string | null;
 
-  headers: Record<string, any> | null;
+  headers: Record<string, unknown> | null;
   received_at: string;
   created_at: string;
   updated_at: string;
@@ -87,7 +87,7 @@ export interface CreateEmailMessageInput {
   body_plain?: string | null;
   body_html?: string | null;
   direction?: EmailDirection;
-  headers?: Record<string, any>;
+  headers?: Record<string, unknown>;
   thread_id?: string | null;
   contact_id?: string | null;
   company_id?: string | null;
@@ -161,7 +161,7 @@ export interface ParsedEmail {
   message_id: string;
   in_reply_to: string | null;
   references: string[] | null;
-  headers: Record<string, any>;
+  headers: Record<string, unknown>;
   attachments?: Array<{
     filename: string;
     content_type: string;

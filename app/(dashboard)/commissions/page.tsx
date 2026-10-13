@@ -5,6 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
+import type {
+  CommissionStats,
+  CommissionWithDetails,
+} from "@/lib/types/commission";
 
 export default async function CommissionsPage() {
   const supabase = await createClient();
@@ -18,8 +22,8 @@ export default async function CommissionsPage() {
 
   const commissionService = new CommissionService();
 
-  let commissions: any[] = [];
-  let stats: any = {
+  let commissions: CommissionWithDetails[] = [];
+  let stats: CommissionStats = {
     total_pending: 0,
     total_approved: 0,
     total_paid: 0,

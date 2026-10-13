@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { StepExecutor } from "./StepExecutor.js";
+import type { PersonaRouter } from "../personas/PersonaRouter.js";
+import type { SupabaseAdapter } from "../adaptors/supabase/SupabaseAdapter.js";
 
 test("stepWaitForUrl waits on pathname matcher and preserves timeout", async () => {
   const calls: Array<{ method: string; args: unknown[] }> = [];
@@ -18,13 +20,21 @@ test("stepWaitForUrl waits on pathname matcher and preserves timeout", async () 
   };
 
   const executor = new StepExecutor(
-    router as any,
-    {} as any,
+    router as unknown as PersonaRouter,
+    {} as unknown as SupabaseAdapter,
     "evidence",
     "run",
   );
 
-  await (executor as any).stepWaitForUrl("admin", "/admin/dashboard", 30_000);
+  // stepWaitForUrl is private; reach it through a minimal structural view.
+  const internals = executor as unknown as {
+    stepWaitForUrl(
+      persona: string,
+      pattern: string,
+      timeoutMs: number,
+    ): Promise<void>;
+  };
+  await internals.stepWaitForUrl("admin", "/admin/dashboard", 30_000);
 
   assert.equal(calls.length, 2);
   assert.equal(calls[0]?.method, "waitForFunction");

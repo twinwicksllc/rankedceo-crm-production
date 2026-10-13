@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { AccountInfo } from "@/lib/types/onboarding";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -12,7 +13,7 @@ import {
 } from "@/components/ui/select";
 
 interface PreferencesStepProps {
-  accountInfo: any;
+  accountInfo: AccountInfo | undefined;
 }
 
 const TIMEZONES = [

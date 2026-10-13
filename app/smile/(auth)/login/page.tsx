@@ -18,6 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { getErrorMessage } from "@/lib/errors";
 
 export default function SmileLoginPage() {
   const router = useRouter();
@@ -67,9 +68,9 @@ export default function SmileLoginPage() {
 
       router.push("/");
       router.refresh();
-    } catch (err: any) {
-      console.error("[SmileLogin] Error:", err.message);
-      setError(err.message || "Failed to sign in");
+    } catch (err) {
+      console.error("[SmileLogin] Error:", getErrorMessage(err));
+      setError(getErrorMessage(err, "Failed to sign in"));
     } finally {
       setLoading(false);
     }

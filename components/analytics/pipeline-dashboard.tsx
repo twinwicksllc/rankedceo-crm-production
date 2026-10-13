@@ -23,6 +23,10 @@ import {
 } from "@/components/ui/card";
 import { DollarSign, Target, TrendingUp, Clock } from "lucide-react";
 import { formatCurrency, formatPercentage } from "@/lib/utils";
+import type {
+  DealsBySource,
+  PipelineValueByStage,
+} from "@/lib/analytics/pipeline";
 
 const COLORS = [
   "#3b82f6",
@@ -39,10 +43,12 @@ interface PipelineDashboardProps {
 
 export function PipelineDashboard({ accountId }: PipelineDashboardProps) {
   const [loading, setLoading] = useState(true);
-  const [pipelineByStage, setPipelineByStage] = useState<any[]>([]);
+  const [pipelineByStage, setPipelineByStage] = useState<
+    PipelineValueByStage[]
+  >([]);
   const [winRate, setWinRate] = useState(0);
   const [averageDealCycle, setAverageDealCycle] = useState(0);
-  const [dealsBySource, setDealsBySource] = useState<any[]>([]);
+  const [dealsBySource, setDealsBySource] = useState<DealsBySource[]>([]);
   const [totalPipelineValue, setTotalPipelineValue] = useState(0);
 
   useEffect(() => {
@@ -73,7 +79,7 @@ export function PipelineDashboard({ accountId }: PipelineDashboardProps) {
       setDealsBySource(sourceRes.data || []);
 
       const totalValue = (stageRes.data || []).reduce(
-        (sum: number, stage: any) => sum + stage.value,
+        (sum: number, stage: PipelineValueByStage) => sum + stage.value,
         0,
       );
       setTotalPipelineValue(totalValue);
@@ -155,10 +161,7 @@ export function PipelineDashboard({ accountId }: PipelineDashboardProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {pipelineByStage.reduce(
-                (sum: number, stage: any) => sum + stage.count,
-                0,
-              )}
+              {pipelineByStage.reduce((sum, stage) => sum + stage.count, 0)}
             </div>
             <p className="text-xs text-muted-foreground">In pipeline</p>
           </CardContent>
@@ -238,7 +241,7 @@ export function PipelineDashboard({ accountId }: PipelineDashboardProps) {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {pipelineByStage.map((stage: any, index: number) => (
+            {pipelineByStage.map((stage, index: number) => (
               <div
                 key={stage.stage}
                 className="flex items-center justify-between p-4 border rounded-lg"

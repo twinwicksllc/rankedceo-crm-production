@@ -18,6 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { getErrorMessage } from "@/lib/errors";
 
 export default function ElectricalSignupPage() {
   const router = useRouter();
@@ -70,9 +71,9 @@ export default function ElectricalSignupPage() {
       if (signUpError) throw signUpError;
       router.push("/onboarding");
       router.refresh();
-    } catch (err: any) {
-      console.error("[ElectricalSignup] Error:", err.message);
-      setError(err.message || "Failed to sign up");
+    } catch (err) {
+      console.error("[ElectricalSignup] Error:", getErrorMessage(err));
+      setError(getErrorMessage(err, "Failed to sign up"));
     } finally {
       setLoading(false);
     }

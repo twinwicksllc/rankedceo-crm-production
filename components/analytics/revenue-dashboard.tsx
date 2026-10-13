@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/card";
 import { DollarSign, TrendingUp, TrendingDown } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import type { RevenueByMonth, RevenueByUser } from "@/lib/analytics/revenue";
 
 interface RevenueDashboardProps {
   accountId: string;
@@ -34,8 +35,8 @@ export function RevenueDashboard({
 }: RevenueDashboardProps) {
   const [loading, setLoading] = useState(true);
   const [totalRevenue, setTotalRevenue] = useState(0);
-  const [revenueByMonth, setRevenueByMonth] = useState<any[]>([]);
-  const [revenueByUser, setRevenueByUser] = useState<any[]>([]);
+  const [revenueByMonth, setRevenueByMonth] = useState<RevenueByMonth[]>([]);
+  const [revenueByUser, setRevenueByUser] = useState<RevenueByUser[]>([]);
   const [averageDealSize, setAverageDealSize] = useState(0);
   const [trend, setTrend] = useState<{ growthRate: number } | null>(null);
 

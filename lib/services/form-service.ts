@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import {
   Form,
@@ -10,7 +11,7 @@ import {
 } from "@/lib/types/form";
 
 export class FormService {
-  private supabase: any;
+  private supabase: SupabaseClient;
 
   constructor() {
     this.supabase = createClient();
@@ -151,9 +152,11 @@ export class FormService {
    * Get form statistics
    */
   async getFormStats(): Promise<FormStats> {
-    const { data: forms } = await this.supabase
+    const { data: forms } = (await this.supabase
       .from("forms")
-      .select("id, name, status");
+      .select("id, name, status")) as {
+      data: Array<Pick<Form, "id" | "name" | "status">> | null;
+    };
 
     const stats: FormStats = {
       total_forms: 0,
@@ -168,9 +171,9 @@ export class FormService {
 
     stats.total_forms = forms.length;
     stats.published_forms = forms.filter(
-      (f: any) => f.status === "published",
+      (f) => f.status === "published",
     ).length;
-    stats.draft_forms = forms.filter((f: any) => f.status === "draft").length;
+    stats.draft_forms = forms.filter((f) => f.status === "draft").length;
 
     // Get submission counts for each form
     for (const form of forms) {

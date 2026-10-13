@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AppointmentService } from "@/lib/services/appointment-service";
 import { updateAppointmentSchema } from "@/lib/validations/appointment";
+import { getErrorMessage } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -21,10 +22,10 @@ export async function GET(
     }
 
     return NextResponse.json({ appointment });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[Appointment GET] Error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to fetch appointment" },
+      { error: getErrorMessage(error, "Failed to fetch appointment") },
       { status: 500 },
     );
   }
@@ -50,10 +51,10 @@ export async function PATCH(
     const appointment = await service.updateAppointment(id, parsed.data);
 
     return NextResponse.json({ appointment });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[Appointment PATCH] Error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to update appointment" },
+      { error: getErrorMessage(error, "Failed to update appointment") },
       { status: 500 },
     );
   }
@@ -69,10 +70,10 @@ export async function DELETE(
     await service.cancelAppointment(id);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[Appointment DELETE] Error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to cancel appointment" },
+      { error: getErrorMessage(error, "Failed to cancel appointment") },
       { status: 500 },
     );
   }

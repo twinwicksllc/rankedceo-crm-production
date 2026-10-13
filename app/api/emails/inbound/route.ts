@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { EmailService } from "@/lib/services/email-service";
-import { EmailParser } from "@/lib/services/email-parser";
+import {
+  EmailParser,
+  type SendGridInboundData,
+} from "@/lib/services/email-parser";
 import { createClient } from "@/lib/supabase/server";
 import { ParsedEmail } from "@/lib/types/email";
 
@@ -39,18 +42,11 @@ export async function POST(request: NextRequest) {
     // SendGrid sends multipart/form-data with email content
     const contentType = request.headers.get("content-type") || "";
 
-    let emailData: any = {};
+    let emailData: SendGridInboundData;
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await request.formData();
       emailData = Object.fromEntries(formData.entries());
-
-      // Convert to regular object
-      const parsedEmail: any = {};
-      formData.forEach((value, key) => {
-        parsedEmail[key] = value;
-      });
-      emailData = parsedEmail;
     } else {
       emailData = await request.json();
     }

@@ -17,6 +17,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { getErrorMessage } from "@/lib/errors";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -72,9 +73,9 @@ export default function SignupPage() {
 
       router.push("/onboarding");
       router.refresh();
-    } catch (err: any) {
+    } catch (err) {
       console.error("[Signup] Error:", err);
-      setError(err.message || "Failed to sign up");
+      setError(getErrorMessage(err, "Failed to sign up"));
     } finally {
       setLoading(false);
     }

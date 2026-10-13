@@ -38,8 +38,7 @@ export function EmailThread({
     }
   };
 
-  const unreadCount =
-    thread.messages?.filter((msg: any) => !msg.opened).length || 0;
+  const unreadCount = thread.messages?.filter((msg) => !msg.opened).length || 0;
 
   const getPreviewText = () => {
     if (thread.latest_message?.body_plain) {
@@ -103,7 +102,7 @@ export function EmailThread({
 
       {isExpanded && thread.messages && (
         <CardContent className="space-y-4">
-          {thread.messages.map((message: any) => (
+          {thread.messages.map((message) => (
             <div key={message.id} className="ml-4 border-l-2 pl-4 relative">
               <div className="absolute left-0 top-0 bottom-0 w-2 bg-blue-200 rounded-full"></div>
               <EmailCard

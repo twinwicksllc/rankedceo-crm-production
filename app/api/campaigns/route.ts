@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { CampaignService } from "@/lib/services/campaign-service";
 import { createCampaignSchema } from "@/lib/validations/campaign";
 import { createClient } from "@/lib/supabase/server";
+import { getErrorMessage } from "@/lib/errors";
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,10 +27,10 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ campaigns });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error fetching campaigns:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to fetch campaigns" },
+      { error: getErrorMessage(error, "Failed to fetch campaigns") },
       { status: 500 },
     );
   }
@@ -53,10 +54,10 @@ export async function POST(request: NextRequest) {
     const campaign = await campaignService.createCampaign(validatedData);
 
     return NextResponse.json({ campaign }, { status: 201 });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error creating campaign:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to create campaign" },
+      { error: getErrorMessage(error, "Failed to create campaign") },
       { status: 500 },
     );
   }

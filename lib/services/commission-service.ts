@@ -394,7 +394,18 @@ export class CommissionService {
     // Group by user
     const userStatsMap = new Map<string, UserCommissionStats>();
 
-    data?.forEach((commission: any) => {
+    // many-to-one join: PostgREST returns a single object, but the untyped client
+    // infers an array, so go through `unknown` (same shape the code always assumed;
+    // not verified against live data).
+    const rows = data as unknown as Array<{
+      user_id: string;
+      amount: number | string;
+      status: string;
+      rate: number | string;
+      user: { id: string; name: string | null; email: string | null } | null;
+    }> | null;
+
+    rows?.forEach((commission) => {
       const userId = commission.user_id;
 
       if (!userStatsMap.has(userId)) {

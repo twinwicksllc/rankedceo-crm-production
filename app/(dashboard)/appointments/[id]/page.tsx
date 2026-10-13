@@ -63,7 +63,7 @@ export default async function AppointmentDetailPage({
               AI Agent Conversation
             </h3>
             <div className="space-y-2 max-h-64 overflow-y-auto">
-              {appointment.agent_conversation.map((msg: any, i: number) => (
+              {appointment.agent_conversation.map((msg, i: number) => (
                 <div
                   key={i}
                   className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}

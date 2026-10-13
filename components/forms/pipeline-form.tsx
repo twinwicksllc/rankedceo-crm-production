@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/alert";
 import { createClient } from "@/lib/supabase/client";
+import { getErrorMessage } from "@/lib/errors";
 
 interface PipelineFormProps {
   accountId: string;
@@ -67,9 +68,9 @@ export default function PipelineForm({
       }
 
       router.refresh();
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error saving pipeline:", err);
-      setError(err.message || "Failed to save pipeline");
+      setError(getErrorMessage(err, "Failed to save pipeline"));
     } finally {
       setLoading(false);
     }

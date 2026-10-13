@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { SmileAssessmentForm } from "@/components/smile/assessment-form";
+import {
+  SmileAssessmentForm,
+  type AssessmentFormData,
+} from "@/components/smile/assessment-form";
 import { submitSmileAssessment } from "@/lib/actions/smile-assessment";
 import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +14,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 async function AssessmentClientWrapper({ dentistId }: { dentistId?: string }) {
-  async function handleSubmit(formData: any) {
+  async function handleSubmit(formData: AssessmentFormData) {
     "use server";
     const result = await submitSmileAssessment({ ...formData, dentistId });
     if (result.success) {

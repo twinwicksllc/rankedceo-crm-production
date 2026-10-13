@@ -10,9 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { getErrorMessage } from "@/lib/errors";
 
 interface ContactFormProps {
-  contact?: any;
+  /** Existing contact row when editing; omitted when creating. */
+  contact?: { id: string } & Partial<ContactFormData>;
   accountId: string;
   userId: string;
 }
@@ -71,8 +73,8 @@ export function ContactForm({ contact, accountId, userId }: ContactFormProps) {
 
       router.push("/contacts");
       router.refresh();
-    } catch (err: any) {
-      setError(err.message || "Failed to save contact");
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to save contact"));
     } finally {
       setLoading(false);
     }
