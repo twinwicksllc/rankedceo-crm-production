@@ -94,7 +94,6 @@ export class Orchestrator {
     let status: RunStatus = "running";
     let consecutiveUiFailures = 0;
     let lastFailurePersona: string | null = null;
-    let fastFailTriggered = false;
 
     try {
       for (let i = 0; i < steps.length; i++) {
@@ -136,7 +135,6 @@ export class Orchestrator {
               };
               await escalation.record(fastFailFinding);
               findingSteps++;
-              fastFailTriggered = true;
               console.warn(
                 "[Orchestrator] Smoke fast-fail guard engaged; aborting remaining steps.",
               );

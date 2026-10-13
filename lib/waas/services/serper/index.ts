@@ -283,7 +283,7 @@ export function getMockSearchRankings(
   // Deterministic target position between position 8-45
   const targetPos = (hash % 37) + 8;
 
-  const competitorResults: RankResult[] = competitorUrls.map((url, i) => {
+  const competitorResults: RankResult[] = competitorUrls.map((url) => {
     const compHash = stringHash(extractDomain(url) + keyword);
     return {
       url,
@@ -295,7 +295,7 @@ export function getMockSearchRankings(
   });
 
   const mockOrganic: SerperSearchResult[] = [
-    ...competitorUrls.slice(0, 3).map((url, i) => {
+    ...competitorUrls.slice(0, 3).map((url) => {
       const compHash = stringHash(extractDomain(url) + keyword);
       return {
         position: (compHash % 10) + 1,

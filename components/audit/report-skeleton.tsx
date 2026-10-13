@@ -80,7 +80,6 @@ function ShimmerCard({ rows = 3 }: { rows?: number }) {
 export function ReportSkeleton({
   targetUrl,
   competitorUrls,
-  status,
 }: ReportSkeletonProps) {
   const [stepIdx, setStepIdx] = useState(0);
   const [dots, setDots] = useState("");

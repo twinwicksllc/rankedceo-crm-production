@@ -435,8 +435,6 @@ export async function runFullAudit(
     };
   }
 
-  const targetDomain = extractDomain(targetUrl);
-
   const reportData: AuditReportData = {
     summary: {
       overall_score: score,

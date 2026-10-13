@@ -35,12 +35,6 @@ export function EmailFilters({ filters, onFiltersChange }: EmailFiltersProps) {
 
   const hasActiveFilters = Object.keys(filters).length > 0;
 
-  const activeFilterCount = Object.keys(filters).filter(
-    (key) =>
-      filters[key as keyof EmailFilters] !== undefined &&
-      filters[key as keyof EmailFilters] !== "",
-  ).length;
-
   return (
     <div className="space-y-4 p-4 bg-card rounded-lg border">
       {/* Search */}

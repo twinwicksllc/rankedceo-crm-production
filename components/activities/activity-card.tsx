@@ -1,4 +1,4 @@
-import { ActivityWithRelations, ActivityType } from "@/lib/types/activity";
+import { ActivityWithRelations } from "@/lib/types/activity";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ActivityIcon } from "./activity-icon";

@@ -9,7 +9,6 @@ import type {
   ServiceUrgency,
   LeadFilters,
 } from "@/lib/types/industry-lead";
-import { INDUSTRY_CONFIGS } from "@/lib/types/industry-lead";
 
 interface LeadFiltersProps {
   industry: IndustryType;
@@ -39,7 +38,6 @@ export function LeadFiltersBar({
   filters,
   onChange,
 }: LeadFiltersProps) {
-  const config = INDUSTRY_CONFIGS[industry];
   const [searchValue, setSearchValue] = useState(filters.search ?? "");
 
   const handleSearchChange = (value: string) => {

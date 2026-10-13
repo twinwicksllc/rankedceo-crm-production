@@ -64,7 +64,7 @@ export function OptimizeExistingSiteClient() {
   const [status, setStatus] = useState<SubmitState>("idle");
   const [error, setError] = useState("");
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
-  const [focusedField, setFocusedField] = useState<keyof FormState | null>(null);
+  const [, setFocusedField] = useState<keyof FormState | null>(null);
 
   const canSubmit = useMemo(() => {
     const errors = validateForm(form);

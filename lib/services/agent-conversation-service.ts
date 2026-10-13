@@ -8,7 +8,6 @@ import type {
   AgentConversation,
   AgentConversationMetadata,
   AgentMessage,
-  AgentContext,
   AppointmentSource,
 } from "@/lib/types/appointment";
 

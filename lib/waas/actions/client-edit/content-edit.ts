@@ -25,7 +25,7 @@ import {
 } from "@/lib/waas/sections/section-ids";
 import type { SectionConfig } from "@/lib/waas/templates/types";
 import { getAdminClient, classifyEditType } from "./_shared";
-import type { ActionResult, EditType } from "./_shared";
+import type { ActionResult } from "./_shared";
 
 // `sections[N].config.<key>` or `sections[id=<id>].config.<key>`
 const CONFIG_PATH_RE = new RegExp(

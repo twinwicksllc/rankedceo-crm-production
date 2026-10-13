@@ -160,7 +160,6 @@ function fallbackRecommendations(
 function sanitizeRecommendations(
   raw: unknown,
   templates: SiteTemplate[],
-  tenant: TenantProfile,
 ): TemplateRecommendation[] {
   if (!Array.isArray(raw)) return [];
 
@@ -306,7 +305,7 @@ export async function recommendTemplates(
     if (typeof text !== "string" || !text.trim()) return fallback.slice(0, 3);
 
     const parsed = JSON.parse(text.replace(/```json\n?|\n?```/g, "").trim());
-    const cleaned = sanitizeRecommendations(parsed, templates, tenant);
+    const cleaned = sanitizeRecommendations(parsed, templates);
     if (cleaned.length === 0) return fallback.slice(0, 3);
 
     // Always return exactly 3 — Gemini output first, filled with fallback if short

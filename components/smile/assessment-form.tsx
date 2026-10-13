@@ -83,10 +83,7 @@ interface SmileAssessmentFormProps {
   dentistId?: string;
 }
 
-export function SmileAssessmentForm({
-  onSubmit,
-  dentistId,
-}: SmileAssessmentFormProps) {
+export function SmileAssessmentForm({ onSubmit }: SmileAssessmentFormProps) {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<AssessmentFormData>(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -157,7 +154,7 @@ export function SmileAssessmentForm({
     setIsSubmitting(true);
     try {
       await onSubmit(formData);
-    } catch (error) {
+    } catch {
       console.error("Form submission error"); // No PII logged
     } finally {
       setIsSubmitting(false);

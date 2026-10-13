@@ -52,7 +52,6 @@ export async function POST(
     const auditRow = audit as Record<string, unknown>;
     const requestorEmail = (auditRow.requestor_email as string | null) ?? null;
     const requestorName = (auditRow.requestor_name as string | null) ?? null;
-    const industry = (auditRow.industry as string | null) ?? null;
     const location = (auditRow.location_detected as string | null) ?? null;
 
     if (!requestorEmail) {

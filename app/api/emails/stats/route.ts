@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { EmailService } from "@/lib/services/email-service";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
  * Returns email statistics for the current user's account
  */
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const emailService = new EmailService();
     const stats = await emailService.getEmailStats();

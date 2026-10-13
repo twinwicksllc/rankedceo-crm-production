@@ -52,7 +52,7 @@ export default function PipelineForm({
         router.push(`/pipelines/${pipeline.id}`);
       } else {
         // Create new pipeline
-        const { data, error: insertError } = await supabase
+        const { error: insertError } = await supabase
           .from("pipelines")
           .insert({
             ...formData,

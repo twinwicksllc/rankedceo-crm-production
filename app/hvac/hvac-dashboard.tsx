@@ -23,10 +23,7 @@ interface HvacDashboardProps {
   leadCount: number;
 }
 
-export default function HvacDashboard({
-  userId,
-  leadCount,
-}: HvacDashboardProps) {
+export default function HvacDashboard({ userId }: HvacDashboardProps) {
   const [leads, setLeads] = useState<IndustryLead[]>([]);
   const [stats, setStats] = useState<LeadStats | null>(null);
   const [filters, setFilters] = useState<LeadFilters>({ industry: "hvac" });

@@ -58,7 +58,7 @@ export function LeadCard({ lead, industry, onStatusChange }: LeadCardProps) {
     try {
       await updateIndustryLead(lead.id, { status: newStatus });
       onStatusChange?.(lead.id, newStatus);
-    } catch (err) {
+    } catch {
       console.error("[LeadCard] Status update failed");
     } finally {
       setUpdating(false);

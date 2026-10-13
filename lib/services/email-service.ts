@@ -1,13 +1,10 @@
 import { createClient } from "@/lib/supabase/client";
 import {
-  EmailMessage,
-  EmailThread,
   EmailMessageWithThread,
   EmailThreadWithMessages,
   CreateEmailMessageInput,
   UpdateEmailMessageInput,
   CreateEmailThreadInput,
-  UpdateEmailThreadInput,
   EmailFilters,
   EmailStats,
   ParsedEmail,
@@ -199,7 +196,6 @@ export class EmailService {
     const threadId = EmailParser.determineThreadId(
       parsedEmail.in_reply_to,
       parsedEmail.references,
-      parsedEmail.message_id,
     );
 
     // Sanitize HTML content

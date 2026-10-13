@@ -1045,7 +1045,6 @@ function HeroSection({
 
 function ScoreBreakdown({
   summary,
-  grade,
 }: {
   summary: NonNullable<AuditReportData["summary"]>;
   grade: string;
@@ -1453,7 +1452,6 @@ function KeywordPerformancePanel({
 
 function PageSpeedSection({
   pageSpeed,
-  targetDomain,
 }: {
   pageSpeed: PageSpeedFull;
   targetDomain: string;

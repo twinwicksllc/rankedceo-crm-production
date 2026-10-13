@@ -157,27 +157,6 @@ Respond ONLY with valid JSON (no markdown, no code blocks):
   }
 }
 
-function detectInfoComplete(
-  messages: AgentMessage[],
-  leadInfo?: AgentContext["leadInfo"],
-): boolean {
-  if (leadInfo?.name && leadInfo?.email) return true;
-
-  // Check if name and email were mentioned in conversation
-  const allText = messages
-    .map((m) => m.content)
-    .join(" ")
-    .toLowerCase();
-  const hasEmail = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(
-    allText,
-  );
-  const hasName = messages.some(
-    (m) =>
-      m.role === "assistant" && m.content.toLowerCase().includes("thank you"),
-  );
-  return hasEmail && hasName;
-}
-
 // ── Extract lead info from conversation ─────────────────────
 
 export function extractLeadInfo(messages: AgentMessage[]): {

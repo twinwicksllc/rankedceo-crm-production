@@ -50,13 +50,10 @@ export async function POST(request: Request) {
     console.log("[Onboarding Step] Found account_id:", userData.account_id);
 
     // Use the SECURITY DEFINER function to bypass RLS
-    const { data: result, error } = await supabase.rpc(
-      "update_onboarding_step",
-      {
-        p_account_id: userData.account_id,
-        p_step: step,
-      },
-    );
+    const { error } = await supabase.rpc("update_onboarding_step", {
+      p_account_id: userData.account_id,
+      p_step: step,
+    });
 
     if (error) {
       console.error("[Onboarding Step] Error updating step:", error);

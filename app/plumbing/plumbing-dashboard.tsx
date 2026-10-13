@@ -23,10 +23,7 @@ interface PlumbingDashboardProps {
   leadCount: number;
 }
 
-export default function PlumbingDashboard({
-  userId,
-  leadCount,
-}: PlumbingDashboardProps) {
+export default function PlumbingDashboard({ userId }: PlumbingDashboardProps) {
   const [leads, setLeads] = useState<IndustryLead[]>([]);
   const [stats, setStats] = useState<LeadStats | null>(null);
   const [filters, setFilters] = useState<LeadFilters>({ industry: "plumbing" });

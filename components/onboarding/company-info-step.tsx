@@ -12,7 +12,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useRouter } from "next/navigation";
 import { COMPANY_SIZES, INDUSTRIES } from "@/lib/types/onboarding";
 
 interface CompanyInfoStepProps {
@@ -20,7 +19,6 @@ interface CompanyInfoStepProps {
 }
 
 export function CompanyInfoStep({ accountInfo }: CompanyInfoStepProps) {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: accountInfo?.name || "",

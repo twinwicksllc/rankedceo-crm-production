@@ -19,7 +19,6 @@
 // =============================================================================
 
 import type { AdminTenantListItem } from "@/lib/waas/actions/admin";
-import type { WaasBrandConfig } from "@/lib/waas/types";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -41,8 +40,6 @@ export interface ReadinessCheck {
 export function getTenantReadiness(
   tenant: AdminTenantListItem,
 ): ReadinessCheck[] {
-  const bc = tenant.brand_config as WaasBrandConfig | null;
-
   // 1. Profile — legal_name + primary_trade
   const hasName = Boolean(tenant.legal_name?.trim());
   const hasTrade = Boolean(tenant.primary_trade?.trim());

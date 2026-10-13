@@ -12,7 +12,6 @@ import {
   saveVariantHistorySnapshot,
 } from "./variants";
 import { ensureClientReviewToken } from "./client-review";
-import type { VariantReviewReadinessReport } from "./variants";
 
 export async function unlockVariantsForEditing(
   tenantId: string,
@@ -35,7 +34,7 @@ export async function unlockVariantsForEditing(
       .eq("tenant_id", tenantId)
       .eq("status", "sent_to_review");
     if (error) {
-      if (isMissingSchemaTable(error.message, "tenant_site_variants"))
+      if (isMissingSchemaTable(error.message))
         return {
           success: false,
           error: "Site variant storage is not available in this environment.",
@@ -91,7 +90,7 @@ export async function reopenVariantReviewCycle(
       .eq("tenant_id", tenantId)
       .in("status", ["selected", "sent_to_review"]);
     if (statusError) {
-      if (isMissingSchemaTable(statusError.message, "tenant_site_variants"))
+      if (isMissingSchemaTable(statusError.message))
         return {
           success: false,
           error: "Site variant storage is not available in this environment.",
@@ -106,10 +105,7 @@ export async function reopenVariantReviewCycle(
         updated_at: new Date().toISOString(),
       })
       .eq("tenant_id", tenantId);
-    if (
-      configError &&
-      !isMissingSchemaTable(configError.message, "tenant_site_config")
-    )
+    if (configError && !isMissingSchemaTable(configError.message))
       return { success: false, error: configError.message };
     await saveTenantSiteVersion(
       tenantId,
@@ -163,8 +159,7 @@ export async function generateAndStoreSiteVariants(
       .from("tenant_site_variants")
       .upsert(payload, { onConflict: "tenant_id,variant_index" });
     if (upsertError) {
-      if (isMissingSchemaTable(upsertError.message, "tenant_site_variants"))
-        return { success: true };
+      if (isMissingSchemaTable(upsertError.message)) return { success: true };
       return { success: false, error: upsertError.message };
     }
     for (const variant of variants) {
@@ -233,7 +228,7 @@ export async function markVariantsSentToReview(
       })
       .eq("tenant_id", tenantId)
       .eq("status", "generated");
-    if (error && !isMissingSchemaTable(error.message, "tenant_site_variants"))
+    if (error && !isMissingSchemaTable(error.message))
       return { success: false, error: error.message };
     await saveTenantSiteVersion(
       tenantId,

@@ -41,7 +41,7 @@ export default function CheckoutButton({
 
       // Redirect to Stripe hosted checkout
       window.location.href = data.url;
-    } catch (err) {
+    } catch {
       setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);

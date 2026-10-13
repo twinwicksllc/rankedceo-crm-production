@@ -1,12 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { SettingsService } from "@/lib/services/settings-service";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProfileSettings } from "@/components/settings/profile-settings";
 import { AccountSettings } from "@/components/settings/account-settings";

@@ -41,7 +41,7 @@ export function NotificationSettings() {
         const data = await response.json();
         setMessage(data.error || "Failed to update settings");
       }
-    } catch (error) {
+    } catch {
       setMessage("Network error. Please try again.");
     } finally {
       setLoading(false);

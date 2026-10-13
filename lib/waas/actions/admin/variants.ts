@@ -3,11 +3,9 @@ import { revalidatePath } from "next/cache";
 import type { SiteVariantRecord } from "@/lib/waas/types";
 import type { SectionConfig, SectionId } from "@/lib/waas/templates/types";
 import { sectionKey } from "@/lib/waas/sections/section-ids";
-import { generateSiteVariants } from "@/lib/waas/services/generate-site-content";
 import { getAdminClient, isMissingSchemaTable } from "./_shared";
 import type { ActionResult } from "./_shared";
 import {
-  saveTenantSiteVersion,
   VARIANT_LIFECYCLE_SOURCES,
   normalizeReasonCategory,
   getDefaultReasonCategoryForSource,
@@ -17,10 +15,8 @@ import {
   toSectionConfigList,
   normalizeVariantSections,
   validateVariantSections,
-  getVariantCoreSectionFailures,
   validateVariantReviewReadiness,
 } from "./_validation";
-import type { WaasTenant } from "@/lib/waas/types";
 
 export interface AdminSiteVariant {
   id: string;
@@ -126,7 +122,7 @@ export async function getTenantVariantStatuses(
     .select("status")
     .eq("tenant_id", tenantId);
   if (error) {
-    if (isMissingSchemaTable(error.message, "tenant_site_variants")) return [];
+    if (isMissingSchemaTable(error.message)) return [];
     throw new Error(error.message);
   }
   return ((data ?? []) as Array<Record<string, unknown>>).map((row) =>
@@ -189,7 +185,7 @@ export async function getSiteVariants(
       .eq("tenant_id", tenantId)
       .order("variant_index", { ascending: true });
     if (error) {
-      if (isMissingSchemaTable(error.message, "tenant_site_variants"))
+      if (isMissingSchemaTable(error.message))
         return { success: true, data: [] };
       return { success: false, error: error.message };
     }
@@ -218,7 +214,7 @@ export async function getVariantReviewReadiness(
       .eq("tenant_id", tenantId)
       .order("variant_index", { ascending: true });
     if (variantsError) {
-      if (isMissingSchemaTable(variantsError.message, "tenant_site_variants"))
+      if (isMissingSchemaTable(variantsError.message))
         return {
           success: false,
           error: "Site variants are not available in this environment.",
@@ -311,7 +307,7 @@ export async function getVariantLifecycleTelemetry(
         updatedAt: typeof row.updated_at === "string" ? row.updated_at : null,
       }));
     } else if (
-      !isMissingSchemaTable(variantError.message, "tenant_site_variants")
+      !isMissingSchemaTable(variantError.message)
     ) {
       return { success: false, error: variantError.message };
     }
@@ -403,7 +399,7 @@ export async function getVariantLifecycleTelemetry(
         }),
       );
     } else if (
-      !isMissingSchemaTable(versionError.message, "tenant_site_versions")
+      !isMissingSchemaTable(versionError.message)
     ) {
       return { success: false, error: versionError.message };
     }
@@ -493,7 +489,7 @@ export async function updateSiteVariant(
       .eq("tenant_id", tenantId)
       .eq("variant_index", variantIndex);
     if (error) {
-      if (isMissingSchemaTable(error.message, "tenant_site_variants"))
+      if (isMissingSchemaTable(error.message))
         return {
           success: false,
           error: "Site variant storage is not available in this environment.",
@@ -530,7 +526,7 @@ export async function getVariantEditHistory(
       .order("created_at", { ascending: false })
       .limit(Math.max(10, limit * 4));
     if (error) {
-      if (isMissingSchemaTable(error.message, "tenant_site_versions"))
+      if (isMissingSchemaTable(error.message))
         return { success: true, data: [] };
       return { success: false, error: error.message };
     }
@@ -638,7 +634,7 @@ export async function rollbackSiteVariantFromHistory(
       .eq("tenant_id", tenantId)
       .eq("variant_index", variantIndex);
     if (updateError) {
-      if (isMissingSchemaTable(updateError.message, "tenant_site_variants"))
+      if (isMissingSchemaTable(updateError.message))
         return {
           success: false,
           error: "Site variant storage is not available in this environment.",
@@ -662,6 +658,7 @@ export async function rollbackSiteVariantFromHistory(
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for builder plan PR 3 (applyLayoutChange / setSectionConfig)
 function setSectionConfig(
   sections: SectionConfig[],
   sectionId: SectionId,
@@ -677,6 +674,7 @@ function setSectionConfig(
   });
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for builder plan PR 3 (applyLayoutChange / setSectionConfig)
 function normalizeSectionOrder(sections: SectionConfig[]): SectionConfig[] {
   return [...sections]
     .sort((a, b) => a.order - b.order)

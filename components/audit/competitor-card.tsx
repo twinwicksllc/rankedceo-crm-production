@@ -15,12 +15,6 @@ interface CompetitorMetrics {
   topKeywords: string[];
 }
 
-interface PageSpeedComparison {
-  targetScore: number;
-  competitorScore: number | null; // we only run PageSpeed on target
-  targetGrade: string;
-}
-
 interface CompetitorCardProps {
   competitor: CompetitorMetrics;
   rank: number;
@@ -53,8 +47,6 @@ export function CompetitorCard({
   competitor,
   rank,
   targetDomain,
-  targetScore,
-  targetGrade,
 }: CompetitorCardProps) {
   const { theme } = useOnboardingTheme();
   const isLight = theme === "light";
@@ -65,12 +57,6 @@ export function CompetitorCard({
   const isBeating =
     competitor.bestPosition !== null && competitor.bestPosition <= 10;
   const rankColor = RANK_COLORS[rank - 1] ?? "#22C55E";
-
-  // How much better/worse than target?
-  const gap =
-    competitor.bestPosition !== null
-      ? 50 - competitor.bestPosition // rough proxy: higher = better ranked
-      : null;
 
   return (
     <div

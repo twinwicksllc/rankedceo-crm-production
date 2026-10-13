@@ -6,19 +6,16 @@ import {
   Clock,
   X,
   ChevronLeft,
-  ChevronRight,
   Loader2,
   CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import type {
   CalendlyEventType,
   CalendlyAvailableSlot,
   AppointmentSource,
 } from "@/lib/types/appointment";
-import { format, addDays, startOfDay, isSameDay } from "date-fns";
+import { startOfDay } from "date-fns";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -40,31 +37,18 @@ export function BookingModal({
   isOpen,
   onClose,
   onBooked,
-  source,
   accountId,
-  leadInfo,
   primaryColor = "#7c3aed",
 }: BookingModalProps) {
   const [step, setStep] = useState<Step>("event-type");
   const [eventTypes, setEventTypes] = useState<CalendlyEventType[]>([]);
   const [selectedEventType, setSelectedEventType] =
     useState<CalendlyEventType | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [slots, setSlots] = useState<CalendlyAvailableSlot[]>([]);
-  const [selectedSlot, setSelectedSlot] =
-    useState<CalendlyAvailableSlot | null>(null);
+  const [selectedDate] = useState<Date>(new Date());
+  const [, setSlots] = useState<CalendlyAvailableSlot[]>([]);
   const [isLoadingEventTypes, setIsLoadingEventTypes] = useState(false);
-  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
-  const [isBooking, setIsBooking] = useState(false);
+  const [, setIsLoadingSlots] = useState(false);
   const [schedulingUrl, setSchedulingUrl] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    name: leadInfo?.name || "",
-    email: leadInfo?.email || "",
-    phone: leadInfo?.phone || "",
-  });
-  const [calendarWeekStart, setCalendarWeekStart] = useState(
-    startOfDay(new Date()),
-  );
 
   useEffect(() => {
     if (isOpen) {

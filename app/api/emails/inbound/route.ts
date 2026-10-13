@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
 /**
  * GET endpoint - for testing webhook connectivity
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   return NextResponse.json({
     status: "online",
     message: "Email inbound webhook is active",
