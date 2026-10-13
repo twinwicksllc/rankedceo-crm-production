@@ -59,7 +59,7 @@ export function AccountSettings({ account }: AccountSettingsProps) {
         const data = await response.json();
         setMessage(data.error || "Failed to update account settings");
       }
-    } catch (error) {
+    } catch {
       setMessage("Network error. Please try again.");
     } finally {
       setLoading(false);

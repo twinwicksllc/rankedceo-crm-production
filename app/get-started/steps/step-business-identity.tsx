@@ -62,9 +62,7 @@ export function StepBusinessIdentity({
   } = form;
   const selectedTrade = watch("primary_trade");
   const [showOptionalDetails, setShowOptionalDetails] = useState(false);
-  const [auditPreFill, setAuditPreFill] = useState<AuditPreFillData | null>(
-    null,
-  );
+  const [, setAuditPreFill] = useState<AuditPreFillData | null>(null);
   const [preFilledFields, setPreFilledFields] = useState<PreFilledFields>({
     business_name: false,
     city: false,

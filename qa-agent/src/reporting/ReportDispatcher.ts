@@ -31,7 +31,7 @@ export class ReportDispatcher {
     // Dispatch all 3 channels in parallel — failures are logged, not thrown
     const results = await Promise.allSettled([
       this.pushToSupabase(report, html),
-      this.sendEmail(report, html),
+      this.sendEmail(report),
       this.postGitHubSummary(report),
     ]);
 
@@ -87,7 +87,7 @@ export class ReportDispatcher {
 
   // ── 2. Resend email ──────────────────────────────────────────────────────
 
-  private async sendEmail(report: RunReport, html: string): Promise<void> {
+  private async sendEmail(report: RunReport): Promise<void> {
     const resendKey = process.env.RESEND_API_KEY;
     const adminEmail = process.env.QA_ADMIN_EMAIL_NOTIFY;
     if (!resendKey || !adminEmail) {

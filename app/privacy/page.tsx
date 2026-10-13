@@ -78,8 +78,8 @@ export default function PrivacyPolicyPage() {
 
         <section style={{ marginBottom: "36px" }}>
           <p style={{ lineHeight: 1.8, fontSize: "16px" }}>
-            RankedCEO LLC ("RankedCEO," "we," "us," or "our") operates the
-            websites located at{" "}
+            RankedCEO LLC (&quot;RankedCEO,&quot; &quot;we,&quot;
+            &quot;us,&quot; or &quot;our&quot;) operates the websites located at{" "}
             <a href="https://rankedceo.com" style={{ color: "#4f46e5" }}>
               rankedceo.com
             </a>
@@ -93,10 +93,11 @@ export default function PrivacyPolicyPage() {
             </a>
             , along with the associated software-as-a-service products including
             our CRM platform, Website Audit tool, and Website-as-a-Service
-            (WaaS) offering (collectively, the "Services"). This Privacy Policy
-            explains how we collect, use, disclose, and protect information
-            about you when you use our Services. By accessing or using our
-            Services, you agree to the practices described in this policy.
+            (WaaS) offering (collectively, the &quot;Services&quot;). This
+            Privacy Policy explains how we collect, use, disclose, and protect
+            information about you when you use our Services. By accessing or
+            using our Services, you agree to the practices described in this
+            policy.
           </p>
         </section>
 
@@ -178,11 +179,11 @@ export default function PrivacyPolicyPage() {
             1.4 Client Data
           </h3>
           <p style={{ lineHeight: 1.8 }}>
-            If you use our CRM or WaaS platform to manage your own customers'
-            data, we process that data on your behalf as a data processor. You
-            remain the data controller for your customers' information, and you
-            are responsible for ensuring you have the appropriate legal basis to
-            collect and share that data with us.
+            If you use our CRM or WaaS platform to manage your own
+            customers&apos; data, we process that data on your behalf as a data
+            processor. You remain the data controller for your customers&apos;
+            information, and you are responsible for ensuring you have the
+            appropriate legal basis to collect and share that data with us.
           </p>
 
           <h3
@@ -287,8 +288,8 @@ export default function PrivacyPolicyPage() {
               support@twin-wicks.com
             </a>
             , and we will delete your Google data according to the timeline
-            above. You may also manage connected apps and revoke RankedCEO's
-            access to your Google account by visiting your{" "}
+            above. You may also manage connected apps and revoke
+            RankedCEO&apos;s access to your Google account by visiting your{" "}
             <a
               href="https://myaccount.google.com/permissions"
               style={{ color: "#4f46e5" }}
@@ -518,8 +519,8 @@ export default function PrivacyPolicyPage() {
             </li>
             <li>
               <strong>Opt out of marketing</strong> — unsubscribe from marketing
-              communications at any time by clicking "Unsubscribe" in any email
-              we send, or by contacting us directly.
+              communications at any time by clicking &quot;Unsubscribe&quot; in
+              any email we send, or by contacting us directly.
             </li>
           </ul>
           <p style={{ lineHeight: 1.8, marginTop: "12px" }}>
@@ -541,7 +542,7 @@ export default function PrivacyPolicyPage() {
           <h2
             style={{ fontSize: "22px", fontWeight: 700, marginBottom: "12px" }}
           >
-            8. Children's Privacy
+            8. Children&apos;s Privacy
           </h2>
           <p style={{ lineHeight: 1.8 }}>
             Our Services are not directed to children under the age of 13, and
@@ -637,12 +638,12 @@ export default function PrivacyPolicyPage() {
           </h2>
           <p style={{ lineHeight: 1.8 }}>
             We may update this Privacy Policy from time to time. When we make
-            changes, we will revise the "Last Updated" date at the top of this
-            page. For material changes, we will provide additional notice such
-            as an in-app notification or an email to the address associated with
-            your account. Your continued use of the Services after any update
-            constitutes your acceptance of the revised policy. We encourage you
-            to review this policy periodically.
+            changes, we will revise the &quot;Last Updated&quot; date at the top
+            of this page. For material changes, we will provide additional
+            notice such as an in-app notification or an email to the address
+            associated with your account. Your continued use of the Services
+            after any update constitutes your acceptance of the revised policy.
+            We encourage you to review this policy periodically.
           </p>
         </section>
 

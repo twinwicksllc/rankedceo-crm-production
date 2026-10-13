@@ -1,7 +1,6 @@
 // lib/waas/services/serper/search-client.ts
 import {
   auditDebug,
-  SERPER_TARGET_RESULTS,
   SerperOrganicResults,
   SerperSearchResult,
   PlaceResult,

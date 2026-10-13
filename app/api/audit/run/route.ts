@@ -9,7 +9,7 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { createAuditRecord, updateAuditRecord } from "@/lib/waas/supabase";
 import type { WaasAuditInsert } from "@/lib/waas/supabase";
 import type { AuditSeoProvider } from "@/lib/waas/types";
-import { runAuditJob, type RunAuditJobParams } from "@/lib/waas/services/audit-jobs";
+import { runAuditJob } from "@/lib/waas/services/audit-jobs";
 
 const AUDIT_EXPIRY_DAYS = 30;
 
@@ -22,7 +22,6 @@ export const maxDuration = 90;
 // POST /api/audit/run
 // ---------------------------------------------------------------------------
 export async function POST(req: NextRequest) {
-  const startTime = Date.now();
 
   try {
     const body = await req.json();

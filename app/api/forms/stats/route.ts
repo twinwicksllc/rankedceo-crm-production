@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { FormService } from "@/lib/services/form-service";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
  * GET /api/forms/stats - Get form statistics
  */
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const formService = new FormService();
     const stats = await formService.getFormStats();

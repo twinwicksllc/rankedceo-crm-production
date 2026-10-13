@@ -48,7 +48,7 @@ export function ProfileSettings({ profile }: ProfileSettingsProps) {
         const data = await response.json();
         setMessage(data.error || "Failed to update profile");
       }
-    } catch (error) {
+    } catch {
       setMessage("Network error. Please try again.");
     } finally {
       setLoading(false);

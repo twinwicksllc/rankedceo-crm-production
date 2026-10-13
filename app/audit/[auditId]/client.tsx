@@ -955,7 +955,7 @@ function HeroSection({
                 color: isLight ? "rgba(15,23,42,0.9)" : "rgba(255,255,255,0.7)",
               }}
             >
-              "{keyword}"
+              &quot;{keyword}&quot;
             </em>{" "}
             and related local searches.
           </p>
@@ -1045,7 +1045,6 @@ function HeroSection({
 
 function ScoreBreakdown({
   summary,
-  grade,
 }: {
   summary: NonNullable<AuditReportData["summary"]>;
   grade: string;
@@ -1453,7 +1452,6 @@ function KeywordPerformancePanel({
 
 function PageSpeedSection({
   pageSpeed,
-  targetDomain,
 }: {
   pageSpeed: PageSpeedFull;
   targetDomain: string;
@@ -1863,7 +1861,7 @@ function TechnicalIssues({
           }}
         >
           Each issue below includes why it affects rankings and exactly what
-          we'll do differently for your site to fix it.
+          we&apos;ll do differently for your site to fix it.
         </div>
       </div>
 

@@ -10,7 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useRouter } from "next/navigation";
 
 interface PreferencesStepProps {
   accountInfo: any;
@@ -41,7 +40,6 @@ const DATE_FORMATS = [
 ];
 
 export function PreferencesStep({ accountInfo }: PreferencesStepProps) {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     timezone: accountInfo?.timezone || "America/New_York",

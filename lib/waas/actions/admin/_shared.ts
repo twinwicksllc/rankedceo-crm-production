@@ -34,10 +34,7 @@ export function isPendingReviewEnumError(msg: string): boolean {
   );
 }
 
-export function isMissingSchemaTable(
-  msg: string,
-  _tableOrColumn?: string,
-): boolean {
+export function isMissingSchemaTable(msg: string): boolean {
   return (
     msg.includes("relation") &&
     (msg.includes("does not exist") || msg.includes("undefined")) &&

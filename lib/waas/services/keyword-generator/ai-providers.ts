@@ -3,7 +3,7 @@
 import { generateKeywords } from "../serper";
 import { GEMINI_API_BASE, GEMINI_MODEL } from "./types";
 import type { SiteSignals, AiKeywordPlan } from "./types";
-import { normalizeKeyword, dedupeAndLimit } from "./text-utils";
+import { dedupeAndLimit } from "./text-utils";
 
 export function computeConfidence(
   signals: SiteSignals,

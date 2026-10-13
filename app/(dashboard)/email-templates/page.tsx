@@ -8,7 +8,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Plus, FileText } from "lucide-react";
 
 export const dynamic = "force-dynamic";

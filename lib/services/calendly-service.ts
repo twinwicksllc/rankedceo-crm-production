@@ -5,7 +5,6 @@
 
 import { createHmac, timingSafeEqual } from "crypto";
 import type {
-  CalendlyConnection,
   CalendlyEventType,
   CalendlyAvailableSlot,
   CalendlyBookingResult,

@@ -6,7 +6,7 @@
 // =============================================================================
 
 import Link from "next/link";
-import { listQaRuns, purgeQaRuns } from "@/lib/waas/actions/qa";
+import { listQaRuns } from "@/lib/waas/actions/qa";
 import { PurgeButton } from "./purge-button";
 
 export const dynamic = "force-dynamic";

@@ -181,7 +181,7 @@ export function PipelineDashboard({ accountId }: PipelineDashboardProps) {
               />
               <YAxis dataKey="stage" type="category" width={100} />
               <Tooltip
-                formatter={(value: number, name: string) => [
+                formatter={(value: number) => [
                   formatCurrency(value),
                   "Pipeline Value",
                 ]}

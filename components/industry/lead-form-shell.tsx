@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -80,7 +79,6 @@ export function LeadFormShell({
   const borderColor = `border-${config.color.border}`;
   const bgLight = `bg-${config.color.light}`;
   const textPrimary = `text-${config.color.primary}`;
-  const textColor = `text-${config.color.text}`;
   const progressFill = `bg-${config.color.primary}`;
   const btnOutline = `border-${config.color.border} text-${config.color.text} hover:bg-${config.color.light}`;
 

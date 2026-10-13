@@ -10,13 +10,13 @@
 //   { url: string }  — Stripe billing portal URL
 // ============================================================
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { SubscriptionService } from "@/lib/services/subscription-service";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     // Authenticate user
     const supabase = await createClient();

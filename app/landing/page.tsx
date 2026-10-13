@@ -57,7 +57,7 @@ export default function LandingPage() {
           <div className="hero-content">
             <div className="hero-left">
               <div className="rating">
-                ⭐ Rated 'Excellent' | 500+ Verified Reviews
+                ⭐ Rated &apos;Excellent&apos; | 500+ Verified Reviews
               </div>
               <h1>
                 <span style={{ fontWeight: 400 }}>The Smile You Deserve</span> —{" "}
@@ -148,9 +148,9 @@ export default function LandingPage() {
 
               <div className="testimonial-card">
                 <p className="testimonial-text">
-                  "The best decision I've ever made for my smile. I thought
-                  veneers were financially out of reach – Smile MakeOver made it
-                  possible."
+                  &quot;The best decision I&apos;ve ever made for my smile. I
+                  thought veneers were financially out of reach – Smile MakeOver
+                  made it possible.&quot;
                 </p>
                 <p className="testimonial-author">
                   Sarah Johnson — via{" "}
@@ -182,7 +182,7 @@ export default function LandingPage() {
 
       <section className="proof-section">
         <div className="container">
-          <h2>Proof You'll See (and Feel) Every Time You Smile</h2>
+          <h2>Proof You&apos;ll See (and Feel) Every Time You Smile</h2>
           <p className="proof-subtitle">
             With over 1,500+ smile makeover cases completed, our
             before-and-after results demonstrate the life-changing impact of
@@ -220,8 +220,8 @@ export default function LandingPage() {
                   teeth?
                 </li>
                 <li>
-                  Been told veneers or cosmetic dental work were "too
-                  expensive"?
+                  Been told veneers or cosmetic dental work were &quot;too
+                  expensive&quot;?
                 </li>
               </ul>
               <p className="column-text">
@@ -229,7 +229,7 @@ export default function LandingPage() {
                 people delay treatment because of price – not desire.
               </p>
               <p className="column-bold">
-                That's where we change the equation.
+                That&apos;s where we change the equation.
               </p>
             </div>
 

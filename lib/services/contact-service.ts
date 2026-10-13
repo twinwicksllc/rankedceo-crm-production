@@ -8,7 +8,6 @@ import {
   createContactSchema,
   updateContactSchema,
 } from "@/lib/validations/contact";
-import { z } from "zod";
 
 export class ContactService {
   private supabase;

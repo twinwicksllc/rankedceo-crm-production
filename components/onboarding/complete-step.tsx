@@ -28,15 +28,17 @@ export function CompleteStep() {
       </div>
 
       <div>
-        <h2 className="text-3xl font-bold text-gray-900">You're all set!</h2>
+        <h2 className="text-3xl font-bold text-gray-900">
+          You&apos;re all set!
+        </h2>
         <p className="mt-3 text-lg text-gray-600">
-          Your workspace is ready. Let's start managing your customer
+          Your workspace is ready. Let&apos;s start managing your customer
           relationships.
         </p>
       </div>
 
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
-        <h3 className="font-semibold text-gray-900 mb-4">What's next?</h3>
+        <h3 className="font-semibold text-gray-900 mb-4">What&apos;s next?</h3>
         <div className="grid gap-4 md:grid-cols-2 text-left">
           <div className="bg-white rounded-lg p-4 shadow-sm">
             <h4 className="font-medium text-gray-900 mb-2">

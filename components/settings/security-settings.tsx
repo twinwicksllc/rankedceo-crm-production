@@ -55,7 +55,7 @@ export function SecuritySettings() {
         const data = await response.json();
         setMessage(data.error || "Failed to update password");
       }
-    } catch (error) {
+    } catch {
       setMessage("Network error. Please try again.");
     } finally {
       setLoading(false);

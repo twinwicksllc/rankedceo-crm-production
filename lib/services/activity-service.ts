@@ -13,7 +13,6 @@ import {
   updateActivitySchema,
   activityFiltersSchema,
 } from "@/lib/validations/activity";
-import { z } from "zod";
 
 export class ActivityService {
   private supabase;

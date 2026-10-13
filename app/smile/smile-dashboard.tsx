@@ -1,11 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import {
-  BarChart,
-  Bar,
   LineChart,
   Line,
   XAxis,
@@ -113,38 +110,6 @@ const aiActivityFeed = [
     timestamp: "Just now",
     status: "pending",
     type: "payment",
-  },
-];
-
-// Qualification metrics
-const qualificationMetrics = [
-  {
-    label: "This Month",
-    value: 28,
-    subtext: "Qualified Patients",
-    icon: Users,
-    color: "bg-purple-100 text-purple-700",
-  },
-  {
-    label: "Qualification Rate",
-    value: "88%",
-    subtext: "vs. 75% last month",
-    icon: Target,
-    color: "bg-purple-50 text-purple-600",
-  },
-  {
-    label: "Avg Case Value",
-    value: "$6,866",
-    subtext: "Based on mix",
-    icon: TrendingUp,
-    color: "bg-purple-100 text-purple-700",
-  },
-  {
-    label: "Pending Consults",
-    value: 15,
-    subtext: "Awaiting follow-up",
-    icon: Clock,
-    color: "bg-purple-50 text-purple-600",
   },
 ];
 

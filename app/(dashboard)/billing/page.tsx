@@ -9,7 +9,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SubscriptionService } from "@/lib/services/subscription-service";
-import { PLAN_INFO, STRIPE_PRICE_IDS } from "@/lib/stripe";
+import { PLAN_INFO } from "@/lib/stripe";
 import {
   Card,
   CardContent,

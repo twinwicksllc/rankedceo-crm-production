@@ -513,8 +513,8 @@ export function StepIntegrations({ form, onSubmit, onBack, isLoading }: Props) {
               </p>
               <p className="text-blue-700/80 dark:text-blue-200/70 text-xs leading-relaxed">
                 After you submit, our team reviews your information and begins
-                building your RankedCEO website. You'll receive a confirmation
-                email and your site will be live within 48 hours.
+                building your RankedCEO website. You&apos;ll receive a
+                confirmation email and your site will be live within 48 hours.
               </p>
             </div>
           </div>

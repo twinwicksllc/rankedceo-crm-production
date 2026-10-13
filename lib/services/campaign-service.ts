@@ -11,21 +11,12 @@ import type {
   EmailTemplateWithRelations,
   CreateEmailTemplateInput,
   UpdateEmailTemplateInput,
-  CampaignSequence,
-  CampaignSequenceWithRelations,
-  CreateCampaignSequenceInput,
-  UpdateCampaignSequenceInput,
-  CampaignAnalytics,
-  CampaignEmail,
-  CampaignEmailWithRelations,
 } from "@/lib/types/campaign";
 import {
   createCampaignSchema,
   updateCampaignSchema,
   createEmailTemplateSchema,
   updateEmailTemplateSchema,
-  createCampaignSequenceSchema,
-  updateCampaignSequenceSchema,
 } from "@/lib/validations/campaign";
 
 export class CampaignService {

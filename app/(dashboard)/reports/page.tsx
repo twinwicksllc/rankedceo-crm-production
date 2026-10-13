@@ -1,8 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { RevenueDashboard } from "@/components/analytics/revenue-dashboard";
-import { PipelineDashboard } from "@/components/analytics/pipeline-dashboard";
-import { ActivityDashboard } from "@/components/analytics/activity-dashboard";
 
 export default async function ReportsPage() {
   const supabase = await createClient();

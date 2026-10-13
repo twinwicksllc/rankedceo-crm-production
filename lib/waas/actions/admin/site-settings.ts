@@ -2,9 +2,8 @@
 import { revalidatePath } from "next/cache";
 import type { SectionConfig } from "@/lib/waas/templates/types";
 import { assignMissingIds } from "@/lib/waas/sections/section-ids";
-import { ALL_TEMPLATES, getTemplate } from "@/lib/waas/templates/registry";
 import { generateIndustryKeywordPlan } from "@/lib/waas/services/keyword-generator";
-import { getAdminClient, isMissingSchemaTable } from "./_shared";
+import { getAdminClient } from "./_shared";
 import type { ActionResult } from "./_shared";
 import { saveTenantSiteVersion } from "./_versioning";
 

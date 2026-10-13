@@ -48,7 +48,7 @@ export default async function OnboardingPage() {
             Welcome to RankedCEO CRM
           </h1>
           <p className="mt-2 text-gray-600">
-            Let's get you set up in just a few steps
+            Let&apos;s get you set up in just a few steps
           </p>
         </div>
 

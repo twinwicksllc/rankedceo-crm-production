@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { redirect } from "next/navigation";
 import { CampaignService } from "@/lib/services/campaign-service";
-import { CampaignForm } from "@/components/forms/campaign-form";
 
 export default async function EditCampaignPage({
   params,

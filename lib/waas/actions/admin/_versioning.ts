@@ -1,6 +1,5 @@
 // RankedCEO WaaS — Site version & lifecycle helpers (no 'use server')
 import { createClient as createServerClient } from "@/lib/supabase/server";
-import type { TenantSiteConfig } from "@/lib/waas/templates/types";
 import { getAdminClient } from "./_shared";
 
 export type VariantLifecycleReasonCategory =

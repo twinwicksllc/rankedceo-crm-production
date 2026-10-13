@@ -504,7 +504,7 @@ export function StepBrandIdentity({
           Define your brand identity
         </h1>
         <p className="text-slate-500 dark:text-white/50 mt-2 text-sm sm:text-base">
-          Upload your logo or we'll craft a professional text-mark
+          Upload your logo or we&apos;ll craft a professional text-mark
           automatically.
         </p>
       </div>

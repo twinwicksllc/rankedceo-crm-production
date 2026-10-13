@@ -53,7 +53,7 @@ const QA_WAAS_TENANT_SLUG = process.env.QA_WAAS_TENANT_SLUG ?? "qa-test-tenant";
 // and its non-CRM sub-paths. CRM-owned routes like /edit/[reviewToken],
 // /login, /admin, /api/* must fall through to normal CRM handling.
 // (The /edit/[reviewToken] portal is served by app/edit/ directly, not _sites.)
-function isQAWaasPath(_pathname: string): boolean {
+function isQAWaasPath(): boolean {
   return false; // QA host uses CRM routing for all paths
 }
 
@@ -176,7 +176,7 @@ export async function middleware(request: NextRequest) {
 
   // ── 3. Audit subdomain (audit.rankedceo.com → /audit-landing) ───────────────
   if (subdomain === "audit") {
-    return handleAuditSubdomain(request, response, user, hostname);
+    return handleAuditSubdomain(request, response, user);
   }
 
   // ── 4. Industry subdomains (existing behaviour — unchanged) ───────────────
@@ -200,7 +200,7 @@ export async function middleware(request: NextRequest) {
   //   c) This is the bare rankedceo.com or crm.rankedceo.com domain
   const isCrmDomain = isKnownCrmDomain(hostname);
   const isQaHost = hostname === QA_WAAS_HOST;
-  const shouldUseWaasRouting = !isQaHost || isQAWaasPath(pathname);
+  const shouldUseWaasRouting = !isQaHost || isQAWaasPath();
 
   if (
     WAAS_ENABLED &&
@@ -484,7 +484,6 @@ function handleAuditSubdomain(
   request: NextRequest,
   response: NextResponse,
   user: { user_metadata?: Record<string, unknown> } | null,
-  hostname: string,
 ): NextResponse {
   const { pathname } = request.nextUrl;
 

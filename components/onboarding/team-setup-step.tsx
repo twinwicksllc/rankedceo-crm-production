@@ -4,11 +4,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useRouter } from "next/navigation";
 import { UserPlus, X } from "lucide-react";
 
 export function TeamSetupStep() {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [emails, setEmails] = useState<string[]>([""]);
 

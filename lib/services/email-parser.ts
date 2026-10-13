@@ -214,7 +214,6 @@ export class EmailParser {
   static determineThreadId(
     inReplyTo: string | null,
     references: string[] | null,
-    message_id: string,
   ): string | null {
     // Check in-reply-to first
     if (inReplyTo) {

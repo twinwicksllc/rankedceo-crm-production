@@ -12,7 +12,6 @@ import {
   Building,
   DollarSign,
   Eye,
-  EyeOff,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 

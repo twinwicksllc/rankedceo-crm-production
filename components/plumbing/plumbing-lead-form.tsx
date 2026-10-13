@@ -205,7 +205,7 @@ export function PlumbingLeadForm({
         },
       };
       await onSubmit(payload);
-    } catch (err) {
+    } catch {
       console.error("[PlumbingLeadForm] Submission error");
     } finally {
       setIsSubmitting(false);

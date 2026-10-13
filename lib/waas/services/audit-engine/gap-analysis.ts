@@ -70,9 +70,6 @@ export function computeGapAnalysis(
 
   // Build natural language summary
   const totalGaps = missingKeywords.length + rankingGaps.length;
-  const criticalGaps = [...missingKeywords, ...rankingGaps].filter(
-    (g) => g.impact === "critical",
-  ).length;
   const topCompetitor = rankReports[0]?.competitorResults
     .filter((c) => c.position !== null)
     .sort((a, b) => (a.position ?? 999) - (b.position ?? 999))[0];

@@ -35,19 +35,15 @@ export default async function PaySuccessPage({
   }
 
   // Retrieve session from Stripe to confirm payment
-  let sessionValid = false;
   let customerEmail = user.email || "";
   try {
     const session = await stripe.checkout.sessions.retrieve(session_id);
-    sessionValid =
-      session.payment_status === "paid" || session.status === "complete";
     if (session.customer_details?.email) {
       customerEmail = session.customer_details.email;
     }
   } catch (err) {
     console.error("[Pay Success] Failed to retrieve session:", err);
     // Still show success page — webhook will handle the subscription sync
-    sessionValid = true;
   }
 
   // Determine redirect URL

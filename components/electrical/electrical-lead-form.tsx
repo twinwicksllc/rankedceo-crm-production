@@ -200,7 +200,7 @@ export function ElectricalLeadForm({
         },
       };
       await onSubmit(payload);
-    } catch (err) {
+    } catch {
       console.error("[ElectricalLeadForm] Submission error");
     } finally {
       setIsSubmitting(false);

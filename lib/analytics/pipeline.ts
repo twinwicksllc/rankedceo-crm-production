@@ -184,8 +184,6 @@ export async function getDealsBySource(
 export async function getPipelineVelocity(
   accountId: string,
 ): Promise<PipelineVelocity[]> {
-  const supabase = await createClient();
-
   // For now, we'll estimate velocity based on average deal cycle
   const avgDealCycle = await getAverageDealCycle(accountId);
   const stages = ["Lead", "Qualified", "Proposal", "Negotiation", "Won"];

@@ -6,19 +6,16 @@ import {
   Clock,
   X,
   ChevronLeft,
-  ChevronRight,
   Loader2,
   CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import type {
   CalendlyEventType,
   CalendlyAvailableSlot,
   AppointmentSource,
 } from "@/lib/types/appointment";
-import { format, addDays, startOfDay, isSameDay } from "date-fns";
+import { startOfDay } from "date-fns";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -40,31 +37,18 @@ export function BookingModal({
   isOpen,
   onClose,
   onBooked,
-  source,
   accountId,
-  leadInfo,
   primaryColor = "#7c3aed",
 }: BookingModalProps) {
   const [step, setStep] = useState<Step>("event-type");
   const [eventTypes, setEventTypes] = useState<CalendlyEventType[]>([]);
   const [selectedEventType, setSelectedEventType] =
     useState<CalendlyEventType | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [slots, setSlots] = useState<CalendlyAvailableSlot[]>([]);
-  const [selectedSlot, setSelectedSlot] =
-    useState<CalendlyAvailableSlot | null>(null);
+  const [selectedDate] = useState<Date>(new Date());
+  const [, setSlots] = useState<CalendlyAvailableSlot[]>([]);
   const [isLoadingEventTypes, setIsLoadingEventTypes] = useState(false);
-  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
-  const [isBooking, setIsBooking] = useState(false);
+  const [, setIsLoadingSlots] = useState(false);
   const [schedulingUrl, setSchedulingUrl] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    name: leadInfo?.name || "",
-    email: leadInfo?.email || "",
-    phone: leadInfo?.phone || "",
-  });
-  const [calendarWeekStart, setCalendarWeekStart] = useState(
-    startOfDay(new Date()),
-  );
 
   useEffect(() => {
     if (isOpen) {
@@ -161,7 +145,7 @@ export function BookingModal({
         {step === "event-type" && (
           <div className="p-6">
             <p className="text-sm text-gray-500 mb-4">
-              Choose the type of appointment you'd like to schedule:
+              Choose the type of appointment you&apos;d like to schedule:
             </p>
             {isLoadingEventTypes ? (
               <div className="flex justify-center py-8">
@@ -232,8 +216,8 @@ export function BookingModal({
               )}
             </div>
             <p className="text-sm text-gray-600 mb-6">
-              You'll be taken to our scheduling page to pick a time that works
-              best for you.
+              You&apos;ll be taken to our scheduling page to pick a time that
+              works best for you.
             </p>
             <Button
               onClick={handleConfirmBooking}
@@ -253,11 +237,11 @@ export function BookingModal({
               <CheckCircle2 className="w-8 h-8 text-green-600" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              You're all set!
+              You&apos;re all set!
             </h3>
             <p className="text-gray-500 text-sm mb-6">
               The scheduling page has been opened. Complete your booking there
-              and you'll receive a confirmation email.
+              and you&apos;ll receive a confirmation email.
             </p>
             <Button onClick={onClose} variant="outline" className="w-full">
               Close

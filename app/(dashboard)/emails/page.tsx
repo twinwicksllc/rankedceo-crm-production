@@ -167,8 +167,8 @@ export default function EmailsPage() {
                 <Mail className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                 <h3 className="text-lg font-semibold mb-2">No emails yet</h3>
                 <p className="text-muted-foreground">
-                  Emails will appear here when you BCC your account's unique
-                  email address.
+                  Emails will appear here when you BCC your account&apos;s
+                  unique email address.
                 </p>
               </div>
             </CardContent>

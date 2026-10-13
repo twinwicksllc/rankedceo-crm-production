@@ -25,7 +25,6 @@ interface ElectricalDashboardProps {
 
 export default function ElectricalDashboard({
   userId,
-  leadCount,
 }: ElectricalDashboardProps) {
   const [leads, setLeads] = useState<IndustryLead[]>([]);
   const [stats, setStats] = useState<LeadStats | null>(null);

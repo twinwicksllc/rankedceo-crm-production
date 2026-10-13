@@ -172,7 +172,7 @@ export async function getIndustryLeads(
     }
 
     return { success: true, data: (leads as IndustryLead[]) || [] };
-  } catch (err) {
+  } catch {
     console.error("[IndustryLead] Unexpected error fetching leads");
     return { success: false, data: [], error: "Unexpected error" };
   }
@@ -207,7 +207,7 @@ export async function getIndustryLead(
     }
 
     return { success: true, data: lead as IndustryLead };
-  } catch (err) {
+  } catch {
     console.error("[IndustryLead] Unexpected error fetching lead");
     return { success: false, data: null, error: "Unexpected error" };
   }
@@ -246,7 +246,7 @@ export async function updateIndustryLead(
     }
 
     return { success: true };
-  } catch (err) {
+  } catch {
     console.error("[IndustryLead] Unexpected error updating lead");
     return { success: false, error: "Unexpected error" };
   }
@@ -331,7 +331,7 @@ export async function getIndustryLeadStats(
     };
 
     return { success: true, data: stats };
-  } catch (err) {
+  } catch {
     console.error("[IndustryLead] Unexpected error fetching stats");
     return { success: false, data: null, error: "Unexpected error" };
   }

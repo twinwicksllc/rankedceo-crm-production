@@ -18,7 +18,6 @@ interface CompleteProfileCardProps {
  * Shows up when at least one optional field is missing.
  */
 export function CompleteProfileCard({
-  tenantId,
   reviewToken,
   missingFields,
 }: CompleteProfileCardProps) {

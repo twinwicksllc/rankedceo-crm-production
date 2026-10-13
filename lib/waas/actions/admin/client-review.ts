@@ -12,7 +12,6 @@ import {
   generateReviewToken,
   normalizeLifecycleReason,
 } from "./_versioning";
-import type { VariantLifecycleReasonCategory } from "./_versioning";
 import { applyTemplate } from "./site-settings";
 
 export async function ensureClientReviewToken(
@@ -400,7 +399,7 @@ export async function selectClientVariantByReviewToken(
 
       if (
         markSelectedError &&
-        !isMissingSchemaTable(markSelectedError.message, "tenant_site_variants")
+        !isMissingSchemaTable(markSelectedError.message)
       ) {
         return { success: false, error: markSelectedError.message };
       }
@@ -512,7 +511,7 @@ export async function mixClientVariantsByReviewToken(
 
       if (
         markSelectedError &&
-        !isMissingSchemaTable(markSelectedError.message, "tenant_site_variants")
+        !isMissingSchemaTable(markSelectedError.message)
       ) {
         return { success: false, error: markSelectedError.message };
       }
@@ -633,7 +632,7 @@ export async function getClientVariantRegenState(
       .order("generation_index", { ascending: true });
 
     if (genError) {
-      if (isMissingSchemaTable(genError.message, "tenant_variant_regenerations")) {
+      if (isMissingSchemaTable(genError.message)) {
         return {
           success: true,
           data: {

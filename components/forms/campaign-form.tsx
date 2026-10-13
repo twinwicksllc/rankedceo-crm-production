@@ -21,7 +21,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { CampaignService } from "@/lib/services/campaign-service";
 import {
   createCampaignSchema,
   type CampaignType,

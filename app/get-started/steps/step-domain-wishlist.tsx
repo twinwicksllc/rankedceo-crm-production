@@ -113,8 +113,8 @@ export function StepDomainWishlist({
           Choose your dream domain
         </h1>
         <p className="text-slate-500 dark:text-white/50 mt-2 text-sm sm:text-base">
-          Add up to 3 domain preferences. We'll check availability and secure
-          the best option for you.
+          Add up to 3 domain preferences. We&apos;ll check availability and
+          secure the best option for you.
         </p>
       </div>
 

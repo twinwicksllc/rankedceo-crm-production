@@ -199,7 +199,7 @@ export function HvacLeadForm({ onSubmit, operatorId }: HvacLeadFormProps) {
         },
       };
       await onSubmit(payload);
-    } catch (err) {
+    } catch {
       console.error("[HvacLeadForm] Submission error");
     } finally {
       setIsSubmitting(false);

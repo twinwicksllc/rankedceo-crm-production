@@ -36,7 +36,7 @@ async function getCrmUser() {
 // ---------------------------------------------------------------------------
 // GET /api/waas/tenants
 // ---------------------------------------------------------------------------
-export async function GET(_req: NextRequest) {
+export async function GET() {
   try {
     const user = await getCrmUser();
     if (!user) {

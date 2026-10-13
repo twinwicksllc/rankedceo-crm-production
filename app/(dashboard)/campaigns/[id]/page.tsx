@@ -4,7 +4,7 @@ import { CampaignService } from "@/lib/services/campaign-service";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Play, Pause } from "lucide-react";
+import { ArrowLeft, Play, Pause } from "lucide-react";
 
 export default async function CampaignDetailPage({
   params,

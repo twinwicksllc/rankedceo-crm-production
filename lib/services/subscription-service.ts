@@ -10,7 +10,7 @@
 // ============================================================
 
 import Stripe from "stripe";
-import { stripe, INDUSTRY_SUBDOMAIN_MAP } from "@/lib/stripe";
+import { stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export class SubscriptionService {

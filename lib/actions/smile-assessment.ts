@@ -2,7 +2,6 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 export interface SubmitAssessmentData {
   patient_name: string;
@@ -190,7 +189,7 @@ export async function submitSmileAssessment(
     return {
       success: true,
     };
-  } catch (error) {
+  } catch {
     // Generic error - no PII in logs
     console.error("[Smile Assessment] Unexpected error during submission");
 
@@ -230,7 +229,7 @@ export async function getUserAssessments() {
     }
 
     return { success: true, data: assessments, error: null };
-  } catch (error) {
+  } catch {
     console.error("[Smile Assessment] Unexpected error fetching assessments");
     return { success: false, data: [], error: "Unexpected error" };
   }

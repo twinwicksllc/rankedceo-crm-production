@@ -106,9 +106,9 @@ export function AuditLandingContent() {
             <p
               className={`mb-8 lg:mb-6 text-lg ${isLight ? "text-slate-600" : "text-slate-300"}`}
             >
-              Enter your competitor's website URL and get instant insights into
-              their SEO strategy, performance scores, and growth opportunities.
-              Stop guessing - start competing.
+              Enter your competitor&apos;s website URL and get instant insights
+              into their SEO strategy, performance scores, and growth
+              opportunities. Stop guessing - start competing.
             </p>
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link

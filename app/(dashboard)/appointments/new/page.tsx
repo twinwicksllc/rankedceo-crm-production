@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Calendar, Loader2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import type { CalendlyEventType } from "@/lib/types/appointment";
 
 export default function NewAppointmentPage() {
-  const router = useRouter();
   const [eventTypes, setEventTypes] = useState<CalendlyEventType[]>([]);
   const [isLoadingEventTypes, setIsLoadingEventTypes] = useState(true);
   const [isCalendlyConnected, setIsCalendlyConnected] = useState(false);
@@ -22,8 +20,7 @@ export default function NewAppointmentPage() {
     invitee_phone: "",
     notes: "",
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState("");
+  const [error] = useState("");
 
   useEffect(() => {
     loadEventTypes();
