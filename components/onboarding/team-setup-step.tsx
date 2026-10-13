@@ -118,6 +118,7 @@ export function TeamSetupStep() {
                 variant="outline"
                 size="icon"
                 onClick={() => removeEmailField(index)}
+                aria-label={`Remove email ${index + 1}`}
               >
                 <X className="h-4 w-4" />
               </Button>

@@ -84,6 +84,7 @@ export function EmailCard({ email, onView, onMarkAsRead }: EmailCardProps) {
                 size="sm"
                 onClick={() => onMarkAsRead(email.id)}
                 title="Mark as read"
+                aria-label="Mark as read"
               >
                 <Eye className="h-4 w-4" />
               </Button>

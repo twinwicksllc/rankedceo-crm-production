@@ -222,6 +222,7 @@ export function StepDomainWishlist({
               <button
                 type="button"
                 onClick={() => handleRemove(i)}
+                aria-label={`Remove ${d.domain_name}${d.extension}`}
                 className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 dark:text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">

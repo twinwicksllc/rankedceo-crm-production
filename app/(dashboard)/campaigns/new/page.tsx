@@ -17,7 +17,7 @@ export default function NewCampaignPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/campaigns">
+          <Link href="/campaigns" aria-label="Back to campaigns">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>

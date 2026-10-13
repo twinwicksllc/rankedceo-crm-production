@@ -45,6 +45,74 @@ const placeholderHrefSelector =
 const placeholderHrefMessage =
   "Placeholder href. Use a real URL, or leave href out and render the item as text.";
 
+// jsx-a11y/control-has-associated-label treats any self-closing component
+// (<X />, <ArrowLeft />) as a possible label, so an icon-only button is never
+// flagged. This local rule fails a button/link whose children are only icons:
+// no text, no {expression}, no aria-label/aria-labelledby/alt anywhere inside,
+// no spread props. title="..." alone does not count. A child element that takes
+// props other than icon styling (<AppointmentCard appointment=... />,
+// <Image alt=... />) renders its own content, so it is not treated as an icon
+// (the rule cannot look inside custom components).
+const ICON_PROPS = /^(className|aria-hidden|strokeWidth|size|style)$/;
+const CONTROL_NAMES = new Set(["button", "Button", "a", "Link"]);
+
+function hasAttr(opening, test) {
+  return opening.attributes.some(
+    (attr) =>
+      attr.type === "JSXSpreadAttribute" || (attr.name && test(attr.name.name)),
+  );
+}
+
+function rendersContent(node) {
+  if (node.type === "JSXText") return node.value.trim().length > 0;
+  if (node.type === "JSXExpressionContainer") {
+    return node.expression.type !== "JSXEmptyExpression";
+  }
+  if (node.type === "JSXFragment") return node.children.some(rendersContent);
+  if (node.type !== "JSXElement") return false;
+  const opening = node.openingElement;
+  if (
+    hasAttr(opening, (name) => /^(aria-label|aria-labelledby|alt)$/.test(name))
+  ) {
+    return true;
+  }
+  if (node.children.length > 0) return node.children.some(rendersContent);
+  return hasAttr(opening, (name) => !ICON_PROPS.test(name));
+}
+
+const iconOnlyControlRule = {
+  meta: {
+    type: "problem",
+    schema: [],
+    messages: {
+      noName:
+        "Button/link with only an icon needs an accessible name: add aria-label (title alone is not enough) or visible text.",
+    },
+  },
+  create(context) {
+    return {
+      JSXElement(node) {
+        const opening = node.openingElement;
+        if (
+          opening.name.type !== "JSXIdentifier" ||
+          !CONTROL_NAMES.has(opening.name.name)
+        ) {
+          return;
+        }
+        if (
+          hasAttr(opening, (name) =>
+            /^(aria-label|aria-labelledby)$/.test(name),
+          )
+        ) {
+          return;
+        }
+        if (node.children.some(rendersContent)) return;
+        context.report({ node, messageId: "noName" });
+      },
+    };
+  },
+};
+
 const eslintConfig = [
   {
     ignores: [
@@ -60,10 +128,48 @@ const eslintConfig = [
   ...coreWebVitals,
   ...nextTypescript,
   {
+    plugins: { local: { rules: { "icon-only-control": iconOnlyControlRule } } },
     rules: {
+      "local/icon-only-control": "error",
       "@typescript-eslint/no-unused-vars": "error",
       ...a11yRules,
       "jsx-a11y/label-has-for": "off",
+      // Stock options plus: td/th are table cells, not controls (the rule
+      // flags them when their text sits more than 2 levels deep); depth 6 so
+      // text inside a few wrapper divs counts; and the project's own
+      // Link/Button components are treated as controls, so an icon-only
+      // <Button><Icon/></Button> is caught like a plain <button>.
+      "jsx-a11y/control-has-associated-label": [
+        "error",
+        {
+          ignoreElements: [
+            "audio",
+            "canvas",
+            "embed",
+            "input",
+            "textarea",
+            "tr",
+            "td",
+            "th",
+            "video",
+          ],
+          ignoreRoles: [
+            "grid",
+            "listbox",
+            "menu",
+            "menubar",
+            "radiogroup",
+            "row",
+            "tablist",
+            "toolbar",
+            "tree",
+            "treegrid",
+          ],
+          includeRoles: ["alert", "dialog"],
+          depth: 6,
+          controlComponents: ["Link", "Button"],
+        },
+      ],
       // Also check next/link: <Link href="#"> is the same problem as <a href="#">.
       "jsx-a11y/anchor-is-valid": ["error", { components: ["Link"] }],
       "no-restricted-syntax": [

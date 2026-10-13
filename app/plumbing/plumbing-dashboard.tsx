@@ -90,6 +90,7 @@ export default function PlumbingDashboard({
               size="sm"
               onClick={loadData}
               disabled={loading}
+              aria-label="Refresh dashboard"
               className="border-teal-200 text-teal-700 hover:bg-teal-50"
             >
               <RefreshCw

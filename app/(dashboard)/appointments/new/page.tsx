@@ -60,6 +60,7 @@ export default function NewAppointmentPage() {
       <div className="flex items-center gap-3 mb-8">
         <Link
           href="/appointments"
+          aria-label="Back to appointments"
           className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
         >
           <ArrowLeft className="w-5 h-5 text-gray-500" />

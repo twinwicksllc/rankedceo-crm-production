@@ -92,6 +92,7 @@ export default function ElectricalDashboard({
               size="sm"
               onClick={loadData}
               disabled={loading}
+              aria-label="Refresh dashboard"
               className="border-amber-200 text-amber-700 hover:bg-amber-50"
             >
               <RefreshCw
