@@ -62,6 +62,10 @@ function InputGroupAddon({
   ...props
 }: React.ComponentProps<"div"> & VariantProps<typeof inputGroupAddonVariants>) {
   return (
+    // Pointer-only convenience: clicking the addon's padding focuses the input.
+    // Keyboard users reach the input directly with Tab, so there is no keyboard
+    // equivalent to add.
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
     <div
       role="group"
       data-slot="input-group-addon"

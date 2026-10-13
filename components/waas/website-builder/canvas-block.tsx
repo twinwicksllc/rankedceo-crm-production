@@ -37,7 +37,11 @@ export function CanvasBlock({ block, selected, onSelect, onDelete }: Props) {
   };
 
   return (
+    // Clicking the card selects it (pointer). The keyboard path is the drag
+    // handle below: focusing it selects the block, so no key handler is needed
+    // on the card itself.
     <div
+      role="presentation"
       ref={setNodeRef}
       style={style}
       onClick={onSelect}
@@ -57,6 +61,7 @@ export function CanvasBlock({ block, selected, onSelect, onDelete }: Props) {
         <button
           {...listeners}
           {...attributes}
+          onFocus={onSelect}
           aria-label="Drag to reorder"
           className="flex size-6 cursor-grab items-center justify-center rounded-md border border-border bg-card text-muted-foreground hover:text-foreground active:cursor-grabbing"
         >

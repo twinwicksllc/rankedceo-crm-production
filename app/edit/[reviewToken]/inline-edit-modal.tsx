@@ -285,12 +285,17 @@ export function InlineEditModal({
     <>
       {/* Backdrop + modal */}
       <div
+        role="presentation"
         className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/40 backdrop-blur-sm pt-24 px-4"
-        onClick={() => !showAi && onCancel()}
+        onClick={(e) => {
+          if (e.target === e.currentTarget && !showAi) onCancel();
+        }}
       >
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Edit ${field.label}`}
           className="w-full max-w-xl rounded-lg bg-white shadow-2xl ring-1 ring-slate-200"
-          onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">

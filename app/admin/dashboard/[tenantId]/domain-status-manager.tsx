@@ -114,6 +114,7 @@ export function DomainStatusManager({ request }: Props) {
               onClick={() => setEditing(true)}
               className="w-7 h-7 rounded-lg border border-white/10 flex items-center justify-center text-white/30 hover:text-white hover:bg-white/5 transition-all"
               title="Update status"
+              aria-label="Update status"
             >
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                 <path

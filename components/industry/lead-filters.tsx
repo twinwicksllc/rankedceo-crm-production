@@ -79,6 +79,7 @@ export function LeadFiltersBar({
         {searchValue && (
           <button
             onClick={() => handleSearchChange("")}
+            aria-label="Clear search"
             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
           >
             <X className="h-4 w-4" />

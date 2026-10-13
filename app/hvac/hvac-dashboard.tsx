@@ -92,6 +92,7 @@ export default function HvacDashboard({
                 size="sm"
                 onClick={loadData}
                 disabled={loading}
+                aria-label="Refresh dashboard"
                 className="border-blue-200 text-blue-700 hover:bg-blue-50"
               >
                 <RefreshCw

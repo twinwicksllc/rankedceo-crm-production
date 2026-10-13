@@ -113,10 +113,10 @@ export function FixRankingsModal({
     open && mounted
       ? createPortal(
         <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Choose your next step"
-          onClick={() => setOpen(false)}
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setOpen(false);
+          }}
           style={{
             position: "fixed",
             inset: 0,
@@ -129,7 +129,9 @@ export function FixRankingsModal({
           }}
         >
           <div
-            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Choose your next step"
             style={{
               width: "min(760px, 100%)",
               borderRadius: 16,

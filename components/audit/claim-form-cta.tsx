@@ -17,6 +17,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useEscapeKey } from "@/hooks/use-escape-key";
 import { useRouter } from "next/navigation";
 import { useOnboardingTheme } from "@/app/get-started/theme-context";
 import {
@@ -102,6 +103,8 @@ export function ClaimFormCta({
   const [choiceModalOpen, setChoiceModalOpen] = useState(false);
   const [pendingChoice, setPendingChoice] = useState<ClaimChoice | null>(null);
   const isUrgent = grade === "D" || grade === "F" || grade === "C";
+
+  useEscapeKey(() => setChoiceModalOpen(false), choiceModalOpen);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -523,10 +526,10 @@ export function ClaimFormCta({
 
         {choiceModalOpen && (
           <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="Choose your next step"
-            onClick={() => setChoiceModalOpen(false)}
+            role="presentation"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setChoiceModalOpen(false);
+            }}
             style={{
               position: "fixed",
               inset: 0,
@@ -539,7 +542,9 @@ export function ClaimFormCta({
             }}
           >
             <div
-              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Choose your next step"
               style={{
                 width: "min(760px, 100%)",
                 borderRadius: 16,

@@ -519,101 +519,106 @@ export function StepBrandIdentity({
         </span>
 
         <div className="grid sm:grid-cols-2 gap-4">
-          {/* Upload option */}
-          <div
-            className={`relative rounded-xl border-2 border-dashed p-6 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all ${
-              !useAutoLogo
-                ? "border-blue-500/60 bg-blue-500/5"
-                : "border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 bg-slate-50 dark:bg-white/[0.03]"
-            }`}
-            onClick={() => !uploading && fileRef.current?.click()}
-          >
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/jpeg,image/png,image/svg+xml,image/webp"
-              onChange={handleFileSelect}
-              className="sr-only"
-            />
-            {logoUrl && !useAutoLogo ? (
-              <>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
+          {/* Upload option. The Remove button is a sibling of the label, not a
+              child: a label must not contain another interactive control. */}
+          <div className="relative flex flex-col">
+            <label
+              className={`flex-1 rounded-xl border-2 border-dashed p-6 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all focus-within:ring-2 focus-within:ring-blue-500 ${
+                logoUrl && !useAutoLogo ? "pb-[3.25rem]" : ""
+              } ${
+                !useAutoLogo
+                  ? "border-blue-500/60 bg-blue-500/5"
+                  : "border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 bg-slate-50 dark:bg-white/[0.03]"
+              }`}
+            >
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/svg+xml,image/webp"
+                aria-label="Upload logo"
+                disabled={uploading}
+                onChange={handleFileSelect}
+                className="sr-only"
+              />
+              {logoUrl && !useAutoLogo ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={logoUrl}
                   alt="Uploaded logo"
                   className="max-h-16 max-w-full object-contain"
                 />
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRemoveLogo();
-                  }}
-                  className="text-xs text-red-400 hover:text-red-300 transition-colors"
-                >
-                  Remove
-                </button>
-              </>
-            ) : (
-              <>
-                {uploading ? (
-                  <svg
-                    className="animate-spin w-8 h-8 text-blue-400"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                  >
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeOpacity="0.25"
-                    />
-                    <path
-                      d="M12 2a10 10 0 0 1 10 10"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                ) : (
-                  <svg
-                    width="32"
-                    height="32"
-                    viewBox="0 0 32 32"
-                    fill="none"
-                    className="text-slate-400 dark:text-white/30"
-                  >
-                    <path
-                      d="M16 4v16M8 12l8-8 8 8"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M4 24v2a2 2 0 0 0 2 2h20a2 2 0 0 0 2-2v-2"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                )}
-                <div className="text-center">
-                  <p className="text-slate-600 dark:text-white/60 text-sm font-medium">
-                    {uploading ? "Uploading…" : "Upload Logo"}
-                  </p>
-                  <p className="text-slate-400 dark:text-white/30 text-xs mt-0.5">
-                    JPG, PNG, SVG, WebP • Max 5MB
-                  </p>
-                </div>
-              </>
+              ) : (
+                <>
+                  {uploading ? (
+                    <svg
+                      className="animate-spin w-8 h-8 text-blue-400"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeOpacity="0.25"
+                      />
+                      <path
+                        d="M12 2a10 10 0 0 1 10 10"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      width="32"
+                      height="32"
+                      viewBox="0 0 32 32"
+                      fill="none"
+                      className="text-slate-400 dark:text-white/30"
+                    >
+                      <path
+                        d="M16 4v16M8 12l8-8 8 8"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M4 24v2a2 2 0 0 0 2 2h20a2 2 0 0 0 2-2v-2"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  )}
+                  <span className="block text-center">
+                    <span className="block text-slate-600 dark:text-white/60 text-sm font-medium">
+                      {uploading ? "Uploading…" : "Upload Logo"}
+                    </span>
+                    <span className="block text-slate-400 dark:text-white/30 text-xs mt-0.5">
+                      JPG, PNG, SVG, WebP • Max 5MB
+                    </span>
+                  </span>
+                </>
+              )}
+            </label>
+            {logoUrl && !useAutoLogo && (
+              <button
+                type="button"
+                onClick={handleRemoveLogo}
+                className="absolute bottom-6 left-1/2 -translate-x-1/2 text-xs text-red-400 hover:text-red-300 transition-colors"
+              >
+                Remove
+              </button>
             )}
           </div>
 
           {/* Auto-generate option */}
-          <div
+          <button
+            type="button"
+            aria-pressed={useAutoLogo}
             className={`relative rounded-xl border-2 p-4 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all ${
               useAutoLogo
                 ? "border-violet-500/60 bg-violet-500/5"
@@ -625,7 +630,7 @@ export function StepBrandIdentity({
             }}
           >
             {useAutoLogo && (
-              <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-violet-500 flex items-center justify-center">
+              <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-violet-500 flex items-center justify-center">
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                   <path
                     d="M2 5l2 2 4-4"
@@ -635,7 +640,7 @@ export function StepBrandIdentity({
                     strokeLinejoin="round"
                   />
                 </svg>
-              </div>
+              </span>
             )}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -643,15 +648,15 @@ export function StepBrandIdentity({
               alt="Auto-generated text-mark"
               className="max-h-10 max-w-full object-contain"
             />
-            <div className="text-center">
-              <p className="text-slate-600 dark:text-white/60 text-sm font-medium">
+            <span className="block text-center">
+              <span className="block text-slate-600 dark:text-white/60 text-sm font-medium">
                 Auto-Generate
-              </p>
-              <p className="text-slate-400 dark:text-white/30 text-xs mt-0.5">
+              </span>
+              <span className="block text-slate-400 dark:text-white/30 text-xs mt-0.5">
                 Professional text-mark
-              </p>
-            </div>
-          </div>
+              </span>
+            </span>
+          </button>
         </div>
 
         {uploadError && (

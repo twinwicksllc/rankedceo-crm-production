@@ -199,7 +199,6 @@ export function StepBusinessIdentity({
             type="text"
             placeholder="e.g. Acme Plumbing LLC"
             className={inputClass(!!errors.legal_name)}
-            autoFocus
           />
           {errors.legal_name && (
             <p className="mt-1.5 text-xs text-red-400">
