@@ -42,7 +42,7 @@ export function FinancingBlock({ tenant, config }: FinancingBlockProps) {
             className="font-brand-heading text-3xl sm:text-4xl font-bold mb-4"
             style={{ color: "var(--brand-text)" }}
           >
-            Don't Let Budget Stop You
+            Don&apos;t Let Budget Stop You
           </h2>
           <p
             className="font-brand-body text-lg max-w-2xl mx-auto"

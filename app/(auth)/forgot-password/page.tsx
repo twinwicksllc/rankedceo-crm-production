@@ -75,7 +75,7 @@ export default function ForgotPasswordPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Didn't receive it?{" "}
+              Didn&apos;t receive it?{" "}
               <button
                 className="text-primary hover:underline"
                 onClick={() => setSent(false)}
@@ -101,7 +101,7 @@ export default function ForgotPasswordPage() {
             Reset password
           </CardTitle>
           <CardDescription className="text-center">
-            Enter your email and we'll send you a reset link
+            Enter your email and we&apos;ll send you a reset link
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>

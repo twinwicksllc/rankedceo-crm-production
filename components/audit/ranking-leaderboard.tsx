@@ -66,7 +66,7 @@ export function RankingLeaderboard({
             color: isLight ? "rgba(15,23,42,0.9)" : "rgba(255,255,255,0.9)",
           }}
         >
-          "{keyword}" · {location}
+          &quot;{keyword}&quot; · {location}
         </p>
       </div>
 

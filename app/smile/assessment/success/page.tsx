@@ -41,7 +41,7 @@ export default function AssessmentSuccessPage() {
 
           <div className="rounded-lg bg-purple-50 border border-purple-200 p-4 mb-6">
             <p className="text-sm text-purple-900">
-              <strong>What's Next?</strong>
+              <strong>What&apos;s Next?</strong>
             </p>
             <p className="text-sm text-gray-600 mt-2">
               Your dentist will review your assessment and reach out within 1-2

@@ -146,7 +146,7 @@ export default async function DashboardPage() {
           Welcome back, {userData.name || "User"}!
         </h1>
         <p className="text-gray-600 mt-2">
-          Here's what's happening with your business today.
+          Here&apos;s what&apos;s happening with your business today.
         </p>
       </div>
 

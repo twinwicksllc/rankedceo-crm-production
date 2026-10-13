@@ -161,7 +161,7 @@ export function BookingModal({
         {step === "event-type" && (
           <div className="p-6">
             <p className="text-sm text-gray-500 mb-4">
-              Choose the type of appointment you'd like to schedule:
+              Choose the type of appointment you&apos;d like to schedule:
             </p>
             {isLoadingEventTypes ? (
               <div className="flex justify-center py-8">
@@ -232,8 +232,8 @@ export function BookingModal({
               )}
             </div>
             <p className="text-sm text-gray-600 mb-6">
-              You'll be taken to our scheduling page to pick a time that works
-              best for you.
+              You&apos;ll be taken to our scheduling page to pick a time that
+              works best for you.
             </p>
             <Button
               onClick={handleConfirmBooking}
@@ -253,11 +253,11 @@ export function BookingModal({
               <CheckCircle2 className="w-8 h-8 text-green-600" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              You're all set!
+              You&apos;re all set!
             </h3>
             <p className="text-gray-500 text-sm mb-6">
               The scheduling page has been opened. Complete your booking there
-              and you'll receive a confirmation email.
+              and you&apos;ll receive a confirmation email.
             </p>
             <Button onClick={onClose} variant="outline" className="w-full">
               Close

@@ -78,10 +78,10 @@ export default function TermsOfServicePage() {
 
         <section style={{ marginBottom: "36px" }}>
           <p style={{ lineHeight: 1.8, fontSize: "16px" }}>
-            Please read these Terms of Service ("Terms") carefully before
-            accessing or using the websites or services provided by{" "}
-            <strong>RankedCEO LLC</strong> ("RankedCEO," "we," "us," or "our"),
-            including{" "}
+            Please read these Terms of Service (&quot;Terms&quot;) carefully
+            before accessing or using the websites or services provided by{" "}
+            <strong>RankedCEO LLC</strong> (&quot;RankedCEO,&quot;
+            &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;), including{" "}
             <a href="https://rankedceo.com" style={{ color: "#4f46e5" }}>
               rankedceo.com
             </a>
@@ -93,9 +93,9 @@ export default function TermsOfServicePage() {
             <a href="https://audit.rankedceo.com" style={{ color: "#4f46e5" }}>
               audit.rankedceo.com
             </a>{" "}
-            (collectively, the "Services"). By creating an account, clicking "I
-            agree," or otherwise using the Services, you agree to be bound by
-            these Terms and our{" "}
+            (collectively, the &quot;Services&quot;). By creating an account,
+            clicking &quot;I agree,&quot; or otherwise using the Services, you
+            agree to be bound by these Terms and our{" "}
             <Link
               href="https://crm.rankedceo.com/privacy"
               style={{ color: "#4f46e5" }}
@@ -107,8 +107,8 @@ export default function TermsOfServicePage() {
           <p style={{ lineHeight: 1.8, marginTop: "12px" }}>
             If you are using the Services on behalf of a business or other legal
             entity, you represent that you have the authority to bind that
-            entity to these Terms, and "you" and "your" will refer to that
-            entity.
+            entity to these Terms, and &quot;you&quot; and &quot;your&quot; will
+            refer to that entity.
           </p>
         </section>
 
@@ -243,7 +243,7 @@ export default function TermsOfServicePage() {
             stated in U.S. dollars unless otherwise noted. We reserve the right
             to change our pricing at any time; however, price changes will not
             apply to your current billing period and we will provide at least 30
-            days' notice of material fee increases.
+            days&apos; notice of material fee increases.
           </p>
 
           <h3
@@ -296,7 +296,7 @@ export default function TermsOfServicePage() {
           </h3>
           <p style={{ lineHeight: 1.8 }}>
             You are responsible for all applicable taxes associated with your
-            use of the Services, except for taxes based on RankedCEO's net
+            use of the Services, except for taxes based on RankedCEO&apos;s net
             income. Where required by law, we may collect and remit sales tax on
             your behalf.
           </p>
@@ -420,12 +420,13 @@ export default function TermsOfServicePage() {
           </h3>
           <p style={{ lineHeight: 1.8 }}>
             You retain all ownership rights to the content and data you submit
-            to the Services ("Your Content"). By submitting Your Content, you
-            grant RankedCEO a worldwide, non-exclusive, royalty-free license to
-            use, store, process, and display Your Content solely as necessary to
-            operate and improve the Services. You represent and warrant that you
-            have all necessary rights to grant this license and that Your
-            Content does not infringe any third-party rights.
+            to the Services (&quot;Your Content&quot;). By submitting Your
+            Content, you grant RankedCEO a worldwide, non-exclusive,
+            royalty-free license to use, store, process, and display Your
+            Content solely as necessary to operate and improve the Services. You
+            represent and warrant that you have all necessary rights to grant
+            this license and that Your Content does not infringe any third-party
+            rights.
           </p>
         </section>
 
@@ -443,11 +444,11 @@ export default function TermsOfServicePage() {
             designated as confidential or that reasonably should be understood
             to be confidential given the nature of the information and the
             circumstances of disclosure. Neither party will use the other
-            party's confidential information except to exercise its rights or
-            perform its obligations under these Terms. Each party will take
-            reasonable precautions to protect the confidentiality of the other's
-            information, no less than the precautions it takes to protect its
-            own confidential information.
+            party&apos;s confidential information except to exercise its rights
+            or perform its obligations under these Terms. Each party will take
+            reasonable precautions to protect the confidentiality of the
+            other&apos;s information, no less than the precautions it takes to
+            protect its own confidential information.
           </p>
         </section>
 
@@ -471,14 +472,14 @@ export default function TermsOfServicePage() {
             7.1 Disclaimer of Warranties
           </h3>
           <p style={{ lineHeight: 1.8 }}>
-            THE SERVICES ARE PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT
-            WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT
-            LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
-            PURPOSE, TITLE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE
-            SERVICES WILL BE UNINTERRUPTED, ERROR-FREE, SECURE, OR FREE FROM
-            VIRUSES OR OTHER HARMFUL COMPONENTS. WE MAKE NO WARRANTY REGARDING
-            THE ACCURACY, COMPLETENESS, OR USEFULNESS OF ANY INFORMATION
-            PROVIDED THROUGH THE SERVICES.
+            THE SERVICES ARE PROVIDED &quot;AS IS&quot; AND &quot;AS
+            AVAILABLE&quot; WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+            IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY,
+            FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT. WE DO
+            NOT WARRANT THAT THE SERVICES WILL BE UNINTERRUPTED, ERROR-FREE,
+            SECURE, OR FREE FROM VIRUSES OR OTHER HARMFUL COMPONENTS. WE MAKE NO
+            WARRANTY REGARDING THE ACCURACY, COMPLETENESS, OR USEFULNESS OF ANY
+            INFORMATION PROVIDED THROUGH THE SERVICES.
           </p>
 
           <h3
@@ -537,8 +538,8 @@ export default function TermsOfServicePage() {
             its officers, directors, employees, agents, licensors, and suppliers
             from and against any claims, liabilities, damages, judgments,
             awards, losses, costs, expenses, or fees (including reasonable
-            attorneys' fees) arising out of or relating to your violation of
-            these Terms, your use of the Services, Your Content, or your
+            attorneys&apos; fees) arising out of or relating to your violation
+            of these Terms, your use of the Services, Your Content, or your
             violation of any law or the rights of any third party.
           </p>
         </section>
@@ -745,10 +746,10 @@ export default function TermsOfServicePage() {
           </h3>
           <p style={{ lineHeight: 1.8 }}>
             We reserve the right to modify these Terms at any time. When we make
-            material changes, we will update the "Last Updated" date and provide
-            reasonable notice. Your continued use of the Services after the
-            effective date of any changes constitutes your acceptance of the
-            updated Terms.
+            material changes, we will update the &quot;Last Updated&quot; date
+            and provide reasonable notice. Your continued use of the Services
+            after the effective date of any changes constitutes your acceptance
+            of the updated Terms.
           </p>
         </section>
 

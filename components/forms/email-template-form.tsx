@@ -130,7 +130,8 @@ export function EmailTemplateForm({
             <CardHeader>
               <CardTitle>Text Content (Optional)</CardTitle>
               <CardDescription>
-                Plain text version for email clients that don't support HTML
+                Plain text version for email clients that don&apos;t support
+                HTML
               </CardDescription>
             </CardHeader>
             <CardContent>

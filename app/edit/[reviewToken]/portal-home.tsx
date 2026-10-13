@@ -303,8 +303,8 @@ function BuildingCard() {
             Building your site…
           </p>
           <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
-            We're generating your personalised website content. This usually
-            takes less than a minute.
+            We&apos;re generating your personalised website content. This
+            usually takes less than a minute.
           </p>
         </div>
         <div className="w-full max-w-xs space-y-2 mt-1">
@@ -382,7 +382,7 @@ function SiteReadyCTA({
       )}
       <p className="text-xs text-slate-400 mt-3 mb-5 max-w-xs">
         Start editing your content, or review your site as-is and approve when
-        you're happy.
+        you&apos;re happy.
       </p>
       <button
         type="button"

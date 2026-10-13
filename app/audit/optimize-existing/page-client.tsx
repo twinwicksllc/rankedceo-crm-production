@@ -275,7 +275,7 @@ export function OptimizeExistingSiteClient() {
                   maxWidth: "70ch",
                 }}
               >
-                We'll review your audit and build a focused optimization plan for <span style={{ fontWeight: 700, color: isLight ? "#1d4ed8" : "#38bdf8" }}>{targetDomain}</span> across speed, technical SEO, and conversion performance.
+                We&apos;ll review your audit and build a focused optimization plan for <span style={{ fontWeight: 700, color: isLight ? "#1d4ed8" : "#38bdf8" }}>{targetDomain}</span> across speed, technical SEO, and conversion performance.
               </p>
             </div>
             <div
@@ -505,7 +505,7 @@ export function OptimizeExistingSiteClient() {
                 maxWidth: "65ch",
               }}
             >
-              Fill out this form and we'll contact you with a personalized optimization roadmap for your site.
+              Fill out this form and we&apos;ll contact you with a personalized optimization roadmap for your site.
             </p>
 
             {status === "success" ? (

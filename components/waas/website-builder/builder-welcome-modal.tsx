@@ -86,7 +86,7 @@ export function BuilderWelcomeModal({ onDismiss }: { onDismiss: () => void }) {
             className="mt-2 text-sm leading-relaxed"
             style={{ color: "var(--brand-copy-color)" }}
           >
-            It's easier than you think. Here's how to get started in 3 steps:
+            It&apos;s easier than you think. Here&apos;s how to get started in 3 steps:
           </p>
         </div>
 
@@ -152,7 +152,7 @@ export function BuilderWelcomeModal({ onDismiss }: { onDismiss: () => void }) {
                 Submit When Ready
               </p>
               <p className="text-xs leading-relaxed" style={{ color: "var(--brand-copy-color)" }}>
-                When your page looks the way you want, click <span className="font-medium">"Submit for Admin Review"</span> at the top
+                When your page looks the way you want, click <span className="font-medium">&quot;Submit for Admin Review&quot;</span> at the top
                 right. Our team will take it from there.
               </p>
             </div>
@@ -168,7 +168,7 @@ export function BuilderWelcomeModal({ onDismiss }: { onDismiss: () => void }) {
             boxShadow: "0 8px 16px color-mix(in srgb, var(--primary) 26%, transparent)",
           }}
         >
-          Got it, let's build!
+          Got it, let&apos;s build!
         </button>
 
         {/* Show again link */}

@@ -276,7 +276,7 @@ function LoginForm() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Didn't receive it? Check your spam folder or{" "}
+              Didn&apos;t receive it? Check your spam folder or{" "}
               <button
                 className="text-primary hover:underline"
                 onClick={() => setMagicSent(false)}
@@ -436,7 +436,7 @@ function LoginForm() {
                 {loading ? "Sending..." : "Send Magic Link"}
               </Button>
               <p className="text-xs text-center text-muted-foreground">
-                We'll email you a secure link — no password needed.
+                We&apos;ll email you a secure link — no password needed.
               </p>
             </form>
           )}
@@ -445,7 +445,7 @@ function LoginForm() {
         {!adminOnly && (
           <CardFooter className="flex flex-col space-y-2">
             <p className="text-sm text-center text-muted-foreground">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Link
                 href="/signup"
                 className="text-primary hover:underline font-medium"

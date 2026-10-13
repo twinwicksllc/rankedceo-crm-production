@@ -260,7 +260,7 @@ function GapRow({
               borderRadius: 4,
             }}
           >
-            "{gap.keyword}"
+            &quot;{gap.keyword}&quot;
           </span>
           {type === "gap" && gap.yourRank && (
             <span

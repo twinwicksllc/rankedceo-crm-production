@@ -63,7 +63,7 @@ export function LocalPackPanel({ localPack, targetDomain }: LocalPackPanelProps)
             color: isLight ? "rgba(15,23,42,0.62)" : "rgba(255,255,255,0.5)",
           }}
         >
-          Google Maps "3-pack" for
+          Google Maps &quot;3-pack&quot; for
         </p>
         <p
           style={{
@@ -73,7 +73,7 @@ export function LocalPackPanel({ localPack, targetDomain }: LocalPackPanelProps)
             color: isLight ? "rgba(15,23,42,0.9)" : "rgba(255,255,255,0.9)",
           }}
         >
-          "{localPack.keyword}" · {localPack.location}
+          &quot;{localPack.keyword}&quot; · {localPack.location}
         </p>
       </div>
 
