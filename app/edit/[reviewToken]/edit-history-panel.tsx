@@ -104,34 +104,58 @@ export function EditHistoryPanel({
   onUndo,
   onClose,
 }: EditHistoryPanelProps) {
-  const [events, setEvents] = useState<EditHistoryEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Result of the latest history fetch, tagged with the request it answers.
+  // `loading` is derived (no result for the current request yet), so the fetch
+  // effect never has to set state synchronously.
+  const [reloadKey, setReloadKey] = useState(0);
+  const requestKey = `${reviewToken}|${variantIndex ?? ""}|${reloadKey}`;
+  const [loaded, setLoaded] = useState<{
+    key: string;
+    events: EditHistoryEvent[];
+    error: string | null;
+  } | null>(null);
+  const loading = loaded?.key !== requestKey;
+  const events = loaded?.events ?? [];
+  const error = loaded?.key === requestKey ? loaded.error : null;
   const [undoingId, setUndoingId] = useState<string | null>(null);
   const [undoError, setUndoError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const panelRef = useRef<HTMLDivElement>(null);
 
   // ---- Load history ----
-  const loadHistory = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    const result = await getClientEditHistory(
-      reviewToken,
-      variantIndex ?? undefined,
-      50,
-    );
-    setLoading(false);
-    if (result.success && result.data) {
-      setEvents(result.data);
-    } else {
-      setError(result.error ?? "Failed to load history");
-    }
-  }, [reviewToken, variantIndex]);
+  const loadHistory = useCallback(() => {
+    setReloadKey((k) => k + 1);
+  }, []);
 
   useEffect(() => {
-    void loadHistory();
-  }, [loadHistory]);
+    let cancelled = false;
+    void getClientEditHistory(reviewToken, variantIndex ?? undefined, 50).then(
+      (result) => {
+        if (cancelled) return;
+        if (result.success && result.data) {
+          const data = result.data;
+          setLoaded({ key: requestKey, events: data, error: null });
+        } else {
+          setLoaded((prev) => ({
+            key: requestKey,
+            events: prev?.events ?? [],
+            error: result.error ?? "Failed to load history",
+          }));
+        }
+      },
+      () => {
+        if (cancelled) return;
+        setLoaded((prev) => ({
+          key: requestKey,
+          events: prev?.events ?? [],
+          error: "Failed to load history",
+        }));
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [reviewToken, variantIndex, requestKey]);
 
   // ---- ESC closes panel (capture phase so it doesn't bubble to modal) ----
   useEffect(() => {
@@ -161,7 +185,7 @@ export function EditHistoryPanel({
       setUndoingId(null);
       if (result.success) {
         onUndo(); // tell shell to bump previewVersion
-        void loadHistory(); // reload the list (undo itself is now in history)
+        loadHistory(); // reload the list (undo itself is now in history)
       } else {
         setUndoError(result.error ?? "Undo failed");
         setTimeout(() => setUndoError(null), 4000);
@@ -245,7 +269,7 @@ export function EditHistoryPanel({
               {error}
               <button
                 type="button"
-                onClick={() => void loadHistory()}
+                onClick={loadHistory}
                 className="ml-2 underline text-red-200 hover:text-red-100"
               >
                 Retry

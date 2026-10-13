@@ -8,6 +8,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useIsClient } from "@/hooks/use-is-client";
 import { AdvantagePointHeader } from "@/components/advantagepoint/header";
 import type { WaasPackageTier } from "@/lib/waas/types";
 
@@ -24,12 +25,30 @@ const TIER_LABELS: Record<WaasPackageTier, string> = {
   premium: "Premium",
 };
 
+const CONFETTI_COLORS = ["#3B82F6", "#8B5CF6", "#10B981", "#F59E0B", "#EF4444"];
+
+/** Random positions/timings for the confetti pieces (generated once per mount). */
+function createConfettiParticles(count: number): React.CSSProperties[] {
+  return Array.from({ length: count }, (_, i) => ({
+    left: `${Math.random() * 100}%`,
+    top: `${-10 + Math.random() * 20}%`,
+    backgroundColor: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+    animationDelay: `${Math.random() * 2}s`,
+    animationDuration: `${1.5 + Math.random() * 2}s`,
+    transform: `rotate(${Math.random() * 360}deg)`,
+  }));
+}
+
 export function OnboardingSuccess({ businessName, tier, reviewToken }: Props) {
-  const [showConfetti, setShowConfetti] = useState(false);
+  const isClient = useIsClient();
+  const [confettiDone, setConfettiDone] = useState(false);
+  const showConfetti = isClient && !confettiDone;
+  // Only rendered once `useIsClient()` is true (after hydration), so the random
+  // values never reach server-rendered markup.
+  const [confettiParticles] = useState(() => createConfettiParticles(24));
 
   useEffect(() => {
-    setShowConfetti(true);
-    const t = setTimeout(() => setShowConfetti(false), 4000);
+    const t = setTimeout(() => setConfettiDone(true), 4000);
     return () => clearTimeout(t);
   }, []);
 
@@ -50,24 +69,11 @@ export function OnboardingSuccess({ businessName, tier, reviewToken }: Props) {
       {/* Confetti particles (CSS-only) */}
       {showConfetti && (
         <div className="pointer-events-none fixed inset-0 overflow-hidden z-50">
-          {Array.from({ length: 24 }).map((_, i) => (
+          {confettiParticles.map((p, i) => (
             <div
               key={i}
               className="absolute w-2 h-2 rounded-sm animate-bounce"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${-10 + Math.random() * 20}%`,
-                backgroundColor: [
-                  "#3B82F6",
-                  "#8B5CF6",
-                  "#10B981",
-                  "#F59E0B",
-                  "#EF4444",
-                ][i % 5],
-                animationDelay: `${Math.random() * 2}s`,
-                animationDuration: `${1.5 + Math.random() * 2}s`,
-                transform: `rotate(${Math.random() * 360}deg)`,
-              }}
+              style={p}
             />
           ))}
         </div>

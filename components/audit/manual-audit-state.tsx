@@ -5,7 +5,7 @@
 // Shown when audit engine fails — reassures prospect and offers next steps
 // =============================================================================
 
-import { useEffect, useState } from "react";
+import { useClientValue } from "@/hooks/use-client-value";
 import {
   buildGetStartedUrl,
   getAuditFunnelProperties,
@@ -35,7 +35,13 @@ export function ManualAuditState({
 }: ManualAuditStateProps) {
   const { theme } = useOnboardingTheme();
   const isLight = theme === "light";
-  const [ctaUrl, setCtaUrl] = useState(
+  const ctaUrl = useClientValue(
+    () =>
+      buildGetStartedUrl(
+        getGetStartedBaseUrl(),
+        new URLSearchParams(window.location.search),
+        { tier: "standard", auditId },
+      ),
     `/get-started?tier=standard&auditId=${auditId}`,
   );
 
@@ -58,16 +64,6 @@ export function ManualAuditState({
       complete your report manually.
     </>
   );
-
-  useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    setCtaUrl(
-      buildGetStartedUrl(getGetStartedBaseUrl(), searchParams, {
-        tier: "standard",
-        auditId,
-      }),
-    );
-  }, [auditId]);
 
   const trackClick = () => {
     const searchParams = new URLSearchParams(window.location.search);

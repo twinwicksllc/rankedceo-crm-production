@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useIsClient } from "@/hooks/use-is-client";
 import {
   Calendar,
   CheckCircle2,
@@ -34,43 +35,67 @@ export function IntegrationsSettings() {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
-  useEffect(() => {
-    // Check for success/error params in URL
+  // Read the OAuth result from the URL once, after hydration (the query string
+  // does not exist on the server). Adjusting state during render avoids an
+  // effect-driven extra render; the URL clean-up itself happens in an effect.
+  const isClient = useIsClient();
+  const [urlHandled, setUrlHandled] = useState(false);
+  if (isClient && !urlHandled) {
+    setUrlHandled(true);
     const params = new URLSearchParams(window.location.search);
     if (params.get("success") === "calendly_connected") {
       setSuccessMessage("Calendly connected successfully!");
-      // Clean URL
-      window.history.replaceState({}, "", "/settings?tab=integrations");
     }
-    if (params.get("error")) {
+    const errorParam = params.get("error");
+    if (errorParam) {
       const errors: Record<string, string> = {
         calendly_denied: "Calendly authorization was denied.",
         calendly_invalid: "Invalid OAuth response from Calendly.",
         calendly_state_mismatch: "Security check failed. Please try again.",
         calendly_failed: "Failed to connect Calendly. Please try again.",
       };
-      setErrorMessage(errors[params.get("error")!] || "An error occurred.");
+      setErrorMessage(errors[errorParam] || "An error occurred.");
+    }
+  }
+
+  useEffect(() => {
+    // Clean URL — only after the params above have been read.
+    if (!urlHandled) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("success") === "calendly_connected" || params.get("error")) {
       window.history.replaceState({}, "", "/settings?tab=integrations");
     }
+  }, [urlHandled]);
 
-    loadCalendlyStatus();
-  }, []);
+  // Bumped by the Refresh button to re-run the status fetch below.
+  const [statusKey, setStatusKey] = useState(0);
 
-  async function loadCalendlyStatus() {
-    setIsLoading(true);
-    try {
-      const res = await fetch("/api/calendly/event-types");
-      const data = await res.json();
-      setCalendly({
-        connected: data.connected || false,
-        user: data.user,
-        event_types: data.event_types || [],
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/calendly/event-types")
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
+        setCalendly({
+          connected: data.connected || false,
+          user: data.user,
+          event_types: data.event_types || [],
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setCalendly({ connected: false });
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
       });
-    } catch {
-      setCalendly({ connected: false });
-    } finally {
-      setIsLoading(false);
-    }
+    return () => {
+      cancelled = true;
+    };
+  }, [statusKey]);
+
+  function loadCalendlyStatus() {
+    setIsLoading(true);
+    setStatusKey((k) => k + 1);
   }
 
   async function handleDisconnect() {

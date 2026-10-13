@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Flame, Copy, Check, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardStats } from "@/components/industry/dashboard-stats";
@@ -35,20 +35,37 @@ export default function HvacDashboard({ userId }: HvacDashboardProps) {
       ? `${window.location.origin}/lead?operatorId=${userId}`
       : `https://hvac.rankedceo.com/lead?operatorId=${userId}`;
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    const [leadsResult, statsResult] = await Promise.all([
-      getIndustryLeads("hvac", filters),
-      getIndustryLeadStats("hvac"),
-    ]);
-    if (leadsResult.success) setLeads(leadsResult.data);
-    if (statsResult.success && statsResult.data) setStats(statsResult.data);
-    setLoading(false);
-  }, [filters]);
+  // Bumped by the Refresh button to re-run the fetch effect below.
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    let cancelled = false;
+    Promise.all([
+      getIndustryLeads("hvac", filters),
+      getIndustryLeadStats("hvac"),
+    ])
+      .then(([leadsResult, statsResult]) => {
+        if (cancelled) return;
+        if (leadsResult.success) setLeads(leadsResult.data);
+        if (statsResult.success && statsResult.data) setStats(statsResult.data);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [filters, refreshKey]);
+
+  const handleRefresh = () => {
+    setLoading(true);
+    setRefreshKey((k) => k + 1);
+  };
+
+  const handleFiltersChange = (next: LeadFilters) => {
+    setLoading(true);
+    setFilters(next);
+  };
 
   const handleCopyLink = async () => {
     await navigator.clipboard.writeText(leadLink);
@@ -87,7 +104,7 @@ export default function HvacDashboard({ userId }: HvacDashboardProps) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={loadData}
+                onClick={handleRefresh}
                 disabled={loading}
                 aria-label="Refresh dashboard"
                 className="border-blue-200 text-blue-700 hover:bg-blue-50"
@@ -183,7 +200,7 @@ export default function HvacDashboard({ userId }: HvacDashboardProps) {
           <LeadFiltersBar
             industry="hvac"
             filters={filters}
-            onChange={setFilters}
+            onChange={handleFiltersChange}
           />
 
           {/* Lead cards */}

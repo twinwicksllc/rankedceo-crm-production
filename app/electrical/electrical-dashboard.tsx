@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Lightbulb, Copy, Check, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardStats } from "@/components/industry/dashboard-stats";
@@ -39,20 +39,37 @@ export default function ElectricalDashboard({
       ? `${window.location.origin}/lead?operatorId=${userId}`
       : `https://electrical.rankedceo.com/lead?operatorId=${userId}`;
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    const [leadsResult, statsResult] = await Promise.all([
-      getIndustryLeads("electrical", filters),
-      getIndustryLeadStats("electrical"),
-    ]);
-    if (leadsResult.success) setLeads(leadsResult.data);
-    if (statsResult.success && statsResult.data) setStats(statsResult.data);
-    setLoading(false);
-  }, [filters]);
+  // Bumped by the Refresh button to re-run the fetch effect below.
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    let cancelled = false;
+    Promise.all([
+      getIndustryLeads("electrical", filters),
+      getIndustryLeadStats("electrical"),
+    ])
+      .then(([leadsResult, statsResult]) => {
+        if (cancelled) return;
+        if (leadsResult.success) setLeads(leadsResult.data);
+        if (statsResult.success && statsResult.data) setStats(statsResult.data);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [filters, refreshKey]);
+
+  const handleRefresh = () => {
+    setLoading(true);
+    setRefreshKey((k) => k + 1);
+  };
+
+  const handleFiltersChange = (next: LeadFilters) => {
+    setLoading(true);
+    setFilters(next);
+  };
 
   const handleCopyLink = async () => {
     await navigator.clipboard.writeText(leadLink);
@@ -89,7 +106,7 @@ export default function ElectricalDashboard({
             <Button
               variant="outline"
               size="sm"
-              onClick={loadData}
+              onClick={handleRefresh}
               disabled={loading}
               aria-label="Refresh dashboard"
               className="border-amber-200 text-amber-700 hover:bg-amber-50"
@@ -182,7 +199,7 @@ export default function ElectricalDashboard({
           <LeadFiltersBar
             industry="electrical"
             filters={filters}
-            onChange={setFilters}
+            onChange={handleFiltersChange}
           />
 
           {loading ? (

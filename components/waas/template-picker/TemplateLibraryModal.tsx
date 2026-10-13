@@ -34,6 +34,7 @@ import React, {
   useRef,
 } from "react";
 import { createPortal } from "react-dom";
+import { useIsClient } from "@/hooks/use-is-client";
 import { TemplatePreviewCard } from "./TemplatePreviewCard";
 import {
   ACTIVE_TEMPLATES,
@@ -113,13 +114,8 @@ export function TemplateLibraryModal({
   const [activeFilter, setActiveFilter] = useState<TemplateAesthetic | "all">(
     "all",
   );
-  const [mounted, setMounted] = useState(false);
+  const mounted = useIsClient();
   const filterScrollRef = useRef<HTMLDivElement>(null);
-
-  // Avoid SSR portal issues
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Lock body scroll while open
   useEffect(() => {
@@ -134,10 +130,13 @@ export function TemplateLibraryModal({
     };
   }, [isOpen, mounted]);
 
-  // Reset filter when modal opens
-  useEffect(() => {
+  // Reset filter when modal opens (adjusting state during render avoids an
+  // extra effect-driven render).
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
     if (isOpen) setActiveFilter("all");
-  }, [isOpen]);
+  }
 
   // Keyboard: Escape to close
   useEffect(() => {

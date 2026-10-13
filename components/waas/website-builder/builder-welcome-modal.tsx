@@ -1,31 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useIsClient } from "@/hooks/use-is-client";
 import { X } from "lucide-react";
 import { useEscapeKey } from "@/hooks/use-escape-key";
 
 const WELCOME_MODAL_KEY = "waas-builder-welcome-shown";
 
 export function BuilderWelcomeModal({ onDismiss }: { onDismiss: () => void }) {
-  const [isVisible, setIsVisible] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-
-    const hasSeenWelcome = localStorage.getItem(WELCOME_MODAL_KEY);
-    if (!hasSeenWelcome) {
-      setIsVisible(true);
-    }
-  }, [mounted]);
+  const mounted = useIsClient();
+  const [hidden, setHidden] = useState(false);
+  // localStorage only exists in the browser; `mounted` is false on the server
+  // and during hydration, so the server markup (nothing) always matches.
+  const isVisible =
+    mounted && !hidden && !localStorage.getItem(WELCOME_MODAL_KEY);
 
   const handleDismiss = () => {
     localStorage.setItem(WELCOME_MODAL_KEY, "true");
-    setIsVisible(false);
+    setHidden(true);
     onDismiss();
   };
 
@@ -33,7 +25,7 @@ export function BuilderWelcomeModal({ onDismiss }: { onDismiss: () => void }) {
 
   const handleShowAgain = () => {
     localStorage.removeItem(WELCOME_MODAL_KEY);
-    setIsVisible(false);
+    setHidden(true);
   };
 
   if (!isVisible) return null;

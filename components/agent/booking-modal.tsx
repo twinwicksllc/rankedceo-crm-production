@@ -46,63 +46,67 @@ export function BookingModal({
     useState<CalendlyEventType | null>(null);
   const [selectedDate] = useState<Date>(new Date());
   const [, setSlots] = useState<CalendlyAvailableSlot[]>([]);
-  const [isLoadingEventTypes, setIsLoadingEventTypes] = useState(false);
-  const [, setIsLoadingSlots] = useState(false);
+  const [isLoadingEventTypes, setIsLoadingEventTypes] = useState(isOpen);
   const [schedulingUrl, setSchedulingUrl] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Reset to the first step (and show the loading state) each time the modal
+  // opens. Adjusting state while rendering avoids a setState-in-effect render.
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
     if (isOpen) {
-      loadEventTypes();
       setStep("event-type");
+      setIsLoadingEventTypes(true);
     }
-  }, [isOpen]);
+  }
 
   useEffect(() => {
-    if (selectedEventType && selectedDate) {
-      loadSlots();
-    }
-  }, [selectedEventType, selectedDate]);
-
-  async function loadEventTypes() {
-    setIsLoadingEventTypes(true);
-    try {
-      const params = accountId ? `?account_id=${accountId}` : "";
-      const res = await fetch(`/api/calendly/event-types${params}`);
-      const data = await res.json();
-      if (data.event_types) {
-        setEventTypes(data.event_types);
-      }
-    } catch (err) {
-      console.error("Failed to load event types:", err);
-    } finally {
-      setIsLoadingEventTypes(false);
-    }
-  }
-
-  async function loadSlots() {
-    if (!selectedEventType) return;
-    setIsLoadingSlots(true);
-    setSlots([]);
-    try {
-      const startTime = startOfDay(selectedDate).toISOString();
-      const endTime = new Date(
-        startOfDay(selectedDate).getTime() + 24 * 60 * 60 * 1000,
-      ).toISOString();
-      const params = new URLSearchParams({
-        event_type_uri: selectedEventType.uri,
-        start_time: startTime,
-        end_time: endTime,
-        ...(accountId ? { account_id: accountId } : {}),
+    if (!isOpen) return;
+    let cancelled = false;
+    const params = accountId ? `?account_id=${accountId}` : "";
+    fetch(`/api/calendly/event-types${params}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled && data.event_types) {
+          setEventTypes(data.event_types);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load event types:", err);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingEventTypes(false);
       });
-      const res = await fetch(`/api/calendly/availability?${params}`);
-      const data = await res.json();
-      setSlots(data.slots || []);
-    } catch (err) {
-      console.error("Failed to load slots:", err);
-    } finally {
-      setIsLoadingSlots(false);
-    }
-  }
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, accountId]);
+
+  useEffect(() => {
+    if (!selectedEventType || !selectedDate) return;
+    let cancelled = false;
+    const startTime = startOfDay(selectedDate).toISOString();
+    const endTime = new Date(
+      startOfDay(selectedDate).getTime() + 24 * 60 * 60 * 1000,
+    ).toISOString();
+    const params = new URLSearchParams({
+      event_type_uri: selectedEventType.uri,
+      start_time: startTime,
+      end_time: endTime,
+      ...(accountId ? { account_id: accountId } : {}),
+    });
+    fetch(`/api/calendly/availability?${params}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) setSlots(data.slots || []);
+      })
+      .catch((err) => {
+        console.error("Failed to load slots:", err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedEventType, selectedDate, accountId]);
 
   function handleSelectEventType(et: CalendlyEventType) {
     setSelectedEventType(et);
