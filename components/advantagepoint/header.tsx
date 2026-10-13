@@ -9,6 +9,7 @@ import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import { hardNavigate } from "@/lib/navigation";
 import { useOnboardingTheme } from "@/app/get-started/theme-context";
 
 interface AdvantagePointHeaderProps {
@@ -30,8 +31,7 @@ export function AdvantagePointHeader({
       const supabase = createClient();
       await supabase.auth.signOut();
     } finally {
-      window.location.href =
-        "/login?next=/admin/dashboard&adminOnly=1&signed_out=1";
+      hardNavigate("/login?next=/admin/dashboard&adminOnly=1&signed_out=1");
     }
   };
 

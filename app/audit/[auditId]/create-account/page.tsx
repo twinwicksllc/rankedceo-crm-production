@@ -9,7 +9,12 @@ export default function CreateAccountPage() {
   const router = useRouter();
   const auditId = params?.auditId as string | undefined;
 
-  const [stage, setStage] = useState<"check" | "existing" | "creating">("check");
+  // When an audit id is present the tenant call starts as soon as the page
+  // mounts, so start in the "creating" stage instead of flipping it from an
+  // effect.
+  const [stage, setStage] = useState<"check" | "existing" | "creating">(
+    auditId ? "creating" : "check",
+  );
   const [error, setError] = useState<string | null>(null);
   const checkCompletedRef = useRef(false);
 
@@ -18,39 +23,39 @@ export default function CreateAccountPage() {
     checkCompletedRef.current = true;
 
     // Auto-create tenant (fire the API call)
-    createTenant();
-  }, [auditId]);
+    const createTenant = async () => {
+      try {
+        const response = await fetch(`/api/audit/${auditId}/create-tenant`, {
+          method: "POST",
+        });
 
-  const createTenant = async () => {
-    if (!auditId) {
-      setError("Invalid audit ID");
-      return;
-    }
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error ?? "Failed to create tenant");
+        }
 
-    try {
-      setStage("creating");
-      const response = await fetch(`/api/audit/${auditId}/create-tenant`, {
-        method: "POST",
-      });
+        const data = (await response.json()) as {
+          tenantId: string;
+          reviewToken: string;
+          existing?: boolean;
+        };
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error ?? "Failed to create tenant");
+        // Redirect to account check screen
+        setStage("existing");
+        sessionStorage.setItem(
+          "pending_tenant",
+          JSON.stringify({
+            tenantId: data.tenantId,
+            reviewToken: data.reviewToken,
+          }),
+        );
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unknown error");
+        setStage("check");
       }
-
-      const data = await response.json() as { tenantId: string; reviewToken: string; existing?: boolean };
-
-      // Redirect to account check screen
-      setStage("existing");
-      sessionStorage.setItem("pending_tenant", JSON.stringify({
-        tenantId: data.tenantId,
-        reviewToken: data.reviewToken,
-      }));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-      setStage("check");
-    }
-  };
+    };
+    void createTenant();
+  }, [auditId]);
 
   const handleExistingAccount = () => {
     // Redirect to login with redirect back to onboarding

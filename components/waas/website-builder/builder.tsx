@@ -15,11 +15,11 @@
 import {
   useEffect,
   useMemo,
-  useRef,
   useState,
   type CSSProperties,
 } from "react";
 import { createPortal } from "react-dom";
+import { useIsClient } from "@/hooks/use-is-client";
 import {
   DndContext,
   DragOverlay,
@@ -801,13 +801,10 @@ export function Builder({
   onBack,
   isLoading,
 }: BuilderProps) {
-  const [mounted, setMounted] = useState(false);
-  const initialDraftRef = useRef<Block[]>([]);
-  const [blocks, setBlocks] = useState<Block[]>(() => {
-    const initial = buildInitialBlocks(prefill);
-    initialDraftRef.current = initial;
-    return initial;
-  });
+  const mounted = useIsClient();
+  // The prefilled draft, kept so "restore" can go back to it later.
+  const [initialDraft] = useState<Block[]>(() => buildInitialBlocks(prefill));
+  const [blocks, setBlocks] = useState<Block[]>(initialDraft);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeDrag, setActiveDrag] = useState<{
     type: "palette" | "canvas";
@@ -880,10 +877,6 @@ export function Builder({
     prefill.selectedTemplateSlug,
     visualPreset,
   ]);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     if (!mounted) return;
@@ -993,7 +986,7 @@ export function Builder({
             <button
               type="button"
               onClick={() => {
-                const restored = initialDraftRef.current.map((block) => ({
+                const restored = initialDraft.map((block) => ({
                   ...block,
                 }));
                 setBlocks(restored);

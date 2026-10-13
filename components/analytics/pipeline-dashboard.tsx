@@ -42,7 +42,10 @@ interface PipelineDashboardProps {
 }
 
 export function PipelineDashboard({ accountId }: PipelineDashboardProps) {
-  const [loading, setLoading] = useState(true);
+  // Which inputs the current data was fetched for; null until the first fetch
+  // finishes. `loading` is derived from it, so no setState runs in the effect.
+  const [fetchedFor, setFetchedFor] = useState<string | null>(null);
+  const loading = fetchedFor !== accountId;
   const [pipelineByStage, setPipelineByStage] = useState<
     PipelineValueByStage[]
   >([]);
@@ -52,43 +55,49 @@ export function PipelineDashboard({ accountId }: PipelineDashboardProps) {
   const [totalPipelineValue, setTotalPipelineValue] = useState(0);
 
   useEffect(() => {
-    fetchPipelineData();
+    let cancelled = false;
+    const fetchPipelineData = async () => {
+      try {
+        const [stageRes, winRateRes, cycleRes, sourceRes] = await Promise.all([
+          fetch(`/api/analytics/pipeline/by-stage?accountId=${accountId}`).then(
+            (r) => r.json(),
+          ),
+          fetch(`/api/analytics/pipeline/win-rate?accountId=${accountId}`).then(
+            (r) => r.json(),
+          ),
+          fetch(
+            `/api/analytics/pipeline/avg-deal-cycle?accountId=${accountId}`,
+          ).then((r) => r.json()),
+          fetch(
+            `/api/analytics/pipeline/by-source?accountId=${accountId}`,
+          ).then((r) => r.json()),
+        ]);
+
+        if (cancelled) return;
+
+        setPipelineByStage(stageRes.data || []);
+        setWinRate(winRateRes.winRate || 0);
+        setAverageDealCycle(cycleRes.avgDealCycle || 0);
+        setDealsBySource(sourceRes.data || []);
+
+        const totalValue = (stageRes.data || []).reduce(
+          (sum: number, stage: PipelineValueByStage) => sum + stage.value,
+          0,
+        );
+        setTotalPipelineValue(totalValue);
+      } catch (error) {
+        console.error("[Pipeline Dashboard] Error fetching data:", error);
+      } finally {
+        if (!cancelled) {
+          setFetchedFor(accountId);
+        }
+      }
+    };
+    void fetchPipelineData();
+    return () => {
+      cancelled = true;
+    };
   }, [accountId]);
-
-  const fetchPipelineData = async () => {
-    setLoading(true);
-    try {
-      const [stageRes, winRateRes, cycleRes, sourceRes] = await Promise.all([
-        fetch(`/api/analytics/pipeline/by-stage?accountId=${accountId}`).then(
-          (r) => r.json(),
-        ),
-        fetch(`/api/analytics/pipeline/win-rate?accountId=${accountId}`).then(
-          (r) => r.json(),
-        ),
-        fetch(
-          `/api/analytics/pipeline/avg-deal-cycle?accountId=${accountId}`,
-        ).then((r) => r.json()),
-        fetch(`/api/analytics/pipeline/by-source?accountId=${accountId}`).then(
-          (r) => r.json(),
-        ),
-      ]);
-
-      setPipelineByStage(stageRes.data || []);
-      setWinRate(winRateRes.winRate || 0);
-      setAverageDealCycle(cycleRes.avgDealCycle || 0);
-      setDealsBySource(sourceRes.data || []);
-
-      const totalValue = (stageRes.data || []).reduce(
-        (sum: number, stage: PipelineValueByStage) => sum + stage.value,
-        0,
-      );
-      setTotalPipelineValue(totalValue);
-    } catch (error) {
-      console.error("[Pipeline Dashboard] Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) {
     return (

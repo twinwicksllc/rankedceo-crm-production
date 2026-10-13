@@ -18,14 +18,20 @@ export default function LandingPage() {
             className="logo"
             style={{ display: "flex", alignItems: "center", gap: "12px" }}
           >
-            <img
+            <Image
               src="/logos/smile_makeover.svg"
               alt="Smile MakeOver Makeover Logo"
+              width={512}
+              height={512}
+              priority
               style={{ height: "240px", width: "auto" }}
             />
-            <img
+            <Image
               src="/logos/smile-logo.png"
               alt="Smile MakeOver Logo"
+              width={800}
+              height={289}
+              priority
               style={{ height: "110px", width: "auto" }}
             />
           </div>

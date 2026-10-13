@@ -1,15 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 export function RecaptchaProvider() {
-  const [loaded, setLoaded] = useState(false);
-
   useEffect(() => {
     // Don't reload if already loaded
-    if (loaded || window.grecaptcha) {
+    if (window.grecaptcha) {
       console.log("[RecaptchaProvider] reCAPTCHA already loaded");
-      setLoaded(true);
       return;
     }
 
@@ -40,7 +37,6 @@ export function RecaptchaProvider() {
       setTimeout(() => {
         if (window.grecaptcha) {
           console.log("[RecaptchaProvider] grecaptcha is available!");
-          setLoaded(true);
         } else {
           console.error(
             "[RecaptchaProvider] grecaptcha not available after script load",
@@ -60,7 +56,7 @@ export function RecaptchaProvider() {
     return () => {
       // Don't remove script as it might be needed by other components
     };
-  }, [loaded]);
+  }, []);
 
   // Render nothing but provide status
   return null;

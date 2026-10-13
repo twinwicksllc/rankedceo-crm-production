@@ -79,13 +79,6 @@ export function ChatWidget({
   }, [messages, scrollToBottom]);
 
   useEffect(() => {
-    if (isOpen && !hasGreeted) {
-      loadStaticGreeting();
-      setHasGreeted(true);
-    }
-  }, [isOpen, hasGreeted]);
-
-  useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 100);
     }
@@ -116,6 +109,14 @@ export function ChatWidget({
         /* silently fail — history restore is best-effort */
       });
   }, []); // run once on mount
+
+  function handleOpen() {
+    setIsOpen(true);
+    if (!hasGreeted) {
+      loadStaticGreeting();
+      setHasGreeted(true);
+    }
+  }
 
   function loadStaticGreeting() {
     // Build personalized company intro if company name is provided
@@ -461,7 +462,7 @@ export function ChatWidget({
 
       {/* Toggle Button */}
       <button
-        onClick={() => (isOpen ? handleClose() : setIsOpen(true))}
+        onClick={() => (isOpen ? handleClose() : handleOpen())}
         className="w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-white transition-transform hover:scale-110 active:scale-95"
         style={{ backgroundColor: primaryColor }}
         aria-label="Open AI Assistant"

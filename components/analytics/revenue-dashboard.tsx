@@ -33,7 +33,16 @@ export function RevenueDashboard({
   accountId,
   dateRange,
 }: RevenueDashboardProps) {
-  const [loading, setLoading] = useState(true);
+  // Which inputs the current data was fetched for; null until the first fetch
+  // finishes. `loading` is derived from it, so no setState runs in the effect.
+  const [fetchedFor, setFetchedFor] = useState<{
+    accountId: string;
+    dateRange: typeof dateRange;
+  } | null>(null);
+  const loading =
+    fetchedFor === null ||
+    fetchedFor.accountId !== accountId ||
+    fetchedFor.dateRange !== dateRange;
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [revenueByMonth, setRevenueByMonth] = useState<RevenueByMonth[]>([]);
   const [revenueByUser, setRevenueByUser] = useState<RevenueByUser[]>([]);
@@ -41,42 +50,48 @@ export function RevenueDashboard({
   const [trend, setTrend] = useState<{ growthRate: number } | null>(null);
 
   useEffect(() => {
-    fetchRevenueData();
+    let cancelled = false;
+    const fetchRevenueData = async () => {
+      try {
+        const [totalRes, monthlyRes, userRes, avgDealRes, trendRes] =
+          await Promise.all([
+            fetch(`/api/analytics/revenue/total?accountId=${accountId}`).then(
+              (r) => r.json(),
+            ),
+            fetch(
+              `/api/analytics/revenue/by-month?accountId=${accountId}`,
+            ).then((r) => r.json()),
+            fetch(`/api/analytics/revenue/by-user?accountId=${accountId}`).then(
+              (r) => r.json(),
+            ),
+            fetch(
+              `/api/analytics/revenue/average-deal-size?accountId=${accountId}`,
+            ).then((r) => r.json()),
+            fetch(`/api/analytics/revenue/trend?accountId=${accountId}`).then(
+              (r) => r.json(),
+            ),
+          ]);
+
+        if (cancelled) return;
+
+        setTotalRevenue(totalRes.totalRevenue || 0);
+        setRevenueByMonth(monthlyRes.data || []);
+        setRevenueByUser(userRes.data || []);
+        setAverageDealSize(avgDealRes.averageDealSize || 0);
+        setTrend(trendRes);
+      } catch (error) {
+        console.error("[Revenue Dashboard] Error fetching data:", error);
+      } finally {
+        if (!cancelled) {
+          setFetchedFor({ accountId, dateRange });
+        }
+      }
+    };
+    void fetchRevenueData();
+    return () => {
+      cancelled = true;
+    };
   }, [accountId, dateRange]);
-
-  const fetchRevenueData = async () => {
-    setLoading(true);
-    try {
-      const [totalRes, monthlyRes, userRes, avgDealRes, trendRes] =
-        await Promise.all([
-          fetch(`/api/analytics/revenue/total?accountId=${accountId}`).then(
-            (r) => r.json(),
-          ),
-          fetch(`/api/analytics/revenue/by-month?accountId=${accountId}`).then(
-            (r) => r.json(),
-          ),
-          fetch(`/api/analytics/revenue/by-user?accountId=${accountId}`).then(
-            (r) => r.json(),
-          ),
-          fetch(
-            `/api/analytics/revenue/average-deal-size?accountId=${accountId}`,
-          ).then((r) => r.json()),
-          fetch(`/api/analytics/revenue/trend?accountId=${accountId}`).then(
-            (r) => r.json(),
-          ),
-        ]);
-
-      setTotalRevenue(totalRes.totalRevenue || 0);
-      setRevenueByMonth(monthlyRes.data || []);
-      setRevenueByUser(userRes.data || []);
-      setAverageDealSize(avgDealRes.averageDealSize || 0);
-      setTrend(trendRes);
-    } catch (error) {
-      console.error("[Revenue Dashboard] Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) {
     return (

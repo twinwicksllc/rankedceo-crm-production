@@ -23,23 +23,26 @@ export default function NewAppointmentPage() {
   const [error] = useState("");
 
   useEffect(() => {
-    loadEventTypes();
+    let cancelled = false;
+    fetch("/api/calendly/event-types")
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (data.connected) {
+          setIsCalendlyConnected(true);
+          setEventTypes(data.event_types || []);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load event types:", err);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingEventTypes(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
-
-  async function loadEventTypes() {
-    try {
-      const res = await fetch("/api/calendly/event-types");
-      const data = await res.json();
-      if (data.connected) {
-        setIsCalendlyConnected(true);
-        setEventTypes(data.event_types || []);
-      }
-    } catch (err) {
-      console.error("Failed to load event types:", err);
-    } finally {
-      setIsLoadingEventTypes(false);
-    }
-  }
 
   function handleOpenCalendly() {
     if (!selectedEventType) return;

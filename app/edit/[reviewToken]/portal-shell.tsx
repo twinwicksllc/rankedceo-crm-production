@@ -14,7 +14,7 @@
 // Phase 8.2 — added Billing tab
 // =============================================================================
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ClientEditPermissions } from "@/lib/waas/client-edit/edit-session";
 import type { TenantPortalData } from "@/lib/waas/actions/client-edit";
@@ -91,9 +91,10 @@ export function PortalShell({
   );
 
   // When server renders tab=history, open the history panel inside EditorShell
-  useEffect(() => {
-    if (activeTab === "history") setHistoryOpenOnMount(true);
-  }, [activeTab]);
+  // (adjusted during render; the flag only ever flips to true).
+  if (activeTab === "history" && !historyOpenOnMount) {
+    setHistoryOpenOnMount(true);
+  }
 
   const navigateTab = useCallback(
     (tab: TabId) => {

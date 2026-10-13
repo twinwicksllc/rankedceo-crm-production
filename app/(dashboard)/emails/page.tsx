@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { EmailService } from "@/lib/services/email-service";
 import {
   EmailMessageWithThread,
@@ -23,38 +23,59 @@ export default function EmailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const emailService = new EmailService();
+  const emailService = useMemo(() => new EmailService(), []);
+  // Bumped to re-run the fetch effects (Refresh button, mark-as-read).
+  const [emailsKey, setEmailsKey] = useState(0);
+  const [statsKey, setStatsKey] = useState(0);
 
   useEffect(() => {
-    loadEmails();
-    loadStats();
-  }, []);
+    let cancelled = false;
+    emailService
+      .getEmails(filters)
+      .then((data) => {
+        if (!cancelled) setEmails(data);
+      })
+      .catch((err) => {
+        console.error("Error loading emails:", err);
+        if (!cancelled) {
+          setError(
+            err instanceof Error ? err.message : "Failed to load emails",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [emailService, filters, emailsKey]);
 
   useEffect(() => {
-    loadEmails();
-  }, [filters]);
+    let cancelled = false;
+    emailService
+      .getEmailStats()
+      .then((data) => {
+        if (!cancelled) setStats(data);
+      })
+      .catch((err) => {
+        console.error("Error loading stats:", err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [emailService, statsKey]);
 
-  const loadEmails = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await emailService.getEmails(filters);
-      setEmails(data);
-    } catch (err) {
-      console.error("Error loading emails:", err);
-      setError(err instanceof Error ? err.message : "Failed to load emails");
-    } finally {
-      setLoading(false);
-    }
+  const handleRefresh = () => {
+    setLoading(true);
+    setError(null);
+    setEmailsKey((k) => k + 1);
   };
 
-  const loadStats = async () => {
-    try {
-      const data = await emailService.getEmailStats();
-      setStats(data);
-    } catch (err) {
-      console.error("Error loading stats:", err);
-    }
+  const handleFiltersChange = (next: EmailFilters) => {
+    setLoading(true);
+    setError(null);
+    setFilters(next);
   };
 
   const handleEmailView = (emailId: string) => {
@@ -69,7 +90,7 @@ export default function EmailsPage() {
           email.id === emailId ? { ...email, opened: true } : email,
         ),
       );
-      loadStats();
+      setStatsKey((k) => k + 1);
     } catch (err) {
       console.error("Error marking email as read:", err);
     }
@@ -84,7 +105,7 @@ export default function EmailsPage() {
             Manage your email communications
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={loadEmails}>
+        <Button variant="outline" size="sm" onClick={handleRefresh}>
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
@@ -140,7 +161,10 @@ export default function EmailsPage() {
         </div>
       )}
 
-      <EmailFiltersComponent filters={filters} onFiltersChange={setFilters} />
+      <EmailFiltersComponent
+        filters={filters}
+        onFiltersChange={handleFiltersChange}
+      />
 
       <div className="space-y-4">
         {loading ? (

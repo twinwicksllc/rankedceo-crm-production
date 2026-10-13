@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useClientValue } from "@/hooks/use-client-value";
 import Link from "next/link";
 import {
   Shield,
@@ -26,15 +27,20 @@ const AUDIT_START_URL = "/audit/start";
 export function AuditLandingContent() {
   const { theme } = useOnboardingTheme();
   const isLight = theme === "light";
-  const [getStartedUrl, setGetStartedUrl] = useState(AUDIT_START_URL);
-  const [loginUrl, setLoginUrl] = useState("/login");
+  const loginUrl = "/login";
+  // Carries the visitor's query string/UTMs, so it is only known in the browser.
+  const getStartedUrl = useClientValue(
+    () =>
+      buildGetStartedUrl(
+        AUDIT_START_URL,
+        new URLSearchParams(window.location.search),
+      ),
+    AUDIT_START_URL,
+  );
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const funnelProperties = getAuditFunnelProperties(searchParams);
-
-    setGetStartedUrl(buildGetStartedUrl(AUDIT_START_URL, searchParams));
-    setLoginUrl("/login");
 
     trackEvent("audit_landing_viewed", {
       host: window.location.hostname,

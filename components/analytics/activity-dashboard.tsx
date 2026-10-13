@@ -33,7 +33,16 @@ export function ActivityDashboard({
   accountId,
   dateRange,
 }: ActivityDashboardProps) {
-  const [loading, setLoading] = useState(true);
+  // Which inputs the current data was fetched for; null until the first fetch
+  // finishes. `loading` is derived from it, so no setState runs in the effect.
+  const [fetchedFor, setFetchedFor] = useState<{
+    accountId: string;
+    dateRange: typeof dateRange;
+  } | null>(null);
+  const loading =
+    fetchedFor === null ||
+    fetchedFor.accountId !== accountId ||
+    fetchedFor.dateRange !== dateRange;
   const [activityByType, setActivityByType] = useState<ActivityByType[]>([]);
   const [completionRate, setCompletionRate] = useState(0);
   const [leaderboard, setLeaderboard] = useState<ActivityLeaderboard[]>([]);
@@ -45,37 +54,45 @@ export function ActivityDashboard({
   });
 
   useEffect(() => {
-    fetchActivityData();
+    let cancelled = false;
+    const fetchActivityData = async () => {
+      try {
+        const [typeRes, rateRes, leaderboardRes, statsRes] = await Promise.all([
+          fetch(`/api/analytics/activity/by-type?accountId=${accountId}`).then(
+            (r) => r.json(),
+          ),
+          fetch(
+            `/api/analytics/activity/completion-rate?accountId=${accountId}`,
+          ).then((r) => r.json()),
+          fetch(
+            `/api/analytics/activity/leaderboard?accountId=${accountId}`,
+          ).then((r) => r.json()),
+          fetch(`/api/analytics/activity/stats?accountId=${accountId}`).then(
+            (r) => r.json(),
+          ),
+        ]);
+
+        if (cancelled) return;
+
+        setActivityByType(typeRes.data || []);
+        setCompletionRate(rateRes.completionRate || 0);
+        setLeaderboard(leaderboardRes.data || []);
+        setStats(
+          statsRes || { total: 0, completed: 0, pending: 0, overdue: 0 },
+        );
+      } catch (error) {
+        console.error("[Activity Dashboard] Error fetching data:", error);
+      } finally {
+        if (!cancelled) {
+          setFetchedFor({ accountId, dateRange });
+        }
+      }
+    };
+    void fetchActivityData();
+    return () => {
+      cancelled = true;
+    };
   }, [accountId, dateRange]);
-
-  const fetchActivityData = async () => {
-    setLoading(true);
-    try {
-      const [typeRes, rateRes, leaderboardRes, statsRes] = await Promise.all([
-        fetch(`/api/analytics/activity/by-type?accountId=${accountId}`).then(
-          (r) => r.json(),
-        ),
-        fetch(
-          `/api/analytics/activity/completion-rate?accountId=${accountId}`,
-        ).then((r) => r.json()),
-        fetch(
-          `/api/analytics/activity/leaderboard?accountId=${accountId}`,
-        ).then((r) => r.json()),
-        fetch(`/api/analytics/activity/stats?accountId=${accountId}`).then(
-          (r) => r.json(),
-        ),
-      ]);
-
-      setActivityByType(typeRes.data || []);
-      setCompletionRate(rateRes.completionRate || 0);
-      setLeaderboard(leaderboardRes.data || []);
-      setStats(statsRes || { total: 0, completed: 0, pending: 0, overdue: 0 });
-    } catch (error) {
-      console.error("[Activity Dashboard] Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) {
     return (

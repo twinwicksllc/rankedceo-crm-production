@@ -1,12 +1,7 @@
 "use client";
 
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import React, { createContext, useContext, useMemo, useState } from "react";
+import { useClientValue } from "@/hooks/use-client-value";
 
 type OnboardingTheme = "light" | "dark";
 
@@ -20,37 +15,46 @@ const OnboardingThemeContext =
 
 const STORAGE_KEY = "ap-onboarding-theme";
 
+function readStoredTheme(): OnboardingTheme {
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (stored === "light" || stored === "dark") return stored;
+  } catch {
+    // no-op
+  }
+  return "light";
+}
+
 export function OnboardingThemeProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [theme, setTheme] = useState<OnboardingTheme>("light");
+  // The saved choice only exists in the browser: "light" on the server and
+  // during hydration, then whatever is in localStorage.
+  const storedTheme = useClientValue(
+    readStoredTheme,
+    "light",
+  ) as OnboardingTheme;
+  // Set once the user toggles in this session; wins over the stored value.
+  const [chosenTheme, setChosenTheme] = useState<OnboardingTheme | null>(null);
+  const theme = chosenTheme ?? storedTheme;
 
-  useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      if (stored === "light" || stored === "dark") {
-        setTheme(stored);
-      }
-    } catch {
-      // no-op
-    }
-  }, []);
-
-  const toggleTheme = () => {
-    setTheme((current) => {
-      const next = current === "light" ? "dark" : "light";
-      try {
-        window.localStorage.setItem(STORAGE_KEY, next);
-      } catch {
-        // no-op
-      }
-      return next;
-    });
-  };
-
-  const value = useMemo(() => ({ theme, toggleTheme }), [theme]);
+  const value = useMemo(
+    () => ({
+      theme,
+      toggleTheme: () => {
+        const next = theme === "light" ? "dark" : "light";
+        setChosenTheme(next);
+        try {
+          window.localStorage.setItem(STORAGE_KEY, next);
+        } catch {
+          // no-op
+        }
+      },
+    }),
+    [theme],
+  );
 
   return (
     <OnboardingThemeContext.Provider value={value}>

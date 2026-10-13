@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Wrench, Copy, Check, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardStats } from "@/components/industry/dashboard-stats";
@@ -35,20 +35,37 @@ export default function PlumbingDashboard({ userId }: PlumbingDashboardProps) {
       ? `${window.location.origin}/lead?operatorId=${userId}`
       : `https://plumbing.rankedceo.com/lead?operatorId=${userId}`;
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    const [leadsResult, statsResult] = await Promise.all([
-      getIndustryLeads("plumbing", filters),
-      getIndustryLeadStats("plumbing"),
-    ]);
-    if (leadsResult.success) setLeads(leadsResult.data);
-    if (statsResult.success && statsResult.data) setStats(statsResult.data);
-    setLoading(false);
-  }, [filters]);
+  // Bumped by the Refresh button to re-run the fetch effect below.
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    let cancelled = false;
+    Promise.all([
+      getIndustryLeads("plumbing", filters),
+      getIndustryLeadStats("plumbing"),
+    ])
+      .then(([leadsResult, statsResult]) => {
+        if (cancelled) return;
+        if (leadsResult.success) setLeads(leadsResult.data);
+        if (statsResult.success && statsResult.data) setStats(statsResult.data);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [filters, refreshKey]);
+
+  const handleRefresh = () => {
+    setLoading(true);
+    setRefreshKey((k) => k + 1);
+  };
+
+  const handleFiltersChange = (next: LeadFilters) => {
+    setLoading(true);
+    setFilters(next);
+  };
 
   const handleCopyLink = async () => {
     await navigator.clipboard.writeText(leadLink);
@@ -85,7 +102,7 @@ export default function PlumbingDashboard({ userId }: PlumbingDashboardProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={loadData}
+              onClick={handleRefresh}
               disabled={loading}
               aria-label="Refresh dashboard"
               className="border-teal-200 text-teal-700 hover:bg-teal-50"
@@ -178,7 +195,7 @@ export default function PlumbingDashboard({ userId }: PlumbingDashboardProps) {
           <LeadFiltersBar
             industry="plumbing"
             filters={filters}
-            onChange={setFilters}
+            onChange={handleFiltersChange}
           />
 
           {loading ? (

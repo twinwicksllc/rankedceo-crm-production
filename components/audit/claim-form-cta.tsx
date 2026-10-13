@@ -16,8 +16,9 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useEscapeKey } from "@/hooks/use-escape-key";
+import { useClientValue } from "@/hooks/use-client-value";
 import { useRouter } from "next/navigation";
 import { useOnboardingTheme } from "@/app/get-started/theme-context";
 import {
@@ -99,22 +100,20 @@ export function ClaimFormCta({
 
   const [status, setStatus] = useState<SubmitStatus>("idle");
   const [error, setError] = useState("");
-  const [cta, setCta] = useState("");
+  const cta = useClientValue(
+    () =>
+      buildGetStartedUrl(
+        getGetStartedBaseUrl(),
+        new URLSearchParams(window.location.search),
+        { tier: "standard", auditId },
+      ),
+    "",
+  );
   const [choiceModalOpen, setChoiceModalOpen] = useState(false);
   const [pendingChoice, setPendingChoice] = useState<ClaimChoice | null>(null);
   const isUrgent = grade === "D" || grade === "F" || grade === "C";
 
   useEscapeKey(() => setChoiceModalOpen(false), choiceModalOpen);
-
-  useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    setCta(
-      buildGetStartedUrl(getGetStartedBaseUrl(), searchParams, {
-        tier: "standard",
-        auditId,
-      }),
-    );
-  }, [auditId]);
 
   const isFormValid =
     form.name.trim() &&

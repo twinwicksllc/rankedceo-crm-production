@@ -279,10 +279,11 @@ export function AIVariantsPanel({
   );
   const [readinessReport, setReadinessReport] =
     useState<VariantReviewReadinessReport | null>(null);
-  const [isReadinessLoading, setIsReadinessLoading] = useState(false);
+  // Start as loading: the mount effect below fetches immediately.
+  const [isReadinessLoading, setIsReadinessLoading] = useState(true);
   const [lifecycleTelemetry, setLifecycleTelemetry] =
     useState<VariantLifecycleTelemetry | null>(null);
-  const [isLifecycleLoading, setIsLifecycleLoading] = useState(false);
+  const [isLifecycleLoading, setIsLifecycleLoading] = useState(true);
   const [reopenReason, setReopenReason] = useState("");
   const [reopenReasonCategory, setReopenReasonCategory] =
     useState<VariantLifecycleReasonCategory>("content_revision");
@@ -686,9 +687,24 @@ export function AIVariantsPanel({
     });
   };
 
+  // Initial load. State is only set in the promise callbacks (the loading flags
+  // start true); the Refresh buttons use loadReadinessReport/loadLifecycleTelemetry.
   useEffect(() => {
-    void Promise.all([loadReadinessReport(), loadLifecycleTelemetry()]);
-  }, []);
+    let cancelled = false;
+    void getVariantReviewReadiness(tenantId).then((result) => {
+      if (cancelled) return;
+      setReadinessReport(result.success && result.data ? result.data : null);
+      setIsReadinessLoading(false);
+    });
+    void getVariantLifecycleTelemetry(tenantId).then((result) => {
+      if (cancelled) return;
+      setLifecycleTelemetry(result.success && result.data ? result.data : null);
+      setIsLifecycleLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
 
   const updateSection = (
     variantIndex: number,

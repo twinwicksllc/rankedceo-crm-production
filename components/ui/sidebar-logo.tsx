@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useIsClient } from "@/hooks/use-is-client";
 import { IndustryLogo, type IndustryType } from "@/components/ui/industry-logo";
 
 // Map subdomains to industry types
@@ -20,13 +20,9 @@ function detectIndustry(): IndustryType | null {
 }
 
 export function SidebarLogo() {
-  const [industry, setIndustry] = useState<IndustryType | null>(null);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setIndustry(detectIndustry());
-    setMounted(true);
-  }, []);
+  // false on the server and during hydration, so the first paint is always the
+  // default logo; the hostname is only read once we are in the browser.
+  const mounted = useIsClient();
 
   // During SSR or before mount, show RankedCEO logo (avoids layout shift)
   if (!mounted) {
@@ -45,6 +41,7 @@ export function SidebarLogo() {
   }
 
   // If on an industry subdomain, show the industry logo on white background
+  const industry = detectIndustry();
   if (industry) {
     return (
       <div className="p-4 bg-white border-b border-gray-100 flex items-center justify-center min-h-[72px]">

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useClientValue } from "@/hooks/use-client-value";
+import { useIsClient } from "@/hooks/use-is-client";
 import { createPortal } from "react-dom";
 import {
   buildGetStartedUrl,
@@ -38,24 +40,16 @@ export function FixRankingsModal({
   const { theme } = useOnboardingTheme();
   const isLight = theme === "light";
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [getStartedUrl, setGetStartedUrl] = useState(
+  const mounted = useIsClient();
+  const getStartedUrl = useClientValue(
+    () =>
+      buildGetStartedUrl(
+        getGetStartedBaseUrl(),
+        new URLSearchParams(window.location.search),
+        { tier: "standard", auditId },
+      ),
     `/get-started?tier=standard&auditId=${auditId}`,
   );
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    setGetStartedUrl(
-      buildGetStartedUrl(getGetStartedBaseUrl(), searchParams, {
-        tier: "standard",
-        auditId,
-      }),
-    );
-  }, [auditId]);
 
   useEffect(() => {
     if (!open) return;
