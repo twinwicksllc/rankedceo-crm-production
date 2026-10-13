@@ -1,11 +1,30 @@
 import assert from "node:assert/strict";
+import { createRequire } from "node:module";
 import { test } from "node:test";
-import { ESLint } from "eslint";
 
 // Guards the local `local/icon-only-control` rule in eslint.config.mjs. The
 // stock jsx-a11y/control-has-associated-label treats any self-closing
 // component as a label, so it never flags <button><X /></button>. If someone
 // loosens the local rule, these cases stop failing and this test says so.
+//
+// eslint is a devDependency and the production build typechecks every .ts
+// file, so this file must not `import ... from "eslint"` (that broke the
+// Vercel build on #284). It is loaded at run time instead, with a minimal type.
+interface LintMessage {
+  ruleId: string | null;
+  line: number;
+}
+interface LintResult {
+  messages: LintMessage[];
+}
+interface ESLintLike {
+  lintText(code: string, options: { filePath: string }): Promise<LintResult[]>;
+}
+
+const nodeRequire = createRequire(`${process.cwd()}/package.json`);
+const { ESLint } = nodeRequire("eslint") as {
+  ESLint: new (options: { cwd: string }) => ESLintLike;
+};
 
 const eslint = new ESLint({ cwd: process.cwd() });
 
