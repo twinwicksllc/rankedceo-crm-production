@@ -6,6 +6,7 @@
 // Red = Your Site | Green = RankedCEO Benchmark / Top Competitors
 // =============================================================================
 
+import Link from "next/link";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { getAuditFunnelProperties } from "@/lib/analytics/audit-funnel";
@@ -335,7 +336,7 @@ function AuditReportClientContent({
           <p style={{ color: "rgba(255,255,255,0.45)", marginBottom: 24 }}>
             This audit report has expired. Run a new audit to get fresh data.
           </p>
-          <a
+          <Link
             href="/"
             style={{
               display: "inline-block",
@@ -348,7 +349,7 @@ function AuditReportClientContent({
             }}
           >
             Run New Audit →
-          </a>
+          </Link>
         </div>
       </PageShell>
     );
@@ -2198,7 +2199,7 @@ function PageShell({
           flexWrap: "wrap",
         }}
       >
-        <a
+        <Link
           href="/audit/start"
           style={{
             padding: "7px 14px",
@@ -2217,7 +2218,7 @@ function PageShell({
           }}
         >
           ← Run Another Audit
-        </a>
+        </Link>
         {expiresAt && <ExpiryCountdown expiresAt={expiresAt} compact />}
         {auditId && score != null && grade && (
           <FixRankingsModal
@@ -2291,7 +2292,7 @@ function ReportFooter({
       >
         © {new Date().getFullYear()} RankedCEO · Powered by Surface Audit Engine
         v2 ·{" "}
-        <a
+        <Link
           href="/"
           style={{
             color: isLight ? "rgba(15,23,42,0.55)" : "rgba(255,255,255,0.3)",
@@ -2299,7 +2300,7 @@ function ReportFooter({
           }}
         >
           rankedceo.com
-        </a>
+        </Link>
       </div>
     </div>
   );

@@ -318,7 +318,7 @@ export async function regenerateSection(
   );
 
   let tokensUsed = 0;
-  let rawResponse: Record<string, string> = {};
+  const rawResponse: Record<string, string> = {};
 
   try {
     const resp = await fetch("https://api.openai.com/v1/chat/completions", {

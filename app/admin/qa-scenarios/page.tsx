@@ -5,6 +5,7 @@
 // (Decision Q7: Admin UI, form-based, no code required)
 // =============================================================================
 
+import Link from "next/link";
 import { listQaScenarios } from "@/lib/waas/actions/qa";
 import { ScenarioList } from "./scenario-list";
 import { NewScenarioForm } from "./new-scenario-form";
@@ -29,12 +30,12 @@ export default async function QaScenariosPage() {
             Create and manage test scenarios for the QA agent. No code required.
           </p>
         </div>
-        <a
+        <Link
           href="/admin/qa-reports"
           className="inline-flex items-center gap-2 rounded-xl bg-white/5 border border-white/10 px-4 py-2 text-sm text-white/70 hover:bg-white/10 transition-colors"
         >
           📋 View Run History
-        </a>
+        </Link>
       </div>
 
       {error && (

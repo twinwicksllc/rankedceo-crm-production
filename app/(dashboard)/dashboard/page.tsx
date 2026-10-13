@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import {
   Card,
@@ -174,7 +175,7 @@ export default async function DashboardPage() {
             <CardDescription>Common tasks to get you started</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            <a
+            <Link
               href="/contacts/new"
               className="block p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
             >
@@ -182,8 +183,8 @@ export default async function DashboardPage() {
               <div className="text-sm text-gray-600">
                 Create a new contact in your CRM
               </div>
-            </a>
-            <a
+            </Link>
+            <Link
               href="/deals/new"
               className="block p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
             >
@@ -191,8 +192,8 @@ export default async function DashboardPage() {
               <div className="text-sm text-gray-600">
                 Start tracking a new opportunity
               </div>
-            </a>
-            <a
+            </Link>
+            <Link
               href="/campaigns/new"
               className="block p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
             >
@@ -200,7 +201,7 @@ export default async function DashboardPage() {
               <div className="text-sm text-gray-600">
                 Create an email campaign
               </div>
-            </a>
+            </Link>
           </CardContent>
         </Card>
 

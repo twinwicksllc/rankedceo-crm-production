@@ -1,6 +1,7 @@
 // SendGrid Service for RankedCEO CRM
 import { MailDataRequired } from "@sendgrid/mail";
 import sgMail from "@sendgrid/mail";
+import { createHmac, timingSafeEqual } from "crypto";
 
 interface SendGridEmailOptions {
   to: string;
@@ -156,16 +157,14 @@ export class SendGridService {
     publicKey: string,
   ): boolean {
     try {
-      const crypto = require("crypto");
       const decodedSignature = Buffer.from(signature, "base64").toString(
         "utf-8",
       );
-      const expectedSignature = crypto
-        .createHmac("sha256", publicKey)
+      const expectedSignature = createHmac("sha256", publicKey)
         .update(timestamp + payload)
         .digest("base64");
 
-      return crypto.timingSafeEqual(
+      return timingSafeEqual(
         Buffer.from(decodedSignature),
         Buffer.from(expectedSignature),
       );

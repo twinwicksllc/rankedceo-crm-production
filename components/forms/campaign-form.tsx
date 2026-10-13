@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -227,7 +228,7 @@ export function CampaignForm() {
           {isLoading ? "Creating..." : "Create Campaign"}
         </Button>
         <Button type="button" variant="outline" asChild>
-          <a href="/campaigns">Cancel</a>
+          <Link href="/campaigns">Cancel</Link>
         </Button>
       </div>
     </form>

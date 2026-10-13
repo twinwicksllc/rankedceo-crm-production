@@ -259,7 +259,7 @@ export async function archiveDuplicatePendingAttempts(): Promise<
     const supabase = getAdminClient();
     let statuses: string[] = ["pending_review", "onboarding"];
 
-    let query = supabase
+    const query = supabase
       .from("tenants")
       .select(
         "id, created_at, submitted_by_email, legal_name, brand_config, status",

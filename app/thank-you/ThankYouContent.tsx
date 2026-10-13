@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 const INDUSTRY_CONFIG: Record<
@@ -354,13 +355,13 @@ export default function ThankYouContent() {
                 </div>
               </div>
 
-              <a
+              <Link
                 href="/"
                 className="ty-back-btn"
                 style={{ background: config.accent }}
               >
                 ← Back to {config.name}
-              </a>
+              </Link>
             </>
           )}
 
