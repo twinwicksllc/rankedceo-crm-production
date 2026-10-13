@@ -16,6 +16,10 @@ import {
   type JsonValue,
 } from "@/lib/waas/client-edit/content-paths";
 import {
+  updateIfUnchanged,
+  type GuardedClient,
+} from "@/lib/waas/sections/guarded-write";
+import {
   resolveEditPathForVariant,
   SECTION_ID_PATTERN,
 } from "@/lib/waas/sections/section-ids";
@@ -165,28 +169,26 @@ export async function updateClientVariantContent(
     // is unchanged since we read it (updated_at), so a stale edit cannot undo a
     // newer write such as the section-id backfill (scripts/backfill-section-ids.ts).
     // No updated_at trigger for this table in the repo migrations, so set it here.
-    let write = supabase
-      .from("tenant_site_variants")
-      .update({
+    const writeResult = await updateIfUnchanged(
+      supabase as unknown as GuardedClient,
+      "tenant_site_variants",
+      variant.id,
+      {
         sections_json: newSections,
         client_last_edited_at: now,
-        updated_at: now,
         client_edit_count: (variant.client_edit_count ?? 0) + 1,
-      })
-      .eq("id", variant.id);
-    write =
-      variant.updated_at == null
-        ? write.is("updated_at", null)
-        : write.eq("updated_at", variant.updated_at);
-    const { data: written, error: updateErr } = await write.select("id");
+      },
+      variant.updated_at,
+      now,
+    );
 
-    if (updateErr) {
+    if (writeResult.status === "error") {
       return {
         success: false,
-        error: `Failed to save edit: ${updateErr.message}`,
+        error: `Failed to save edit: ${writeResult.message}`,
       };
     }
-    if (!written || written.length === 0) {
+    if (writeResult.status === "conflict") {
       return {
         success: false,
         error:

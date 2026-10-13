@@ -116,3 +116,65 @@ test("rewriteLegacyPath returns null for stray, missing, id and brand paths", ()
     null,
   );
 });
+
+// Deploy and snapshot restore call assignMissingIds on a copy of the variant's
+// sections before the variant itself is backfilled. These tests show both
+// routes give the same ids, so the live layout and the variant agree.
+const mkSection = (section: string, order: number) => ({
+  section,
+  order,
+  enabled: true,
+  config: {},
+  content: {},
+});
+const idsOf = (list: unknown[] | undefined) =>
+  (list ?? []).map((s) => (s as { id: string }).id);
+
+test("deploy/restore ids equal the backfill ids for the same sections", () => {
+  const legacy = [
+    mkSection("hero", 1),
+    mkSection("services", 2),
+    mkSection("faq", 3),
+  ];
+  const viaDeploy = assignMissingIds(legacy);
+  const viaBackfill = planSectionIdBackfill(legacy).next;
+  assert.deepEqual(idsOf(viaDeploy), idsOf(viaBackfill));
+  assert.deepEqual(idsOf(viaDeploy), ["hero", "services", "faq"]);
+});
+
+test("with one section per type, an id does not depend on array position", () => {
+  const a = [mkSection("hero", 1), mkSection("faq", 2), mkSection("about", 3)];
+  const b = [a[2], a[0], a[1]];
+  const idByType = (list: unknown[]) =>
+    Object.fromEntries(
+      (list as Array<{ section: string; id: string }>).map((s) => [
+        s.section,
+        s.id,
+      ]),
+    );
+  assert.deepEqual(
+    idByType(assignMissingIds(a)),
+    idByType(assignMissingIds(b)),
+  );
+});
+
+test("assignMissingIds is idempotent: running it twice changes nothing", () => {
+  const once = assignMissingIds([
+    mkSection("hero", 1),
+    mkSection("services", 2),
+    mkSection("services", 3),
+  ]);
+  assert.deepEqual(assignMissingIds(once), once);
+  assert.deepEqual(idsOf(once), ["hero", "services", "services-2"]);
+});
+
+test("a variant that already has ids is not renumbered by deploy/restore", () => {
+  const withIds = [
+    { ...mkSection("services", 1), id: "services-k3f9a2" },
+    { ...mkSection("services", 2), id: "services" },
+  ];
+  assert.deepEqual(idsOf(assignMissingIds(withIds)), [
+    "services-k3f9a2",
+    "services",
+  ]);
+});

@@ -35,6 +35,10 @@
 import { createClient } from "@supabase/supabase-js";
 import { readAll } from "../lib/waas/sections/read-all";
 import {
+  updateIfUnchanged,
+  type GuardedClient,
+} from "../lib/waas/sections/guarded-write";
+import {
   planSectionIdBackfill,
   rewriteLegacyPath,
 } from "../lib/waas/sections/backfill";
@@ -210,24 +214,21 @@ async function main() {
       }
       if (!apply) continue;
 
-      let write = supabase
-        .from(table)
-        .update({ [column]: plan.next, updated_at: new Date().toISOString() })
-        .eq("id", row.id as string);
-      // Optimistic guard: only write if nobody changed the row since we read
-      // it. The new updated_at makes any writer that read the old row fail its
-      // own check.
-      write =
-        row.updated_at == null
-          ? write.is("updated_at", null)
-          : write.eq("updated_at", row.updated_at as string);
-      const { data: written, error: writeError } = await write.select("id");
-      if (writeError) {
-        console.error(
-          `${table} ${row.id}: write failed: ${writeError.message}`,
-        );
+      // Optimistic guard (see guarded-write.ts): only write if nobody changed
+      // the row since we read it. The new updated_at makes any writer that read
+      // the old row fail its own check.
+      const result = await updateIfUnchanged(
+        supabase as unknown as GuardedClient,
+        table,
+        row.id as string,
+        { [column]: plan.next },
+        (row.updated_at as string | null) ?? null,
+        new Date().toISOString(),
+      );
+      if (result.status === "error") {
+        console.error(`${table} ${row.id}: write failed: ${result.message}`);
         totals.errors++;
-      } else if (!written || written.length === 0) {
+      } else if (result.status === "conflict") {
         console.warn(
           `${table} ${row.id}: changed since read, skipped (re-run)`,
         );
