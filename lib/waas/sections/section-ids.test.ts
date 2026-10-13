@@ -92,12 +92,15 @@ test("newSectionId never returns a taken id, even when the rng repeats", () => {
   assert.match(second, /^services-[a-z0-9]{6}$/);
 });
 
-test("a removed id is not handed out again (random suffix, not a counter)", () => {
-  // Two adds with different random draws give different ids even though the
-  // first one was deleted in between (so it is not in `taken`).
-  const a = newSectionId("faq", new Set(), () => 0.1);
-  const b = newSectionId("faq", new Set(), () => 0.7);
-  assert.notEqual(a, b);
+test("newSectionId avoids a retired id when the caller passes it in", () => {
+  // A deleted section's id is not in the layout any more, but the caller can
+  // still list it (for example from the edit history) so it is not drawn again.
+  const retired = newSectionId("faq", new Set(), () => 0.1);
+  let calls = 0;
+  const next = newSectionId("faq", new Set([retired]), () =>
+    calls++ < 6 ? 0.1 : 0.7,
+  );
+  assert.notEqual(next, retired);
 });
 
 test("path helpers", () => {

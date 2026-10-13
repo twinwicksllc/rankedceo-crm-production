@@ -2,11 +2,13 @@
 // lib/waas/sections/section-ids.ts
 // Stable section ids (B4+B3 plan, PR 2). Pure functions, no I/O.
 //
-// An id is written once and never reused. The first section of a type gets
-// id = type ("hero"); any further one gets "<type>-<suffix>". Runtime additions
-// use a random suffix, so a deleted id is never handed out again and no counter
-// has to be stored (sections_json is a bare array, so there is nowhere to keep
-// one).
+// An id is written once and is not changed afterwards. The first section of a
+// type gets id = type ("hero"); any further one gets "<type>-<suffix>". Runtime
+// additions use a random 6-character suffix (36^6, about 2 billion values), so
+// no counter has to be stored (sections_json is a bare array, so there is
+// nowhere to keep one). A random id avoids every id in `taken`; it can only
+// repeat an id that was deleted and is NOT in `taken`, which is why the caller
+// must include retired ids (for example those found in the edit history).
 // =============================================================================
 
 import type { SectionConfig, SectionId } from "@/lib/waas/templates/types";
@@ -74,8 +76,11 @@ function isDuplicate(all: ReadonlyArray<unknown>, s: SectionConfig): boolean {
 const SUFFIX_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
 
 /**
- * Id for a section added at runtime (Layout editor). Random suffix so an id is
- * never reused after a delete. `rng` is injectable for tests.
+ * Id for a section added at runtime (Layout editor). Random suffix, checked
+ * against `taken`. This is "unique among `taken`", not "never reused": pass the
+ * ids currently in the layout AND any retired ids you can find (e.g. from
+ * client_variant_edit_events), otherwise a deleted id could in theory be drawn
+ * again (about 1 in 2 billion per draw). `rng` is injectable for tests.
  */
 export function newSectionId(
   type: string,

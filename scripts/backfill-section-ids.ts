@@ -16,19 +16,24 @@
 // `active_sections_json` (tenant_site_config). Array order, `order` values and
 // content are not changed. It is safe to re-run: rows that already have ids are
 // skipped. Each update only applies if the row's `updated_at` is unchanged since
-// it was read; otherwise it is reported as a conflict and left alone. Client
-// edits and admin saves set `updated_at`; tenant_site_config also has a trigger.
+// it was read, and it sets a new `updated_at`, so a writer that read the row
+// before the backfill fails its own `updated_at` check (client edits do; see
+// content-edit.ts) instead of overwriting the ids. A conflict is reported and
+// the row is left alone (re-run).
 //
-// History: in the same run that adds ids to a variant, its old position-based
-// edit events (`sections[3]...`) are rewritten to id paths (`sections[id=faq]...`)
-// using the array position. That is only done in that run; on a later run the
-// layout may have been reordered, so numeric events are left alone and show
-// read-only in the portal.
+// History: before ids are written to a variant, that variant's old
+// position-based edit events (`sections[3]...`) are rewritten to id paths
+// (`sections[id=faq]...`) using the array position. Events go FIRST so that a
+// crash leaves the variant without ids, and a re-run does the whole job again
+// (ids are deterministic, rewritten events are skipped). If any event fails to
+// update, the ids for that variant are NOT written. Events with no matching
+// section are left as they are and show read-only in the portal.
 // Note: updating tenant_site_config bumps its `updated_at`, which the sitemap
 // uses as <lastmod>.
 // =============================================================================
 
 import { createClient } from "@supabase/supabase-js";
+import { readAll } from "../lib/waas/sections/read-all";
 import {
   planSectionIdBackfill,
   rewriteLegacyPath,
@@ -89,31 +94,40 @@ async function main() {
   /**
    * Rewrite old position-based history paths for ONE variant, using the array
    * positions as they are right now (ids are added in place, so positions do
-   * not move). Only called in the same run that adds the ids: on a later run
-   * the layout may have been reordered and a position would map to the wrong
-   * section. Events that cannot be resolved are left as they are and show
-   * read-only in the portal.
+   * not move). Called BEFORE the ids are written, so a crash or a failed event
+   * update leaves the variant without ids and a re-run redoes the whole job.
+   * Only done in the run that adds the ids: on a later run the layout may have
+   * been reordered and a position would map to the wrong section. Events that
+   * cannot be resolved are left as they are and show read-only in the portal.
+   * Returns false if any event could not be read or updated.
    */
   async function rewriteEvents(
     eventTenantId: string,
     variantIndex: number,
     sectionsWithIds: unknown[],
-  ) {
-    const { data: events, error: readError } = await supabase
-      .from("client_variant_edit_events")
-      .select("id, field_path")
-      .eq("tenant_id", eventTenantId)
-      .eq("variant_index", variantIndex)
-      .like("field_path", "sections[%");
-    if (readError) {
-      console.error(`  history read failed: ${readError.message}`);
-      totals.errors++;
-      return;
-    }
-    for (const ev of (events ?? []) as Array<{
+  ): Promise<boolean> {
+    // Id paths also start with "sections[", so the matched set does not change
+    // while we page through it.
+    const { rows: events, error: readError } = await readAll<{
       id: string;
       field_path: string;
-    }>) {
+    }>((from, to) =>
+      supabase
+        .from("client_variant_edit_events")
+        .select("id, field_path")
+        .eq("tenant_id", eventTenantId)
+        .eq("variant_index", variantIndex)
+        .like("field_path", "sections[%")
+        .order("id", { ascending: true })
+        .range(from, to),
+    );
+    if (readError) {
+      console.error(`  history read failed: ${readError}`);
+      totals.errors++;
+      return false;
+    }
+    let ok = true;
+    for (const ev of events) {
       const next = rewriteLegacyPath(ev.field_path, sectionsWithIds);
       if (next === null) {
         // Already an id path, or the position holds no real section.
@@ -130,24 +144,34 @@ async function main() {
       if (updateError) {
         console.error(`  history ${ev.id}: ${updateError.message}`);
         totals.errors++;
+        ok = false;
       }
     }
+    return ok;
   }
 
   for (const { table, column, extra } of TARGETS) {
-    let query = supabase
-      .from(table)
-      .select(`id, tenant_id, updated_at, ${column}${extra}`);
-    if (tenantId) query = query.eq("tenant_id", tenantId);
-    const { data, error } = await query;
+    const { rows, error } = await readAll<Record<string, unknown>>(
+      (from, to) => {
+        let query = supabase
+          .from(table)
+          .select(`id, tenant_id, updated_at, ${column}${extra}`)
+          .order("id", { ascending: true })
+          .range(from, to);
+        if (tenantId) query = query.eq("tenant_id", tenantId);
+        return query as unknown as PromiseLike<{
+          data: Record<string, unknown>[] | null;
+          error: { message: string } | null;
+        }>;
+      },
+    );
     if (error) {
-      console.error(`${table}: read failed: ${error.message}`);
+      // Do not act on a partial read.
+      console.error(`${table}: read failed: ${error}`);
       totals.errors++;
       continue;
     }
-    for (const row of (data ?? []) as unknown as Array<
-      Record<string, unknown>
-    >) {
+    for (const row of rows) {
       totals.rows++;
       const plan = planSectionIdBackfill(row[column]);
       totals.strayEntries += plan.strayEntries;
@@ -168,22 +192,31 @@ async function main() {
       console.log(
         `${table} ${row.id} (tenant ${row.tenant_id}): add ids ${plan.added.join(", ")}`,
       );
-      if (!apply) {
-        if (table === "tenant_site_variants") {
-          await rewriteEvents(
-            row.tenant_id as string,
-            row.variant_index as number,
-            plan.next ?? [],
+
+      // History first (variants only). If any event fails, leave this row
+      // without ids so a re-run does the whole job again.
+      if (table === "tenant_site_variants") {
+        const eventsOk = await rewriteEvents(
+          row.tenant_id as string,
+          row.variant_index as number,
+          plan.next ?? [],
+        );
+        if (!eventsOk) {
+          console.warn(
+            `${table} ${row.id}: history not fully rewritten, ids not written (re-run)`,
           );
+          continue;
         }
-        continue;
       }
+      if (!apply) continue;
 
       let write = supabase
         .from(table)
-        .update({ [column]: plan.next })
+        .update({ [column]: plan.next, updated_at: new Date().toISOString() })
         .eq("id", row.id as string);
-      // Optimistic guard: only write if nobody changed the row since we read it.
+      // Optimistic guard: only write if nobody changed the row since we read
+      // it. The new updated_at makes any writer that read the old row fail its
+      // own check.
       write =
         row.updated_at == null
           ? write.is("updated_at", null)
@@ -199,12 +232,6 @@ async function main() {
           `${table} ${row.id}: changed since read, skipped (re-run)`,
         );
         totals.conflicts++;
-      } else if (table === "tenant_site_variants") {
-        await rewriteEvents(
-          row.tenant_id as string,
-          row.variant_index as number,
-          plan.next ?? [],
-        );
       }
     }
   }

@@ -113,7 +113,7 @@ export async function updateClientVariantContent(
     // Fetch current variant sections_json
     const { data: variantRow, error: fetchErr } = await supabase
       .from("tenant_site_variants")
-      .select("id, sections_json, client_edit_count")
+      .select("id, sections_json, client_edit_count, updated_at")
       .eq("tenant_id", tenantId)
       .eq("variant_index", variantIndex)
       .single();
@@ -126,6 +126,7 @@ export async function updateClientVariantContent(
       id: string;
       sections_json: JsonValue;
       client_edit_count: number | null;
+      updated_at: string | null;
     };
 
     // Numeric paths are only accepted while the variant has no stable ids
@@ -160,23 +161,36 @@ export async function updateClientVariantContent(
     const editType = classifyEditType(path);
     const now = new Date().toISOString();
 
-    // Write patched sections back to variant
-    const { error: updateErr } = await supabase
+    // Write patched sections back to variant. The write only applies if the row
+    // is unchanged since we read it (updated_at), so a stale edit cannot undo a
+    // newer write such as the section-id backfill (scripts/backfill-section-ids.ts).
+    // No updated_at trigger for this table in the repo migrations, so set it here.
+    let write = supabase
       .from("tenant_site_variants")
       .update({
         sections_json: newSections,
         client_last_edited_at: now,
-        // No updated_at trigger for this table in the repo migrations, so set it
-        // here; concurrent writers (e.g. the section-id backfill) rely on it.
         updated_at: now,
         client_edit_count: (variant.client_edit_count ?? 0) + 1,
       })
       .eq("id", variant.id);
+    write =
+      variant.updated_at == null
+        ? write.is("updated_at", null)
+        : write.eq("updated_at", variant.updated_at);
+    const { data: written, error: updateErr } = await write.select("id");
 
     if (updateErr) {
       return {
         success: false,
         error: `Failed to save edit: ${updateErr.message}`,
+      };
+    }
+    if (!written || written.length === 0) {
+      return {
+        success: false,
+        error:
+          "Your site was updated while you were editing. Please reload and try again.",
       };
     }
 

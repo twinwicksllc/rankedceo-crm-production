@@ -694,9 +694,13 @@ export async function selectClientVariantGeneration(
     }
 
     const row = genRow as Record<string, unknown>;
-    const sections = Array.isArray(row.sections_json)
-      ? (row.sections_json as SectionConfig[])
-      : [];
+    // A generation saved before section ids existed has none; add them so this
+    // write cannot put position-only sections back into the active layout.
+    const sections = assignMissingIds(
+      Array.isArray(row.sections_json)
+        ? (row.sections_json as SectionConfig[])
+        : [],
+    );
     const templateSlug =
       typeof row.template_slug === "string" ? row.template_slug : "modern";
 

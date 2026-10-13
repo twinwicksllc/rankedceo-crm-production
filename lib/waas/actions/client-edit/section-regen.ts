@@ -221,7 +221,7 @@ export async function regenerateSection(
   }
 
   // --- Validate inputs ---
-  if (variantIndex == null || variantIndex < 0) {
+  if (!Number.isInteger(variantIndex) || variantIndex < 1) {
     return { success: false, error: "Invalid variantIndex." };
   }
   if (hint && hint.length > 500) {
@@ -243,31 +243,26 @@ export async function regenerateSection(
 
   // --- Load the current variant from DB to source existing content ---
   const supabase = getAdminClient();
-  const { data: variantRow, error: variantErr } = await supabase
+  // variantIndex is the stored variant number (1-3), so select by it; it is not
+  // an offset into the list of rows.
+  const { data: targetRow, error: variantErr } = await supabase
     .from("tenant_site_variants")
     .select("sections_json, id")
     .eq("tenant_id", session.tenantId)
-    .order("variant_index", { ascending: true })
-    .limit(10); // load all, then pick by index
+    .eq("variant_index", variantIndex)
+    .maybeSingle();
 
-  if (variantErr || !variantRow) {
+  if (variantErr) {
     return { success: false, error: "Could not load site variant." };
   }
-
-  // Find by variantIndex (offset in ordered list)
-  const variantRows = variantRow as Array<{
-    sections_json: unknown;
-    id: string;
-  }>;
-  const targetRow = variantRows[variantIndex];
   if (!targetRow) {
     return {
       success: false,
-      error: `Variant at index ${variantIndex} not found.`,
+      error: `Variant ${variantIndex} not found.`,
     };
   }
 
-  const sectionsJson = targetRow.sections_json;
+  const sectionsJson = (targetRow as { sections_json: unknown }).sections_json;
   const sections: SectionConfig[] = Array.isArray(sectionsJson)
     ? (sectionsJson as SectionConfig[])
     : [];
