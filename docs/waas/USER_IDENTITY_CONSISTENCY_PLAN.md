@@ -178,7 +178,32 @@ select distinct lower(trim(e)) as email from (
   union select requestor_email from public.audits
   union select email from public.leads
 ) x where e is not null;
+
+-- 3.7 What can the public anon key actually read? (read-only, the transaction is rolled back)
+-- If requestor_email_visible > 0, requestor PII is readable by anyone holding the anon key.
+begin;
+set local role anon;
+select count(*) as anon_visible_audits,
+       count(requestor_email) as requestor_email_visible,
+       count(requestor_phone) as requestor_phone_visible
+from public.audits;
+rollback;
+
+-- 3.7b Table-level grants on audits
+select grantee, privilege_type
+from information_schema.role_table_grants
+where table_schema = 'public' and table_name = 'audits' and grantee in ('anon', 'authenticated')
+order by 1, 2;
 ```
+
+### 4.3 Results received
+
+**Query 3.5b (WaaS project `audits` policies), received 2026-10-14.** Three policies are live: `audits_admin_all` (ALL, `authenticated`, JWT `waas_admin` claims), `audits_anon_insert_prospect` (INSERT, `anon`) and `audits_anon_read_own` (SELECT, `anon`, `audit_type = 'prospect' AND tenant_id IS NULL`). Consequences, from those rows plus the code:
+
+1. **The anon read policy is live.** `audits` holds `requestor_name`, `requestor_email`, `requestor_phone` and `requestor_company` (`000_waas_complete_idempotent.sql`). `NEXT_PUBLIC_WAAS_SUPABASE_ANON_KEY` is public by design, so anyone holding it can call the WaaS REST API and read those columns for every unlinked prospect audit. No `REVOKE` on `audits` appears in the WaaS migrations, so column access is probably not restricted either. Query 3.7 below confirms this with `set role anon`. This is a PII exposure, not only an ownership gap.
+2. **The code depends on that policy.** `app/audit/[auditId]/page.tsx`, `app/api/audit/[auditId]/create-tenant/route.ts` and `app/api/audit/leads/route.ts` read `audits` through `createWaasClient()`, which uses the anon key. Dropping the policy without changing those three call sites breaks the audit page, tenant creation and lead capture for new audits.
+3. **There is no live `authenticated` read policy for tenant owners.** `002_waas_audits.sql` defines `audits_tenant_read_own`, but it is not in the live list. Combined with the anon-key client above, an audit that already has a `tenant_id` matches no anon policy, so those same three call sites likely cannot read it. If so, the ownership check in the page (`audit.tenant_id` branch) never runs for linked audits, and a repeat `create-tenant` call for an already-linked audit returns "Audit not found". This is inferred from the policy list and the code, not observed; test it on QA before relying on it.
+4. **Fix shape (phase 1).** Move the three call sites and the page's audit read to server-side reads with `getWaasAdminClient()` plus an explicit access check (owner by `owner_user_id` or lowercase email, or a share token), then drop `audits_anon_read_own`. The status poll already has a narrow path: `get_audit_status()` returns only id, status, report data, dates and error, with no requestor columns.
 
 ## 5. Phased plan
 
@@ -187,7 +212,7 @@ Each phase is its own branch and draft PR (DEC-0017). Phases 2 to 4 touch the DB
 | Phase | What | DB? | Depends on |
 |---|---|---|---|
 | 0 | Tommy runs section 4 and pastes results. I update this doc with the verified live shape. | read-only | none |
-| 1 | Code-only: `normalizeEmail()` helper used by all writers and by the ownership checks; `isPlatformAdmin()` helper for the access gate only (the three notification sites keep a shared recipient setting, not a predicate); close both anonymous audit paths for unlinked audits (the PDF route's missing sign-in check and, subject to 3.5b, the WaaS anon SELECT policy). Merge #291 first. | no | D1, D3 |
+| 1 | Code-only: `normalizeEmail()` helper used by all writers and by the ownership checks; `isPlatformAdmin()` helper for the access gate only (the three notification sites keep a shared recipient setting, not a predicate); close both anonymous audit paths for unlinked audits: add the missing access check to the PDF route, move the page, `create-tenant` and `leads` audit reads to `getWaasAdminClient()` with an explicit check, then drop the live `audits_anon_read_own` policy (verified live, see 4.3). Order matters: dropping the policy first breaks those three call sites. #291 is already merged. | no | D1, D3 |
 | 2 | CRM DB: one `handle_new_user()` (id = auth uid, no shared default account), repair existing rows, unique index on `lower(email)` for `public.users`, optional `find_user_id_by_email()` SQL function (security definer, service-role only) replacing the paged `listUsers` lookup in #291. Gated on 2.8 and 2.6: if the `auth.users` FK is live, the trigger insert currently fails and must be fixed first. Profile-id changes require the 2.12 FK map plus a dependent-row inventory and a coordinated remap (see rollback). | yes, QA first | phase 0, D2 |
 | 3 | WaaS DB: add `owner_user_id uuid NULL` to `tenants`, `audits`, `leads` plus indexes. One-off script (dry run by default, like `scripts/backfill-section-ids.ts`) that fills it by matching lowercase email to CRM `auth.users`. Take a snapshot of the three tables before the backfill. | yes, QA first | phase 2 |
 | 4 | Code: write `owner_user_id` on create (create-tenant, onboarding steps, lead capture); ownership checks use `owner_user_id` first and lowercase email as fallback; set `tenants.crm_account_id` when a tenant converts. | no | phase 3 |
@@ -197,7 +222,7 @@ Rollback: every DB phase takes a snapshot before it runs (phase 2: `public.users
 
 ## 6. Decisions needed from Tommy
 
-1. **D1.** An audit with no tenant is reachable today by two anonymous paths: the PDF route with no sign-in check, and the WaaS anon SELECT policy. Should an unlinked audit be (a) restricted to the requester email, (b) reachable only through an unguessable share link, or (c) left open? Whichever you pick, phase 1 must fix the PDF route and, subject to 3.5b, the WaaS policy together.
+1. **D1.** Verified (3.5b): the WaaS anon SELECT policy is live, so unlinked prospect audits, including requestor name, email, phone and company, are readable by anyone with the public anon key, and the PDF route also serves them with no sign-in. Who may read an unlinked audit? (a) only the requester, proved by a share token or a signed-in matching email (recommended), (b) anyone with the link only, with requestor columns hidden, or (c) leave open. Phase 1 must fix the PDF route and the policy together, and move the three anon-key call sites first (see 4.3 item 2).
 2. **D2.** New self-serve signups: one new account per user (recommended) or keep the shared `my-account`?
 3. **D3.** Source of truth for admins: env allowlist only, JWT claim only, or `users.role`? (Recommendation: JWT `app_metadata` claim, since WaaS RLS already depends on it, with the env allowlist as the bootstrap.)
 4. **D4.** Is the CRM project the one shared with the eBay product? If yes, trigger changes in phase 2 must be checked against that product first.
