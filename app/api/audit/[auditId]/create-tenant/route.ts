@@ -111,7 +111,16 @@ export async function POST(
     try {
       userExists = await authUserExistsByEmail(createAdminClient(), requestorEmail);
     } catch (err) {
-      console.error("[create-tenant] auth user lookup failed:", err);
+      // Thrown errors (for example a missing service-role key).
+      console.error("[create-tenant] auth user lookup threw:", err);
+    }
+    if (userExists === null) {
+      // The helper reports API failures as `null` instead of throwing, so
+      // log here too; otherwise the welcome email is skipped with no trace.
+      // No email in the log line (PII).
+      console.error(
+        "[create-tenant] auth user lookup inconclusive; skipping account_created email",
+      );
     }
 
     // ── Create new tenant ───────────────────────────────────────────────
