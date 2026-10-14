@@ -18,6 +18,8 @@ interface EmailCaptureFormProps {
   targetDomain: string;
   userEmail?: string;
   userName?: string;
+  /** Valid share token, appended to the PDF link so it opens without sign-in. */
+  shareToken?: string;
   onCaptured?: (email: string) => void;
 }
 
@@ -91,8 +93,12 @@ export function EmailCaptureForm({
   targetDomain,
   userEmail,
   userName,
+  shareToken,
   onCaptured,
 }: EmailCaptureFormProps) {
+  const pdfUrl = `/api/audit/${auditId}/pdf${
+    shareToken ? `?token=${encodeURIComponent(shareToken)}` : ""
+  }`;
   const phoneFieldId = useId();
   const { theme } = useOnboardingTheme();
   const isLight = theme === "light";
@@ -176,7 +182,7 @@ export function EmailCaptureForm({
       onCaptured?.(form.email);
 
       setTimeout(() => {
-        window.open(`/api/audit/${auditId}/pdf`, "_blank");
+        window.open(pdfUrl, "_blank");
       }, 800);
     } catch (err) {
       setStatus("error");
@@ -225,7 +231,7 @@ export function EmailCaptureForm({
           Your PDF report is being prepared. Check your downloads folder.
         </div>
         <a
-          href={`/api/audit/${auditId}/pdf`}
+          href={pdfUrl}
           target="_blank"
           rel="noopener noreferrer"
           style={{

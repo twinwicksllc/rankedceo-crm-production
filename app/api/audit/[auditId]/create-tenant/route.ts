@@ -10,6 +10,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { authUserExistsByEmail } from "@/lib/supabase/auth-user-lookup";
 import { getWaasAdminClient, createTenantRecord, updateTenantRecord } from "@/lib/waas/supabase";
 import { ensureClientReviewToken } from "@/lib/waas/actions/admin";
+import { signAuditToken } from "@/lib/waas/audit-share-token";
 import { sendTenantNotification, sendAuditReportReadyEmail } from "@/lib/waas/services/notifications";
 import type { WaasTenantInsert, WaasTenantUpdate } from "@/lib/waas/supabase";
 import type { WaasTenant } from "@/lib/waas/types";
@@ -206,8 +207,14 @@ export async function POST(
       process.env.NEXT_PUBLIC_APP_URL_PROD ??
       process.env.NEXT_PUBLIC_APP_URL ??
       "https://crm.rankedceo.com";
-    const fullReportUrl = `${baseUrl}${reportPath}`;
-    const fullPdfUrl = `${baseUrl}/api/audit/${auditId}/pdf`;
+    // Share token (decision D1=A): the emailed report/PDF links are capability
+    // URLs, so the recipient can open them without signing in.
+    const shareToken = signAuditToken(auditId);
+    const tokenQuery = shareToken
+      ? `?token=${encodeURIComponent(shareToken)}`
+      : "";
+    const fullReportUrl = `${baseUrl}${reportPath}${tokenQuery}`;
+    const fullPdfUrl = `${baseUrl}/api/audit/${auditId}/pdf${tokenQuery}`;
 
     const reportData = (auditRow.report_data as Record<string, unknown>) ?? {};
     const summary = (reportData.summary as Record<string, unknown>) ?? {};

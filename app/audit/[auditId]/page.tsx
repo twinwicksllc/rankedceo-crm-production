@@ -1,8 +1,12 @@
 // =============================================================================
 // /audit/[auditId] — Live Audit Report Dashboard
 // "Boardroom Ready" — Red vs Green theme, polling, full SEO report
-// Auth Required: platform admin, tenant owner, the report addressee, or an
-// anonymous prospect audit (reached via its unguessable id).
+//
+// Access (decision D1=A): platform admin, tenant owner, a valid share token
+// (`?token=`), or a signed-in user whose email matches the report addressee.
+// The share token is a capability link: it opens the report without sign-in,
+// which is how the prospect reaches the report right after running the audit
+// (before any email is captured).
 // =============================================================================
 
 import { notFound, redirect } from "next/navigation";
@@ -10,8 +14,8 @@ import type { Metadata } from "next";
 import { AuditReportClient } from "./client";
 import { getWaasAdminClient } from "@/lib/waas/supabase";
 import { createClient } from "@/lib/supabase/server";
-import { isPlatformAdmin } from "@/lib/auth/admin";
-import { canViewAudit } from "@/lib/waas/audit-access";
+import { authorizeAuditAccess } from "@/lib/waas/audit-access-server";
+import { verifyAuditToken } from "@/lib/waas/audit-share-token";
 import type { WaasAuditRow as WaasAudit } from "@/lib/waas/supabase";
 import { extractAuditIdFromRouteParam } from "@/lib/waas/utils/audit-report-url";
 
@@ -32,10 +36,12 @@ export const metadata: Metadata = {
 
 interface PageProps {
   params: Promise<{ auditId: string }>;
+  searchParams: Promise<{ token?: string }>;
 }
 
-export default async function AuditReportPage({ params }: PageProps) {
+export default async function AuditReportPage({ params, searchParams }: PageProps) {
   const { auditId: rawAuditParam } = await params;
+  const { token } = await searchParams;
   const auditId = extractAuditIdFromRouteParam(rawAuditParam);
 
   // Backward-compatible: accepts UUID only or slug-UUID path segment.
@@ -43,14 +49,17 @@ export default async function AuditReportPage({ params }: PageProps) {
     notFound();
   }
 
-  // Check authentication
   const authClient = await createClient();
   const {
     data: { user },
   } = await authClient.auth.getUser();
 
-  if (!user) {
-    redirect(`/audit/login?redirectTo=/audit/${auditId}`);
+  // A valid share token is a capability: it opens the report without sign-in.
+  const hasValidToken = verifyAuditToken(auditId, token);
+
+  if (!user && !hasValidToken) {
+    const redirectTo = `/audit/${auditId}${token ? `?token=${encodeURIComponent(token)}` : ""}`;
+    redirect(`/audit/login?redirectTo=${encodeURIComponent(redirectTo)}`);
   }
 
   // Fetch audit from Supabase. Use the service-role client: the anon role no
@@ -69,32 +78,25 @@ export default async function AuditReportPage({ params }: PageProps) {
 
   const audit = data as WaasAudit;
 
-  // Access control: platform admins, tenant owners, the report addressee, or an
-  // anonymous prospect audit reached via its unguessable id.
-  const isAdmin = await isPlatformAdmin(authClient, user);
+  // Access control: admin, tenant owner, valid token, or matching email.
+  const { allowed } = await authorizeAuditAccess({
+    auditId,
+    token,
+    user,
+    authClient,
+    audit,
+  });
 
-  let ownsTenant = false;
-  if (audit.tenant_id && user.email) {
-    // If the audit is linked to a tenant, verify the user is associated with it.
-    const { data: tenant } = await waasClient
-      .from("tenants")
-      .select("id")
-      .eq("id", audit.tenant_id)
-      .eq("submitted_by_email", user.email)
-      .maybeSingle();
-
-    ownsTenant = Boolean(tenant);
-  }
-
-  if (!canViewAudit(audit, user, { isAdmin, ownsTenant })) {
+  if (!allowed) {
     notFound();
   }
 
   return (
     <AuditReportClient
       audit={audit}
-      userEmail={user.email ?? undefined}
-      userName={user.user_metadata?.full_name ?? undefined}
+      userEmail={user?.email ?? undefined}
+      userName={user?.user_metadata?.full_name ?? undefined}
+      shareToken={hasValidToken ? (token ?? undefined) : undefined}
     />
   );
 }

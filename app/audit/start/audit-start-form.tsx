@@ -11,6 +11,7 @@ import {
 
 type AuditRunResponse = {
   audit_id?: string;
+  token?: string;
   error?: string;
 };
 
@@ -51,7 +52,11 @@ function AuditStartFormContent() {
       }
 
       if (data.audit_id) {
-        router.push(`/audit/${data.audit_id}`);
+        router.push(
+          `/audit/${data.audit_id}${
+            data.token ? `?token=${encodeURIComponent(data.token)}` : ""
+          }`,
+        );
         return;
       }
 

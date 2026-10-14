@@ -16,6 +16,7 @@ import {
 } from "@/lib/waas/supabase";
 import { SendGridService } from "@/lib/services/sendgrid-service";
 import { escapeHtml } from "@/lib/utils";
+import { signAuditToken } from "@/lib/waas/audit-share-token";
 import type { WaasAudit, WaasTenant } from "@/lib/waas/types";
 
 // ---------------------------------------------------------------------------
@@ -157,8 +158,14 @@ export async function POST(req: NextRequest) {
 
         if (sendgridKey) {
           const sg = new SendGridService(sendgridKey);
-          const reportUrl = `${req.nextUrl.origin}/audit/${audit_id}`;
-          const pdfUrl = `${req.nextUrl.origin}/api/audit/${audit_id}/pdf`;
+          // Share token (decision D1=A): the admin email links are capability
+          // URLs so they open even if the admin is not signed in.
+          const shareToken = signAuditToken(String(audit_id));
+          const tokenQuery = shareToken
+            ? `?token=${encodeURIComponent(shareToken)}`
+            : "";
+          const reportUrl = `${req.nextUrl.origin}/audit/${audit_id}${tokenQuery}`;
+          const pdfUrl = `${req.nextUrl.origin}/api/audit/${audit_id}/pdf${tokenQuery}`;
 
           await sg.sendEmail({
             to: adminEmail,

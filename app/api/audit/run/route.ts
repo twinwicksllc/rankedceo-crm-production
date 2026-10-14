@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse, after } from "next/server";
 import { createAuditRecord, updateAuditRecord } from "@/lib/waas/supabase";
+import { signAuditToken } from "@/lib/waas/audit-share-token";
 import type { WaasAuditInsert } from "@/lib/waas/supabase";
 import type { AuditSeoProvider } from "@/lib/waas/types";
 import { runAuditJob } from "@/lib/waas/services/audit-jobs";
@@ -85,6 +86,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           {
             audit_id: cachedId,
+            token: signAuditToken(cachedId),
             status: "completed",
             message: "Audit is ready",
             poll_url: `/api/waas/audits/${cachedId}/status`,
@@ -148,6 +150,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         audit_id: auditId,
+        token: signAuditToken(auditId),
         status: "pending",
         poll_url: `/api/waas/audits/${auditId}/status`,
       },

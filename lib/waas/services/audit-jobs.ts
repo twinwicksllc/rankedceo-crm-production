@@ -15,6 +15,7 @@ import { runFullAudit } from "./audit-engine";
 import { LocationUnresolvedError } from "./audit-engine/location";
 import { extractDomain } from "./serper";
 import { buildAuditReportPath } from "@/lib/waas/utils/audit-report-url";
+import { signAuditToken } from "@/lib/waas/audit-share-token";
 import { sendAuditReportReadyEmail } from "./notifications";
 import { getDisplayScore } from "./audit-engine/scoring";
 
@@ -199,8 +200,14 @@ export async function runAuditJob(
         process.env.NEXT_PUBLIC_APP_URL_PROD ??
         process.env.NEXT_PUBLIC_APP_URL ??
         "https://crm.rankedceo.com";
-      const fullReportUrl = `${baseUrl}${reportPath}`;
-      const fullPdfUrl = `${baseUrl}/api/audit/${auditId}/pdf`;
+      // Share token (decision D1=A): the emailed report/PDF links are capability
+      // URLs, so the recipient can open them without signing in.
+      const shareToken = signAuditToken(auditId);
+      const tokenQuery = shareToken
+        ? `?token=${encodeURIComponent(shareToken)}`
+        : "";
+      const fullReportUrl = `${baseUrl}${reportPath}${tokenQuery}`;
+      const fullPdfUrl = `${baseUrl}/api/audit/${auditId}/pdf${tokenQuery}`;
 
       const summary = engineResult.reportData.summary;
       const score = summary ? getDisplayScore(summary).score : 0;
