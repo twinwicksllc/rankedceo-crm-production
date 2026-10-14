@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { ensureCrmProfile } from "@/lib/supabase/ensure-crm-profile";
 import { DashboardNav } from "@/components/dashboard-nav";
 import { SidebarLogo } from "@/components/ui/sidebar-logo";
 import { LogOut } from "lucide-react";
@@ -16,6 +17,21 @@ export default async function DashboardLayout({
 
   if (!user) {
     redirect("/login");
+  }
+
+  // Make sure this login has a CRM profile and an owning account. New
+  // signups otherwise land in auth.users with no public.users row, and the
+  // dashboard then shows "Account Setup Required". Idempotent, never throws.
+  const profile = await ensureCrmProfile({
+    id: user.id,
+    email: user.email,
+    user_metadata: user.user_metadata,
+  });
+  if (!profile.ok) {
+    console.error(
+      "[Dashboard Layout] ensureCrmProfile failed:",
+      profile.reason,
+    );
   }
 
   return (
