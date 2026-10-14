@@ -6,7 +6,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createClient as createAuthClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { authUserExistsByEmail } from "@/lib/supabase/auth-user-lookup";
 import { createWaasClient, getWaasAdminClient, createTenantRecord, updateTenantRecord } from "@/lib/waas/supabase";
 import { ensureClientReviewToken } from "@/lib/waas/actions/admin";
 import { sendTenantNotification, sendAuditReportReadyEmail } from "@/lib/waas/services/notifications";
@@ -104,11 +105,23 @@ export async function POST(
     }
 
     // ── Check if auth user exists for requestor email ────────────────────
-    const authClient = await createAuthClient();
-    const { data: existingUser } = await authClient.auth.admin.listUsers();
-    const userExists = existingUser?.users.some(
-      (u) => u.email?.toLowerCase() === requestorEmail.toLowerCase(),
-    );
+    // listUsers() needs the service-role key; the anon/SSR client silently
+    // returns an empty list. `null` = lookup failed (unknown).
+    let userExists: boolean | null = null;
+    try {
+      userExists = await authUserExistsByEmail(createAdminClient(), requestorEmail);
+    } catch (err) {
+      // Thrown errors (for example a missing service-role key).
+      console.error("[create-tenant] auth user lookup threw:", err);
+    }
+    if (userExists === null) {
+      // The helper reports API failures as `null` instead of throwing, so
+      // log here too; otherwise the welcome email is skipped with no trace.
+      // No email in the log line (PII).
+      console.error(
+        "[create-tenant] auth user lookup inconclusive; skipping account_created email",
+      );
+    }
 
     // ── Create new tenant ───────────────────────────────────────────────
     const slug = `prospect-${auditId.slice(0, 8)}`;
@@ -239,7 +252,8 @@ export async function POST(
     );
 
     // If auth user doesn't exist, send them an invite/welcome email
-    if (!userExists) {
+    // Only when we KNOW the user is absent; on lookup failure (null) skip it.
+    if (userExists === false) {
       sendTenantNotification({
         type: "account_created",
         tenantId,
