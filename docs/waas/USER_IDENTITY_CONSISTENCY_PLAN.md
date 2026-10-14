@@ -2,7 +2,7 @@
 
 Status: DRAFT for Tommy's decision. Written 2026-10-14.
 Scope: documentation only. No code, no migrations, no DB access (DEC-0013 hold still applies).
-Basis: repository code and migrations only. Nothing here was checked against the live databases. Section 4 gives read-only SQL so Tommy can confirm the live state before any decision.
+Basis: repository code and migrations, plus read-only query results Tommy pasted on 2026-10-14 (section 4.3; there is no QA environment, so all of it is production). Claims marked "Verified" come from those results. Everything else is inferred from code and is not confirmed. Section 4 holds the read-only SQL still to be run.
 
 ## 1. Where an audit signup lives today (from code)
 
@@ -11,8 +11,8 @@ There are two separate Supabase projects: the CRM project (`NEXT_PUBLIC_SUPABASE
 | Thing | Where it lives | Evidence |
 |---|---|---|
 | Login (password, magic link, Google) for audit, CRM and admin | CRM project `auth.users` | `lib/supabase/audit-client.ts`, `lib/supabase/server.ts`, `middleware.ts` and `app/api/auth/callback/route.ts` all use the CRM URL and anon key |
-| App profile | CRM `public.users`, created by the `handle_new_user()` trigger on `auth.users` | final definition in `supabase/migrations/000007_correct_link_auth_users.sql` |
-| Tenant for a CRM user | CRM `public.accounts`. In 000007 the trigger uses a shared default account with slug `my-account` | same file, lines near 109 and 128 |
+| App profile | CRM `public.users`. **Live finding (2.6, 2.7):** the only trigger on `auth.users` is `on_auth_user_created`, and its live `handle_new_user()` is NOT the one in this repo's migrations. It creates `profiles`, `organizations` and `org_members` rows (the other product's tables) and never inserts into `public.users`. This repo has no code that inserts `public.users` rows either (grep), only one-off seed functions in 000018 and 000019 | live function body from query 2.6; `schema_investigation/SCHEMA_GAP_ANALYSIS.md` lines 28-31 say those tables belong to a separate project |
+| Tenant for a CRM user | CRM `public.accounts`, reached through `public.users.account_id`. Live accounts (2.5): `my-account` (1 user), `my-organization` (0), and four industry pools `hvac-pool`, `plumbing-pool`, `electrical-pool`, `smile-pool` (0 users each, from `20240222000000_create_industry_leads.sql` and `20240308000001_add_smile_to_industry_leads.sql`) | query 2.5 |
 | Anonymous audit requester | WaaS `audits.requestor_email` and `requestor_name`, plain text, no user id | `app/api/audit/run/route.ts` |
 | Captured lead | WaaS `leads` (email, audit_id, tenant_id) via the `capture_audit_lead()` RPC | `app/api/audit/leads/route.ts` |
 | Prospect tenant created from an audit | WaaS `tenants`, with `submitted_by_email` set from `requestor_email` | `app/api/audit/[auditId]/create-tenant/route.ts` |
@@ -32,9 +32,9 @@ Ownership check for an audit report. The page `app/audit/[auditId]/page.tsx` req
    - **PDF route.** `app/api/audit/[auditId]/pdf/route.ts` fetches the audit with a service-role client (line 171) and only calls `auth.getUser()` when `audit.tenant_id` is set (line 185). When `tenant_id` is null it serves the report with no sign-in check.
    - **WaaS row-level security.** `002_waas_audits.sql` (lines 171-176, repeated in `000_waas_complete_idempotent.sql` lines 438-441) has policy `audits_anon_read_own`: `FOR SELECT TO anon USING (audit_type = 'prospect' AND tenant_id IS NULL)`. Any anon caller can read any unlinked prospect audit row directly. Whether this policy is live must be verified (query 3.5).
    Needs a product decision (D1) and a technical fix, and both paths must be covered.
-4. **`users.id` linkage disagrees across migrations, and the mismatch can abort a signup.** 000001 (line 25) and 000005 (line 76) declare `users.id REFERENCES auth.users(id) ON DELETE CASCADE`. 000006 and 000007 insert `gen_random_uuid()` for the profile id (000007 line 153) and match by email. If the foreign key is still live, that insert violates it and the trigger fails, which aborts the new auth signup. So this is not only a mislink risk; it is a possible signup outage. `app/admin/layout.tsx` matches `public.users` by `id`; `lib/services/settings-service.ts` matches by `email`. Both cannot be right for the same row. Check the live constraint (2.8) together with the trigger body (2.6) before planning any repair.
-5. **Shared default account.** If 000007 is the live trigger, every new signup without an existing row is attached to the one `my-account` account. If so, new users share one tenant. Needs verification (query 2.5).
-6. **`handle_new_user()` is defined in 000001, 000003, 000005, 000006 and 000007.** The last one applied wins. Which one is live is unknown.
+4. **Verified: 10 of 11 logins have no CRM profile.** Query 2.2 returned 10 auth users with no `public.users` row, and 2.1 shows exactly 1 profile (its id matches its auth id). The app needs that row: `app/(dashboard)/dashboard/page.tsx` shows an error panel when it is missing, `app/api/onboarding/step/route.ts` looks the user up by `id` with `.single()` and fails, and `lib/services/settings-service.ts` matches by email. So a new signup (trade signup pages, magic link, Google) very likely lands in the CRM with no profile and no account. This follows from the live trigger body (2.6), the single trigger (2.7) and the absence of any inserting app code; I have not watched a signup run, and it should be confirmed with one throwaway signup. Whether the 10 are audit-only visitors who never needed a CRM profile is not known (query 2.13 lists them).
+5. **Verified: no foreign key from `public.users.id` to `auth.users`, and no shared-default-account problem today.** Query 2.8 returned only `users_pkey`, `users_account_id_fkey` and `UNIQUE (account_id, email)`. So the conflict between migrations 000001/000005 (FK) and 000006/000007 (random id) resolved in favour of no FK, and the signup-abort risk I raised earlier does not exist. Query 2.5 shows `my-account` has 1 user, so the shared default account is not collecting users. Ids match (2.1), there are no case-duplicate emails in auth (2.3) and no duplicate profile emails (2.11).
+6. **The CRM project is shared with the other product, and its live `handle_new_user()` belongs to that product.** The repo defines `handle_new_user()` in 000001, 000003, 000005, 000006 and 000007, but none of those is live. This answers D4: the production project hosts both products, so any trigger change on `auth.users` affects the other product's signup (org creation, invitations). This is inferred from the function body (2.6) and the repo's own schema gap analysis, not from a project listing.
 7. **Admin identity has three mechanisms:** env allowlist `WAAS_ADMIN_EMAILS` / `WAAS_ADMIN_EMAIL` (also read in `app/api/audit/leads/route.ts`, `lib/waas/services/audit-jobs.ts`, `lib/waas/actions/client-edit/approval.ts`, each with its own fallback; two of them hard-code a default address), JWT claim `app_metadata.role === "waas_admin"` or `app_metadata.waas_admin`, and `public.users.role in (admin, super_admin, owner)`. WaaS RLS uses only the JWT claim.
 8. **Existing-user check in `create-tenant` was broken** (anon client calling the admin API). Fixed in the separate draft PR #291.
 9. **Vestigial WaaS `accounts`/`users` and trigger.** Any signup that ever reached the WaaS project's auth would create rows nobody reads.
@@ -42,8 +42,8 @@ Ownership check for an audit report. The page `app/audit/[auditId]/page.tsx` req
 ## 3. Target model
 
 1. **One identity source: CRM project `auth.users`.** Every human who logs in (audit, CRM, admin) is a row there.
-2. **One profile table: CRM `public.users`, with `id = auth.users.id`.** Email is a lookup field, not the key.
-3. **One account per customer in CRM `public.accounts`.** No shared default account for self-serve signups (decision D2).
+2. **One profile table: CRM `public.users`, with `id = auth.users.id`** (already true for the 1 existing row, 2.1). Email is a lookup field, not the key.
+3. **One account per customer in CRM `public.accounts`**, created when a CRM profile is created. No shared default account (decision D2).
 4. **WaaS rows carry `owner_user_id uuid NULL`** (the CRM auth uid) on `tenants`, `audits` and `leads`, no foreign key (cross-project). Email stays as a lowercase fallback for anonymous and not-yet-signed-up requesters. `tenants.crm_account_id` is filled when the tenant becomes a paying customer.
 5. **One shared helper for email normalization** (`trim().toLowerCase()`) used by every writer and every comparison.
 6. **One admin authorization helper** (`isPlatformAdmin(user)`) used only where access is decided (`app/admin/layout.tsx` and any future gate); one documented source of truth for who is an admin (decision D3). This is separate from **notification recipients**: `app/api/audit/leads/route.ts`, `lib/waas/services/audit-jobs.ts` and `lib/waas/actions/client-edit/approval.ts` read `WAAS_ADMIN_EMAIL(S)` to choose where to send mail, usually with no authenticated admin in scope. Those keep a shared recipient setting (for example `NOTIFICATION_RECIPIENT_EMAIL`); they must not be replaced by an authorization predicate.
@@ -109,6 +109,17 @@ from pg_constraint where conrelid = 'public.users'::regclass;
 -- 2.9 Columns on public.users (is there a metadata column?)
 select column_name, data_type from information_schema.columns
 where table_schema = 'public' and table_name = 'users' order by ordinal_position;
+
+-- 2.13 The auth users that have no CRM profile (email domain only, no full addresses)
+select a.id, a.created_at, a.last_sign_in_at,
+       a.raw_app_meta_data ->> 'provider' as provider,
+       split_part(a.email, '@', 2) as email_domain,
+       a.raw_user_meta_data ->> 'industry' as signup_industry,
+       a.raw_user_meta_data ->> 'product' as signup_product
+from auth.users a
+left join public.users u on u.id = a.id
+where u.id is null
+order by a.created_at;
 
 -- 2.11 Profile-email duplicates that would block a unique index on lower(email).
 -- The existing index is non-unique (000005 line 101). Any rows returned here must
@@ -250,6 +261,15 @@ from auth.users order by created_at;
 3. **3.9: anon sees 2 tenants (both `active`), 0 tenant emails, 0 leads.** `leads` has no anon SELECT policy, so lead emails are not readable with the anon key. Tenant contact emails are not exposed (0 visible). The only verified PII exposure remains `audits` (3.7: 1 email, 1 phone among 32 rows).
 4. **Not concluded, needs a test:** the policy `anon_can_update_own_tenant_onboarding` is named "own" but its predicate is only `status IN ('onboarding', 'pending_review')`, with no ownership test. Whether an anon caller can actually update another onboarding tenant depends on how Postgres combines it with the SELECT policy (anon can only see `active` tenants). I have not tested this. It is listed as an open item for phase 1, not a finding.
 
+**Queries 2.1 to 2.9, 2.11, 2.12 and a repeat of 3.9, received 2026-10-14 (CRM project unless noted).**
+
+1. **2.1:** 1 profile, its id equals its auth id, no ambiguous or unmatched emails. **2.2:** 10 auth users have no profile (11 logins in total, from 3.1). **2.3:** no case-duplicate emails in `auth.users`. **2.4:** the 1 profile has role `admin`. **2.11:** no duplicate profile emails.
+2. **2.5:** `my-account` has 1 user, `my-organization` 0, and the four `*-pool` accounts 0 each. The pools come from the industry-leads migrations, not from signups.
+3. **2.6 and 2.7:** one trigger, `on_auth_user_created`, enabled. Its function is the other product's: it upserts `profiles`, reads `org_invitations`, creates `organizations` and `org_members`, and swallows its own errors with a warning. It does not touch `public.users` or `public.accounts`. This is the main finding of the round (inconsistencies 4 and 6).
+4. **2.8:** `public.users` has only its primary key, a foreign key to `accounts` and `UNIQUE (account_id, email)`. No foreign key to `auth.users`. **2.9:** no `metadata` column (000007's comment was right); extra columns `phone`, `title`, `crm_stripe_customer_id`.
+5. **2.12:** 21 foreign-key columns reference `public.users(id)`, all with ON UPDATE NO ACTION. Delete actions vary: SET NULL, NO ACTION, RESTRICT (`deals.owner_user_id`, `commission_events`, `commission_payouts`) and CASCADE (`deals.user_id`, `commission_rates`, `commissions`, `calendly_connections`). Practical consequence: never delete a profile row casually, because CASCADE columns remove deals, commissions and Calendly connections with it, and RESTRICT columns block the delete.
+6. **The "3.11" paste was actually the 3.9 output** (columns `anon_visible_tenants` to `lead_emails_visible`, same values 2, 0, 0, 0). 3.11 (list of the 2 WaaS auth users) is still not answered. Also, there is no QA environment, so that paste was presumably the WaaS project.
+
 **Open question: which project did the first results come from?** The 3.5b policy list (with the `waas_audit_type` enum) was run in the "full rankedceo-crm environment", and the 3.7 result was run in the WaaS project. If the `audits` table exists in both, either the WaaS migrations were also applied to the CRM project, or the two environments share one project. Section 1 of this plan assumes two separate projects (from the header of `lib/waas/supabase.ts`). Query 3.10 and the project refs (2.10) settle it. Until then, treat the "two projects" statements as unverified.
 
 ## 5. Phased plan
@@ -258,27 +278,28 @@ Each phase is its own branch and draft PR (DEC-0017). There is no QA environment
 
 | Phase | What | DB? | Depends on |
 |---|---|---|---|
-| 0 | Tommy runs section 4 and pastes results. I update this doc with the verified live shape. | read-only | none |
+| 0 | Tommy runs section 4 and pastes results. Done so far: 2.1 to 2.9, 2.11, 2.12, 3.1, 3.5b, 3.7 to 3.9. Still open: 2.13, 3.10, 3.11, 3.2 to 3.6. | read-only | none |
 | 1 | Code-only: `normalizeEmail()` helper used by all writers and by the ownership checks; `isPlatformAdmin()` helper for the access gate only (the three notification sites keep a shared recipient setting, not a predicate); close both anonymous audit paths for unlinked audits: add the missing access check to the PDF route, move the page, `create-tenant` and `leads` audit reads to `getWaasAdminClient()` with an explicit check, then drop the live `audits_anon_read_own` policy (verified live, see 4.3). Order matters: dropping the policy first breaks those three call sites. #291 is already merged. | no | D1, D3 |
-| 2 | CRM DB: one `handle_new_user()` (id = auth uid, no shared default account), repair existing rows, unique index on `lower(email)` for `public.users`, optional `find_user_id_by_email()` SQL function (security definer, service-role only) replacing the paged `listUsers` lookup in #291. Gated on 2.8 and 2.6: if the `auth.users` FK is live, the trigger insert currently fails and must be fixed first. Profile-id changes require the 2.12 FK map plus a dependent-row inventory and a coordinated remap (see rollback). | yes, production (snapshot first) | phase 0, D2 |
+| 2 | CRM profile creation. **Do not replace or edit the live `handle_new_user()`: it belongs to the other product.** Recommended: an app-side `ensureCrmProfile(user)` helper using the service-role client (`createAdminClient()`), called from the auth callback and from the dashboard and onboarding routes when the profile is missing. It creates the account and the `public.users` row with `id = auth.users.id`, is idempotent, and changes nothing in the shared database. Alternative: a second, separate trigger function on `auth.users` for the CRM tables, which needs the other product's owner to agree. Existing logins without a profile (10 today) get a one-off backfill, dry run first, only for the ones Tommy approves (D6). No profile-id remap is needed: the only profile already matches its auth id. | no DB change for the recommended option | phase 0, D2, D6 |
 | 3 | WaaS DB: add `owner_user_id uuid NULL` to `tenants`, `audits`, `leads` plus indexes. One-off script (dry run by default, like `scripts/backfill-section-ids.ts`) that fills it by matching lowercase email to CRM `auth.users`. Take a snapshot of the three tables before the backfill. | yes, production (snapshot first) | phase 2 |
 | 4 | Code: write `owner_user_id` on create (create-tenant, onboarding steps, lead capture); ownership checks use `owner_user_id` first and lowercase email as fallback; set `tenants.crm_account_id` when a tenant converts. | no | phase 3 |
 | 5 | WaaS DB: drop the vestigial `accounts`, `users` and trigger (only if 3.2 shows no data worth keeping and the 2 WaaS auth users found by 3.1 and 3.11 have been dealt with). Take a schema and data snapshot of both tables before the drop. | yes, production (snapshot first) | phase 0 |
 
-Rollback: every DB phase takes a snapshot before it runs (phase 2: `public.users` and `public.accounts`; phase 3: the three WaaS tables; phase 5: the two vestigial tables and the trigger). Reverse order matters once phase 4 has deployed: revert the phase 4 code first so nothing writes or reads `owner_user_id`, then reverse phase 3 (the column can stay, but stop trusting the values), then phase 5 (recreate the tables from the snapshot if anything still reads them). Phase 2 profile-id changes need the 2.12 FK map, a dependent-row count per referencing table, and a remap of every dependent in the same transaction, because the keys have no `ON UPDATE CASCADE`; recreating a profile row without remapping its dependents silently loses ownership. After any phase-4 rollback, reconcile `owner_user_id` against the CRM `auth.users` email match and log the rows that no longer resolve.
+Rollback: every DB phase takes a snapshot before it runs (phase 3: the three WaaS tables; phase 5: the two vestigial tables and the trigger). Reverse order once phase 4 has deployed: revert the phase 4 code first so nothing writes or reads `owner_user_id`, then reverse phase 3 (the column can stay, but stop trusting the values), then phase 5 (recreate the tables from the snapshot if anything still reads them). Phase 2 as recommended changes no database objects, so its rollback is reverting the code. The one-off profile backfill inserts rows with a recorded list of created ids, so it can be reversed by deleting exactly those rows. Query 2.12 shows what depends on `public.users(id)` (all with ON UPDATE NO ACTION), which only matters if a profile id is ever changed; today none needs to be. After any phase-4 rollback, reconcile `owner_user_id` against the CRM `auth.users` email match and log the rows that no longer resolve.
 
 ## 6. Decisions needed from Tommy
 
 1. **D1.** Verified (3.5b): the WaaS anon SELECT policy is live, so unlinked prospect audits, including requestor name, email, phone and company, are readable by anyone with the public anon key, and the PDF route also serves them with no sign-in. Who may read an unlinked audit? (a) only the requester, proved by a share token or a signed-in matching email (recommended), (b) anyone with the link only, with requestor columns hidden, or (c) leave open. Phase 1 must fix the PDF route and the policy together, and move the three anon-key call sites first (see 4.3 item 2).
-2. **D2.** New self-serve signups: one new account per user (recommended) or keep the shared `my-account`?
+2. **D2.** When a CRM profile is created for a user, create one new account per user (recommended) or attach everyone to `my-account`?
 3. **D3.** Source of truth for admins: env allowlist only, JWT claim only, or `users.role`? (Recommendation: JWT `app_metadata` claim, since WaaS RLS already depends on it, with the env allowlist as the bootstrap.)
-4. **D4.** Is the CRM project the one shared with the eBay product? If yes, trigger changes in phase 2 must be checked against that product first.
+4. **D4.** Answered by the evidence: the CRM production project is shared with the other product (live trigger body, 2.6). Remaining question for Tommy: who owns that product, and do they agree that this plan never edits `handle_new_user()` or the other product's tables?
 5. **D5.** Should anonymous audit requesters be auto-created as auth users, or stay as an email string until they sign in (current behaviour)?
+6. **D6.** Of the 10 logins with no CRM profile (list from 2.13), which should get one (real CRM users), and which stay audit-only?
 
 ## 7. Risks
 
 1. Cross-project `owner_user_id` is not enforced by the database. A deleted CRM user leaves a dangling uuid. Mitigation: never delete auth users, or add a periodic reconcile.
-2. Changing `handle_new_user()` affects every signup path at once, including the trade signups that pass `industry`, `product` and `company_name` metadata. There is no QA environment, so each trade signup (hvac, plumbing, electrical, smile) needs a test signup with a throwaway email right after the change, and the previous trigger body must be saved so it can be restored in one statement.
+2. Any change on `auth.users` (a trigger, for example) is shared with the other product's signup. That is why phase 2 avoids touching the live trigger. A new signup test per entry point (hvac, plumbing, electrical, smile, audit magic link, Google) with a throwaway email is needed after the phase 2 code ships, and the other product's signup should be tested too if a second trigger is ever chosen.
 3. Backfilling by email can attach rows to the wrong person if two people share a mailbox. Dry-run output is reviewed before the real run.
 4. Phase 1 and 4 change access checks. Add tests that import the real helpers (Copilot catalog rows 8 and 14).
-5. If the `auth.users` foreign key on `public.users.id` is live (check 2.8), the current `handle_new_user()` insert can abort new signups. Treat this as a possible live outage, not only a data-quality issue, and fix the trigger before any other phase-2 work.
+5. Resolved by 2.8: there is no `auth.users` foreign key on `public.users.id`, so the earlier concern that the trigger insert could abort signups does not apply. The live risk is the opposite: signups succeed but no CRM profile is created (inconsistency 4).
