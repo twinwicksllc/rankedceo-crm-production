@@ -1,14 +1,17 @@
 // =============================================================================
 // /audit/[auditId] — Live Audit Report Dashboard
 // "Boardroom Ready" — Red vs Green theme, polling, full SEO report
-// Auth Required: User must own the audit or be an admin
+// Auth Required: platform admin, tenant owner, the report addressee, or an
+// anonymous prospect audit (reached via its unguessable id).
 // =============================================================================
 
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { AuditReportClient } from "./client";
-import { createWaasClient } from "@/lib/waas/supabase";
+import { getWaasAdminClient } from "@/lib/waas/supabase";
 import { createClient } from "@/lib/supabase/server";
+import { isPlatformAdmin } from "@/lib/auth/admin";
+import { canViewAudit } from "@/lib/waas/audit-access";
 import type { WaasAuditRow as WaasAudit } from "@/lib/waas/supabase";
 import { extractAuditIdFromRouteParam } from "@/lib/waas/utils/audit-report-url";
 
@@ -50,8 +53,10 @@ export default async function AuditReportPage({ params }: PageProps) {
     redirect(`/audit/login?redirectTo=/audit/${auditId}`);
   }
 
-  // Fetch audit from Supabase (server-side for initial SSR)
-  const waasClient = createWaasClient();
+  // Fetch audit from Supabase. Use the service-role client: the anon role no
+  // longer has SELECT on audits (the audits_anon_read_own policy is dropped),
+  // so server reads must bypass RLS. Access is enforced below.
+  const waasClient = getWaasAdminClient();
   const { data, error } = await waasClient
     .from("audits")
     .select("*")
@@ -64,21 +69,25 @@ export default async function AuditReportPage({ params }: PageProps) {
 
   const audit = data as WaasAudit;
 
-  // Check ownership: user must own the audit or be an admin
-  // Audit is owned by the user who created it (tenant_id) or admins can access any audit
+  // Access control: platform admins, tenant owners, the report addressee, or an
+  // anonymous prospect audit reached via its unguessable id.
+  const isAdmin = await isPlatformAdmin(authClient, user);
+
+  let ownsTenant = false;
   if (audit.tenant_id && user.email) {
-    // If audit is linked to a tenant, verify the user is associated with that tenant
+    // If the audit is linked to a tenant, verify the user is associated with it.
     const { data: tenant } = await waasClient
       .from("tenants")
       .select("id")
       .eq("id", audit.tenant_id)
       .eq("submitted_by_email", user.email)
-      .single();
+      .maybeSingle();
 
-    if (!tenant) {
-      // User doesn't own this audit
-      notFound();
-    }
+    ownsTenant = Boolean(tenant);
+  }
+
+  if (!canViewAudit(audit, user, { isAdmin, ownsTenant })) {
+    notFound();
   }
 
   return (

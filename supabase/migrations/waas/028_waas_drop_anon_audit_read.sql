@@ -1,0 +1,30 @@
+-- =============================================================================
+-- 028_waas_drop_anon_audit_read
+--
+-- Drops the audits_anon_read_own SELECT policy.
+--
+-- That policy let ANY holder of the public anon key read every prospect audit:
+--   USING (audit_type = 'prospect' AND tenant_id IS NULL)
+-- The anon key ships in the client bundle, so this exposed requestor PII
+-- (name/email/phone/company) for all prospect audits. Verified in production:
+-- the anon role could read 32 audits, including 1 requestor_email and 1
+-- requestor_phone.
+--
+-- The application no longer reads audits with the anon key. Every server path
+-- now uses the service-role client and enforces access in app code:
+--   - app/audit/[auditId]/page.tsx                    (report page)
+--   - app/api/audit/leads/route.ts                    (lead capture)
+--   - app/api/audit/[auditId]/create-tenant/route.ts  (prospect -> tenant)
+--   - app/api/waas/audits/[id]/status/route.ts        (polling, already service-role)
+-- so the policy is vestigial.
+--
+-- RUN ONLY AFTER the fix/audit-anon-exposure deploy is live. Dropping it before
+-- the deploy would break the report page, lead capture and create-tenant, which
+-- still read audits with the anon key on the current production build.
+--
+-- Rollback (recreate the policy):
+--   CREATE POLICY "audits_anon_read_own" ON audits FOR SELECT TO anon
+--     USING (audit_type = 'prospect' AND tenant_id IS NULL)
+-- =============================================================================
+
+DROP POLICY IF EXISTS "audits_anon_read_own" ON audits;

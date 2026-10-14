@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { authUserExistsByEmail } from "@/lib/supabase/auth-user-lookup";
-import { createWaasClient, getWaasAdminClient, createTenantRecord, updateTenantRecord } from "@/lib/waas/supabase";
+import { getWaasAdminClient, createTenantRecord, updateTenantRecord } from "@/lib/waas/supabase";
 import { ensureClientReviewToken } from "@/lib/waas/actions/admin";
 import { sendTenantNotification, sendAuditReportReadyEmail } from "@/lib/waas/services/notifications";
 import type { WaasTenantInsert, WaasTenantUpdate } from "@/lib/waas/supabase";
@@ -34,11 +34,12 @@ export async function POST(
       );
     }
 
-    const supabase = createWaasClient();
+    // Service-role client: the anon role no longer has SELECT on audits (the
+    // audits_anon_read_own policy is dropped), so this read must bypass RLS.
     const adminClient = getWaasAdminClient();
 
     // ── Fetch audit record ──────────────────────────────────────────────────
-    const { data: audit, error: auditError } = await supabase
+    const { data: audit, error: auditError } = await adminClient
       .from("audits")
       .select("*")
       .eq("id", auditId)

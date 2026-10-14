@@ -3,6 +3,8 @@
 // Captures lead email from the audit report page before PDF download.
 // Public endpoint — saves to leads table via capture_audit_lead() RPC.
 // ALSO: Updates tenant's brand_config with captured contact info.
+// Reads/writes use the service-role client (the anon role has no SELECT/UPDATE
+// on audits/tenants).
 // =============================================================================
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -10,7 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   updateAuditRecord,
   captureAuditLead,
-  createWaasClient,
+  getWaasAdminClient,
 } from "@/lib/waas/supabase";
 import { SendGridService } from "@/lib/services/sendgrid-service";
 import type { WaasAudit, WaasTenant } from "@/lib/waas/types";
@@ -217,7 +219,10 @@ export async function POST(req: NextRequest) {
     // UPDATE TENANT'S BRAND_CONFIG WITH CAPTURED CONTACT INFO
     // ──────────────────────────────────────────────────────────────────────
     try {
-      const waasClient = createWaasClient();
+      // Service-role client: the anon role no longer has SELECT/UPDATE on
+      // audits/tenants (the audits_anon_read_own policy is dropped). This route
+      // stays publicly callable — it is the public lead-capture endpoint.
+      const waasClient = getWaasAdminClient();
 
       // Find tenant by audit
       const { data: audit } = (await waasClient
