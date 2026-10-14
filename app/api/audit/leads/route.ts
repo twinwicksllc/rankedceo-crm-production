@@ -15,6 +15,7 @@ import {
   getWaasAdminClient,
 } from "@/lib/waas/supabase";
 import { SendGridService } from "@/lib/services/sendgrid-service";
+import { escapeHtml } from "@/lib/utils";
 import type { WaasAudit, WaasTenant } from "@/lib/waas/types";
 
 // ---------------------------------------------------------------------------
@@ -163,7 +164,7 @@ export async function POST(req: NextRequest) {
             to: adminEmail,
             from: fromEmail,
             fromName: "RankedCEO Audit Tool",
-            subject: `🚀 Optimization Request: ${company || name || email}`,
+            subject: `🚀 Optimization Request: ${String(company || name || email).replace(/[\r\n]+/g, " ")}`,
             html: `
               <div style="font-family: sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
                 <div style="background: #0f172a; padding: 24px; text-align: center;">
@@ -177,23 +178,23 @@ export async function POST(req: NextRequest) {
                     <table style="width: 100%; border-collapse: collapse;">
                       <tr>
                         <td style="padding: 4px 0; color: #64748b; font-size: 14px; width: 100px;">Name:</td>
-                        <td style="padding: 4px 0; font-size: 14px; font-weight: 600;">${name || "—"}</td>
+                        <td style="padding: 4px 0; font-size: 14px; font-weight: 600;">${escapeHtml(name) || "—"}</td>
                       </tr>
                       <tr>
                         <td style="padding: 4px 0; color: #64748b; font-size: 14px;">Company:</td>
-                        <td style="padding: 4px 0; font-size: 14px; font-weight: 600;">${company || "—"}</td>
+                        <td style="padding: 4px 0; font-size: 14px; font-weight: 600;">${escapeHtml(company) || "—"}</td>
                       </tr>
                       <tr>
                         <td style="padding: 4px 0; color: #64748b; font-size: 14px;">Email:</td>
-                        <td style="padding: 4px 0; font-size: 14px; font-weight: 600;">${email}</td>
+                        <td style="padding: 4px 0; font-size: 14px; font-weight: 600;">${escapeHtml(email)}</td>
                       </tr>
                       <tr>
                         <td style="padding: 4px 0; color: #64748b; font-size: 14px;">Phone:</td>
-                        <td style="padding: 4px 0; font-size: 14px; font-weight: 600;">${normalizedPhone}</td>
+                        <td style="padding: 4px 0; font-size: 14px; font-weight: 600;">${escapeHtml(normalizedPhone)}</td>
                       </tr>
                       <tr>
                         <td style="padding: 4px 0; color: #64748b; font-size: 14px;">Target URL:</td>
-                        <td style="padding: 4px 0; font-size: 14px; font-weight: 600;">${target_url || "—"}</td>
+                        <td style="padding: 4px 0; font-size: 14px; font-weight: 600;">${escapeHtml(target_url) || "—"}</td>
                       </tr>
                     </table>
                   </div>
