@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   ensureCrmProfile,
   deriveAccountName,
+  deriveAccountSlug,
   type EnsureProfileClient,
 } from "./ensure-crm-profile";
 
@@ -122,6 +123,8 @@ test("creates an account and a profile when missing", async () => {
   });
   const accountInsert = calls.find((c) => c.startsWith("insert accounts"));
   assert.ok(accountInsert && accountInsert.includes("Acme"));
+  // accounts.slug is NOT NULL with no default: the insert must supply one.
+  assert.ok(accountInsert!.includes('"slug":"account-u2"'));
   const profileInsert = calls.find((c) => c.startsWith("insert users"));
   assert.ok(profileInsert);
   assert.ok(profileInsert!.includes('"id":"u2"'));
@@ -206,4 +209,12 @@ test("deriveAccountName prefers company_name, then email local part", () => {
     "tommy",
   );
   assert.equal(deriveAccountName({ id: "u" }), "My Account");
+});
+
+test("deriveAccountSlug is derived from the auth id, never the display name", () => {
+  const a = deriveAccountSlug({ id: "11111111-aaaa", user_metadata: { company_name: "Acme" } });
+  const b = deriveAccountSlug({ id: "22222222-bbbb", user_metadata: { company_name: "Acme" } });
+  assert.equal(a, "account-11111111-aaaa");
+  assert.notEqual(a, b); // same company name, different slug
+  assert.ok(a.trim().length > 0);
 });

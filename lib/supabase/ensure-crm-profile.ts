@@ -96,6 +96,18 @@ export function deriveAccountName(user: EnsureProfileUser): string {
 }
 
 /**
+ * A unique, non-empty slug for the new account. `accounts.slug` is NOT NULL
+ * with no default (migration 000005) and has a non-empty CHECK, so the insert
+ * must supply one. It is derived from the auth id, not the display name, so two
+ * users with the same company name can never collide. Uses the full id (not the
+ * 8-char prefix the backfill uses) so it stays unique even if a unique index
+ * exists on the live table.
+ */
+export function deriveAccountSlug(user: EnsureProfileUser): string {
+  return `account-${user.id}`.slice(0, 255);
+}
+
+/**
  * Make sure `public.users` has a row (and an owning `accounts` row) for this
  * auth user. Never throws: any failure is returned as `{ ok: false, reason }`
  * so a page render can continue.
@@ -156,7 +168,7 @@ export async function ensureCrmProfile(
   const accountName = deriveAccountName(user);
   const accountInsert = await db
     .from("accounts")
-    .insert({ name: accountName })
+    .insert({ name: accountName, slug: deriveAccountSlug(user) })
     .select("id")
     .maybeSingle();
 
