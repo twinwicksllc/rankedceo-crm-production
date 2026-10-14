@@ -51,7 +51,7 @@ Ownership check for an audit report. The page `app/audit/[auditId]/page.tsx` req
 
 Alternative considered: merge WaaS into the CRM project so real foreign keys work. Not recommended now: large migration, and the prod ref is shared with the eBay product (confirm which project, check 2.10). Revisit after the table-level cleanup.
 
-## 4. Verification SQL for Tommy (read-only, run on QA first)
+## 4. Verification SQL for Tommy (read-only)
 
 All statements are SELECT only. They return counts and structure, no password data. Run each in the Supabase SQL editor of the named project.
 
@@ -194,6 +194,30 @@ select grantee, privilege_type
 from information_schema.role_table_grants
 where table_schema = 'public' and table_name = 'audits' and grantee in ('anon', 'authenticated')
 order by 1, 2;
+
+-- 3.8 Is row-level security enabled, and what do anon/authenticated policies exist, per WaaS table?
+select c.relname as table_name,
+       c.relrowsecurity as rls_enabled,
+       c.relforcerowsecurity as rls_forced,
+       (select count(*) from pg_policies p where p.schemaname = 'public' and p.tablename = c.relname and 'anon' = any(p.roles)) as anon_policies
+from pg_class c join pg_namespace n on n.oid = c.relnamespace
+where n.nspname = 'public' and c.relkind = 'r' and c.relname in ('audits', 'tenants', 'leads')
+order by 1;
+
+-- 3.9 What can anon read from tenants and leads? (read-only, the transaction is rolled back)
+begin;
+set local role anon;
+select (select count(*) from public.tenants) as anon_visible_tenants,
+       (select count(submitted_by_email) from public.tenants) as tenant_emails_visible,
+       (select count(*) from public.leads) as anon_visible_leads,
+       (select count(email) from public.leads) as lead_emails_visible;
+rollback;
+
+-- 3.10 Run this in BOTH the CRM and the WaaS project and compare. Does each one hold the WaaS tables?
+select to_regclass('public.audits') as audits_table,
+       to_regclass('public.tenants') as tenants_table,
+       to_regclass('public.leads') as leads_table,
+       to_regclass('public.contacts') as crm_contacts_table;
 ```
 
 ### 4.3 Results received
@@ -202,21 +226,29 @@ order by 1, 2;
 
 1. **The anon read policy is live.** `audits` holds `requestor_name`, `requestor_email`, `requestor_phone` and `requestor_company` (`000_waas_complete_idempotent.sql`). `NEXT_PUBLIC_WAAS_SUPABASE_ANON_KEY` is public by design, so anyone holding it can call the WaaS REST API and read those columns for every unlinked prospect audit. No `REVOKE` on `audits` appears in the WaaS migrations, so column access is probably not restricted either. Query 3.7 below confirms this with `set role anon`. This is a PII exposure, not only an ownership gap.
 2. **The code depends on that policy.** `app/audit/[auditId]/page.tsx`, `app/api/audit/[auditId]/create-tenant/route.ts` and `app/api/audit/leads/route.ts` read `audits` through `createWaasClient()`, which uses the anon key. Dropping the policy without changing those three call sites breaks the audit page, tenant creation and lead capture for new audits.
-3. **There is no live `authenticated` read policy for tenant owners.** `002_waas_audits.sql` defines `audits_tenant_read_own`, but it is not in the live list. Combined with the anon-key client above, an audit that already has a `tenant_id` matches no anon policy, so those same three call sites likely cannot read it. If so, the ownership check in the page (`audit.tenant_id` branch) never runs for linked audits, and a repeat `create-tenant` call for an already-linked audit returns "Audit not found". This is inferred from the policy list and the code, not observed; test it on QA before relying on it.
+3. **There is no live `authenticated` read policy for tenant owners.** `002_waas_audits.sql` defines `audits_tenant_read_own`, but it is not in the live list. Combined with the anon-key client above, an audit that already has a `tenant_id` matches no anon policy, so those same three call sites likely cannot read it. If so, the ownership check in the page (`audit.tenant_id` branch) never runs for linked audits, and a repeat `create-tenant` call for an already-linked audit returns "Audit not found". This is inferred from the policy list and the code, not observed; confirm it with a read-only check (for example, load a linked audit page in a signed-in browser) before relying on it.
 4. **Fix shape (phase 1).** Move the three call sites and the page's audit read to server-side reads with `getWaasAdminClient()` plus an explicit access check (owner by `owner_user_id` or lowercase email, or a share token), then drop `audits_anon_read_own`. The status poll already has a narrow path: `get_audit_status()` returns only id, status, report data, dates and error, with no requestor columns.
+
+**Queries 3.7 and 3.7b (WaaS project), received 2026-10-14.**
+
+1. **3.7 confirms the exposure.** As the `anon` role, `public.audits` returns 32 rows, 1 with a requestor email and 1 with a requestor phone. Anyone holding the public anon key can read those today. Only one row carries contact data, so the live PII exposure is small, but it grows with every new unlinked prospect audit that has a requestor email.
+2. **3.7b shows default Supabase grants.** `anon` and `authenticated` both hold every table privilege on `audits` (SELECT, INSERT, UPDATE, DELETE, TRUNCATE, TRIGGER, REFERENCES). Table privileges only matter together with row-level security. The policy list in 3.5b has no `anon` UPDATE or DELETE policy, so those are denied only if RLS is enabled on `audits`. The doc does not yet know that: query 3.8 checks it. TRUNCATE is not exposed by the Supabase REST API, but it is a privilege `anon` should not hold.
+3. **Same pattern probably applies to `tenants` and `leads`.** Not checked. Query 3.8 and 3.9 cover them.
+
+**Open question: which project did the first results come from?** The 3.5b policy list (with the `waas_audit_type` enum) was run in the "full rankedceo-crm environment", and the 3.7 result was run in the WaaS project. If the `audits` table exists in both, either the WaaS migrations were also applied to the CRM project, or the two environments share one project. Section 1 of this plan assumes two separate projects (from the header of `lib/waas/supabase.ts`). Query 3.10 and the project refs (2.10) settle it. Until then, treat the "two projects" statements as unverified.
 
 ## 5. Phased plan
 
-Each phase is its own branch and draft PR (DEC-0017). Phases 2 to 4 touch the DB, so Tommy runs them on QA first and I write the SQL only after the section 4 results are in (DEC-0013).
+Each phase is its own branch and draft PR (DEC-0017). There is no QA environment (confirmed by Tommy 2026-10-14), so every DB phase runs against production. That changes the safety rules: each DB step is wrapped in a transaction where Postgres allows it, is preceded by a snapshot, ships with a written reverse script, and is run in a quiet window. Before phase 2, Tommy checks whether Supabase backups or point-in-time recovery are enabled for each project (not verified by me). I write the SQL only after the section 4 results are in (DEC-0013).
 
 | Phase | What | DB? | Depends on |
 |---|---|---|---|
 | 0 | Tommy runs section 4 and pastes results. I update this doc with the verified live shape. | read-only | none |
 | 1 | Code-only: `normalizeEmail()` helper used by all writers and by the ownership checks; `isPlatformAdmin()` helper for the access gate only (the three notification sites keep a shared recipient setting, not a predicate); close both anonymous audit paths for unlinked audits: add the missing access check to the PDF route, move the page, `create-tenant` and `leads` audit reads to `getWaasAdminClient()` with an explicit check, then drop the live `audits_anon_read_own` policy (verified live, see 4.3). Order matters: dropping the policy first breaks those three call sites. #291 is already merged. | no | D1, D3 |
-| 2 | CRM DB: one `handle_new_user()` (id = auth uid, no shared default account), repair existing rows, unique index on `lower(email)` for `public.users`, optional `find_user_id_by_email()` SQL function (security definer, service-role only) replacing the paged `listUsers` lookup in #291. Gated on 2.8 and 2.6: if the `auth.users` FK is live, the trigger insert currently fails and must be fixed first. Profile-id changes require the 2.12 FK map plus a dependent-row inventory and a coordinated remap (see rollback). | yes, QA first | phase 0, D2 |
-| 3 | WaaS DB: add `owner_user_id uuid NULL` to `tenants`, `audits`, `leads` plus indexes. One-off script (dry run by default, like `scripts/backfill-section-ids.ts`) that fills it by matching lowercase email to CRM `auth.users`. Take a snapshot of the three tables before the backfill. | yes, QA first | phase 2 |
+| 2 | CRM DB: one `handle_new_user()` (id = auth uid, no shared default account), repair existing rows, unique index on `lower(email)` for `public.users`, optional `find_user_id_by_email()` SQL function (security definer, service-role only) replacing the paged `listUsers` lookup in #291. Gated on 2.8 and 2.6: if the `auth.users` FK is live, the trigger insert currently fails and must be fixed first. Profile-id changes require the 2.12 FK map plus a dependent-row inventory and a coordinated remap (see rollback). | yes, production (snapshot first) | phase 0, D2 |
+| 3 | WaaS DB: add `owner_user_id uuid NULL` to `tenants`, `audits`, `leads` plus indexes. One-off script (dry run by default, like `scripts/backfill-section-ids.ts`) that fills it by matching lowercase email to CRM `auth.users`. Take a snapshot of the three tables before the backfill. | yes, production (snapshot first) | phase 2 |
 | 4 | Code: write `owner_user_id` on create (create-tenant, onboarding steps, lead capture); ownership checks use `owner_user_id` first and lowercase email as fallback; set `tenants.crm_account_id` when a tenant converts. | no | phase 3 |
-| 5 | WaaS DB: drop the vestigial `accounts`, `users` and trigger (only if 3.1 and 3.2 show no data worth keeping). Take a schema and data snapshot of both tables before the drop. | yes, QA first | phase 0 |
+| 5 | WaaS DB: drop the vestigial `accounts`, `users` and trigger (only if 3.1 and 3.2 show no data worth keeping). Take a schema and data snapshot of both tables before the drop. | yes, production (snapshot first) | phase 0 |
 
 Rollback: every DB phase takes a snapshot before it runs (phase 2: `public.users` and `public.accounts`; phase 3: the three WaaS tables; phase 5: the two vestigial tables and the trigger). Reverse order matters once phase 4 has deployed: revert the phase 4 code first so nothing writes or reads `owner_user_id`, then reverse phase 3 (the column can stay, but stop trusting the values), then phase 5 (recreate the tables from the snapshot if anything still reads them). Phase 2 profile-id changes need the 2.12 FK map, a dependent-row count per referencing table, and a remap of every dependent in the same transaction, because the keys have no `ON UPDATE CASCADE`; recreating a profile row without remapping its dependents silently loses ownership. After any phase-4 rollback, reconcile `owner_user_id` against the CRM `auth.users` email match and log the rows that no longer resolve.
 
@@ -231,7 +263,7 @@ Rollback: every DB phase takes a snapshot before it runs (phase 2: `public.users
 ## 7. Risks
 
 1. Cross-project `owner_user_id` is not enforced by the database. A deleted CRM user leaves a dangling uuid. Mitigation: never delete auth users, or add a periodic reconcile.
-2. Changing `handle_new_user()` affects every signup path at once, including the trade signups that pass `industry`, `product` and `company_name` metadata. The trade signups need a test signup per product on QA.
+2. Changing `handle_new_user()` affects every signup path at once, including the trade signups that pass `industry`, `product` and `company_name` metadata. There is no QA environment, so each trade signup (hvac, plumbing, electrical, smile) needs a test signup with a throwaway email right after the change, and the previous trigger body must be saved so it can be restored in one statement.
 3. Backfilling by email can attach rows to the wrong person if two people share a mailbox. Dry-run output is reviewed before the real run.
 4. Phase 1 and 4 change access checks. Add tests that import the real helpers (Copilot catalog rows 8 and 14).
 5. If the `auth.users` foreign key on `public.users.id` is live (check 2.8), the current `handle_new_user()` insert can abort new signups. Treat this as a possible live outage, not only a data-quality issue, and fix the trigger before any other phase-2 work.
