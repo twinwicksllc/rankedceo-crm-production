@@ -47,7 +47,7 @@ Ownership check for an audit report. The page `app/audit/[auditId]/page.tsx` req
 4. **WaaS rows carry `owner_user_id uuid NULL`** (the CRM auth uid) on `tenants`, `audits` and `leads`, no foreign key (cross-project). Email stays as a lowercase fallback for anonymous and not-yet-signed-up requesters. `tenants.crm_account_id` is filled when the tenant becomes a paying customer.
 5. **One shared helper for email normalization** (`trim().toLowerCase()`) used by every writer and every comparison.
 6. **One admin authorization helper** (`isPlatformAdmin(user)`) used only where access is decided (`app/admin/layout.tsx` and any future gate); one documented source of truth for who is an admin (decision D3). This is separate from **notification recipients**: `app/api/audit/leads/route.ts`, `lib/waas/services/audit-jobs.ts` and `lib/waas/actions/client-edit/approval.ts` read `WAAS_ADMIN_EMAIL(S)` to choose where to send mail, usually with no authenticated admin in scope. Those keep a shared recipient setting (for example `NOTIFICATION_RECIPIENT_EMAIL`); they must not be replaced by an authorization predicate.
-7. **The WaaS project's `auth.users` is not a login source.** Its vestigial `accounts`/`users` and trigger are removed after verification.
+7. **The WaaS project's `auth.users` should not be a login source.** Query 3.1 found 2 users there, so this is a target, not a current fact. Identify them with 3.11 first, then decide whether to move them into the CRM project or keep them as admin-only accounts. The vestigial `accounts`/`users` tables and trigger are removed only after that and after 3.2 shows they hold nothing worth keeping.
 
 Alternative considered: merge WaaS into the CRM project so real foreign keys work. Not recommended now: large migration, and the prod ref is shared with the eBay product (confirm which project, check 2.10). Revisit after the table-level cleanup.
 
@@ -218,6 +218,14 @@ select to_regclass('public.audits') as audits_table,
        to_regclass('public.tenants') as tenants_table,
        to_regclass('public.leads') as leads_table,
        to_regclass('public.contacts') as crm_contacts_table;
+
+-- 3.11 Who are the WaaS project's auth users? (run in the WaaS project, email domain only)
+select id, created_at, last_sign_in_at,
+       raw_app_meta_data ->> 'provider' as provider,
+       raw_app_meta_data ->> 'role' as app_role,
+       raw_app_meta_data ->> 'waas_admin' as waas_admin_flag,
+       split_part(email, '@', 2) as email_domain
+from auth.users order by created_at;
 ```
 
 ### 4.3 Results received
@@ -235,6 +243,13 @@ select to_regclass('public.audits') as audits_table,
 2. **3.7b shows default Supabase grants.** `anon` and `authenticated` both hold every table privilege on `audits` (SELECT, INSERT, UPDATE, DELETE, TRUNCATE, TRIGGER, REFERENCES). Table privileges only matter together with row-level security. The policy list in 3.5b has no `anon` UPDATE or DELETE policy, so those are denied only if RLS is enabled on `audits`. The doc does not yet know that: query 3.8 checks it. TRUNCATE is not exposed by the Supabase REST API, but it is a privilege `anon` should not hold.
 3. **Same pattern probably applies to `tenants` and `leads`.** Not checked. Query 3.8 and 3.9 cover them.
 
+**Queries 3.1, 3.8 and 3.9, received 2026-10-14.**
+
+1. **3.1 (`select count(*) from auth.users`): 11 in the CRM project, 2 in the WaaS project.** The platform is small: 11 CRM logins in total. That makes a manual or scripted identity repair realistic, and it makes snapshots cheap. It also contradicts an assumption in this plan: the WaaS project is not an empty login source, it has 2 auth users. Who they are is not known. One plausible reading is WaaS admin accounts, since the live `audits_admin_all` policy keys off a `waas_admin` JWT claim; that is a guess. Query 3.11 lists them (created, last sign-in, provider, email domain only).
+2. **3.8: row-level security is enabled on `audits`, `leads` and `tenants` (not forced).** The anon policy counts are audits 2, leads 1, tenants 3. These match the three migration definitions exactly: audits (`audits_anon_insert_prospect`, `audits_anon_read_own`), leads (`leads_anon_insert`), tenants (`tenants_public_read_active`, `anon_can_create_tenant`, `anon_can_update_own_tenant_onboarding`). So the broad table grants seen in 3.7b are filtered by RLS, and the live policy set looks like the migrated one. This narrows the risk to the one policy already identified.
+3. **3.9: anon sees 2 tenants (both `active`), 0 tenant emails, 0 leads.** `leads` has no anon SELECT policy, so lead emails are not readable with the anon key. Tenant contact emails are not exposed (0 visible). The only verified PII exposure remains `audits` (3.7: 1 email, 1 phone among 32 rows).
+4. **Not concluded, needs a test:** the policy `anon_can_update_own_tenant_onboarding` is named "own" but its predicate is only `status IN ('onboarding', 'pending_review')`, with no ownership test. Whether an anon caller can actually update another onboarding tenant depends on how Postgres combines it with the SELECT policy (anon can only see `active` tenants). I have not tested this. It is listed as an open item for phase 1, not a finding.
+
 **Open question: which project did the first results come from?** The 3.5b policy list (with the `waas_audit_type` enum) was run in the "full rankedceo-crm environment", and the 3.7 result was run in the WaaS project. If the `audits` table exists in both, either the WaaS migrations were also applied to the CRM project, or the two environments share one project. Section 1 of this plan assumes two separate projects (from the header of `lib/waas/supabase.ts`). Query 3.10 and the project refs (2.10) settle it. Until then, treat the "two projects" statements as unverified.
 
 ## 5. Phased plan
@@ -248,7 +263,7 @@ Each phase is its own branch and draft PR (DEC-0017). There is no QA environment
 | 2 | CRM DB: one `handle_new_user()` (id = auth uid, no shared default account), repair existing rows, unique index on `lower(email)` for `public.users`, optional `find_user_id_by_email()` SQL function (security definer, service-role only) replacing the paged `listUsers` lookup in #291. Gated on 2.8 and 2.6: if the `auth.users` FK is live, the trigger insert currently fails and must be fixed first. Profile-id changes require the 2.12 FK map plus a dependent-row inventory and a coordinated remap (see rollback). | yes, production (snapshot first) | phase 0, D2 |
 | 3 | WaaS DB: add `owner_user_id uuid NULL` to `tenants`, `audits`, `leads` plus indexes. One-off script (dry run by default, like `scripts/backfill-section-ids.ts`) that fills it by matching lowercase email to CRM `auth.users`. Take a snapshot of the three tables before the backfill. | yes, production (snapshot first) | phase 2 |
 | 4 | Code: write `owner_user_id` on create (create-tenant, onboarding steps, lead capture); ownership checks use `owner_user_id` first and lowercase email as fallback; set `tenants.crm_account_id` when a tenant converts. | no | phase 3 |
-| 5 | WaaS DB: drop the vestigial `accounts`, `users` and trigger (only if 3.1 and 3.2 show no data worth keeping). Take a schema and data snapshot of both tables before the drop. | yes, production (snapshot first) | phase 0 |
+| 5 | WaaS DB: drop the vestigial `accounts`, `users` and trigger (only if 3.2 shows no data worth keeping and the 2 WaaS auth users found by 3.1 and 3.11 have been dealt with). Take a schema and data snapshot of both tables before the drop. | yes, production (snapshot first) | phase 0 |
 
 Rollback: every DB phase takes a snapshot before it runs (phase 2: `public.users` and `public.accounts`; phase 3: the three WaaS tables; phase 5: the two vestigial tables and the trigger). Reverse order matters once phase 4 has deployed: revert the phase 4 code first so nothing writes or reads `owner_user_id`, then reverse phase 3 (the column can stay, but stop trusting the values), then phase 5 (recreate the tables from the snapshot if anything still reads them). Phase 2 profile-id changes need the 2.12 FK map, a dependent-row count per referencing table, and a remap of every dependent in the same transaction, because the keys have no `ON UPDATE CASCADE`; recreating a profile row without remapping its dependents silently loses ownership. After any phase-4 rollback, reconcile `owner_user_id` against the CRM `auth.users` email match and log the rows that no longer resolve.
 
