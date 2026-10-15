@@ -422,6 +422,10 @@ export interface AuditProviderMeta {
     national: number;
     unknown: number;
   };
+  on_page_pages_crawled?: number;
+  on_page_findings?: number;
+  on_page_score?: number | null;
+  on_page_sitemap_found?: boolean;
 }
 
 export interface AuditLocalPackPlace {
@@ -448,6 +452,44 @@ export interface AuditLocalPack {
   competitors: AuditLocalPackCompetitor[];
 }
 
+export interface AuditOnPageFinding {
+  id: string;
+  severity: AuditIssueSeverity;
+  title: string;
+  description: string;
+  url: string;
+  fix: string;
+  impact: AuditOpportunityImpact;
+}
+
+export interface AuditOnPagePage {
+  url: string;
+  title: string | null;
+  meta_description: string | null;
+  h1: string | null;
+  word_count: number;
+  canonical: string | null;
+  noindex: boolean;
+  schema_types: string[];
+  internal_link_count: number;
+  is_service_page: boolean;
+  is_location_page: boolean;
+}
+
+export interface AuditOnPage {
+  crawled_at: string;
+  homepage_url: string;
+  pages_crawled: number;
+  sitemap_found: boolean;
+  sitemap_url_count: number | null;
+  robots_txt_found: boolean;
+  robots_disallow_all: boolean;
+  /** 0-100 on-page score, or null when the homepage could not be crawled. */
+  score: number | null;
+  findings: AuditOnPageFinding[];
+  pages: AuditOnPagePage[];
+}
+
 export interface AuditReportData {
   summary?: AuditSummary;
   rankings?: AuditRanking[];
@@ -459,6 +501,7 @@ export interface AuditReportData {
   provider_meta?: AuditProviderMeta;
   keyword_performance?: AuditKeywordPerformance;
   local_pack?: AuditLocalPack | null;
+  on_page?: AuditOnPage | null;
   data_unavailable?: boolean;
   data_unavailable_reason?: string;
 }

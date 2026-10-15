@@ -15,6 +15,7 @@ const full: ScoreInputs = {
   visibility: 80,
   competitive: 70,
   localPack: 60,
+  onPage: 100,
   speed: 90,
   seo: 100,
   accessibility: 100,
@@ -50,7 +51,8 @@ test("v2: weights sum to 1 and score matches hand calculation", () => {
   const r = computeOverallScoreV2(full);
   const sum = r.components.reduce((s, c) => s + c.weight, 0);
   assert.ok(Math.abs(sum - 1) < 0.001);
-  // .35*80 + .15*70 + .10*60 + .15*90 + .15*100 + .05*100 + .05*100 = 28+10.5+6+13.5+15+5+5
+  // .35*80 + .15*70 + .10*60 + .10*100 + .15*90 + .05*100 + .05*100 + .05*100
+  // = 28 + 10.5 + 6 + 10 + 13.5 + 5 + 5 + 5
   assert.equal(r.score, 83);
   assert.equal(r.grade, "A");
   assert.equal(r.version, SCORE_VERSION);
@@ -97,6 +99,7 @@ test("v2: nothing measured gives 0 and no divide-by-zero", () => {
     visibility: null,
     competitive: null,
     localPack: null,
+    onPage: null,
     speed: null,
     seo: null,
     accessibility: null,
@@ -104,7 +107,7 @@ test("v2: nothing measured gives 0 and no divide-by-zero", () => {
   });
   assert.equal(r.score, 0);
   assert.equal(r.grade, "F");
-  assert.equal(r.notMeasured.length, 7);
+  assert.equal(r.notMeasured.length, 8);
 });
 
 test("v2: inputs are clamped to 0-100", () => {
@@ -149,7 +152,7 @@ test("getDisplayScore: v2 summary returns the stored breakdown", () => {
   });
   assert.equal(d.version, SCORE_VERSION);
   assert.equal(d.score, r.score);
-  assert.equal(d.components.length, 7);
+  assert.equal(d.components.length, 8);
 });
 
 test("getDisplayScore: v2 flag without components falls back to legacy", () => {
