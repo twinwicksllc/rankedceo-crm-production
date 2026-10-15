@@ -7,9 +7,12 @@
 
 import { NextRequest, NextResponse, after } from "next/server";
 import { createAuditRecord, updateAuditRecord } from "@/lib/waas/supabase";
+import { signAuditToken } from "@/lib/waas/audit-share-token";
 import type { WaasAuditInsert } from "@/lib/waas/supabase";
 import type { AuditSeoProvider } from "@/lib/waas/types";
 import { runAuditJob } from "@/lib/waas/services/audit-jobs";
+import { createClient } from "@/lib/supabase/server";
+import { authorizeAuditAccess } from "@/lib/waas/audit-access-server";
 
 const AUDIT_EXPIRY_DAYS = 30;
 
@@ -36,6 +39,7 @@ export async function POST(req: NextRequest) {
       requestor_company,
       audit_id,
       skip_cache,
+      token,
     } = body;
 
     // ── Validate inputs ────────────────────────────────────────────────────
@@ -79,15 +83,23 @@ export async function POST(req: NextRequest) {
         normalizedTarget,
         normalizedCompetitors,
         location ? String(location) : null,
+        requestor_email ? String(requestor_email) : null,
       );
       if (cachedId) {
         console.log(`[WaaS] Returning cached audit ${cachedId} for ${normalizedTarget}`);
+        const cachedToken = signAuditToken(cachedId);
+        // The status route is access-controlled, so the poll URL must carry the
+        // same capability token or the client's polling would 403.
+        const cachedPollUrl = `/api/waas/audits/${cachedId}/status${
+          cachedToken ? `?token=${encodeURIComponent(cachedToken)}` : ""
+        }`;
         return NextResponse.json(
           {
             audit_id: cachedId,
+            token: cachedToken,
             status: "completed",
             message: "Audit is ready",
-            poll_url: `/api/waas/audits/${cachedId}/status`,
+            poll_url: cachedPollUrl,
           },
           { status: 200 }
         );
@@ -98,6 +110,27 @@ export async function POST(req: NextRequest) {
     let auditId: string | null = audit_id ? String(audit_id) : null;
 
     if (auditId) {
+      // Re-running an existing audit is a mutation and the response carries a
+      // share token, so the caller must be allowed to read this audit first
+      // (valid share token, matching signed-in email, tenant owner, or admin).
+      // Without this, anyone could reset and re-sign an arbitrary audit id.
+      const authClient = await createClient();
+      const {
+        data: { user },
+      } = await authClient.auth.getUser();
+      const access = await authorizeAuditAccess({
+        auditId,
+        token: token ? String(token) : null,
+        user,
+        authClient,
+      });
+      if (!access.audit) {
+        return NextResponse.json({ error: "Audit not found" }, { status: 404 });
+      }
+      if (!access.allowed) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      }
+
       await updateAuditRecord(auditId, {
         status: "pending",
         started_at: new Date().toISOString(),
@@ -145,11 +178,19 @@ export async function POST(req: NextRequest) {
       }),
     );
 
+    const newToken = signAuditToken(auditId);
+    // The status route is access-controlled, so the poll URL must carry the
+    // same capability token or the client's polling would 403.
+    const pollUrl = `/api/waas/audits/${auditId}/status${
+      newToken ? `?token=${encodeURIComponent(newToken)}` : ""
+    }`;
+
     return NextResponse.json(
       {
         audit_id: auditId,
+        token: newToken,
         status: "pending",
-        poll_url: `/api/waas/audits/${auditId}/status`,
+        poll_url: pollUrl,
       },
       { status: 202 },
     );

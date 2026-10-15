@@ -8,8 +8,12 @@ import { NextRequest, NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { authUserExistsByEmail } from "@/lib/supabase/auth-user-lookup";
-import { createWaasClient, getWaasAdminClient, createTenantRecord, updateTenantRecord } from "@/lib/waas/supabase";
+import { getWaasAdminClient, createTenantRecord, updateTenantRecord } from "@/lib/waas/supabase";
 import { ensureClientReviewToken } from "@/lib/waas/actions/admin";
+import { signAuditToken } from "@/lib/waas/audit-share-token";
+import { createClient } from "@/lib/supabase/server";
+import { authorizeAuditAccess } from "@/lib/waas/audit-access-server";
+import type { AuditAccessRecord } from "@/lib/waas/audit-access";
 import { sendTenantNotification, sendAuditReportReadyEmail } from "@/lib/waas/services/notifications";
 import type { WaasTenantInsert, WaasTenantUpdate } from "@/lib/waas/supabase";
 import type { WaasTenant } from "@/lib/waas/types";
@@ -34,11 +38,12 @@ export async function POST(
       );
     }
 
-    const supabase = createWaasClient();
+    // Service-role client: the anon role no longer has SELECT on audits (the
+    // audits_anon_read_own policy is dropped), so this read must bypass RLS.
     const adminClient = getWaasAdminClient();
 
     // ── Fetch audit record ──────────────────────────────────────────────────
-    const { data: audit, error: auditError } = await supabase
+    const { data: audit, error: auditError } = await adminClient
       .from("audits")
       .select("*")
       .eq("id", auditId)
@@ -49,6 +54,27 @@ export async function POST(
         { error: "Audit not found" },
         { status: 404 },
       );
+    }
+
+    // Authorization: creating a tenant from an audit — or handing back the
+    // existing tenant's review token — must be limited to someone allowed to
+    // read the audit (valid share token, matching signed-in email, tenant
+    // owner, or admin). Otherwise anyone with an audit id could convert it or
+    // fetch its review token.
+    const token = req.nextUrl.searchParams.get("token");
+    const authClient = await createClient();
+    const {
+      data: { user },
+    } = await authClient.auth.getUser();
+    const { allowed } = await authorizeAuditAccess({
+      auditId,
+      token,
+      user,
+      authClient,
+      audit: audit as unknown as AuditAccessRecord,
+    });
+    if (!allowed) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const auditRow = audit as Record<string, unknown>;
@@ -205,8 +231,14 @@ export async function POST(
       process.env.NEXT_PUBLIC_APP_URL_PROD ??
       process.env.NEXT_PUBLIC_APP_URL ??
       "https://crm.rankedceo.com";
-    const fullReportUrl = `${baseUrl}${reportPath}`;
-    const fullPdfUrl = `${baseUrl}/api/audit/${auditId}/pdf`;
+    // Share token (decision D1=A): the emailed report/PDF links are capability
+    // URLs, so the recipient can open them without signing in.
+    const shareToken = signAuditToken(auditId);
+    const tokenQuery = shareToken
+      ? `?token=${encodeURIComponent(shareToken)}`
+      : "";
+    const fullReportUrl = `${baseUrl}${reportPath}${tokenQuery}`;
+    const fullPdfUrl = `${baseUrl}/api/audit/${auditId}/pdf${tokenQuery}`;
 
     const reportData = (auditRow.report_data as Record<string, unknown>) ?? {};
     const summary = (reportData.summary as Record<string, unknown>) ?? {};

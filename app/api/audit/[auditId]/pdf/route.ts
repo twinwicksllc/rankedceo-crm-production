@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import PDFDocument from "pdfkit";
 import { getWaasAdminClient } from "@/lib/waas/supabase";
 import { createClient } from "@/lib/supabase/server";
+import { authorizeAuditAccess } from "@/lib/waas/audit-access-server";
+import { signAuditToken } from "@/lib/waas/audit-share-token";
 import type {
   AuditLocalPack,
   AuditOpportunity,
@@ -164,9 +166,10 @@ function kvRow(
 // GET /api/audit/[auditId]/pdf
 // ---------------------------------------------------------------------------
 
-export async function GET(_req: NextRequest, context: RequestContext) {
+export async function GET(req: NextRequest, context: RequestContext) {
   try {
     const { auditId } = await context.params;
+    const token = req.nextUrl.searchParams.get("token");
 
     // Fetch audit — use service-role client so RLS does not block server-side reads
     const waasAdmin = getWaasAdminClient();
@@ -181,27 +184,24 @@ export async function GET(_req: NextRequest, context: RequestContext) {
       return NextResponse.json({ error: "Audit not found" }, { status: 404 });
     }
 
-    // Ownership check — if tied to a tenant, verify user owns it
-    if (audit.tenant_id) {
-      const authClient = await createClient();
-      const {
-        data: { user },
-      } = await authClient.auth.getUser();
+    // Access control (decision D1=A): a valid share token, a platform admin, a
+    // tenant owner, or the signed-in report addressee. The PDF is no longer
+    // public — the emailed link and the in-report download carry `?token=`.
+    const authClient = await createClient();
+    const {
+      data: { user },
+    } = await authClient.auth.getUser();
 
-      if (!user?.email) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
+    const { allowed } = await authorizeAuditAccess({
+      auditId,
+      token,
+      user,
+      authClient,
+      audit,
+    });
 
-      const { data: tenant } = await waasAdmin
-        .from("tenants")
-        .select("id")
-        .eq("id", audit.tenant_id)
-        .eq("submitted_by_email", user.email)
-        .single();
-
-      if (!tenant) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-      }
+    if (!allowed) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const report = audit.report_data as ExtendedReportData | null;
@@ -246,7 +246,10 @@ export async function GET(_req: NextRequest, context: RequestContext) {
       process.env.NEXT_PUBLIC_APP_URL_PROD ??
       process.env.NEXT_PUBLIC_APP_URL ??
       "https://crm.rankedceo.com";
-    const reportUrl = `${baseUrl}/audit/${auditId}`;
+    const shareToken = signAuditToken(auditId);
+    const reportUrl = `${baseUrl}/audit/${auditId}${
+      shareToken ? `?token=${encodeURIComponent(shareToken)}` : ""
+    }`;
     const shortId = auditId.slice(0, 8).toUpperCase();
 
     // ==========================================================================

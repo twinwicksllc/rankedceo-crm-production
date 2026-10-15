@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import { AdvantagePointHeader } from "@/components/advantagepoint/header";
 import { AdvantagePointFooter } from "@/components/advantagepoint/footer";
 import { createClient } from "@/lib/supabase/server";
+import { isPlatformAdmin } from "@/lib/auth/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -16,68 +17,6 @@ export const metadata: Metadata = {
   description: "RankedCEO Admin Dashboard",
   robots: "noindex, nofollow",
 };
-
-function parseAdminAllowlist(): string[] {
-  const raw =
-    process.env.WAAS_ADMIN_EMAILS ?? process.env.WAAS_ADMIN_EMAIL ?? "";
-  return raw
-    .split(",")
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
-}
-
-type SessionType = Awaited<
-  ReturnType<Awaited<ReturnType<typeof createClient>>["auth"]["getSession"]>
->["data"]["session"];
-
-async function isAdminSession(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  session: SessionType,
-): Promise<boolean> {
-  const user = session?.user;
-  if (!user) return false;
-
-  const email = user.email?.toLowerCase() ?? "";
-  const allowlist = parseAdminAllowlist();
-
-  const hasAllowlistedEmail = allowlist.length > 0 && allowlist.includes(email);
-  const hasAdminRoleFlag =
-    user.app_metadata?.role === "waas_admin" ||
-    user.app_metadata?.waas_admin === true ||
-    user.app_metadata?.waas_admin === "true";
-
-  // DEBUG: Log admin auth checks
-  console.log("[Admin Auth Debug]", {
-    email,
-    allowlist,
-    hasAllowlistedEmail,
-    hasAdminRoleFlag,
-    appMetadata: user.app_metadata,
-  });
-
-  if (hasAllowlistedEmail || hasAdminRoleFlag) {
-    console.log("[Admin Auth Success] Email or flag matched");
-    return true;
-  }
-
-  const { data: dbUser } = await supabase
-    .from("users")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const dbRole =
-    typeof dbUser?.role === "string" ? dbUser.role.toLowerCase() : "";
-  const allowedDbRoles = new Set(["admin", "super_admin", "owner"]);
-  const hasDbAdminRole = allowedDbRoles.has(dbRole);
-
-  console.log("[Admin Auth DB Check]", {
-    dbRole,
-    hasDbAdminRole,
-  });
-
-  return hasDbAdminRole;
-}
 
 export default async function AdminLayout({
   children,
@@ -94,15 +33,7 @@ export default async function AdminLayout({
     redirect("/login?next=/admin/dashboard&adminOnly=1");
   }
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session) {
-    redirect("/login?next=/admin/dashboard&adminOnly=1");
-  }
-
-  const hasAdminAccess = await isAdminSession(supabase, session);
+  const hasAdminAccess = await isPlatformAdmin(supabase, user);
   if (!hasAdminAccess) {
     redirect(
       "/login?error=Admin%20access%20required&next=/admin/dashboard&adminOnly=1",

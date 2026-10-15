@@ -203,12 +203,15 @@ interface AuditReportClientProps {
   audit: WaasAudit;
   userEmail?: string;
   userName?: string;
+  /** Valid share token, when the report was opened via a capability link. */
+  shareToken?: string;
 }
 
 function AuditReportClientContent({
   audit: initialAudit,
   userEmail,
   userName,
+  shareToken,
 }: AuditReportClientProps) {
   const [audit, setAudit] = useState<WaasAudit>(initialAudit);
   const [attempts, setAttempts] = useState(0);
@@ -245,7 +248,10 @@ function AuditReportClientContent({
   // ── Polling ──────────────────────────────────────────────────────────────
   const poll = useCallback(async () => {
     try {
-      const res = await fetch(`/api/waas/audits/${audit.id}/status`);
+      const statusUrl = `/api/waas/audits/${audit.id}/status${
+        shareToken ? `?token=${encodeURIComponent(shareToken)}` : ""
+      }`;
+      const res = await fetch(statusUrl);
       if (!res.ok) return;
       const data = await res.json();
       if (data.status) {
@@ -254,7 +260,7 @@ function AuditReportClientContent({
     } catch {
       // silently retry
     }
-  }, [audit.id]);
+  }, [audit.id, shareToken]);
 
   useEffect(() => {
     if (!isRunning) return;
@@ -385,7 +391,12 @@ function AuditReportClientContent({
       targetDomain={targetDomain}
     >
       <div data-testid="audit-complete">
-        <FullReport audit={audit} userEmail={userEmail} userName={userName} />
+        <FullReport
+          audit={audit}
+          userEmail={userEmail}
+          userName={userName}
+          shareToken={shareToken}
+        />
       </div>
     </PageShell>
   );
@@ -395,6 +406,7 @@ export function AuditReportClient({
   audit,
   userEmail,
   userName,
+  shareToken,
 }: AuditReportClientProps) {
   return (
     <OnboardingThemeProvider>
@@ -402,6 +414,7 @@ export function AuditReportClient({
         audit={audit}
         userEmail={userEmail}
         userName={userName}
+        shareToken={shareToken}
       />
     </OnboardingThemeProvider>
   );
@@ -415,10 +428,12 @@ function FullReport({
   audit,
   userEmail,
   userName,
+  shareToken,
 }: {
   audit: WaasAudit;
   userEmail?: string;
   userName?: string;
+  shareToken?: string;
 }) {
   const { theme } = useOnboardingTheme();
   const isLight = theme === "light";
@@ -651,6 +666,7 @@ function FullReport({
           targetDomain={targetDomain}
           userEmail={userEmail}
           userName={userName}
+          shareToken={shareToken}
         />
       </div>
 
@@ -713,6 +729,7 @@ function HeroSection({
 
       const data = (await response.json()) as {
         audit_id?: string;
+        token?: string;
         error?: string;
       };
 
@@ -723,7 +740,11 @@ function HeroSection({
       }
 
       if (data.audit_id) {
-        router.push(`/audit/${data.audit_id}`);
+        router.push(
+          `/audit/${data.audit_id}${
+            data.token ? `?token=${encodeURIComponent(data.token)}` : ""
+          }`,
+        );
       }
     } catch (err) {
       console.error("Force refresh error:", err);

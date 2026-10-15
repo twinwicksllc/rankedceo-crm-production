@@ -5,6 +5,19 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Escape a value for safe interpolation into HTML (for example an email body).
+ * Escapes &, <, >, " and ' so user input cannot inject markup or attributes.
+ */
+export function escapeHtml(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export function getRecaptchaSiteKey(): string {
   // Get the site key from environment variable
   const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";

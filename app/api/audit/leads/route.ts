@@ -3,6 +3,8 @@
 // Captures lead email from the audit report page before PDF download.
 // Public endpoint — saves to leads table via capture_audit_lead() RPC.
 // ALSO: Updates tenant's brand_config with captured contact info.
+// Reads/writes use the service-role client (the anon role has no SELECT/UPDATE
+// on audits/tenants).
 // =============================================================================
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -10,9 +12,11 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   updateAuditRecord,
   captureAuditLead,
-  createWaasClient,
+  getWaasAdminClient,
 } from "@/lib/waas/supabase";
 import { SendGridService } from "@/lib/services/sendgrid-service";
+import { escapeHtml } from "@/lib/utils";
+import { signAuditToken, verifyAuditToken } from "@/lib/waas/audit-share-token";
 import type { WaasAudit, WaasTenant } from "@/lib/waas/types";
 
 // ---------------------------------------------------------------------------
@@ -69,6 +73,7 @@ export async function POST(req: NextRequest) {
       utm_campaign,
       referrer_url,
       optimization_requested,
+      token,
     } = body;
 
     // Validate required fields
@@ -154,14 +159,20 @@ export async function POST(req: NextRequest) {
 
         if (sendgridKey) {
           const sg = new SendGridService(sendgridKey);
-          const reportUrl = `${req.nextUrl.origin}/audit/${audit_id}`;
-          const pdfUrl = `${req.nextUrl.origin}/api/audit/${audit_id}/pdf`;
+          // Share token (decision D1=A): the admin email links are capability
+          // URLs so they open even if the admin is not signed in.
+          const shareToken = signAuditToken(String(audit_id));
+          const tokenQuery = shareToken
+            ? `?token=${encodeURIComponent(shareToken)}`
+            : "";
+          const reportUrl = `${req.nextUrl.origin}/audit/${audit_id}${tokenQuery}`;
+          const pdfUrl = `${req.nextUrl.origin}/api/audit/${audit_id}/pdf${tokenQuery}`;
 
           await sg.sendEmail({
             to: adminEmail,
             from: fromEmail,
             fromName: "RankedCEO Audit Tool",
-            subject: `🚀 Optimization Request: ${company || name || email}`,
+            subject: `🚀 Optimization Request: ${String(company || name || email).replace(/[\r\n]+/g, " ")}`,
             html: `
               <div style="font-family: sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
                 <div style="background: #0f172a; padding: 24px; text-align: center;">
@@ -175,23 +186,23 @@ export async function POST(req: NextRequest) {
                     <table style="width: 100%; border-collapse: collapse;">
                       <tr>
                         <td style="padding: 4px 0; color: #64748b; font-size: 14px; width: 100px;">Name:</td>
-                        <td style="padding: 4px 0; font-size: 14px; font-weight: 600;">${name || "—"}</td>
+                        <td style="padding: 4px 0; font-size: 14px; font-weight: 600;">${escapeHtml(name) || "—"}</td>
                       </tr>
                       <tr>
                         <td style="padding: 4px 0; color: #64748b; font-size: 14px;">Company:</td>
-                        <td style="padding: 4px 0; font-size: 14px; font-weight: 600;">${company || "—"}</td>
+                        <td style="padding: 4px 0; font-size: 14px; font-weight: 600;">${escapeHtml(company) || "—"}</td>
                       </tr>
                       <tr>
                         <td style="padding: 4px 0; color: #64748b; font-size: 14px;">Email:</td>
-                        <td style="padding: 4px 0; font-size: 14px; font-weight: 600;">${email}</td>
+                        <td style="padding: 4px 0; font-size: 14px; font-weight: 600;">${escapeHtml(email)}</td>
                       </tr>
                       <tr>
                         <td style="padding: 4px 0; color: #64748b; font-size: 14px;">Phone:</td>
-                        <td style="padding: 4px 0; font-size: 14px; font-weight: 600;">${normalizedPhone}</td>
+                        <td style="padding: 4px 0; font-size: 14px; font-weight: 600;">${escapeHtml(normalizedPhone)}</td>
                       </tr>
                       <tr>
                         <td style="padding: 4px 0; color: #64748b; font-size: 14px;">Target URL:</td>
-                        <td style="padding: 4px 0; font-size: 14px; font-weight: 600;">${target_url || "—"}</td>
+                        <td style="padding: 4px 0; font-size: 14px; font-weight: 600;">${escapeHtml(target_url) || "—"}</td>
                       </tr>
                     </table>
                   </div>
@@ -217,17 +228,31 @@ export async function POST(req: NextRequest) {
     // UPDATE TENANT'S BRAND_CONFIG WITH CAPTURED CONTACT INFO
     // ──────────────────────────────────────────────────────────────────────
     try {
-      const waasClient = createWaasClient();
+      // Service-role client: the anon role no longer has SELECT/UPDATE on
+      // audits/tenants (the audits_anon_read_own policy is dropped). This route
+      // stays publicly callable — it is the public lead-capture endpoint.
+      const waasClient = getWaasAdminClient();
 
       // Find tenant by audit
       const { data: audit } = (await waasClient
         .from("audits")
-        .select("tenant_id, id")
+        .select("tenant_id, id, requestor_email")
         .eq("id", String(audit_id))
         .single()) as {
-        data: Pick<WaasAudit, "tenant_id" | "id"> | null;
+        data: Pick<WaasAudit, "tenant_id" | "id" | "requestor_email"> | null;
         error: unknown;
       };
+
+      // Overwriting the tenant's brand_config.contact and PDF counters is a
+      // write to someone else's tenant, so it is only allowed when the caller
+      // proves they belong to this audit: a valid share token, or the submitted
+      // email matches the audit's requestor email. Otherwise a stranger could
+      // POST an arbitrary audit_id and overwrite the tenant's contact details.
+      const submittedEmail = String(email).trim().toLowerCase();
+      const auditEmail = (audit?.requestor_email ?? "").trim().toLowerCase();
+      const callerOwnsAudit =
+        verifyAuditToken(String(audit_id), token) ||
+        (submittedEmail !== "" && submittedEmail === auditEmail);
 
       let tenantId = audit?.tenant_id;
 
@@ -241,8 +266,8 @@ export async function POST(req: NextRequest) {
         tenantId = tenantByAudit?.id;
       }
 
-      // Update tenant's brand_config if found
-      if (tenantId) {
+      // Update tenant's brand_config if found and the caller is authorized.
+      if (tenantId && callerOwnsAudit) {
         const { data: tenant } = (await waasClient
           .from("tenants")
           .select("brand_config")
@@ -286,6 +311,10 @@ export async function POST(req: NextRequest) {
           "[/api/audit/leads] Updated tenant",
           tenantId,
           "with contact info from PDF download",
+        );
+      } else if (tenantId) {
+        console.warn(
+          "[/api/audit/leads] skipping tenant brand_config update: caller not authorized for audit",
         );
       }
     } catch (tenantErr) {
