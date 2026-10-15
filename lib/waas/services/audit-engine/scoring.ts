@@ -93,6 +93,7 @@ export type ScoreComponentKey =
   | "visibility"
   | "competitive"
   | "local_pack"
+  | "on_page"
   | "speed"
   | "seo"
   | "accessibility"
@@ -106,8 +107,13 @@ const COMPONENTS: Array<{
   { key: "visibility", label: "Google search visibility", weight: 0.35 },
   { key: "competitive", label: "Competitive position", weight: 0.15 },
   { key: "local_pack", label: "Google Maps (local pack)", weight: 0.1 },
+  // A5: real on-page crawl (title/meta/H1/schema/sitemap/...). The PageSpeed
+  // "SEO" category is a Lighthouse heuristic that overlaps heavily with the
+  // crawl, so it is kept as a small "Lighthouse SEO" component (0.05) and the
+  // crawl takes the larger on-page weight.
+  { key: "on_page", label: "On-page SEO", weight: 0.1 },
   { key: "speed", label: "Site speed (mobile)", weight: 0.15 },
-  { key: "seo", label: "On-page SEO", weight: 0.15 },
+  { key: "seo", label: "Lighthouse SEO", weight: 0.05 },
   { key: "accessibility", label: "Accessibility", weight: 0.05 },
   { key: "best_practices", label: "Best practices", weight: 0.05 },
 ];
@@ -119,6 +125,8 @@ export interface ScoreInputs {
   competitive: number | null;
   /** Points for the Google Maps position. null = local pack not measured. */
   localPack: number | null;
+  /** Real on-page crawl score (0-100). null = homepage could not be crawled. */
+  onPage: number | null;
   /** Lighthouse mobile scores 0-100. null = PageSpeed unavailable. */
   speed: number | null;
   seo: number | null;
@@ -158,6 +166,7 @@ export function computeOverallScoreV2(inputs: ScoreInputs): OverallScoreV2 {
     visibility: inputs.visibility,
     competitive: inputs.competitive,
     local_pack: inputs.localPack,
+    on_page: inputs.onPage,
     speed: inputs.speed,
     seo: inputs.seo,
     accessibility: inputs.accessibility,

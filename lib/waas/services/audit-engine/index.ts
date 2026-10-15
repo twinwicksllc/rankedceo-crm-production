@@ -20,6 +20,7 @@ import {
 import type { AuditReportData, AuditSeoProvider } from "../../types";
 import { computeGapAnalysis } from "./gap-analysis";
 import { buildLeaderboard, computeKeywordPerformance } from "./leaderboard";
+import { crawlOnPage, type OnPageCrawlResult } from "./on-page-crawl";
 import {
   computeOverallScoreV2,
   positionToPoints,
@@ -230,6 +231,18 @@ export async function runFullAudit(
           })
       : Promise.resolve(null);
 
+  // ── On-page crawl (A5) ──
+  // A real crawl of the target site, run in parallel with PageSpeed. Best-effort:
+  // a crawl failure resolves to null and never fails the audit. Skipped in mock
+  // mode so offline/demo audits make no network calls.
+  const onPagePromise: Promise<OnPageCrawlResult | null> =
+    provider === "mock"
+      ? Promise.resolve(null)
+      : crawlOnPage(targetUrl, { locationHint: searchLocation }).catch((err) => {
+          auditDebug("onpage:error", { error: String(err).slice(0, 200) });
+          return null;
+        });
+
   // ── 2. Run PageSpeed ────────────────────────────────────────────────────────────────────
   let pageSpeed: PageSpeedReport | null = null;
 
@@ -283,6 +296,14 @@ export async function runFullAudit(
       targetPosition: localPack?.target.position ?? null,
     });
   }
+
+  const onPage = await onPagePromise;
+  auditDebug("onpage:complete", {
+    available: onPage !== null,
+    pagesCrawled: onPage?.pagesCrawled ?? 0,
+    findings: onPage?.findings.length ?? 0,
+    score: onPage?.score ?? null,
+  });
 
   const competitorLocalityByDomain = new Map<string, boolean | null>();
   competitorUrls.forEach((url) => {
@@ -369,6 +390,7 @@ export async function runFullAudit(
         ? 100 - gapAnalysis.opportunityScore
         : null,
     localPack: localPack ? positionToPoints(localPack.target.position) : null,
+    onPage: onPage?.score ?? null,
     speed: pageSpeed ? performanceScore : null,
     seo: pageSpeed ? seoScore : null,
     accessibility: pageSpeed ? accessibilityScore : null,
@@ -398,6 +420,10 @@ export async function runFullAudit(
       keyword_serp_results_min: serpResultsMin,
       keyword_serp_results_max: serpResultsMax,
       competitor_locality_summary: competitorLocalitySummary,
+      on_page_pages_crawled: onPage?.pagesCrawled ?? 0,
+      on_page_findings: onPage?.findings.length ?? 0,
+      on_page_score: onPage?.score ?? null,
+      on_page_sitemap_found: onPage?.sitemapFound ?? false,
     } as Record<string, unknown>),
   };
 
@@ -497,6 +523,12 @@ export async function runFullAudit(
       };
     }),
     technical_issues: [
+      ...(onPage?.findings.map((f) => ({
+        severity: f.severity,
+        type: f.id,
+        description: `${f.title}. ${f.description}`,
+        url: f.url,
+      })) ?? []),
       ...(pageSpeed?.diagnostics.map((d) => ({
         severity: "warning" as const,
         type: d.id,
@@ -549,6 +581,14 @@ export async function runFullAudit(
               ? ("medium" as const)
               : ("low" as const),
       })) ?? []),
+      ...(onPage?.findings
+        .filter((f) => f.severity !== "info")
+        .slice(0, 3)
+        .map((f) => ({
+          type: f.id,
+          description: `${f.title}. ${f.fix}`,
+          estimated_impact: f.impact,
+        })) ?? []),
     ],
     provider_meta: providerMeta,
     local_pack: localPack

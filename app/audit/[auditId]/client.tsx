@@ -1079,6 +1079,7 @@ function ScoreBreakdown({
     "Google Maps (local pack)": "📍",
     "Site speed (mobile)": "⚡",
     "On-page SEO": "🔍",
+    "Lighthouse SEO": "🔍",
     Accessibility: "♿",
     "Best practices": "✅",
     Performance: "⚡",
