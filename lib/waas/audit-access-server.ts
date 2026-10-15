@@ -43,7 +43,7 @@ export async function fetchAuditAccessRecord(
     const client = getWaasAdminClient();
     const { data } = await client
       .from("audits")
-      .select("id, tenant_id, requestor_email")
+      .select("id, tenant_id, audit_type, requestor_email")
       .eq("id", auditId)
       .maybeSingle();
     return (data as (AuditAccessRecord & { id: string }) | null) ?? null;

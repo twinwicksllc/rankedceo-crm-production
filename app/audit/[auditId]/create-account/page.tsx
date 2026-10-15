@@ -25,7 +25,14 @@ export default function CreateAccountPage() {
     // Auto-create tenant (fire the API call)
     const createTenant = async () => {
       try {
-        const response = await fetch(`/api/audit/${auditId}/create-tenant`, {
+        // The audit id alone is no longer enough (D1=A): the create-tenant
+        // route now authorizes the caller, so forward the share token that
+        // arrived on this page's URL (the emailed create-account link).
+        const token = new URLSearchParams(window.location.search).get("token");
+        const createTenantUrl = `/api/audit/${auditId}/create-tenant${
+          token ? `?token=${encodeURIComponent(token)}` : ""
+        }`;
+        const response = await fetch(createTenantUrl, {
           method: "POST",
         });
 

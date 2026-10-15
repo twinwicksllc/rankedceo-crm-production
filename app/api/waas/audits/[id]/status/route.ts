@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuditStatus } from "@/lib/waas/supabase";
 import { createClient } from "@/lib/supabase/server";
 import { authorizeAuditAccess } from "@/lib/waas/audit-access-server";
+import { auditStatusCacheControl } from "@/lib/waas/audit-http";
 
 export async function GET(
   req: NextRequest,
@@ -51,19 +52,13 @@ export async function GET(
       return NextResponse.json({ error: "Audit not found" }, { status: 404 });
     }
 
-    // Set cache headers based on status
-    const headers: Record<string, string> = {};
-
-    if (result.status === "completed") {
-      // Cache completed audits for 5 minutes (they don't change)
-      headers["Cache-Control"] =
-        "public, max-age=300, stale-while-revalidate=600";
-    } else if (result.status === "pending" || result.status === "running") {
-      // Don't cache in-progress audits — client is polling
-      headers["Cache-Control"] = "no-store";
-    } else {
-      headers["Cache-Control"] = "public, max-age=60";
-    }
+    // The response carries report_data and is authorized per caller (a share
+    // token or a signed-in matching email), so it must never be stored by a
+    // shared cache. A `public` directive here would let one caller's report be
+    // served to another.
+    const headers: Record<string, string> = {
+      "Cache-Control": auditStatusCacheControl(),
+    };
 
     return NextResponse.json(result, { headers });
   } catch (err) {

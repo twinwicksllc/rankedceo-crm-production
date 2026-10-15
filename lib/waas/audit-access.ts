@@ -9,8 +9,10 @@
 // Model (decision D1=A): an audit may be read only by
 //   - a platform admin,
 //   - the tenant owner (a tenant-linked audit),
-//   - the holder of a valid share token (the capability link that is emailed to
-//     the requester and used in the post-audit redirect), or
+//   - the holder of a valid share token, but ONLY for an unlinked prospect audit
+//     (audit_type === "prospect" && tenant_id === null) — the capability link is
+//     issued to the prospect who just ran the audit, before any email is
+//     captured, and must not open tenant-linked audits, or
 //   - a signed-in user whose email matches the audit's requestor_email.
 // Everyone else is denied. A prospect audit with no captured email and no
 // token is therefore not readable, which is the point: the unguessable id alone
@@ -19,6 +21,8 @@
 
 export interface AuditAccessRecord {
   tenant_id: string | null;
+  /** "prospect" | "tenant" | "competitor". */
+  audit_type: string | null;
   requestor_email: string | null;
 }
 
@@ -40,6 +44,16 @@ function normalizeEmail(value: string | null | undefined): string {
 }
 
 /**
+ * True when the share token may open this audit. The token is a capability for
+ * an *unlinked prospect* audit only: a tenant-linked audit (or a non-prospect
+ * audit type) must be opened by its owner/admin/addressee, never by a token, so
+ * a leaked/guessed token can never reach a customer's tenant data.
+ */
+export function tokenGrantsAuditAccess(audit: AuditAccessRecord): boolean {
+  return audit.audit_type === "prospect" && audit.tenant_id === null;
+}
+
+/**
  * Whether the caller may view the audit. Callers must still fetch the audit
  * with the service-role client and verify the token before calling this.
  */
@@ -48,7 +62,8 @@ export function canViewAudit(
   user: AuditAccessSubject | null | undefined,
   context: AuditAccessContext,
 ): boolean {
-  if (context.isAdmin || context.ownsTenant || context.hasValidToken) return true;
+  if (context.isAdmin || context.ownsTenant) return true;
+  if (context.hasValidToken && tokenGrantsAuditAccess(audit)) return true;
 
   // Otherwise only the report's addressee may view it, proved by a matching
   // signed-in email.

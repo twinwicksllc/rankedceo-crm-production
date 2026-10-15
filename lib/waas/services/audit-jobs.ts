@@ -225,7 +225,9 @@ export async function runAuditJob(
         ((engineResult.reportData as Record<string, unknown>)
           .gap_analysis as { nationalCompetitorNote?: string } | undefined)
           ?.nationalCompetitorNote ?? null;
-      const createAccountUrl = `${baseUrl}/audit/${auditId}/create-account`;
+      // The create-account page POSTs to /api/audit/[auditId]/create-tenant,
+      // which now authorizes the caller, so the link must carry the token too.
+      const createAccountUrl = `${baseUrl}/audit/${auditId}/create-account${tokenQuery}`;
 
       sendAuditReportReadyEmail({
         recipientEmail: String(params.requestorEmail),

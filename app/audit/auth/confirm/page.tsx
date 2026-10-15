@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createAuditClient } from "@/lib/supabase/audit-client";
 import { hardNavigate } from "@/lib/navigation";
+import { resolveSafeRedirect } from "@/lib/audit/safe-redirect";
 
 /**
  * Audit Auth Confirm Page 
@@ -62,6 +63,21 @@ export default function AuditAuthConfirmPage() {
         const queryErrorCode = searchParams.get("error");
         const queryErrorDesc = searchParams.get("error_description");
 
+        // Post-auth destination: honor a validated `next` param so magic-link
+        // and Google sign-in return the user to the report they were reading
+        // instead of always dropping them on /audit/start. tenantId/reviewToken
+        // (attached by the create-account flow) are carried along.
+        const nextParam = resolveSafeRedirect(searchParams.get("next"));
+        const carried = new URLSearchParams();
+        const tenantId = searchParams.get("tenantId");
+        const reviewToken = searchParams.get("reviewToken");
+        if (tenantId) carried.set("tenantId", tenantId);
+        if (reviewToken) carried.set("reviewToken", reviewToken);
+        const carriedQs = carried.toString();
+        const destination = carriedQs
+          ? `${nextParam}${nextParam.includes("?") ? "&" : "?"}${carriedQs}`
+          : nextParam;
+
         if (queryErrorCode) {
           throw new Error(queryErrorDesc || queryErrorCode);
         }
@@ -77,7 +93,7 @@ export default function AuditAuthConfirmPage() {
           setStatus("success");
 
           setTimeout(() => {
-            hardNavigate("/audit/start");
+            hardNavigate(destination);
           }, 600);
           return;
         }
@@ -113,7 +129,7 @@ export default function AuditAuthConfirmPage() {
           // --- Step 3: Hard navigate to /audit/start ---
           // Full page load so server component re-runs auth check with new cookies
           setTimeout(() => {
-            hardNavigate("/audit/start");
+            hardNavigate(destination);
           }, 600);
         } else {
           // No tokens in hash — maybe session already exists, try getSession
@@ -127,7 +143,7 @@ export default function AuditAuthConfirmPage() {
           if (session) {
             setStatus("success");
             setTimeout(() => {
-              hardNavigate("/audit/start");
+              hardNavigate(destination);
             }, 600);
           } else {
             // Let detectSessionInUrl handle it via onAuthStateChange
@@ -137,7 +153,7 @@ export default function AuditAuthConfirmPage() {
               if (event === "SIGNED_IN" && session) {
                 setStatus("success");
                 setTimeout(() => {
-                  hardNavigate("/audit/start");
+                  hardNavigate(destination);
                 }, 600);
                 subscription.unsubscribe();
               } else if (event === "SIGNED_OUT") {

@@ -16,7 +16,7 @@ import {
 } from "@/lib/waas/supabase";
 import { SendGridService } from "@/lib/services/sendgrid-service";
 import { escapeHtml } from "@/lib/utils";
-import { signAuditToken } from "@/lib/waas/audit-share-token";
+import { signAuditToken, verifyAuditToken } from "@/lib/waas/audit-share-token";
 import type { WaasAudit, WaasTenant } from "@/lib/waas/types";
 
 // ---------------------------------------------------------------------------
@@ -73,6 +73,7 @@ export async function POST(req: NextRequest) {
       utm_campaign,
       referrer_url,
       optimization_requested,
+      token,
     } = body;
 
     // Validate required fields
@@ -235,12 +236,23 @@ export async function POST(req: NextRequest) {
       // Find tenant by audit
       const { data: audit } = (await waasClient
         .from("audits")
-        .select("tenant_id, id")
+        .select("tenant_id, id, requestor_email")
         .eq("id", String(audit_id))
         .single()) as {
-        data: Pick<WaasAudit, "tenant_id" | "id"> | null;
+        data: Pick<WaasAudit, "tenant_id" | "id" | "requestor_email"> | null;
         error: unknown;
       };
+
+      // Overwriting the tenant's brand_config.contact and PDF counters is a
+      // write to someone else's tenant, so it is only allowed when the caller
+      // proves they belong to this audit: a valid share token, or the submitted
+      // email matches the audit's requestor email. Otherwise a stranger could
+      // POST an arbitrary audit_id and overwrite the tenant's contact details.
+      const submittedEmail = String(email).trim().toLowerCase();
+      const auditEmail = (audit?.requestor_email ?? "").trim().toLowerCase();
+      const callerOwnsAudit =
+        verifyAuditToken(String(audit_id), token) ||
+        (submittedEmail !== "" && submittedEmail === auditEmail);
 
       let tenantId = audit?.tenant_id;
 
@@ -254,8 +266,8 @@ export async function POST(req: NextRequest) {
         tenantId = tenantByAudit?.id;
       }
 
-      // Update tenant's brand_config if found
-      if (tenantId) {
+      // Update tenant's brand_config if found and the caller is authorized.
+      if (tenantId && callerOwnsAudit) {
         const { data: tenant } = (await waasClient
           .from("tenants")
           .select("brand_config")
@@ -299,6 +311,10 @@ export async function POST(req: NextRequest) {
           "[/api/audit/leads] Updated tenant",
           tenantId,
           "with contact info from PDF download",
+        );
+      } else if (tenantId) {
+        console.warn(
+          "[/api/audit/leads] skipping tenant brand_config update: caller not authorized for audit",
         );
       }
     } catch (tenantErr) {

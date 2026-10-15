@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { createAuditClient } from "@/lib/supabase/audit-client";
+import { resolveSafeRedirect } from "@/lib/audit/safe-redirect";
 
 function GoogleIcon() {
   return (
@@ -90,7 +91,11 @@ function AuditLoginForm() {
       ? "https://audit.rankedceo.com/audit/auth/confirm"
       : `${window.location.origin}/audit/auth/confirm`;
 
-    return confirmUrl;
+    // Carry the post-login destination through the OAuth / magic-link round
+    // trip so the user returns to the report they were reading. Validated as a
+    // same-origin path to avoid turning this into an open redirect.
+    const next = resolveSafeRedirect(redirectTo);
+    return `${confirmUrl}?next=${encodeURIComponent(next)}`;
   };
 
   const handleEmailLogin = async (e: React.FormEvent) => {

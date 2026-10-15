@@ -170,6 +170,10 @@ export function EmailCaptureForm({
           phone: form.phone, // already formatted by formatPhoneDisplay
           company: form.company,
           target_url: targetDomain,
+          // Capability token (when the report was opened via a share link) so
+          // the route may update the linked tenant's brand_config. Without it
+          // the route falls back to matching the submitted email.
+          token: shareToken,
         }),
       });
 
