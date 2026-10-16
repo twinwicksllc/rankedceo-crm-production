@@ -21,6 +21,7 @@ import type { AuditReportData, AuditSeoProvider } from "../../types";
 import { computeGapAnalysis } from "./gap-analysis";
 import { buildLeaderboard, computeKeywordPerformance } from "./leaderboard";
 import { crawlOnPage, type OnPageCrawlResult } from "./on-page-crawl";
+import { buildOpportunities } from "./findings";
 import {
   computeOverallScoreV2,
   positionToPoints,
@@ -565,31 +566,12 @@ export async function runFullAudit(
       referring_domains: 0,
       domain_authority: 0,
     },
-    opportunities: [
-      ...gapAnalysis.missingKeywords.slice(0, 3).map((g) => ({
-        type: "missing_keyword",
-        description: g.description,
-        estimated_impact: g.impact as "high" | "medium" | "low",
-      })),
-      ...(pageSpeed?.opportunities.slice(0, 2).map((o) => ({
-        type: o.id,
-        description: `${o.title} (saves ~${Math.round(o.savings_ms / 100) / 10}s)`,
-        estimated_impact:
-          o.impact === "critical"
-            ? ("high" as const)
-            : o.impact === "warning"
-              ? ("medium" as const)
-              : ("low" as const),
-      })) ?? []),
-      ...(onPage?.findings
-        .filter((f) => f.severity !== "info")
-        .slice(0, 3)
-        .map((f) => ({
-          type: f.id,
-          description: `${f.title}. ${f.fix}`,
-          estimated_impact: f.impact,
-        })) ?? []),
-    ],
+    // Ranked by impact, then effort (quick wins first); see findings.ts.
+    opportunities: buildOpportunities({
+      missingKeywords: gapAnalysis.missingKeywords,
+      speed: pageSpeed?.opportunities ?? [],
+      onPage: onPage?.findings ?? [],
+    }),
     provider_meta: providerMeta,
     local_pack: localPack
       ? {

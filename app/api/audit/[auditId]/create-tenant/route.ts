@@ -16,7 +16,8 @@ import { authorizeAuditAccess } from "@/lib/waas/audit-access-server";
 import type { AuditAccessRecord } from "@/lib/waas/audit-access";
 import { sendTenantNotification, sendAuditReportReadyEmail } from "@/lib/waas/services/notifications";
 import type { WaasTenantInsert, WaasTenantUpdate } from "@/lib/waas/supabase";
-import type { WaasTenant } from "@/lib/waas/types";
+import type { AuditOpportunity, WaasTenant } from "@/lib/waas/types";
+import { rankOpportunities } from "@/lib/waas/services/audit-engine/findings";
 
 interface CreateTenantResponse {
   tenantId: string;
@@ -246,9 +247,12 @@ export async function POST(
       ? Math.round((summary.overall_score as number) * 100) / 100
       : 0;
     const grade = (reportData.grade as string) ?? "F";
-    const opportunities = ((reportData.opportunities as Array<{ title?: string; description?: string }> | undefined) ?? [])
+    // Top 3 by impact then effort (same order as the report), not stored order.
+    const opportunities = rankOpportunities(
+      (reportData.opportunities as AuditOpportunity[] | undefined) ?? [],
+    )
       .slice(0, 3)
-      .map((o) => o.title ?? o.description ?? "");
+      .map((o) => o.description ?? "");
     const nationalCompetitorNote =
       ((reportData.gap_analysis as { nationalCompetitorNote?: string } | undefined)
         ?.nationalCompetitorNote) ?? null;

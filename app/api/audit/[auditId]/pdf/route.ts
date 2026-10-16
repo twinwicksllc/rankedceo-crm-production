@@ -12,6 +12,7 @@ import type {
   AuditTechnicalIssue,
   WaasAudit,
 } from "@/lib/waas/types";
+import { rankOpportunities } from "@/lib/waas/services/audit-engine/findings";
 import { getDisplayScore } from "@/lib/waas/services/audit-engine/scoring";
 
 /**
@@ -47,15 +48,13 @@ interface ExtendedReportData extends AuditReportData {
 type PdfDoc = InstanceType<typeof PDFDocument>;
 
 /**
- * The PDF reads opportunity/issue rows with legacy field names (title, impact,
- * priority) that the audit engine does not emit (it emits type/description/
- * estimated_impact and type/description/severity). Behavior is kept as-is here;
- * these optional fields only make the existing lookups type-check.
+ * Issue rows are still read with legacy field names (title, impact) that the
+ * audit engine does not emit (it emits type/description/severity); those
+ * optional fields only make the existing lookups type-check. Opportunities are
+ * read through rankOpportunities, which uses the real `estimated_impact`.
  */
 type PdfOpportunity = AuditOpportunity & {
   title?: string;
-  impact?: string;
-  priority?: string;
 };
 type PdfTechIssue = Omit<AuditTechnicalIssue, "severity"> & {
   severity?: string;
@@ -233,7 +232,9 @@ export async function GET(req: NextRequest, context: RequestContext) {
       : [];
     const gapAnalysis = report.gap_analysis;
     const localPack = report.local_pack;
-    const opportunities: PdfOpportunity[] = report.opportunities ?? [];
+    const opportunities: PdfOpportunity[] = rankOpportunities(
+      report.opportunities ?? [],
+    );
     const techIssues: PdfTechIssue[] = report.technical_issues ?? [];
     const completedDate = audit.completed_at
       ? new Date(audit.completed_at).toLocaleDateString("en-US", {
@@ -644,11 +645,11 @@ export async function GET(req: NextRequest, context: RequestContext) {
 
       opportunities.slice(0, 8).forEach((opp, i: number) => {
         const title = opp.title ?? opp.description ?? String(opp);
-        const impact = opp.impact ?? opp.priority ?? "";
+        const impact = opp.estimated_impact;
         const impColor =
-          impact === "critical" || impact === "high"
+          impact === "high"
             ? "#dc2626"
-            : impact === "warning" || impact === "medium"
+            : impact === "medium"
               ? "#d97706"
               : "#2563eb";
 
