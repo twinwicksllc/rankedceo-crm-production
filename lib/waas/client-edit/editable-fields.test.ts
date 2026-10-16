@@ -277,3 +277,63 @@ test("order values with gaps still address the right array slot", () => {
   const about = fields.find((f) => f.value === "ABOUT headline");
   assert.equal(about?.path, "sections[1].content.headline");
 });
+
+// ---------------------------------------------------------------------------
+// Owner-entered reviews (B1): every slot is surfaced even when empty
+// ---------------------------------------------------------------------------
+
+test("buildEditableFields always surfaces all review slots and Google fields", () => {
+  const sections = [
+    {
+      section: "reviews",
+      enabled: true,
+      order: 1,
+      config: {},
+      content: { headline: "What Our Customers Say" },
+    } as SectionConfig,
+  ];
+  const fields = buildEditableFields({ sections, brandConfig: {} });
+  const paths = fields.map((f) => f.path);
+  assert.ok(paths.includes("sections[0].content.ownerGoogleRating"));
+  assert.ok(paths.includes("sections[0].content.ownerGoogleReviewCount"));
+  for (let i = 0; i < 6; i++) {
+    for (const key of ["author", "rating", "text", "date"]) {
+      assert.ok(
+        paths.includes(`sections[0].content.ownerReviews[${i}].${key}`),
+        `${i}.${key}`,
+      );
+    }
+  }
+  assert.ok(!paths.includes("sections[0].content.ownerReviews[6].author"));
+  const rating = fields.find((f) => f.path.endsWith("ownerReviews[0].rating"));
+  assert.equal(rating?.kind, "select");
+  assert.equal(rating?.value, "");
+});
+
+test("buildEditableFields shows stored review values and skips disabled sections", () => {
+  const stored = {
+    section: "reviews",
+    enabled: true,
+    order: 1,
+    config: {},
+    content: {
+      ownerReviews: [
+        { author: "Pat Lee", rating: 4, text: "Great", date: null },
+      ],
+      ownerGoogleRating: 4.8,
+      ownerGoogleReviewCount: 37,
+    },
+  } as unknown as SectionConfig;
+  const fields = buildEditableFields({ sections: [stored], brandConfig: {} });
+  const val = (suffix: string) =>
+    fields.find((f) => f.path.endsWith(suffix))?.value;
+  assert.equal(val("ownerReviews[0].author"), "Pat Lee");
+  assert.equal(val("ownerReviews[0].rating"), "4");
+  assert.equal(val("ownerReviews[0].date"), "");
+  assert.equal(val("ownerGoogleRating"), "4.8");
+  assert.equal(val("ownerGoogleReviewCount"), "37");
+
+  const off = { ...stored, enabled: false } as SectionConfig;
+  const none = buildEditableFields({ sections: [off], brandConfig: {} });
+  assert.ok(!none.some((f) => f.path.includes("ownerReviews[")));
+});

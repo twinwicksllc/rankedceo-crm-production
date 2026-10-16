@@ -1,3 +1,4 @@
+import { stripUnverifiedReviewData } from "@/lib/waas/reviews";
 import type { GeneratedSiteVariant } from "@/lib/waas/types";
 import type {
   SectionConfig,
@@ -78,7 +79,15 @@ function buildGeminiPrompt(
     .join("\n");
 }
 
+/**
+ * AI output must never carry review data (fabricated reviews or ratings);
+ * only owner-entered data from the editor is ever shown on a site.
+ */
 function sanitizeSections(value: unknown): SectionConfig[] {
+  return stripUnverifiedReviewData(sanitizeSectionsRaw(value));
+}
+
+function sanitizeSectionsRaw(value: unknown): SectionConfig[] {
   if (!Array.isArray(value)) return [];
   const allowed: SectionId[] = [
     "hero",

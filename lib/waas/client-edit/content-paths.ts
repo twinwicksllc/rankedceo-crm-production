@@ -11,6 +11,15 @@
 // =============================================================================
 
 import { SECTION_ID_PATTERN } from "@/lib/waas/sections/section-ids";
+import {
+  MAX_REVIEWS,
+  OWNER_GOOGLE_COUNT_KEY,
+  OWNER_GOOGLE_RATING_KEY,
+  OWNER_REVIEWS_KEY,
+  REVIEW_LIMITS,
+  parseGoogleAggregate,
+  parseReviewRating,
+} from "@/lib/waas/reviews";
 
 export type JsonValue =
   string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
@@ -383,6 +392,85 @@ export function validateConfigValue(
   return validator(value);
 }
 
+// Review fields (see lib/waas/reviews.ts). Kept apart from the generic
+// allow-lists above on purpose.
+const REVIEW_ITEM_KEYS = new Set(["author", "rating", "text", "date"]);
+const REVIEW_CONTENT_KEYS = new Set([
+  OWNER_GOOGLE_RATING_KEY,
+  OWNER_GOOGLE_COUNT_KEY,
+]);
+
+// Built from the exported key constants in lib/waas/reviews.ts so the path
+// regexes can never drift from the keys the section actually reads/writes.
+const SECTION_CONTENT_PREFIX =
+  String.raw`sections\[(?:\d+|id=[A-Za-z0-9_-]+)\]\.content\.`;
+const REVIEW_ITEM_PATH_RE = new RegExp(
+  `^${SECTION_CONTENT_PREFIX}${OWNER_REVIEWS_KEY}\\[\\d+\\]\\.([a-zA-Z0-9_]+)$`,
+);
+const REVIEW_AGGREGATE_PATH_RE = new RegExp(
+  `^${SECTION_CONTENT_PREFIX}(${OWNER_GOOGLE_RATING_KEY}|${OWNER_GOOGLE_COUNT_KEY})$`,
+);
+
+/**
+ * Validate the VALUE written to a review path. Path allow-listing only
+ * confirms the key is editable; this stops a direct server-action call from
+ * persisting a 9-star rating, a 10 MB review, or a half-formed Google badge.
+ * An empty string is always allowed: it is how an owner clears a field.
+ * Returns `{ valid: true }` for any path that is not a review path.
+ */
+export function validateReviewValue(
+  path: string,
+  value: JsonValue,
+): PathValidationResult {
+  const item = path.match(REVIEW_ITEM_PATH_RE);
+  const aggregate = item ? null : path.match(REVIEW_AGGREGATE_PATH_RE);
+  if (!item && !aggregate) return { valid: true };
+
+  const key = (item ? item[1] : aggregate?.[1]) as string;
+  const isBlank = value === null || (typeof value === "string" && !value.trim());
+  if (isBlank) return { valid: true };
+
+  const maxLen = (limit: number, label: string): PathValidationResult =>
+    typeof value === "string" && value.length <= limit
+      ? { valid: true }
+      : {
+          valid: false,
+          reason: `${label} must be text of at most ${limit} characters`,
+        };
+
+  switch (key) {
+    case "author":
+      return maxLen(REVIEW_LIMITS.author, "Reviewer name");
+    case "text":
+      return maxLen(REVIEW_LIMITS.text, "Review text");
+    case "date":
+      return maxLen(REVIEW_LIMITS.date, "Review date");
+    case "rating":
+      return parseReviewRating(value) === null
+        ? { valid: false, reason: "Rating must be a whole number from 1 to 5" }
+        : { valid: true };
+    case OWNER_GOOGLE_RATING_KEY:
+      return parseGoogleAggregate({
+        [OWNER_GOOGLE_RATING_KEY]: value,
+        [OWNER_GOOGLE_COUNT_KEY]: 1,
+      })
+        ? { valid: true }
+        : { valid: false, reason: "Google rating must be between 1 and 5" };
+    case OWNER_GOOGLE_COUNT_KEY:
+      return parseGoogleAggregate({
+        [OWNER_GOOGLE_RATING_KEY]: 5,
+        [OWNER_GOOGLE_COUNT_KEY]: value,
+      })
+        ? { valid: true }
+        : {
+            valid: false,
+            reason: `Google review count must be a whole number from 1 to ${REVIEW_LIMITS.maxGoogleReviewCount.toLocaleString("en-US")}`,
+          };
+    default:
+      return { valid: false, reason: `Unknown review field '${key}'` };
+  }
+}
+
 const ID_REF_RE = new RegExp(`^sections\\[id=(${SECTION_ID_PATTERN})\\]`);
 
 export type PathValidationResult =
@@ -437,7 +525,10 @@ export function validateEditPath(path: string): PathValidationResult {
   );
   if (sectionContentMatch) {
     const leafKey = sectionContentMatch[1];
-    if (!ALLOWED_SECTION_CONTENT_KEYS.has(leafKey)) {
+    if (
+      !ALLOWED_SECTION_CONTENT_KEYS.has(leafKey) &&
+      !REVIEW_CONTENT_KEYS.has(leafKey)
+    ) {
       return {
         valid: false,
         reason: `Section content key '${leafKey}' is not editable by clients`,
@@ -457,6 +548,34 @@ export function validateEditPath(path: string): PathValidationResult {
       return {
         valid: false,
         reason: `Section config key '${leafKey}' is not editable by clients`,
+      };
+    }
+    return { valid: true };
+  }
+
+  // Reviews (real, owner-entered only; see lib/waas/reviews.ts). Deliberately
+  // NOT folded into ALLOWED_ARRAY_ITEM_KEYS: `author`, `text` and `rating`
+  // must not become editable on services/faq/steps items.
+  //   sections[N].content.ownerReviews[M].<author|rating|text|date>  (M < 6)
+  //   sections[N].content.<ownerGoogleRating|ownerGoogleReviewCount>
+  const reviewItemMatch = shape.match(
+    new RegExp(
+      `^sections\\[\\d+\\]\\.content\\.${OWNER_REVIEWS_KEY}\\[(\\d+)\\]\\.([a-zA-Z0-9_]+)$`,
+    ),
+  );
+  if (reviewItemMatch) {
+    const slot = Number(reviewItemMatch[1]);
+    const leafKey = reviewItemMatch[2];
+    if (slot >= MAX_REVIEWS) {
+      return {
+        valid: false,
+        reason: `At most ${MAX_REVIEWS} reviews can be added`,
+      };
+    }
+    if (!REVIEW_ITEM_KEYS.has(leafKey)) {
+      return {
+        valid: false,
+        reason: `Review key '${leafKey}' is not editable by clients`,
       };
     }
     return { valid: true };

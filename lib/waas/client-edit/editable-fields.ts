@@ -9,6 +9,13 @@
 
 import type { SectionConfig, SectionId } from "@/lib/waas/templates/types";
 import {
+  MAX_REVIEWS,
+  OWNER_GOOGLE_COUNT_KEY,
+  OWNER_GOOGLE_RATING_KEY,
+  OWNER_REVIEWS_KEY,
+  REVIEW_LIMITS,
+} from "@/lib/waas/reviews";
+import {
   SECTION_ID_PATTERN,
   isValidSectionId,
 } from "@/lib/waas/sections/section-ids";
@@ -488,6 +495,122 @@ const SECTION_ARRAY_FIELDS: Partial<
 };
 
 // ---------------------------------------------------------------------------
+// Reviews section: owner-entered review slots + Google aggregate.
+// Unlike other array fields these are always surfaced (see fieldsForSection):
+// the stored array starts empty and the editor has no "add item" control.
+// Rating is a `select` (not `number`) so a blank choice stays "" and clears
+// the slot instead of being coerced to 0.
+// ---------------------------------------------------------------------------
+
+const REVIEW_RATING_OPTIONS: SelectOption[] = [
+  { value: "", label: "— (not set)" },
+  { value: "5", label: "5 stars" },
+  { value: "4", label: "4 stars" },
+  { value: "3", label: "3 stars" },
+  { value: "2", label: "2 stars" },
+  { value: "1", label: "1 star" },
+];
+
+function fieldsForReviews(
+  content: Record<string, unknown>,
+  ctx: {
+    keyRef: string;
+    pathRef: string;
+    group: string;
+    sid: SectionId;
+    order: number;
+    refId: string | undefined;
+  },
+): EditableField[] {
+  const out: EditableField[] = [];
+  const base = {
+    group: ctx.group,
+    scope: "section" as const,
+    sectionId: ctx.sid,
+    sectionOrder: ctx.order,
+    sectionRef: ctx.refId,
+  };
+  const str = (v: unknown) => (v == null ? "" : String(v));
+
+  out.push({
+    ...base,
+    id: `sec-${ctx.keyRef}-ownerGoogleRating`,
+    path: `sections[${ctx.pathRef}].content.${OWNER_GOOGLE_RATING_KEY}`,
+    label: "Google rating (e.g. 4.8)",
+    value: str(content[OWNER_GOOGLE_RATING_KEY]),
+    kind: "text",
+    maxLength: 4,
+    helpText:
+      "Copy this from your Google Business Profile. The rating badge only shows when BOTH the rating and the review count are filled in.",
+  });
+  out.push({
+    ...base,
+    id: `sec-${ctx.keyRef}-ownerGoogleReviewCount`,
+    path: `sections[${ctx.pathRef}].content.${OWNER_GOOGLE_COUNT_KEY}`,
+    label: "Google review count (e.g. 37)",
+    value: str(content[OWNER_GOOGLE_COUNT_KEY]),
+    kind: "text",
+    maxLength: 7,
+    helpText: "Whole number, copied from your Google Business Profile.",
+  });
+
+  const list = Array.isArray(content[OWNER_REVIEWS_KEY])
+    ? content[OWNER_REVIEWS_KEY]
+    : [];
+  for (let i = 0; i < MAX_REVIEWS; i++) {
+    const raw = list[i];
+    const item =
+      raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+    const itemPath = `sections[${ctx.pathRef}].content.${OWNER_REVIEWS_KEY}[${i}]`;
+    const itemId = `sec-${ctx.keyRef}-reviews-${i}`;
+    const label = `Review ${i + 1}`;
+    out.push(
+      {
+        ...base,
+        id: `${itemId}-author`,
+        path: `${itemPath}.author`,
+        label: `${label} — Customer name`,
+        value: str(item.author),
+        kind: "text",
+        maxLength: REVIEW_LIMITS.author,
+        helpText:
+          i === 0
+            ? "Only add reviews from real customers, with their permission. A review needs a name, text, and star rating to appear."
+            : undefined,
+      },
+      {
+        ...base,
+        id: `${itemId}-rating`,
+        path: `${itemPath}.rating`,
+        label: `${label} — Stars`,
+        value: str(item.rating),
+        kind: "select",
+        options: REVIEW_RATING_OPTIONS,
+      },
+      {
+        ...base,
+        id: `${itemId}-text`,
+        path: `${itemPath}.text`,
+        label: `${label} — Review text`,
+        value: str(item.text),
+        kind: "long_text",
+        maxLength: REVIEW_LIMITS.text,
+      },
+      {
+        ...base,
+        id: `${itemId}-date`,
+        path: `${itemPath}.date`,
+        label: `${label} — Date (optional)`,
+        value: str(item.date),
+        kind: "text",
+        maxLength: REVIEW_LIMITS.date,
+      },
+    );
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
 // Build editable fields for a single section
 // ---------------------------------------------------------------------------
 
@@ -529,6 +652,21 @@ function fieldsForSection(
       sectionRef: refId,
       maxLength: leaf.maxLength,
     });
+  }
+
+  // Owner-entered reviews: always surface every slot (even empty ones) so the
+  // owner can add a first review. Nothing here is ever generated.
+  if (sid === "reviews") {
+    out.push(
+      ...fieldsForReviews(content, {
+        keyRef,
+        pathRef,
+        group,
+        sid,
+        order,
+        refId,
+      }),
+    );
   }
 
   // Config fields (Phase 8.6) — these drive runtime behavior, not display

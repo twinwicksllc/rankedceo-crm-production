@@ -133,7 +133,7 @@ export function buildTier1Variant(
     enabled: true,
     content: {
       headline: "What Our Customers Say",
-      subheadline: `${profile.businessName} is built on repeat business and referrals.`,
+      subheadline: "Hear from the customers we have served.",
     },
   });
 

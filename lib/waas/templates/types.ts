@@ -118,10 +118,40 @@ export interface BookingSectionContent {
   primaryCtaLabel?: string;
 }
 
+/**
+ * One real customer review, entered by the business owner or an admin.
+ * Never generated: see lib/waas/reviews.ts (`stripUnverifiedReviewData`).
+ */
+export interface ReviewItemContent {
+  author: string;
+  /** Whole stars, 1-5. */
+  rating: number;
+  text: string;
+  /** Free text such as "March 2026". Optional. */
+  date?: string | null;
+}
+
 export interface ReviewsSectionContent {
   eyebrow?: string;
   headline?: string;
   subheadline?: string;
+  /**
+   * Owner-entered reviews. The section shows nothing but these.
+   *
+   * The `owner` prefix is deliberate: variants generated before this change
+   * may contain an AI-written `reviews` array, and reading that would present
+   * fabricated reviews as owner-entered. Only these keys are read; the legacy
+   * unprefixed keys are ignored (see lib/waas/reviews.ts).
+   */
+  ownerReviews?: ReviewItemContent[];
+  /**
+   * Owner-entered Google rating (for example 4.8) and review count. The
+   * badge only renders when BOTH are set. It is never computed from
+   * `ownerReviews`, which is a hand-picked list and would overstate the real
+   * average.
+   */
+  ownerGoogleRating?: number | string | null;
+  ownerGoogleReviewCount?: number | string | null;
 }
 
 // Phase 7.3: Gallery section
