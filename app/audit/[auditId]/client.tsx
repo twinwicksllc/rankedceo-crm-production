@@ -28,6 +28,11 @@ import { EmailCaptureForm } from "@/components/audit/email-capture-form";
 import { FixRankingsModal } from "@/components/audit/fix-rankings-modal";
 import { AdvantagePointHeader } from "@/components/advantagepoint/header";
 import {
+  EFFORT_LABEL,
+  humanizeFindingType,
+  rankOpportunities,
+} from "@/lib/waas/services/audit-engine/findings";
+import {
   OnboardingThemeProvider,
   useOnboardingTheme,
 } from "@/app/get-started/theme-context";
@@ -2034,10 +2039,14 @@ function Opportunities({
     low: { color: "#60A5FA", label: "Low Impact", icon: "💡" },
   };
 
+  // Rank here as well as in the engine so audits stored before ranking existed
+  // (unordered, and with critical/warning/info impacts) read the same way.
+  const ranked = rankOpportunities(opportunities);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {opportunities.map((opp, i) => {
-        const cfg = IMPACT_CONFIG[opp.estimated_impact] ?? IMPACT_CONFIG.low;
+      {ranked.map((opp, i) => {
+        const cfg = IMPACT_CONFIG[opp.estimated_impact];
         return (
           <div
             key={i}
@@ -2085,7 +2094,17 @@ function Opportunities({
                     textTransform: "capitalize",
                   }}
                 >
-                  {opp.type.replace(/_/g, " ")}
+                  {humanizeFindingType(opp.type)}
+                </span>
+                <span
+                  style={{
+                    fontSize: "0.68rem",
+                    color: isLight
+                      ? "rgba(15,23,42,0.55)"
+                      : "rgba(255,255,255,0.36)",
+                  }}
+                >
+                  · {EFFORT_LABEL[opp.effort]}
                 </span>
               </div>
               <div

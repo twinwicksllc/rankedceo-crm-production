@@ -2,6 +2,7 @@
 
 import type { AuditReportData } from "@/lib/waas/types";
 import { getRawClient } from "./_shared";
+import { taglineFromOpportunities } from "@/lib/waas/services/audit-engine/findings";
 
 // ---------------------------------------------------------------------------
 // Audit Data Extraction Helper
@@ -174,20 +175,10 @@ function suggestTagline(report: AuditReportData): string | null {
   // Build tagline from top opportunities and performance summary
   if (!report.summary) return null;
 
-  const opportunities: string[] = [];
-
-  if (report.opportunities && Array.isArray(report.opportunities)) {
-    report.opportunities.slice(0, 2).forEach((opp) => {
-      if (opp.type && opp.estimated_impact === "high") {
-        opportunities.push(opp.type);
-      }
-    });
-  }
-
-  // If we have high-impact opportunities, suggest improving them
-  if (opportunities.length > 0) {
-    return `Improving ${opportunities.join(" and ").toLowerCase()} for better performance.`;
-  }
+  // If we have high-impact opportunities, suggest improving them (ranked, with
+  // readable wording rather than machine ids; see findings.ts).
+  const fromOpportunities = taglineFromOpportunities(report.opportunities);
+  if (fromOpportunities) return fromOpportunities;
 
   // Fallback: generic tagline based on overall score
   if (report.summary.overall_score && report.summary.overall_score < 70) {

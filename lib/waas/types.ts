@@ -397,6 +397,8 @@ export interface AuditOpportunity {
   type: string;
   description: string;
   estimated_impact: AuditOpportunityImpact;
+  /** Estimated effort to fix; absent on audits stored before A8. */
+  effort?: "low" | "medium" | "high";
 }
 
 export type AuditSeoProvider = "serper" | "dataforseo" | "mock";
