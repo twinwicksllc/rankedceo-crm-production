@@ -1,0 +1,171 @@
+# Decision log
+
+This file is the canonical record of the product and engineering decisions for the
+RankedCEO CRM and the WaaS product. Some plan documents also restate decisions (for
+example `docs/waas/B4_B3_UNIFIED_BUILDER_PLAN.md` section 5 lists DEC-0014 to
+DEC-0016); where they differ, this file is authoritative. Before this file existed,
+the decisions lived only in code comments, plan documents and PR bodies, so some
+were cited by number but never written down.
+
+Each entry has: the ID, the date it was decided (where known), its status, the
+decision itself, where it is used, and the source of the wording.
+
+Status values: **in force**, **implemented**, **on hold**. Implementation state
+(built or not) is recorded separately on each entry.
+
+---
+
+## DEC-0001 — Do not merge the Tailwind 4 Dependabot PR
+
+- Date: 2026-10-12
+- Status: in force
+- Decision: Dependabot PR #270 (tailwindcss 3.4 → 4.3) is closed and ignored as a
+  major version. Tailwind 4 will be done as a planned migration, not a dependency
+  bump. Reason: major breaking changes (the PostCSS plugin, the `@tailwind`
+  directives, the config) and both Vercel builds failed.
+- Used in: Dependabot (#270).
+- Source: reconstructed from the closed Dependabot PR #270 and my notes.
+
+## DEC-0003 — Location comes from the client, never a default city
+
+- Status: implemented (#274)
+- Decision: The audit market comes from the client's intake form or their website.
+  We never fall back to a default city (the old code defaulted to "Chicago, IL").
+  Searching the wrong market produces misleading rankings. If no location can be
+  resolved, the audit stops before any search or PageSpeed calls are made and is
+  sent to manual review.
+- Used in: `lib/waas/services/audit-engine/location.ts`,
+  `lib/waas/services/audit-engine/index.ts`, `lib/waas/services/serper/index.ts`,
+  `lib/waas/supabase.ts`, `app/audit/[auditId]/client.tsx`.
+- Source: reconstructed from code comments.
+
+## DEC-0004 — Real reviews only
+
+- Date: 2026-10-16
+- Status: in force
+- Decision: Reviews shown to visitors must be real. Placeholder or fake reviews
+  must never be displayed. Review proof (the reviews themselves, or a Google rating
+  aggregate) only shows when it is real. When there is no proof, the section shows
+  no fake reviews: it either stays hidden or shows a standalone CTA when the client
+  has a valid Google review URL (`shouldRenderReviewSection` in
+  `lib/waas/reviews.ts`). The reviews section is not offered in the section library
+  until real reviews exist. Real reviews are entered manually.
+- Used in: `components/waas/sections/ReviewNFCSection.tsx`, `lib/waas/reviews.ts`,
+  `docs/waas/B4_B3_UNIFIED_BUILDER_PLAN.md`.
+- Source: confirmed by Tommy, 2026-10-16.
+
+## DEC-0005 — Extra pages are team-sold
+
+- Date: 2026-10-16
+- Status: in force
+- Decision: Extra pages (additional service or location pages beyond the standard
+  site) are sold and set up by the team, not self-serve. A client cannot add them
+  on their own.
+- Used in: `docs/waas/B4_B3_UNIFIED_BUILDER_PLAN.md`.
+- Source: confirmed by Tommy, 2026-10-16.
+
+## DEC-0006 — Lead form is team-sold
+
+- Date: 2026-10-16
+- Status: in force
+- Decision: The native lead form (a form on the tenant site that sends leads into
+  the CRM) is sold and set up by the team, not self-serve. A client cannot turn it
+  on themselves.
+- Used in: `docs/waas/B4_B3_UNIFIED_BUILDER_PLAN.md`.
+- Source: confirmed by Tommy, 2026-10-16.
+
+## DEC-0007 — One consistent builder, admin review and upsell
+
+- Status: in force
+- Decision: There is one consistent website builder for the client. The client's
+  finished site is handed to admins for review and upsell.
+- Used in: `docs/waas/B4_B3_UNIFIED_BUILDER_PLAN.md`.
+- Source: reconstructed from the B4/B3 plan.
+
+## DEC-0008 — Analytics and tracking are team-sold
+
+- Date: 2026-10-16
+- Status: in force
+- Decision: Analytics and tracking (GA4, Google Tag Manager, call tracking) are
+  sold and set up by the team, not self-serve. A client cannot add tracking IDs
+  themselves.
+- Used in: `docs/waas/B4_B3_UNIFIED_BUILDER_PLAN.md`.
+- Source: confirmed by Tommy, 2026-10-16.
+
+## DEC-0012 — Checks before every push
+
+- Status: in force
+- Decision: Every PR runs typecheck, tests and lint on the files it changes before
+  it is pushed.
+- Used in: `docs/waas/B4_B3_UNIFIED_BUILDER_PLAN.md`, `package.json`
+  (`npm run check`), `.github/workflows/ci-checks.yml`.
+- Source: reconstructed from the B4/B3 plan and `npm run check`.
+
+## DEC-0013 — Supabase is on hold; no database work from me
+
+- Status: on hold
+- Decision: The shared Supabase project is being cleaned up and migrated by another
+  team. Until that is settled, no database work is done from my side: no migrations,
+  no live-data access, no writes. Work that needs a database change is written up
+  but held.
+- Used in: STATUS docs, all plan documents.
+- Source: reconstructed from the STATUS docs.
+
+## DEC-0014 — Onboarding step 6 becomes the Layout editor
+
+- Date: 2026-10-12
+- Status: in force
+- Implementation: not yet built (planned for B4/B3 plan PR 5).
+- Decision: The onboarding block builder stops being a separate product. Onboarding
+  step 6 becomes the same Layout editor the client gets later. One consistent
+  builder.
+- Used in: `docs/waas/B4_B3_UNIFIED_BUILDER_PLAN.md`.
+- Source: transcribed from the B4/B3 plan, section 5.
+
+## DEC-0015 — Maximum 3 copies per section type
+
+- Date: 2026-10-12
+- Status: in force
+- Implementation: not yet built (planned for B4/B3 plan PR 3).
+- Decision: A section type can be duplicated up to 3 times, matching the client
+  regeneration limit (`client_regen_quota` defaults to 3). Hero and booking are
+  limited to 1 because they are locked. The limit will be one constant in code
+  (`MAX_SECTIONS_PER_TYPE = 3`), not tied to the database column. That constant
+  does not exist yet; it is a guardrail for the future Layout editor.
+- Used in: `docs/waas/B4_B3_UNIFIED_BUILDER_PLAN.md`.
+- Source: transcribed from the B4/B3 plan, section 5.
+
+## DEC-0016 — The admin Add-ons panel is out of onboarding
+
+- Date: 2026-10-12
+- Status: in force
+- Decision: The admin Add-ons panel is not part of client onboarding. It moves to a
+  separate "what do admins do once a client onboards" plan.
+- Used in: `docs/waas/B4_B3_UNIFIED_BUILDER_PLAN.md`.
+- Source: transcribed from the B4/B3 plan, section 5.
+
+## DEC-0017 — Every PR opens as a draft
+
+- Status: in force
+- Decision: Every new PR opens as a DRAFT. I do the initial review myself (run
+  `npm run check`, read `docs/engineering/COPILOT_FINDINGS_CATALOG.md`, read my own
+  diff) and post my findings in the PR body. Only Tommy moves a PR out of draft and
+  requests the Copilot review.
+- Used in: all PRs; `docs/engineering/COPILOT_FINDINGS_CATALOG.md`.
+- Source: reconstructed from PR history.
+
+## DEC-0018 — My checks must catch what Copilot would
+
+- Status: in force
+- Decision: Copilot reviews may stop at any time, so my own checks must catch what
+  Copilot would have caught.
+- Used in: all PRs.
+- Source: reconstructed from PR history.
+
+---
+
+## Not yet recorded
+
+The numbers **DEC-0002, DEC-0009, DEC-0010 and DEC-0011** are not defined anywhere
+in the repo or in my notes. They were either never used or were decided verbally and
+not written down. If they were real decisions, they should be added here.
