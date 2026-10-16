@@ -231,6 +231,26 @@ test("results are capped at 5 and sorted: missing by best competitor rank, gaps 
   );
 });
 
+test("ranking gaps are capped at 5, keeping the five widest", () => {
+  // Seven ranking gaps with distinct widths (yourRank - competitorRank):
+  // 45, 30, 20, 12, 8, 5, 2. Only the five widest should survive the cap.
+  const gapReports = [
+    report("w45", 50, [["w45.com", 5]]),
+    report("w30", 35, [["w30.com", 5]]),
+    report("w20", 30, [["w20.com", 10]]),
+    report("w12", 20, [["w12.com", 8]]),
+    report("w08", 15, [["w08.com", 7]]),
+    report("w05", 25, [["w05.com", 20]]),
+    report("w02", 10, [["w02.com", 8]]),
+  ];
+  const gaps = computeGapAnalysis(TARGET, gapReports).rankingGaps;
+  assert.equal(gaps.length, 5);
+  assert.deepEqual(
+    gaps.map((g) => g.competitorDomain),
+    ["w45.com", "w30.com", "w20.com", "w12.com", "w08.com"],
+  );
+});
+
 test("summary: counts, singular/plural, average gap, top competitor", () => {
   const result = computeGapAnalysis(TARGET, [
     report("a", null, [["rival.com", 2]]),
