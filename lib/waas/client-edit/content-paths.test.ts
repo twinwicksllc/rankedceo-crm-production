@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   validateEditPath,
   validateConfigValue,
+  validateReviewValue,
 } from "./content-paths";
 
 // ---------------------------------------------------------------------------
@@ -135,4 +136,92 @@ test("validateConfigValue: brands accepts array or CSV string within limits", ()
 
 test("validateConfigValue: unregistered keys pass through as valid (non-breaking default)", () => {
   assert.equal(validateConfigValue("someFutureKey", "anything").valid, true);
+});
+
+// ---------------------------------------------------------------------------
+// Owner-entered reviews (B1) — path allow-list and value validation
+// ---------------------------------------------------------------------------
+
+test("validateEditPath accepts review item fields for slots 0-5 only", () => {
+  for (const key of ["author", "rating", "text", "date"]) {
+    assert.equal(
+      validateEditPath(`sections[3].content.reviews[0].${key}`).valid,
+      true,
+      key,
+    );
+    assert.equal(
+      validateEditPath(`sections[id=reviews-k3f9].content.reviews[5].${key}`)
+        .valid,
+      true,
+      key,
+    );
+  }
+  assert.equal(
+    validateEditPath("sections[3].content.reviews[6].author").valid,
+    false,
+  );
+  assert.equal(
+    validateEditPath("sections[3].content.reviews[0].avatar").valid,
+    false,
+  );
+});
+
+test("validateEditPath accepts the Google aggregate fields", () => {
+  assert.equal(
+    validateEditPath("sections[3].content.googleRating").valid,
+    true,
+  );
+  assert.equal(
+    validateEditPath("sections[3].content.googleReviewCount").valid,
+    true,
+  );
+});
+
+test("review keys are NOT editable on other array sections", () => {
+  assert.equal(
+    validateEditPath("sections[1].content.items[0].author").valid,
+    false,
+  );
+  assert.equal(
+    validateEditPath("sections[1].content.faqs[0].rating").valid,
+    false,
+  );
+});
+
+test("validateReviewValue enforces rating, count and length limits", () => {
+  const p = "sections[3].content.reviews[0]";
+  assert.equal(validateReviewValue(`${p}.rating`, 5).valid, true);
+  assert.equal(validateReviewValue(`${p}.rating`, "4").valid, true);
+  assert.equal(validateReviewValue(`${p}.rating`, 0).valid, false);
+  assert.equal(validateReviewValue(`${p}.rating`, 6).valid, false);
+  assert.equal(validateReviewValue(`${p}.rating`, 4.5).valid, false);
+  assert.equal(validateReviewValue(`${p}.author`, "x".repeat(61)).valid, false);
+  assert.equal(validateReviewValue(`${p}.text`, "x".repeat(501)).valid, false);
+  assert.equal(validateReviewValue(`${p}.text`, "x".repeat(500)).valid, true);
+  assert.equal(validateReviewValue(`${p}.text`, 12).valid, false);
+
+  const s = "sections[id=reviews-k3f9].content";
+  assert.equal(validateReviewValue(`${s}.googleRating`, "4.8").valid, true);
+  assert.equal(validateReviewValue(`${s}.googleRating`, 7).valid, false);
+  assert.equal(validateReviewValue(`${s}.googleReviewCount`, 37).valid, true);
+  assert.equal(validateReviewValue(`${s}.googleReviewCount`, 0).valid, false);
+  assert.equal(
+    validateReviewValue(`${s}.googleReviewCount`, 2_000_000).valid,
+    false,
+  );
+});
+
+test("validateReviewValue always allows clearing and ignores other paths", () => {
+  assert.equal(
+    validateReviewValue("sections[3].content.reviews[0].rating", "").valid,
+    true,
+  );
+  assert.equal(
+    validateReviewValue("sections[3].content.googleRating", null).valid,
+    true,
+  );
+  assert.equal(
+    validateReviewValue("sections[0].content.headline", "x".repeat(999)).valid,
+    true,
+  );
 });

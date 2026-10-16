@@ -277,3 +277,61 @@ test("order values with gaps still address the right array slot", () => {
   const about = fields.find((f) => f.value === "ABOUT headline");
   assert.equal(about?.path, "sections[1].content.headline");
 });
+
+// ---------------------------------------------------------------------------
+// Owner-entered reviews (B1): every slot is surfaced even when empty
+// ---------------------------------------------------------------------------
+
+test("buildEditableFields always surfaces all review slots and Google fields", () => {
+  const sections = [
+    {
+      section: "reviews",
+      enabled: true,
+      order: 1,
+      config: {},
+      content: { headline: "What Our Customers Say" },
+    } as SectionConfig,
+  ];
+  const fields = buildEditableFields({ sections, brandConfig: {} });
+  const paths = fields.map((f) => f.path);
+  assert.ok(paths.includes("sections[0].content.googleRating"));
+  assert.ok(paths.includes("sections[0].content.googleReviewCount"));
+  for (let i = 0; i < 6; i++) {
+    for (const key of ["author", "rating", "text", "date"]) {
+      assert.ok(
+        paths.includes(`sections[0].content.reviews[${i}].${key}`),
+        `${i}.${key}`,
+      );
+    }
+  }
+  assert.ok(!paths.includes("sections[0].content.reviews[6].author"));
+  const rating = fields.find((f) => f.path.endsWith("reviews[0].rating"));
+  assert.equal(rating?.kind, "select");
+  assert.equal(rating?.value, "");
+});
+
+test("buildEditableFields shows stored review values and skips disabled sections", () => {
+  const stored = {
+    section: "reviews",
+    enabled: true,
+    order: 1,
+    config: {},
+    content: {
+      reviews: [{ author: "Pat Lee", rating: 4, text: "Great", date: null }],
+      googleRating: 4.8,
+      googleReviewCount: 37,
+    },
+  } as unknown as SectionConfig;
+  const fields = buildEditableFields({ sections: [stored], brandConfig: {} });
+  const val = (suffix: string) =>
+    fields.find((f) => f.path.endsWith(suffix))?.value;
+  assert.equal(val("reviews[0].author"), "Pat Lee");
+  assert.equal(val("reviews[0].rating"), "4");
+  assert.equal(val("reviews[0].date"), "");
+  assert.equal(val("googleRating"), "4.8");
+  assert.equal(val("googleReviewCount"), "37");
+
+  const off = { ...stored, enabled: false } as SectionConfig;
+  const none = buildEditableFields({ sections: [off], brandConfig: {} });
+  assert.ok(!none.some((f) => f.path.includes("reviews[")));
+});

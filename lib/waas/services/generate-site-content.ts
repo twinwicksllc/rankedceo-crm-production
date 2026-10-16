@@ -1,3 +1,4 @@
+import { stripUnverifiedReviewData } from "@/lib/waas/reviews";
 import type { GeneratedSiteVariant, WaasTenant } from "@/lib/waas/types";
 import { getTemplate } from "@/lib/waas/templates/registry";
 import { assignMissingIds } from "@/lib/waas/sections/section-ids";
@@ -319,8 +320,8 @@ function buildDeterministicVariants(
     sections = upsertSection(sections, "reviews", {
       enabled: true,
       content: {
-        headline: "Proof From Real Customers",
-        subheadline: `${profile.businessName} is built on repeat business and referrals.`,
+        headline: "What Our Customers Say",
+        subheadline: "Hear from the customers we have served.",
       },
     });
 
@@ -339,7 +340,15 @@ function parseJsonResponse(text: string): unknown {
   return JSON.parse(cleaned);
 }
 
+/**
+ * AI output must never carry review data (fabricated reviews or ratings);
+ * only owner-entered data from the editor is ever shown on a site.
+ */
 function sanitizeSections(value: unknown): SectionConfig[] {
+  return stripUnverifiedReviewData(sanitizeSectionsRaw(value));
+}
+
+function sanitizeSectionsRaw(value: unknown): SectionConfig[] {
   if (!Array.isArray(value)) return [];
 
   const allowed: SectionId[] = [
@@ -433,6 +442,7 @@ async function generateWithGemini(
     "Allowed section values: hero, answer-first-aeo, bento-emergency, services, trust, financing, booking, reviews, about, faq, how-it-works, gallery.",
     "Allowed templateSlug values: modern, bold, trust-first.",
     "Use onboarding inputs as source of truth; do not invent factual claims or certifications.",
+    "Never invent customer reviews, testimonials, star ratings, or review counts. For the reviews section return only eyebrow, headline, and subheadline.",
     "Use the business USP, tagline, CTA, and about narrative as core source text.",
     "",
     "Variant strategy goals:",

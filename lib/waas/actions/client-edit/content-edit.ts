@@ -10,6 +10,7 @@ import {
 import {
   validateEditPath,
   validateConfigValue,
+  validateReviewValue,
   getValueAtPath,
   setValueAtPath,
   serializeForHistory,
@@ -101,6 +102,12 @@ export async function updateClientVariantContent(
     if (!valueCheck.valid) {
       return { success: false, error: valueCheck.reason };
     }
+  }
+
+  // --- Validate owner-entered review values (length, 1-5 rating, count) ---
+  const reviewCheck = validateReviewValue(path, newValue);
+  if (!reviewCheck.valid) {
+    return { success: false, error: reviewCheck.reason };
   }
 
   // --- Resolve session for tenant context ---

@@ -496,13 +496,12 @@ function sectionTrust(p: OnboardingPrefill): Block[] {
 
 function sectionReviews(sectionContent: Record<string, unknown> | undefined): Block[] {
   const headline = getStringField(sectionContent, "headline") ?? "What Our Customers Say";
-  const subheadline =
-    getStringField(sectionContent, "subheadline") ??
-    '⭐⭐⭐⭐⭐  "Exceptional service — on time, professional, and great value."  — Verified Customer';
+  // No invented testimonial: only owner-provided copy is shown.
+  const subheadline = getStringField(sectionContent, "subheadline");
 
   return [
     mkH2(headline),
-    mkText(subheadline),
+    ...(subheadline ? [mkText(subheadline)] : []),
     mkSpacer("sm"),
   ];
 }
