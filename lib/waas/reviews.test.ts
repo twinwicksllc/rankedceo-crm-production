@@ -27,7 +27,7 @@ test("parseReviewRating accepts whole numbers 1-5 only", () => {
 
 test("normalizeReviews keeps only complete reviews and tolerates null holes", () => {
   const out = normalizeReviews({
-    reviews: [
+    ownerReviews: [
       null,
       good,
       { author: "No Text", rating: 5, text: "  " },
@@ -41,38 +41,38 @@ test("normalizeReviews keeps only complete reviews and tolerates null holes", ()
 
 test("normalizeReviews caps the list and handles missing content", () => {
   const many = Array.from({ length: 20 }, () => good);
-  assert.equal(normalizeReviews({ reviews: many }).length, MAX_REVIEWS);
+  assert.equal(normalizeReviews({ ownerReviews: many }).length, MAX_REVIEWS);
   assert.deepEqual(normalizeReviews(undefined), []);
-  assert.deepEqual(normalizeReviews({ reviews: "nope" }), []);
+  assert.deepEqual(normalizeReviews({ ownerReviews: "nope" }), []);
 });
 
 test("parseGoogleAggregate needs BOTH a valid rating and a valid count", () => {
   assert.deepEqual(
-    parseGoogleAggregate({ googleRating: "4.84", googleReviewCount: "37" }),
+    parseGoogleAggregate({ ownerGoogleRating: "4.84", ownerGoogleReviewCount: "37" }),
     { rating: 4.8, count: 37 },
   );
-  assert.equal(parseGoogleAggregate({ googleRating: 4.8 }), null);
-  assert.equal(parseGoogleAggregate({ googleReviewCount: 10 }), null);
+  assert.equal(parseGoogleAggregate({ ownerGoogleRating: 4.8 }), null);
+  assert.equal(parseGoogleAggregate({ ownerGoogleReviewCount: 10 }), null);
   assert.equal(
-    parseGoogleAggregate({ googleRating: 6, googleReviewCount: 10 }),
+    parseGoogleAggregate({ ownerGoogleRating: 6, ownerGoogleReviewCount: 10 }),
     null,
   );
   assert.equal(
-    parseGoogleAggregate({ googleRating: 5, googleReviewCount: 0 }),
+    parseGoogleAggregate({ ownerGoogleRating: 5, ownerGoogleReviewCount: 0 }),
     null,
   );
   assert.equal(
-    parseGoogleAggregate({ googleRating: 5, googleReviewCount: 1.5 }),
+    parseGoogleAggregate({ ownerGoogleRating: 5, ownerGoogleReviewCount: 1.5 }),
     null,
   );
   assert.equal(
-    parseGoogleAggregate({ googleRating: 5, googleReviewCount: 2_000_000 }),
+    parseGoogleAggregate({ ownerGoogleRating: 5, ownerGoogleReviewCount: 2_000_000 }),
     null,
   );
 });
 
 test("the badge is never computed from curated reviews", () => {
-  const view = buildReviewSectionView({ reviews: [good] }, null);
+  const view = buildReviewSectionView({ ownerReviews: [good] }, null);
   assert.equal(view.aggregate, null);
   assert.equal(view.reviews.length, 1);
 });
@@ -95,7 +95,7 @@ test("section renders nothing without real proof or a Google URL", () => {
   assert.equal(shouldRenderReviewSection(urlOnly, true), true);
   assert.equal(shouldRenderReviewSection(urlOnly, false), false);
 
-  const proof = buildReviewSectionView({ reviews: [good] }, null);
+  const proof = buildReviewSectionView({ ownerReviews: [good] }, null);
   assert.equal(shouldRenderReviewSection(proof, false), true);
 });
 
@@ -106,9 +106,9 @@ test("stripUnverifiedReviewData removes review data without mutating input", () 
       section: "reviews",
       content: {
         headline: "What Our Customers Say",
-        reviews: [good],
-        googleRating: 5,
-        googleReviewCount: 100,
+        ownerReviews: [good],
+        ownerGoogleRating: 5,
+        ownerGoogleReviewCount: 100,
       },
     },
     { section: "reviews" },
@@ -118,7 +118,39 @@ test("stripUnverifiedReviewData removes review data without mutating input", () 
   assert.deepEqual(out[0], input[0]);
   assert.equal(out[2], input[2]);
   assert.ok(
-    "reviews" in (input[1].content as Record<string, unknown>),
+    "ownerReviews" in (input[1].content as Record<string, unknown>),
     "input must not be mutated",
   );
+});
+
+test("legacy AI-written review data is ignored on read (provenance)", () => {
+  // The legacy shape is deliberately not representable in the type.
+  const legacy = {
+    reviews: [{ author: "Michael T.", rating: 5, text: "Fabricated." }],
+    googleRating: 5,
+    googleReviewCount: 100,
+  } as unknown as { ownerReviews?: unknown };
+  const view = buildReviewSectionView(legacy, null);
+  assert.deepEqual(view.reviews, []);
+  assert.equal(view.aggregate, null);
+  assert.equal(view.hasProof, false);
+  assert.equal(shouldRenderReviewSection(view, false), false);
+});
+
+test("stripUnverifiedReviewData removes legacy and owner keys alike", () => {
+  const out = stripUnverifiedReviewData([
+    {
+      section: "reviews",
+      content: {
+        headline: "H",
+        reviews: [good],
+        googleRating: 5,
+        googleReviewCount: 100,
+        ownerReviews: [good],
+        ownerGoogleRating: 4.8,
+        ownerGoogleReviewCount: 37,
+      },
+    },
+  ]);
+  assert.deepEqual(out[0].content, { headline: "H" });
 });

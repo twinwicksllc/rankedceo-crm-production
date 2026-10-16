@@ -15,22 +15,7 @@ import type {
   FieldGroup,
 } from "@/lib/waas/client-edit/editable-fields";
 import type { SectionId } from "@/lib/waas/templates/types";
-
-// Sections that support per-section AI regeneration (must match server-side allowlist)
-const REGENERATABLE_SECTIONS = new Set<string>([
-  "hero",
-  "answer-first-aeo",
-  "bento-emergency",
-  "services",
-  "trust",
-  "about",
-  "faq",
-  "how-it-works",
-  "booking",
-  "reviews",
-  "gallery",
-  "financing",
-]);
+import { REGENERATABLE_SECTION_IDS } from "@/lib/waas/client-edit/regeneratable-sections";
 
 interface FieldNavigatorProps {
   groups: FieldGroup[];
@@ -149,7 +134,7 @@ export function FieldNavigator({
           const canRegen =
             !disabled &&
             !!sectionId &&
-            REGENERATABLE_SECTIONS.has(sectionId) &&
+            REGENERATABLE_SECTION_IDS.includes(sectionId) &&
             !!onRegenerateSection;
 
           return (

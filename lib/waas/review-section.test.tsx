@@ -44,9 +44,11 @@ test("never renders the old fabricated reviews, badge or NFC link", () => {
 
 test("renders owner-entered reviews and the owner-entered badge", () => {
   const html = render({
-    reviews: [{ author: "Pat Lee", rating: 4, text: "Fixed our leak fast." }],
-    googleRating: 4.8,
-    googleReviewCount: 37,
+    ownerReviews: [
+      { author: "Pat Lee", rating: 4, text: "Fixed our leak fast." },
+    ],
+    ownerGoogleRating: 4.8,
+    ownerGoogleReviewCount: 37,
   });
   assert.ok(html.includes('id="reviews"'));
   assert.ok(html.includes("Pat Lee"));
@@ -57,11 +59,39 @@ test("renders owner-entered reviews and the owner-entered badge", () => {
 
 test("no badge without both rating and count; escapes review text", () => {
   const html = render({
-    reviews: [{ author: "A", rating: 5, text: "<script>x</script>" }],
-    googleRating: 5,
+    ownerReviews: [{ author: "A", rating: 5, text: "<script>x</script>" }],
+    ownerGoogleRating: 5,
   });
   assert.ok(!html.includes("Google review"));
   assert.ok(!html.includes("<script>"));
+});
+
+test("fractional Google rating keeps its exact accessible label", () => {
+  const html = render({
+    ownerGoogleRating: 4.8,
+    ownerGoogleReviewCount: 37,
+  });
+  assert.ok(html.includes('aria-label="4.8 out of 5 stars"'));
+  assert.ok(!html.includes('aria-label="5 out of 5 stars"'));
+  assert.ok(html.includes("4.8"));
+});
+
+test("aggregate-only sites still get the See all reviews on Google link", () => {
+  const html = render(
+    { ownerGoogleRating: 4.8, ownerGoogleReviewCount: 37 },
+    "https://reviews.example.com/acme",
+  );
+  assert.ok(html.includes('href="https://reviews.example.com/acme"'));
+  assert.ok(html.includes("See all reviews on Google"));
+});
+
+test("legacy AI-written review keys are ignored by the renderer", () => {
+  const html = render({
+    reviews: [{ author: "Michael T.", rating: 5, text: "Fabricated." }],
+    googleRating: 5,
+    googleReviewCount: 100,
+  } as unknown as Record<string, unknown>);
+  assert.equal(html, "");
 });
 
 test("Google link renders only for http(s) URLs", () => {

@@ -8,7 +8,13 @@
 // =============================================================================
 
 import type { SectionConfig, SectionId } from "@/lib/waas/templates/types";
-import { MAX_REVIEWS, REVIEW_LIMITS } from "@/lib/waas/reviews";
+import {
+  MAX_REVIEWS,
+  OWNER_GOOGLE_COUNT_KEY,
+  OWNER_GOOGLE_RATING_KEY,
+  OWNER_REVIEWS_KEY,
+  REVIEW_LIMITS,
+} from "@/lib/waas/reviews";
 import {
   SECTION_ID_PATTERN,
   isValidSectionId,
@@ -528,10 +534,10 @@ function fieldsForReviews(
 
   out.push({
     ...base,
-    id: `sec-${ctx.keyRef}-googleRating`,
-    path: `sections[${ctx.pathRef}].content.googleRating`,
+    id: `sec-${ctx.keyRef}-ownerGoogleRating`,
+    path: `sections[${ctx.pathRef}].content.${OWNER_GOOGLE_RATING_KEY}`,
     label: "Google rating (e.g. 4.8)",
-    value: str(content.googleRating),
+    value: str(content[OWNER_GOOGLE_RATING_KEY]),
     kind: "text",
     maxLength: 4,
     helpText:
@@ -539,21 +545,23 @@ function fieldsForReviews(
   });
   out.push({
     ...base,
-    id: `sec-${ctx.keyRef}-googleReviewCount`,
-    path: `sections[${ctx.pathRef}].content.googleReviewCount`,
+    id: `sec-${ctx.keyRef}-ownerGoogleReviewCount`,
+    path: `sections[${ctx.pathRef}].content.${OWNER_GOOGLE_COUNT_KEY}`,
     label: "Google review count (e.g. 37)",
-    value: str(content.googleReviewCount),
+    value: str(content[OWNER_GOOGLE_COUNT_KEY]),
     kind: "text",
     maxLength: 7,
     helpText: "Whole number, copied from your Google Business Profile.",
   });
 
-  const list = Array.isArray(content.reviews) ? content.reviews : [];
+  const list = Array.isArray(content[OWNER_REVIEWS_KEY])
+    ? content[OWNER_REVIEWS_KEY]
+    : [];
   for (let i = 0; i < MAX_REVIEWS; i++) {
     const raw = list[i];
     const item =
       raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
-    const itemPath = `sections[${ctx.pathRef}].content.reviews[${i}]`;
+    const itemPath = `sections[${ctx.pathRef}].content.${OWNER_REVIEWS_KEY}[${i}]`;
     const itemId = `sec-${ctx.keyRef}-reviews-${i}`;
     const label = `Review ${i + 1}`;
     out.push(

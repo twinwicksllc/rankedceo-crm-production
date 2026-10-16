@@ -26,12 +26,29 @@ export const REVIEW_LIMITS = {
   maxGoogleReviewCount: 1_000_000,
 } as const;
 
-/** Keys the generators may never write into a reviews section's content. */
+/**
+ * Keys the generators may never write into a reviews section's content.
+ *
+ * The owner-entered keys are prefixed `owner` on purpose: a variant generated
+ * before this change can already contain an AI-written `content.reviews`
+ * array, and reading it would show fabricated reviews as if the owner had
+ * entered them. Only keys that the editor writes are read (`ownerReviews`,
+ * `ownerGoogleRating`, `ownerGoogleReviewCount`); the unprefixed legacy keys
+ * are ignored on read and stripped on write, so no data migration is needed.
+ */
 const UNVERIFIED_REVIEW_KEYS = [
   "reviews",
   "googleRating",
   "googleReviewCount",
+  "ownerReviews",
+  "ownerGoogleRating",
+  "ownerGoogleReviewCount",
 ] as const;
+
+/** Content keys the editor writes and the section reads. */
+export const OWNER_REVIEWS_KEY = "ownerReviews";
+export const OWNER_GOOGLE_RATING_KEY = "ownerGoogleRating";
+export const OWNER_GOOGLE_COUNT_KEY = "ownerGoogleReviewCount";
 
 function cleanString(value: unknown, maxLen: number): string {
   if (typeof value !== "string") return "";
@@ -58,22 +75,22 @@ export function parseReviewRating(value: unknown): number | null {
  * Capped at MAX_REVIEWS.
  */
 export function normalizeReviews(
-  content: { reviews?: unknown } | null | undefined,
+  content: { ownerReviews?: unknown } | null | undefined,
 ): ReviewItemContent[] {
-  const raw = content?.reviews;
+  const raw = content?.ownerReviews;
   if (!Array.isArray(raw)) return [];
 
   const out: ReviewItemContent[] = [];
-  for (const item of raw) {
-    if (!item || typeof item !== "object") continue;
-    const rec = item as Record<string, unknown>;
-    const author = cleanString(rec.author, REVIEW_LIMITS.author);
-    const text = cleanString(rec.text, REVIEW_LIMITS.text);
-    const rating = parseReviewRating(rec.rating);
-    if (!author || !text || rating === null) continue;
-    const date = cleanString(rec.date, REVIEW_LIMITS.date);
-    out.push({ author, rating, text, date: date || null });
+  for (const entry of raw) {
     if (out.length >= MAX_REVIEWS) break;
+    if (!entry || typeof entry !== "object") continue;
+    const item = entry as Record<string, unknown>;
+    const author = cleanString(item.author, REVIEW_LIMITS.author);
+    const text = cleanString(item.text, REVIEW_LIMITS.text);
+    const rating = parseReviewRating(item.rating);
+    if (!author || !text || rating === null) continue;
+    const date = cleanString(item.date, REVIEW_LIMITS.date);
+    out.push({ author, rating, text, date: date || null });
   }
   return out;
 }
@@ -93,12 +110,15 @@ export interface GoogleAggregate {
  */
 export function parseGoogleAggregate(
   content:
-    | { googleRating?: unknown; googleReviewCount?: unknown }
+    | {
+        ownerGoogleRating?: unknown;
+        ownerGoogleReviewCount?: unknown;
+      }
     | null
     | undefined,
 ): GoogleAggregate | null {
-  const ratingRaw = content?.googleRating;
-  const countRaw = content?.googleReviewCount;
+  const ratingRaw = content?.ownerGoogleRating;
+  const countRaw = content?.ownerGoogleReviewCount;
 
   const rating =
     typeof ratingRaw === "number"
@@ -154,9 +174,9 @@ export interface ReviewSectionView {
 export function buildReviewSectionView(
   content:
     | {
-        reviews?: unknown;
-        googleRating?: unknown;
-        googleReviewCount?: unknown;
+        ownerReviews?: unknown;
+        ownerGoogleRating?: unknown;
+        ownerGoogleReviewCount?: unknown;
       }
     | null
     | undefined,

@@ -3,6 +3,10 @@
 import { resolveClientEditSession } from "@/lib/waas/client-edit/edit-session";
 import type { SectionConfig, SectionId } from "@/lib/waas/templates/types";
 import { isValidSectionId } from "@/lib/waas/sections/section-ids";
+import {
+  REGENERATABLE_LEAF_FIELDS,
+  isRegeneratableSection,
+} from "@/lib/waas/client-edit/regeneratable-sections";
 import { getAdminClient } from "./_shared";
 import type { ActionResult } from "./_shared";
 
@@ -65,82 +69,6 @@ export interface RegenerateSectionResult {
 // ---------------------------------------------------------------------------
 
 /** Leaf text fields the regeneration action will rewrite per section. */
-const REGENERATABLE_LEAF_FIELDS: Partial<
-  Record<
-    SectionId,
-    Array<{
-      key: string;
-      label: string;
-      maxLen: number;
-      isArray?: false;
-    }>
-  >
-> = {
-  hero: [
-    { key: "eyebrow", label: "Eyebrow", maxLen: 60 },
-    { key: "headline", label: "Headline", maxLen: 120 },
-    { key: "subheadline", label: "Subheadline", maxLen: 240 },
-    { key: "primaryCtaLabel", label: "Primary CTA", maxLen: 40 },
-    { key: "secondaryCtaLabel", label: "Secondary CTA", maxLen: 40 },
-    { key: "locationBadge", label: "Location Badge", maxLen: 80 },
-  ],
-  "answer-first-aeo": [
-    { key: "eyebrow", label: "Eyebrow", maxLen: 60 },
-    { key: "headline", label: "Headline", maxLen: 120 },
-    { key: "intro", label: "Intro", maxLen: 300 },
-  ],
-  "bento-emergency": [
-    { key: "eyebrow", label: "Eyebrow", maxLen: 60 },
-    { key: "headline", label: "Headline", maxLen: 120 },
-    { key: "subheadline", label: "Subheadline", maxLen: 240 },
-    { key: "bottomCtaText", label: "Bottom CTA", maxLen: 60 },
-  ],
-  services: [
-    { key: "eyebrow", label: "Eyebrow", maxLen: 60 },
-    { key: "headline", label: "Headline", maxLen: 120 },
-    { key: "subheadline", label: "Subheadline", maxLen: 240 },
-    { key: "bottomCtaText", label: "Bottom CTA", maxLen: 60 },
-  ],
-  trust: [
-    { key: "headline", label: "Headline", maxLen: 120 },
-    { key: "subheadline", label: "Subheadline", maxLen: 240 },
-  ],
-  about: [
-    { key: "eyebrow", label: "Eyebrow", maxLen: 60 },
-    { key: "headline", label: "Headline", maxLen: 120 },
-    { key: "body", label: "Body", maxLen: 800 },
-  ],
-  faq: [
-    { key: "eyebrow", label: "Eyebrow", maxLen: 60 },
-    { key: "headline", label: "Headline", maxLen: 120 },
-    { key: "intro", label: "Intro", maxLen: 300 },
-  ],
-  "how-it-works": [
-    { key: "eyebrow", label: "Eyebrow", maxLen: 60 },
-    { key: "headline", label: "Headline", maxLen: 120 },
-    { key: "intro", label: "Intro", maxLen: 300 },
-  ],
-  booking: [
-    { key: "eyebrow", label: "Eyebrow", maxLen: 60 },
-    { key: "headline", label: "Headline", maxLen: 120 },
-    { key: "subheadline", label: "Subheadline", maxLen: 240 },
-    { key: "primaryCtaLabel", label: "Primary CTA", maxLen: 40 },
-  ],
-  reviews: [
-    { key: "eyebrow", label: "Eyebrow", maxLen: 60 },
-    { key: "headline", label: "Headline", maxLen: 120 },
-    { key: "subheadline", label: "Subheadline", maxLen: 240 },
-  ],
-  gallery: [
-    { key: "eyebrow", label: "Eyebrow", maxLen: 60 },
-    { key: "headline", label: "Headline", maxLen: 120 },
-  ],
-  financing: [
-    { key: "headline", label: "Headline", maxLen: 120 },
-    { key: "subheadline", label: "Subheadline", maxLen: 240 },
-  ],
-};
-
 /**
  * Builds the OpenAI prompt for regenerating all fields in a section at once.
  * Returns a JSON schema that maps field keys to regenerated values.
@@ -230,7 +158,7 @@ export async function regenerateSection(
 
   // --- Check we have leaf fields for this section ---
   const leafFields = REGENERATABLE_LEAF_FIELDS[sectionId];
-  if (!leafFields || leafFields.length === 0) {
+  if (!isRegeneratableSection(sectionId) || !leafFields) {
     return {
       success: false,
       error: `Section "${sectionId}" does not support AI regeneration.`,

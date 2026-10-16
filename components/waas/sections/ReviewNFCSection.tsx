@@ -19,20 +19,55 @@ interface ReviewNFCSectionProps {
   content?: ReviewsSectionContent;
 }
 
-function StarRating({ rating }: { rating: number }) {
+// Star size/gap are fixed (w-4 = 16px, gap-0.5 = 2px) so the fractional
+// overlay below can be clipped by an exact pixel width.
+const STAR_PX = 16;
+const STAR_GAP_PX = 2;
+const STARS_TOTAL_PX = STAR_PX * 5 + STAR_GAP_PX * 4;
+
+function StarGlyph({ className }: { className: string }) {
   return (
-    <div className="flex gap-0.5" aria-label={`${rating} out of 5 stars`}>
-      {[1, 2, 3, 4, 5].map((star) => (
-        <svg
-          key={star}
-          className={`w-4 h-4 ${star <= rating ? "text-yellow-400" : "text-gray-300"}`}
-          fill="currentColor"
-          viewBox="0 0 20 20"
-          aria-hidden="true"
-        >
-          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-        </svg>
-      ))}
+    <svg
+      className={`w-4 h-4 shrink-0 ${className}`}
+      fill="currentColor"
+      viewBox="0 0 20 20"
+      aria-hidden="true"
+    >
+      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+    </svg>
+  );
+}
+
+/**
+ * Renders `rating` out of 5 with a fractional fill, so an owner-entered 4.8
+ * shows a partial fifth star rather than being rounded up to a 5.0 display.
+ * The accessible name always carries the exact value.
+ */
+function StarRating({ rating }: { rating: number }) {
+  const clamped = Math.max(0, Math.min(5, rating));
+  const fillPct = (clamped / 5) * 100;
+  return (
+    <div
+      role="img"
+      aria-label={`${rating} out of 5 stars`}
+      className="relative inline-flex gap-0.5"
+    >
+      <div className="flex gap-0.5" aria-hidden="true">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <StarGlyph key={star} className="text-gray-300" />
+        ))}
+      </div>
+      <div
+        className="absolute inset-y-0 left-0 overflow-hidden"
+        style={{ width: `${(STARS_TOTAL_PX * fillPct) / 100}px` }}
+        aria-hidden="true"
+      >
+        <div className="flex gap-0.5">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <StarGlyph key={star} className="text-yellow-400" />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -100,7 +135,7 @@ export function ReviewNFCSection({
             {/* Owner-entered Google rating (both rating and count required) */}
             {aggregate && (
               <div className="flex items-center justify-center gap-3 mb-2">
-                <StarRating rating={Math.round(aggregate.rating)} />
+                <StarRating rating={aggregate.rating} />
                 <span
                   className="font-brand-heading text-2xl font-bold"
                   style={{ color: "var(--brand-text)" }}
@@ -118,7 +153,7 @@ export function ReviewNFCSection({
             )}
 
             {/* Google review link (real, validated http(s) URL only) */}
-            {googleUrl && reviews.length > 0 && (
+            {googleUrl && (
               <a
                 href={googleUrl}
                 target="_blank"

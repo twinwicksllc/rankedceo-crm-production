@@ -13,6 +13,9 @@
 import { SECTION_ID_PATTERN } from "@/lib/waas/sections/section-ids";
 import {
   MAX_REVIEWS,
+  OWNER_GOOGLE_COUNT_KEY,
+  OWNER_GOOGLE_RATING_KEY,
+  OWNER_REVIEWS_KEY,
   REVIEW_LIMITS,
   parseGoogleAggregate,
   parseReviewRating,
@@ -392,12 +395,21 @@ export function validateConfigValue(
 // Review fields (see lib/waas/reviews.ts). Kept apart from the generic
 // allow-lists above on purpose.
 const REVIEW_ITEM_KEYS = new Set(["author", "rating", "text", "date"]);
-const REVIEW_CONTENT_KEYS = new Set(["googleRating", "googleReviewCount"]);
+const REVIEW_CONTENT_KEYS = new Set([
+  OWNER_GOOGLE_RATING_KEY,
+  OWNER_GOOGLE_COUNT_KEY,
+]);
 
-const REVIEW_ITEM_PATH_RE =
-  /^sections\[(?:\d+|id=[A-Za-z0-9_-]+)\]\.content\.reviews\[\d+\]\.([a-zA-Z0-9_]+)$/;
-const REVIEW_AGGREGATE_PATH_RE =
-  /^sections\[(?:\d+|id=[A-Za-z0-9_-]+)\]\.content\.(googleRating|googleReviewCount)$/;
+// Built from the exported key constants in lib/waas/reviews.ts so the path
+// regexes can never drift from the keys the section actually reads/writes.
+const SECTION_CONTENT_PREFIX =
+  String.raw`sections\[(?:\d+|id=[A-Za-z0-9_-]+)\]\.content\.`;
+const REVIEW_ITEM_PATH_RE = new RegExp(
+  `^${SECTION_CONTENT_PREFIX}${OWNER_REVIEWS_KEY}\\[\\d+\\]\\.([a-zA-Z0-9_]+)$`,
+);
+const REVIEW_AGGREGATE_PATH_RE = new RegExp(
+  `^${SECTION_CONTENT_PREFIX}(${OWNER_GOOGLE_RATING_KEY}|${OWNER_GOOGLE_COUNT_KEY})$`,
+);
 
 /**
  * Validate the VALUE written to a review path. Path allow-listing only
@@ -437,12 +449,18 @@ export function validateReviewValue(
       return parseReviewRating(value) === null
         ? { valid: false, reason: "Rating must be a whole number from 1 to 5" }
         : { valid: true };
-    case "googleRating":
-      return parseGoogleAggregate({ googleRating: value, googleReviewCount: 1 })
+    case OWNER_GOOGLE_RATING_KEY:
+      return parseGoogleAggregate({
+        [OWNER_GOOGLE_RATING_KEY]: value,
+        [OWNER_GOOGLE_COUNT_KEY]: 1,
+      })
         ? { valid: true }
         : { valid: false, reason: "Google rating must be between 1 and 5" };
-    case "googleReviewCount":
-      return parseGoogleAggregate({ googleRating: 5, googleReviewCount: value })
+    case OWNER_GOOGLE_COUNT_KEY:
+      return parseGoogleAggregate({
+        [OWNER_GOOGLE_RATING_KEY]: 5,
+        [OWNER_GOOGLE_COUNT_KEY]: value,
+      })
         ? { valid: true }
         : {
             valid: false,
@@ -538,10 +556,12 @@ export function validateEditPath(path: string): PathValidationResult {
   // Reviews (real, owner-entered only; see lib/waas/reviews.ts). Deliberately
   // NOT folded into ALLOWED_ARRAY_ITEM_KEYS: `author`, `text` and `rating`
   // must not become editable on services/faq/steps items.
-  //   sections[N].content.reviews[M].<author|rating|text|date>   (M < MAX_REVIEWS)
-  //   sections[N].content.<googleRating|googleReviewCount>
+  //   sections[N].content.ownerReviews[M].<author|rating|text|date>  (M < 6)
+  //   sections[N].content.<ownerGoogleRating|ownerGoogleReviewCount>
   const reviewItemMatch = shape.match(
-    /^sections\[\d+\]\.content\.reviews\[(\d+)\]\.([a-zA-Z0-9_]+)$/,
+    new RegExp(
+      `^sections\\[\\d+\\]\\.content\\.${OWNER_REVIEWS_KEY}\\[(\\d+)\\]\\.([a-zA-Z0-9_]+)$`,
+    ),
   );
   if (reviewItemMatch) {
     const slot = Number(reviewItemMatch[1]);
