@@ -239,13 +239,20 @@ Status values: **in force**, **implemented**, **on hold**, **superseded**. Imple
   into `rankedceo-waas` (DEC-0022) and (b) the other product's `listing-assistant-pro`
   is combined into `listrassistr-official`, the `rankedceo-crm-production` project is
   repurposed as the QA project. This avoids the roughly $10 a month a new project would
-  cost ("no new expenses until revenue"). Until both combines are done, QA stays on the
-  `qa` schema inside `rankedceo-waas` (`qa.rankedceo.com`), which already exists but
-  holds only `qa.qa_runs` and `qa.qa_scenarios`.
+  cost ("no new expenses until revenue"). Until both combines are done, QA runs against
+  `rankedceo-waas` at `qa.rankedceo.com`. Only the QA agent's bookkeeping
+  (`qa.qa_runs`, `qa.qa_scenarios`) is isolated in the `qa` schema; the browser-driven
+  QA flows write to the `public` tables in `rankedceo-waas`, the same project as
+  production, so application data is **not** isolated (see
+  `docs/deployment/qa-deployment.md`).
 - Amends DEC-0022: DEC-0022 says `rankedceo-crm` "is left to the other product". That
   wording is now incomplete. The project is left to the other product only until its own
   combine into `listrassistr-official` is done; after that it is repurposed as QA, not
   kept by the other product. The rest of DEC-0022 is unchanged.
+- Naming: `rankedceo-crm` (the short name DEC-0022 uses) and `rankedceo-crm-production`
+  (the project name in `docs/engineering/DB_CONSOLIDATION_PLAN.md`) are the same
+  Supabase project, the one reached by `NEXT_PUBLIC_SUPABASE_URL`. This entry uses the
+  canonical `rankedceo-crm-production`.
 - Note: this is separate from the Vercel project named `rankedceo-crm-qa`, which is a
   hosting project and not the Supabase QA database.
 - Used in: the DEC-0022 database work and `docs/engineering/DB_CONSOLIDATION_PLAN.md`
