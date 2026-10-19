@@ -229,6 +229,31 @@ Status values: **in force**, **implemented**, **on hold**, **superseded**. Imple
 
 ---
 
+## DEC-0024 - QA is the repurposed rankedceo-crm-production; no new project is created
+
+- Date: 2026-10-19
+- Status: in force
+- Implementation: not started. It depends on both combines being finished first (see
+  below), and neither has begun.
+- Decision: No new Supabase project is created for QA. Once (a) our tables are combined
+  into `rankedceo-waas` (DEC-0022) and (b) the other product's `listing-assistant-pro`
+  is combined into `listrassistr-official`, the `rankedceo-crm-production` project is
+  repurposed as the QA project. This avoids the roughly $10 a month a new project would
+  cost ("no new expenses until revenue"). Until both combines are done, QA stays on the
+  `qa` schema inside `rankedceo-waas` (`qa.rankedceo.com`), which already exists but
+  holds only `qa.qa_runs` and `qa.qa_scenarios`.
+- Amends DEC-0022: DEC-0022 says `rankedceo-crm` "is left to the other product". That
+  wording is now incomplete. The project is left to the other product only until its own
+  combine into `listrassistr-official` is done; after that it is repurposed as QA, not
+  kept by the other product. The rest of DEC-0022 is unchanged.
+- Note: this is separate from the Vercel project named `rankedceo-crm-qa`, which is a
+  hosting project and not the Supabase QA database.
+- Used in: the DEC-0022 database work and `docs/engineering/DB_CONSOLIDATION_PLAN.md`
+  (section 9).
+- Source: Tommy, 2026-10-19 (his QA plan, recorded after the live audits).
+
+---
+
 ## Not yet recorded
 
 The numbers **DEC-0002, DEC-0009, DEC-0010 and DEC-0011** are not defined anywhere

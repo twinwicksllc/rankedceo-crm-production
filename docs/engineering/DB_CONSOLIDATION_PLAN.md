@@ -286,15 +286,16 @@ after the data is in place and tested.
 
 ## 9. Open questions
 
-1. QA project. Tommy said (2026-10-19) that once our tables are combined into
-   `rankedceo-waas` and the other product's `listing-assistant-pro` is combined into
-   `listrassistr-official`, `rankedceo-crm-production` could be repurposed as the QA
-   project, so no new project is created and no extra $10 a month is spent. This is
-   not yet in the decision log, and it differs from the DEC-0022 wording that leaves
-   `rankedceo-crm` to the other product. Until then QA stays on the `qa` schema in
-   `rankedceo-waas`, which already exists, but it holds only two tables, so it does not
-   isolate QA from the new `public` tables. A staging and rollback approach for step 5 of
-   section 8 is still needed.
+1. QA project. Recorded as DEC-0024 (2026-10-19): no new project is created for QA.
+   Once our tables are combined into `rankedceo-waas` (DEC-0022) and the other
+   product's `listing-assistant-pro` is combined into `listrassistr-official`,
+   `rankedceo-crm-production` is repurposed as the QA project, so no extra $10 a month
+   is spent. This amends the DEC-0022 wording that left `rankedceo-crm` to the other
+   product: it is left to the other product only until that product's own combine is
+   done. Until both combines finish, QA stays on the `qa` schema in `rankedceo-waas`,
+   which already exists, but it holds only two tables, so it does not isolate QA from
+   the new `public` tables. A staging and rollback approach for step 5 of section 8 is
+   still needed.
 2. Which definition of `accounts` and `users` is the base (section 3)?
 3. How do CRM logins reach `rankedceo-waas`?
 4. The four missing names in section 5, especially `waas_tenants`.
