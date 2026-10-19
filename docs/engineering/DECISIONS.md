@@ -10,7 +10,7 @@ were cited by number but never written down.
 Each entry has: the ID, the date it was decided (where known), its status, the
 decision itself, where it is used, and the source of the wording.
 
-Status values: **in force**, **implemented**, **on hold**. Implementation state
+Status values: **in force**, **implemented**, **on hold**, **superseded**. Implementation state
 (built or not) is recorded separately on each entry.
 
 ---
@@ -103,7 +103,7 @@ Status values: **in force**, **implemented**, **on hold**. Implementation state
 
 ## DEC-0013 — Supabase is on hold; no database work from me
 
-- Status: on hold
+- Status: superseded by DEC-0021 (2026-10-19)
 - Decision: The shared Supabase project is being cleaned up and migrated by another
   team. Until that is settled, no database work is done from my side: no migrations,
   no live-data access, no writes. Work that needs a database change is written up
@@ -164,8 +164,30 @@ Status values: **in force**, **implemented**, **on hold**. Implementation state
 
 ---
 
+## DEC-0021 — Database access is allowed, limited to tables our own code calls
+
+- Date: 2026-10-19
+- Status: in force
+- Implementation: the rule is decided. Supabase credentials and a QA database have
+  not been provided yet, so no live access exists until they are.
+- Decision: I may create net-new tables and alter tables that our own code calls by
+  exact name (verified by grep of `.from()` and `.rpc()`). I never guess a table
+  name, and I never touch a table our code doesn't call. Triggers on `auth.users`
+  stay off-limits.
+- Supersedes: DEC-0013.
+- Used in: all database work (for example the B3 PR 3 layout RPC migration).
+- Source: Tommy, 2026-10-19; wording confirmed as written.
+
+---
+
 ## Not yet recorded
 
 The numbers **DEC-0002, DEC-0009, DEC-0010 and DEC-0011** are not defined anywhere
 in the repo or in my notes. They were either never used or were decided verbally and
 not written down. If they were real decisions, they should be added here.
+
+**DEC-0019** is not defined anywhere in the repo or in my notes. **DEC-0020** is not
+in the repo either, but my working notes cite it as the rule "never edit the live
+`handle_new_user()` trigger" (the same rule is stated in
+`docs/waas/USER_IDENTITY_CONSISTENCY_PLAN.md`). It has not been confirmed as a
+log entry, so it is not written here yet.
