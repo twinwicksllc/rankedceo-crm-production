@@ -209,6 +209,23 @@ Status values: **in force**, **implemented**, **on hold**, **superseded**. Imple
   exact name) and the rule never to edit the live `handle_new_user()` trigger.
 - Used in: all database work.
 - Source: Tommy, 2026-10-19 (chose option A of three).
+- Scope note: see DEC-0023 for `pipeline_stages`.
+
+---
+
+## DEC-0023 - `pipeline_stages` is in scope as a dependency of `deals`
+
+- Date: 2026-10-19
+- Status: in force
+- Implementation: not started. Part of the DEC-0022 work.
+- Decision: `pipeline_stages` is included in the tables recreated in `rankedceo-waas`,
+  even though our code does not call it by name. `deals`, which our code does call, has
+  a foreign key to it, so `deals` cannot be created without it. Under DEC-0021 this
+  counts as a net-new table.
+- Scope: only `pipeline_stages`. It does not extend DEC-0021 to any other table our
+  code does not call.
+- Used in: the DEC-0022 database work.
+- Source: Tommy, 2026-10-19 (chose option A of three).
 
 ---
 
