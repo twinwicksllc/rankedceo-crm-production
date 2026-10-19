@@ -192,16 +192,19 @@ Status values: **in force**, **implemented**, **on hold**, **superseded**. Imple
   shares it. No new Supabase project is created for the combine.
 - Scope, by grep of `.from()` in `app`, `lib` and `components` against the
   `CREATE TABLE` statements in `supabase/migrations` (counted 2026-10-19, repo only):
-  44 tables are called by our code. 23 are created only by the CRM migrations, 14 only
+  44 names are called by our code. 23 are created only by the CRM migrations, 14 only
   by the WaaS migrations, 2 (`accounts`, `users`) by both, and 5 are created by no
-  migration (`audit_abandonment_tracking`, `logos`, `waas_tenants`, `qa_runs`,
-  `qa_scenarios`).
+  `CREATE TABLE` the grep matched. Of those 5, read from the code and migrations:
+  `logos` is a storage bucket, not a table; `qa_runs` and `qa_scenarios` are created
+  as `qa.qa_runs` and `qa.qa_scenarios` by `waas/021_qa_schema.sql`; `waas_tenants` is
+  queried once (`section-regen.ts`) while the migration creates `tenants`; and
+  `audit_abandonment_tracking` has no CREATE in any `.sql` or `.md` file. The last two
+  are unexplained and need a live check.
 - Open: `accounts` and `users` exist in both migration sets and need a decision on
   which definition wins. `auth.users` is separate in each project, so moving logins
-  is a separate live-data step. The five tables with no CREATE must be checked in the
-  live database before anything is done with them. Whether to create a separate
-  `rankedceo-qa` project is undecided; it may cost money (see "no new expenses until
-  revenue"), and that has not been checked against the Supabase plan.
+  is a separate live-data step. Whether to create a separate `rankedceo-qa` project
+  is undecided; it may cost money (see "no new expenses until revenue"), and that has
+  not been checked against the Supabase plan.
 - Rules that still apply: DEC-0021 (only net-new tables, or tables our code calls by
   exact name) and the rule never to edit the live `handle_new_user()` trigger.
 - Used in: all database work.
