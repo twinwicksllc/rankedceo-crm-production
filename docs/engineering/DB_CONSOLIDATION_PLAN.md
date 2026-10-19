@@ -276,8 +276,10 @@ after the data is in place and tested.
    every `auth.users` trigger statement, and test it on a local throwaway Postgres.
 5. Apply to `rankedceo-waas`. The existing `qa` schema holds only `qa.qa_runs` and
    `qa.qa_scenarios` (audit), so it is not a separate copy of the new tables and is not
-   a staging area for this step. Whether the QA deployment reads and writes the same
-   `public` tables as production is not verified. Before applying, decide how to
+   a staging area for this step. The repo's `docs/deployment/qa-deployment.md` states
+   the QA deployment targets `rankedceo-waas` (the same project as production) and that
+   browser-driven QA flows write to the same `public` tables, so QA is not isolated from
+   the new tables. Before applying, decide how to
    test and how to roll back (for example, test on the local throwaway Postgres first
    and keep a reverse SQL script). This is an open question (section 9).
 6. Create the five onboarding RPCs and the helper functions, and check their grants.
@@ -286,14 +288,17 @@ after the data is in place and tested.
 
 ## 9. Open questions
 
-1. QA project. Tommy said (2026-10-19) that once our tables are combined into
-   `rankedceo-waas` and the other product's `listing-assistant-pro` is combined into
-   `listrassistr-official`, `rankedceo-crm-production` could be repurposed as the QA
-   project, so no new project is created and no extra $10 a month is spent. This is
-   not yet in the decision log, and it differs from the DEC-0022 wording that leaves
-   `rankedceo-crm` to the other product. Until then QA stays on the `qa` schema in
-   `rankedceo-waas`, which already exists, but it holds only two tables, so it does not
-   isolate QA from the new `public` tables. A staging and rollback approach for step 5 of
+1. QA project. Recorded as DEC-0024 (2026-10-19): no new project is created for QA.
+   Once our tables are combined into `rankedceo-waas` (DEC-0022) and the other
+   product's `listing-assistant-pro` is combined into `listrassistr-official`,
+   `rankedceo-crm-production` is repurposed as the QA project, so no extra $10 a month
+   is spent. This amends the DEC-0022 wording that left `rankedceo-crm` to the other
+   product: it is left to the other product only until that product's own combine is
+   done. Until both combines finish, QA runs against `rankedceo-waas` at
+   `qa.rankedceo.com`: only the QA agent's bookkeeping (`qa.qa_runs`, `qa.qa_scenarios`)
+   is isolated in the `qa` schema, while the browser-driven QA flows write to the
+   `public` tables in `rankedceo-waas`, so application data is not isolated (see
+   `docs/deployment/qa-deployment.md`). A staging and rollback approach for step 5 of
    section 8 is still needed.
 2. Which definition of `accounts` and `users` is the base (section 3)?
 3. How do CRM logins reach `rankedceo-waas`?
