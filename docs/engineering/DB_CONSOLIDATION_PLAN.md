@@ -19,7 +19,7 @@ confirmed by Tommy as the target of `NEXT_PUBLIC_WAAS_SUPABASE_URL`).
 
 ## 1. What the audit found
 
-Our code calls 44 table names through `.from()` (repo). Checked against the live
+Our code calls 44 names through `.from()` (repo): 43 tables and 1 storage bucket (`logos`). Checked against the live
 `public` and `qa` tables in each project (audit):
 
 | Where the name is live | Count | Names |
@@ -28,7 +28,7 @@ Our code calls 44 table names through `.from()` (repo). Checked against the live
 | Only in `rankedceo-crm-production` | 28 | 22 from the CRM migrations: `activities`, `agent_conversations`, `appointments`, `calendly_connections`, `campaign_emails`, `campaigns`, `commission_rates`, `commissions`, `companies`, `contacts`, `crm_billing_events`, `crm_subscriptions`, `deals`, `email_messages`, `email_templates`, `email_threads`, `form_fields`, `form_submissions`, `forms`, `industry_leads`, `pipelines`, `smile_assessments`. 6 from the WaaS migrations: `client_domain_change_requests`, `client_uploaded_assets`, `notification_log`, `tenant_site_deployments`, `tenant_site_variants`, `tenant_site_versions` |
 | In neither project | 5 | `audit_abandonment_tracking`, `calendar_provider_connections`, `tenant_variant_regenerations`, `waas_tenants`, and `logos` (a storage bucket, see section 5) |
 
-11 + 28 + 5 = 44, counted by script. The CRM project also lists all 11 names (audit). `docs/waas/USER_IDENTITY_CONSISTENCY_PLAN.md`
+11 + 28 + 5 = 44 names (43 tables plus the `logos` bucket), counted by script. The CRM project also lists all 11 names (audit). `docs/waas/USER_IDENTITY_CONSISTENCY_PLAN.md`
 noted on 2026-10-14 that the CRM copies of `audits`, `tenants` and `leads` were probably
 left from running the WaaS migrations there; that is an inference. "In `rankedceo-waas`"
 in the table means the project production's WaaS client reads. `pipeline_stages` is not called by our code but
@@ -212,8 +212,12 @@ after the data is in place and tested.
    `users` (section 3).
 4. Write the new-table SQL from the live shapes, excluding `handle_new_user()` and
    every `auth.users` trigger statement, and test it on a local throwaway Postgres.
-5. Apply to `rankedceo-waas`. QA is the existing `qa` schema in `rankedceo-waas`
-   (see section 9), so no extra project is needed for this step.
+5. Apply to `rankedceo-waas`. The existing `qa` schema holds only `qa.qa_runs` and
+   `qa.qa_scenarios` (audit), so it is not a separate copy of the new tables and is not
+   a staging area for this step. Whether the QA deployment reads and writes the same
+   `public` tables as production is not verified. Before applying, decide how to
+   test and how to roll back (for example, test on the local throwaway Postgres first
+   and keep a reverse SQL script). This is an open question (section 9).
 6. Create the five onboarding RPCs and the helper functions, and check their grants.
 7. Decide about data and logins.
 8. Switch the CRM client to the single project (separate PR).
@@ -226,7 +230,9 @@ after the data is in place and tested.
    project, so no new project is created and no extra $10 a month is spent. This is
    not yet in the decision log, and it differs from the DEC-0022 wording that leaves
    `rankedceo-crm` to the other product. Until then QA stays on the `qa` schema in
-   `rankedceo-waas`, which already exists.
+   `rankedceo-waas`, which already exists, but it holds only two tables, so it does not
+   isolate QA from the new `public` tables. A staging and rollback approach for step 5 of
+   section 8 is still needed.
 2. Which definition of `accounts` and `users` is the base (section 3)?
 3. How do CRM logins reach `rankedceo-waas`?
 4. The four missing names in section 5, especially `waas_tenants`.
