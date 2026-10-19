@@ -1,11 +1,16 @@
 # Database consolidation plan (DEC-0022, DEC-0023)
 
 Status: **plan only. Nothing has been created, moved or copied.** First written
-2026-10-19 from the repository alone, then updated the same day after a live read-only
-audit. For the audit, Tommy ran seven `SELECT` queries in each Supabase project and
-pasted the results. I did not connect to either database. Wording used below:
-**repo** = read in this repository by grep or by opening the file; **audit** = read
-from Tommy's pasted results; **not verified** = neither of those has shown it.
+2026-10-19 from the repository alone, then updated the same day after two live read-only
+audits. For each audit, Tommy ran `SELECT` queries in each Supabase project and pasted
+the results; I did not connect to either database. Audit 1 (seven queries per project)
+covered the live table lists, the shapes of `accounts` and `users`, the functions, the
+`auth.users` triggers, the storage buckets and the row counts. Audit 2 (18 queries: the
+`WaaS-A*` set in `rankedceo-waas` and the `CRM-B*` set in `rankedceo-crm-production`)
+covered the live function bodies, the columns, foreign keys, indexes and RLS policies of
+the target tables, the table triggers, the RLS flags, and the account rows. Wording used
+below: **repo** = read in this repository by grep or by opening the file; **audit** =
+read from Tommy's pasted results; **not verified** = neither of those has shown it.
 
 The decision this plan implements is DEC-0022: `rankedceo-waas` becomes the single
 Supabase project for our product and our CRM tables are recreated there. DEC-0021
@@ -30,7 +35,9 @@ Our code calls 44 names through `.from()` (repo): 43 tables and 1 storage bucket
 
 11 + 28 + 5 = 44 names (43 tables plus the `logos` bucket), counted by script. The CRM project also lists all 11 names (audit). `docs/waas/USER_IDENTITY_CONSISTENCY_PLAN.md`
 noted on 2026-10-14 that the CRM copies of `audits`, `tenants` and `leads` were probably
-left from running the WaaS migrations there; that is an inference. "In `rankedceo-waas`"
+left from running the WaaS migrations there. Audit 2 supports that: in the CRM project
+the six WaaS-migration tables are all empty, `tenants` has 2 rows, `audits` and `leads`
+0 and `tenant_site_config` 1 (audit), so little would be lost by ignoring them. "In `rankedceo-waas`"
 in the table means the project production's WaaS client reads. `pipeline_stages` is not called by our code but
 `deals` has a foreign key to it (DEC-0023). It exists live in the CRM project and not
 in `rankedceo-waas`. The CRM project also holds many tables our code never calls
@@ -65,8 +72,14 @@ Order of creation, derived from the foreign keys in the CRM `CREATE TABLE` bodie
 | 7 | `agent_conversations` |
 | WaaS group | After `tenants` (already live in `rankedceo-waas`): `tenant_site_versions`, `tenant_site_variants`, `client_uploaded_assets`, `client_domain_change_requests`, `notification_log`, then `tenant_site_deployments` (it references `tenant_site_versions`) |
 
-Caveat: the foreign keys were parsed from migration text, so a later `ALTER TABLE`
-may add a reference this order misses. The live foreign keys have not been read yet.
+The order above was first derived from the foreign keys in the migration text. Audit 2
+read the live foreign keys (CRM-B4) and they agree: the CRM tables reference
+`accounts(id)` (and, for many, `users(id)`), except `crm_billing_events`, which has no
+foreign key at all, and `pipeline_stages`, which references only `pipelines`; the six
+WaaS-style tables reference only `tenants(id)` (plus
+`tenant_site_deployments.source_version_id` -> `tenant_site_versions`); and `deals`
+references `pipelines` and `pipeline_stages` with `ON DELETE RESTRICT`. No later
+`ALTER TABLE` added a reference this order misses.
 
 ## 3. The `accounts` and `users` collision
 
@@ -87,18 +100,26 @@ live columns have no migration: `is_pool_account`, `onboarding_data`, `platform_
 `title`, `last_login_at`, `crm_stripe_customer_id`, and others), no `full_name`, and a
 gap at column position 13 (a dropped column).
 
-Rows: CRM `accounts` 6, `users` 1. WaaS `accounts` 6, `users` 2. Both are small, so
-copying rows later is a small job, but the WaaS rows are not empty and cannot be
-dropped.
+Rows: CRM `accounts` 6, `users` 1. WaaS `accounts` 6, `users` 2. Audit 2 shows the six
+CRM accounts are all `active` on the `starter` plan with `platform_type` `CRM`, and four
+of them are pool rows (`is_pool_account` true), so only two are real customer accounts
+(CRM-B11). Both projects are small, so copying rows later is a small job, but the WaaS
+rows are not empty and cannot be dropped.
 
-**Hazard to design around.** `rankedceo-waas` has a live trigger
-`on_auth_user_created` that calls `handle_new_user()` (audit). The repo copy of that
-function (`waas/027_baseline_accounts_users.sql`) inserts only `accounts(name)` and
-`users(id, account_id, full_name, avatar_url)`. If the repo copy matches the live
-body, any column added to the WaaS `accounts` or `users` that is NOT NULL without a
-default (for example `accounts.slug`, `users.email`, `users.name`) would make every new
-WaaS sign-up fail. Added columns therefore must be nullable or have a default. The
-live function body has **not** been read yet. We never edit that trigger.
+**Hazard to design around — confirmed.** `rankedceo-waas` has a live trigger
+`on_auth_user_created` that calls `handle_new_user()` (audit). Audit 2 read the live
+body (WaaS-A1) and it matches the repo copy: it inserts only `accounts(name)` (the value
+`'My Account'`) and `users(id, account_id, full_name, avatar_url)`. So any column added
+to the WaaS `accounts` or `users` that is NOT NULL without a default (for example
+`accounts.slug`, `users.email`, `users.name`) would make every new WaaS sign-up fail.
+Added columns therefore must be nullable or have a default. The live function has no
+`SET search_path` (audit). We never edit that trigger.
+
+The onboarding RPCs (section 4) write eleven `accounts` columns the WaaS table does not
+have yet — `onboarding_completed`, `onboarding_completed_at`, `onboarding_step`,
+`onboarding_skipped`, `company_size`, `industry`, `website`, `phone`, `address`,
+`timezone` and `settings` — so those must be added, and under this hazard each must be
+nullable or defaulted. They also write `name`, which already exists in WaaS.
 
 Our code calls `users` in 58 files and `accounts` in 13 (repo); a grep found no file
 that calls them and also references the WaaS client.
@@ -120,15 +141,27 @@ The two must not both write.
   with an empty `search_path`, and finds the row where `users.id = auth.uid()` or the
   email matches the JWT email. It has no `auth_user_id` branch and no
   `SET LOCAL row_security = off`. We must copy the live definition, not the migration,
-  or access rules change silently. Which live policies use which helper has **not
-  been read yet** (`pg_policies`); the 248 migration mentions include definitions.
+  or access rules change silently. Audit 2 read the live policies (CRM-B6): most call
+  `get_current_user_account_id()`; some match `auth.uid()` directly (`activities.user_id`,
+  `appointments.booked_by_user_id`, `industry_leads.auth_user_id`, `crm_subscriptions.user_id`);
+  `form_fields` matches by email through `auth.users`; `pipeline_stages` has a duplicate
+  `authenticated` and `public` policy set; `smile_assessments` has an anon insert policy
+  hardcoded to the pool account `00000000-0000-4000-a000-000000000004`;
+  `agent_conversations` compares `auth.uid()::text = account_id::text`, which looks like a
+  bug but is what is live; the six WaaS-style tables in CRM use the `waas_admin` JWT
+  claim, and `tenant_site_variants` has a deny-all policy.
 - **RPC functions.** Our onboarding routes call five functions with the CRM client:
   `complete_onboarding`, `update_onboarding_step`, `skip_onboarding`,
   `update_company_info`, `update_preferences` (repo). All five are live in the CRM
   project and none exists in `rankedceo-waas` (audit). They are `SECURITY DEFINER` and
   update `accounts`, including the onboarding columns, so they must be created in
   `rankedceo-waas` (and the `accounts` columns they write must exist) before the client
-  switch. Grants must be read from the live definition; the migrations have none.
+  switch. Audit 2 read the live bodies (CRM-B7): all five are `SECURITY DEFINER` with
+  `SET search_path TO 'public'`, and each takes `p_account_id` and updates `accounts`
+  **without checking that the caller owns that account**, so an authorized invoker can
+  target any account — an authorization gap to review when they are recreated. Whether a
+  caller can actually invoke them depends on the `EXECUTE` grants, which the audit did not
+  read; the migrations have none.
   The other four RPCs our code calls (`resolve_tenant_by_hostname`,
   `capture_audit_lead`, `create_prospect_audit`, `get_audit_status`) are live in both
   projects (audit).
@@ -138,8 +171,27 @@ The two must not both write.
   (`handle_new_user` in 5 CRM migration files plus `waas/027`) must be excluded from
   any SQL applied to QA or `rankedceo-waas`, with a grep check on the final SQL.
   `rankedceo-waas` also has an event trigger function `rls_auto_enable`, not defined
-  anywhere in the repo (grep). Its effect on newly created tables is **not verified**,
-  and it may turn on row-level security for them.
+  anywhere in the repo (grep). Audit 2 read it (WaaS-A2): it runs
+  `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` on every new `public` table, so a table
+  created in `rankedceo-waas` will have RLS turned on automatically and needs its
+  policies in the same change or it will deny all access.
+- **Table triggers and helper functions.** The target tables carry their own triggers
+  (audit, CRM-B9): `update_updated_at_column()` backs nine of them (`campaigns`,
+  `companies`, `contacts`, `deals`, `email_messages`, `email_templates`, `email_threads`,
+  `forms`, `pipelines`); `handle_updated_at()` backs four (`agent_conversations`,
+  `appointments`, `calendly_connections`, `smile_assessments`); `deals` has
+  `auto_create_commission` (after insert or update of `stage`) and
+  `update_commission_on_deal_change` (after update of `value`); `email_messages` has
+  `associate_email_with_contact` (before insert) and `update_thread_stats` (after insert
+  or delete). `agent_conversations` has a redundant duplicate before-update trigger. The
+  six WaaS-style tables have no triggers. Audit 2 also read 20 helper functions (CRM-B8);
+  eight are `SECURITY DEFINER` and several take an id with no ownership check, and
+  `get_smile_account_id()` uses `SET LOCAL row_security = off` plus `users.auth_user_id`,
+  a column that is not in the live `users` table, so it looks dead.
+  `update_updated_at_column()` is used by nine triggers but was not in that set of 20 — it
+  is a shared helper that also exists in `rankedceo-waas`. All of these functions and
+  triggers must be recreated after the tables move. Every target table has RLS enabled
+  (audit, CRM-B10, 29 of 29), so each needs its policies recreated.
 - **Logins.** Each project has its own `auth.users`. A CRM login cannot appear in
   `rankedceo-waas` by moving table rows alone. The method is undecided.
 - **Buckets.** `rankedceo-waas` has `logos`. The CRM project has `avatars`,
@@ -147,7 +199,11 @@ The two must not both write.
   (repo). The upload route that uses `client-uploads` creates the bucket itself if it is
   missing, through the WaaS client, so the bucket is not a blocker. Whether the CRM
   copy of `client-uploads` holds files we need is **not verified**.
-- **Data.** Structure only so far. Copying rows is a separate step.
+- **Data.** Structure only so far. Copying rows is a separate step. Audit 2 read the row
+  counts: the six WaaS-migration tables in the CRM project are empty (CRM-B1); the 22 CRM
+  tables are also empty except `agent_conversations` 31, `industry_leads` 5,
+  `appointments` 2 and `calendly_connections` 1 (CRM-B2); and the CRM `accounts` table
+  has 6 rows, four of them pool rows (CRM-B11).
 
 ## 5. Names with no live table
 
@@ -181,10 +237,15 @@ So the repo suggests admin tools write to the CRM project while client-facing pa
 read from `rankedceo-waas`. If that is how production runs, a variant created in the
 admin would not be visible to the client edit page, and the client edit pages would
 fail on missing tables. This is a **reading of the code, not a test of production**.
-What the Vercel production variables actually hold is not verified, and the 2026-10-14
-note in `docs/waas/USER_IDENTITY_CONSISTENCY_PLAN.md` says the CRM copy of `tenants`
-had 2 rows against 18 in `rankedceo-waas`, which does not obviously fit admin tools
-using the CRM copy. It needs a read-only check (section 8) before anything is built.
+What the Vercel production variables actually hold is not verified. Audit 2 read the CRM
+row counts (CRM-B1): the six WaaS-style tables are all empty, `tenants` has 2 rows,
+`audits` and `leads` 0 and `tenant_site_config` 1, against 18 `tenants`, 32 `audits` and
+1 `leads` in `rankedceo-waas` (audit). That fits the idea that the CRM copies are
+leftovers rather than the tables the admin tools write to, but it does not prove which
+project the admin code reads and writes. It still needs a check of the Vercel variables
+(section 8) before anything is built. Note also that the live `tenants` table has no
+foreign key on `crm_account_id` (audit), so the link from a tenant to a CRM account is by
+convention only.
 
 ## 7. Code changes after the data moves
 
@@ -202,12 +263,13 @@ after the data is in place and tested.
 
 1. Done: compare the live shapes of `accounts` and `users`, the functions, the
    `auth.users` triggers, the buckets and the row counts in both projects (audit).
-2. Next read-only round (all `SELECT`): the live body of WaaS `handle_new_user()` and
-   `handle_user_delete()`; the row counts of the 6 CRM-only WaaS tables plus `tenants`,
-   `audits` and `leads` in the CRM project (settles section 6); the live columns,
-   foreign keys, indexes and RLS policies of the 28 CRM-only tables; the live
-   definitions of the five onboarding RPCs and the other helper functions the live
-   policies use; what `rls_auto_enable` does.
+2. Done: the second read-only round (audit 2, 18 `SELECT` queries). It read the live
+   bodies of WaaS `handle_new_user()`/`handle_user_delete()` and `rls_auto_enable`; the
+   row counts of the six CRM-only WaaS tables and `tenants`/`audits`/`leads` in the CRM
+   project (section 6); the live columns, foreign keys, indexes and RLS policies of the
+   target tables; the live definitions of the five onboarding RPCs and 20 helper
+   functions; the table triggers; and the RLS flags. Findings are folded into sections
+   1–6.
 3. Decide the four missing names (section 5) and the base shape for `accounts` and
    `users` (section 3).
 4. Write the new-table SQL from the live shapes, excluding `handle_new_user()` and
