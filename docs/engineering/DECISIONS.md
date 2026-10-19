@@ -180,6 +180,35 @@ Status values: **in force**, **implemented**, **on hold**, **superseded**. Imple
 
 ---
 
+## DEC-0022 — Our tables move into rankedceo-waas; rankedceo-crm is left to the other product
+
+- Date: 2026-10-19
+- Status: in force
+- Implementation: not started. Nothing has been moved, created or copied. Neither live
+  database has been inspected, and no credentials have been provided.
+- Decision: `rankedceo-waas` becomes the single Supabase project for our product.
+  The tables our own code calls that currently live in `rankedceo-crm` are to be
+  recreated in `rankedceo-waas`. `rankedceo-crm` is left to the other product, which
+  shares it. No new Supabase project is created for the combine.
+- Scope, by grep of `.from()` in `app`, `lib` and `components` against the
+  `CREATE TABLE` statements in `supabase/migrations` (counted 2026-10-19, repo only):
+  44 tables are called by our code. 23 are created only by the CRM migrations, 14 only
+  by the WaaS migrations, 2 (`accounts`, `users`) by both, and 5 are created by no
+  migration (`audit_abandonment_tracking`, `logos`, `waas_tenants`, `qa_runs`,
+  `qa_scenarios`).
+- Open: `accounts` and `users` exist in both migration sets and need a decision on
+  which definition wins. `auth.users` is separate in each project, so moving logins
+  is a separate live-data step. The five tables with no CREATE must be checked in the
+  live database before anything is done with them. Whether to create a separate
+  `rankedceo-qa` project is undecided; it may cost money (see "no new expenses until
+  revenue"), and that has not been checked against the Supabase plan.
+- Rules that still apply: DEC-0021 (only net-new tables, or tables our code calls by
+  exact name) and the rule never to edit the live `handle_new_user()` trigger.
+- Used in: all database work.
+- Source: Tommy, 2026-10-19 (chose option A of three).
+
+---
+
 ## Not yet recorded
 
 The numbers **DEC-0002, DEC-0009, DEC-0010 and DEC-0011** are not defined anywhere
