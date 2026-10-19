@@ -73,9 +73,11 @@ Order of creation, derived from the foreign keys in the CRM `CREATE TABLE` bodie
 | WaaS group | After `tenants` (already live in `rankedceo-waas`): `tenant_site_versions`, `tenant_site_variants`, `client_uploaded_assets`, `client_domain_change_requests`, `notification_log`, then `tenant_site_deployments` (it references `tenant_site_versions`) |
 
 The order above was first derived from the foreign keys in the migration text. Audit 2
-read the live foreign keys (CRM-B4) and they agree: every CRM table references
-`accounts(id)` and `users(id)`, the six WaaS-style tables reference only `tenants(id)`
-(plus `tenant_site_deployments.source_version_id` -> `tenant_site_versions`), and `deals`
+read the live foreign keys (CRM-B4) and they agree: the CRM tables reference
+`accounts(id)` (and, for many, `users(id)`), except `crm_billing_events`, which has no
+foreign key at all, and `pipeline_stages`, which references only `pipelines`; the six
+WaaS-style tables reference only `tenants(id)` (plus
+`tenant_site_deployments.source_version_id` -> `tenant_site_versions`); and `deals`
 references `pipelines` and `pipeline_stages` with `ON DELETE RESTRICT`. No later
 `ALTER TABLE` added a reference this order misses.
 
@@ -113,11 +115,11 @@ to the WaaS `accounts` or `users` that is NOT NULL without a default (for exampl
 Added columns therefore must be nullable or have a default. The live function has no
 `SET search_path` (audit). We never edit that trigger.
 
-The onboarding RPCs (section 4) write twelve `accounts` columns the WaaS table does not
+The onboarding RPCs (section 4) write eleven `accounts` columns the WaaS table does not
 have yet — `onboarding_completed`, `onboarding_completed_at`, `onboarding_step`,
 `onboarding_skipped`, `company_size`, `industry`, `website`, `phone`, `address`,
-`timezone`, `settings` and `name` — so those must be added, and under this hazard each
-must be nullable or defaulted.
+`timezone` and `settings` — so those must be added, and under this hazard each must be
+nullable or defaulted. They also write `name`, which already exists in WaaS.
 
 Our code calls `users` in 58 files and `accounts` in 13 (repo); a grep found no file
 that calls them and also references the WaaS client.
@@ -156,9 +158,10 @@ The two must not both write.
   `rankedceo-waas` (and the `accounts` columns they write must exist) before the client
   switch. Audit 2 read the live bodies (CRM-B7): all five are `SECURITY DEFINER` with
   `SET search_path TO 'public'`, and each takes `p_account_id` and updates `accounts`
-  **without checking that the caller owns that account**, so any authenticated caller can
-  change any account — an authorization gap to fix when they are recreated. The audit
-  read the bodies, not the ACLs, so the grants still need a read; the migrations have none.
+  **without checking that the caller owns that account**, so an authorized invoker can
+  target any account — an authorization gap to review when they are recreated. Whether a
+  caller can actually invoke them depends on the `EXECUTE` grants, which the audit did not
+  read; the migrations have none.
   The other four RPCs our code calls (`resolve_tenant_by_hostname`,
   `capture_audit_lead`, `create_prospect_audit`, `get_audit_status`) are live in both
   projects (audit).
@@ -196,9 +199,11 @@ The two must not both write.
   (repo). The upload route that uses `client-uploads` creates the bucket itself if it is
   missing, through the WaaS client, so the bucket is not a blocker. Whether the CRM
   copy of `client-uploads` holds files we need is **not verified**.
-- **Data.** Structure only so far. Copying rows is a separate step. Audit 2 shows there
-  is almost nothing to copy: the six WaaS-migration tables in the CRM project are empty,
-  and the CRM `accounts` table has 6 rows, four of them pool rows (CRM-B1, CRM-B11).
+- **Data.** Structure only so far. Copying rows is a separate step. Audit 2 read the row
+  counts: the six WaaS-migration tables in the CRM project are empty (CRM-B1); the 22 CRM
+  tables are also empty except `agent_conversations` 31, `industry_leads` 5,
+  `appointments` 2 and `calendly_connections` 1 (CRM-B2); and the CRM `accounts` table
+  has 6 rows, four of them pool rows (CRM-B11).
 
 ## 5. Names with no live table
 
