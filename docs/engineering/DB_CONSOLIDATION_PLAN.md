@@ -1,136 +1,192 @@
-# Database consolidation plan (DEC-0022)
+# Database consolidation plan (DEC-0022, DEC-0023)
 
-Status: **plan only. Nothing has been created, moved or copied.** Written 2026-10-19
-from the repository alone. Neither live database was inspected and no credentials were
-used. Every "verified" below means verified in the repo by grep or by reading the
-file named; every "not verified" means it needs the live database.
+Status: **plan only. Nothing has been created, moved or copied.** First written
+2026-10-19 from the repository alone, then updated the same day after a live read-only
+audit. For the audit, Tommy ran seven `SELECT` queries in each Supabase project and
+pasted the results. I did not connect to either database. Wording used below:
+**repo** = read in this repository by grep or by opening the file; **audit** = read
+from Tommy's pasted results; **not verified** = neither of those has shown it.
 
 The decision this plan implements is DEC-0022: `rankedceo-waas` becomes the single
-Supabase project for our product, our CRM tables are recreated there, and
-`rankedceo-crm` is left to the other product that shares it. DEC-0021 limits what may
-be touched: net-new tables, or tables our own code calls by exact name.
+Supabase project for our product and our CRM tables are recreated there. DEC-0021
+limits what may be touched: net-new tables, or tables our own code calls by exact name.
+DEC-0023 puts `pipeline_stages` in scope. The reason for combining is cost: each extra
+Supabase project is about $10 a month (Tommy, 2026-10-19).
 
-## 1. What has to move
+Project names: `rankedceo-waas` is the WaaS project (ref `klgvdvryewykzlumbkei`,
+confirmed by Tommy as the target of `NEXT_PUBLIC_WAAS_SUPABASE_URL`).
+`rankedceo-crm-production` is the CRM project (`NEXT_PUBLIC_SUPABASE_URL`).
 
-Our code calls 44 table names through `.from()`. By the `CREATE TABLE` statements in
-`supabase/migrations`:
+## 1. What the audit found
 
-| Group | Count | Action |
+Our code calls 44 table names through `.from()` (repo). Checked against the live
+`public` and `qa` tables in each project (audit):
+
+| Where the name is live | Count | Names |
 |---|---|---|
-| Created only by the WaaS migrations | 14 | Nothing to recreate **if** they exist live. Needs a live existence check first (see below). |
-| Created only by the CRM migrations | 23 | Recreate in `rankedceo-waas`. |
-| Created by both (`accounts`, `users`) | 2 | Decision needed (section 3). |
-| No `CREATE TABLE` matched | 5 | See section 5. None is a plain move. |
+| In `rankedceo-waas` | 11 | `accounts`, `audits`, `client_variant_edit_events`, `domain_requests`, `leads`, `qa_runs`, `qa_scenarios`, `site_templates`, `tenant_site_config`, `tenants`, `users` |
+| Only in `rankedceo-crm-production` | 28 | 22 from the CRM migrations: `activities`, `agent_conversations`, `appointments`, `calendly_connections`, `campaign_emails`, `campaigns`, `commission_rates`, `commissions`, `companies`, `contacts`, `crm_billing_events`, `crm_subscriptions`, `deals`, `email_messages`, `email_templates`, `email_threads`, `form_fields`, `form_submissions`, `forms`, `industry_leads`, `pipelines`, `smile_assessments`. 6 from the WaaS migrations: `client_domain_change_requests`, `client_uploaded_assets`, `notification_log`, `tenant_site_deployments`, `tenant_site_variants`, `tenant_site_versions` |
+| In neither project | 5 | `audit_abandonment_tracking`, `calendar_provider_connections`, `tenant_variant_regenerations`, `waas_tenants`, and `logos` (a storage bucket, see section 5) |
 
-The migrations do not prove the 14 WaaS tables exist in the live target.
-`schema_investigation/SCHEMA_GAP_ANALYSIS.md` (line 51) records nine tables as written
-but never applied to production at the time of that analysis. Seven of them are in this
-group and called by our code: `client_domain_change_requests`, `client_uploaded_assets`,
-`notification_log`, `tenant_site_deployments`, `tenant_site_variants`,
-`tenant_site_versions` and `tenant_variant_regenerations`. The other two are `qa_runs`
-and `qa_scenarios` (section 5). Whether they have been applied since is **not
-verified**. For each of the 14, the action is "apply the WaaS migration if the live
-check says the table is missing", not "no move".
+11 + 28 + 5 = 44, counted by script. The CRM project also lists all 11 names (audit). `docs/waas/USER_IDENTITY_CONSISTENCY_PLAN.md`
+noted on 2026-10-14 that the CRM copies of `audits`, `tenants` and `leads` were probably
+left from running the WaaS migrations there; that is an inference. "In `rankedceo-waas`"
+in the table means the project production's WaaS client reads. `pipeline_stages` is not called by our code but
+`deals` has a foreign key to it (DEC-0023). It exists live in the CRM project and not
+in `rankedceo-waas`. The CRM project also holds many tables our code never calls
+(for example `ebay_*`, `listing_*`, `profiles`, `organizations`, `org_members`, `ai_*`).
+By their names they belong to the other product that shares the project; that is an
+inference and DEC-0021 keeps them out of scope.
 
-The 23 CRM-only tables: `activities`, `agent_conversations`, `appointments`,
-`calendar_provider_connections`, `calendly_connections`, `campaign_emails`,
-`campaigns`, `commission_rates`, `commissions`, `companies`, `contacts`,
-`crm_billing_events`, `crm_subscriptions`, `deals`, `email_messages`,
-`email_templates`, `email_threads`, `form_fields`, `form_submissions`, `forms`,
-`industry_leads`, `pipelines`, `smile_assessments`.
+The `accounts` and `users` tables exist in both projects with different shapes
+(section 3).
 
-One more table is needed that our code does not call: `deals` has a foreign key to
-`pipeline_stages` (created in `0000085_baseline_forward_referenced_crm_tables.sql`).
-DEC-0021 does not cover it directly. **DEC-0023** records Tommy's 2026-10-19 ruling
-that it is in scope, because a table our code calls (`deals`) depends on it.
+## 2. What has to be created in `rankedceo-waas`
 
-## 2. Order of creation
+The 6 WaaS-migration tables that are live only in the CRM project, and the 22 CRM
+tables plus `pipeline_stages`, have to be created in `rankedceo-waas`. The 4 missing
+table names (section 5) need a decision first. Today the repo migrations are not a
+reliable source: the live `accounts` table has 9 columns the migrations add that are
+not live, and the live `get_current_user_account_id()` differs from the latest
+migration (sections 3 and 4). The new-table SQL should therefore be generated from the
+live shapes, not replayed from migration files.
 
-Derived from the foreign keys in the CRM `CREATE TABLE` bodies. A table cannot be
-created before the tables it references.
+Order of creation, derived from the foreign keys in the CRM `CREATE TABLE` bodies
+(repo). A table cannot be created before the tables it references.
 
 | Step | Tables |
 |---|---|
-| 1 | `accounts` (if kept), `crm_billing_events` |
-| 2 | `users` (if kept), `pipelines`, `email_threads` |
-| 3 | `calendar_provider_connections`, `calendly_connections`, `commission_rates`, `companies`, `crm_subscriptions`, `email_templates`, `forms`, `industry_leads`, `pipeline_stages` (DEC-0023), `smile_assessments` |
+| 1 | `crm_billing_events` (`accounts` and `users` already exist in `rankedceo-waas`, see section 3) |
+| 2 | `pipelines`, `email_threads` |
+| 3 | `calendly_connections`, `commission_rates`, `companies`, `crm_subscriptions`, `email_templates`, `forms`, `industry_leads`, `pipeline_stages` (DEC-0023), `smile_assessments` |
 | 4 | `campaigns`, `contacts`, `form_fields` |
 | 5 | `deals`, `form_submissions` |
 | 6 | `activities`, `appointments`, `campaign_emails`, `commissions`, `email_messages` |
 | 7 | `agent_conversations` |
+| WaaS group | After `tenants` (already live in `rankedceo-waas`): `tenant_site_versions`, `tenant_site_variants`, `client_uploaded_assets`, `client_domain_change_requests`, `notification_log`, then `tenant_site_deployments` (it references `tenant_site_versions`) |
 
-Caveat: the foreign keys were parsed from the migration text, so a table that was
-changed by a later `ALTER TABLE` may have a reference this order misses. The live
-schema is the authority.
+Caveat: the foreign keys were parsed from migration text, so a later `ALTER TABLE`
+may add a reference this order misses. The live foreign keys have not been read yet.
 
 ## 3. The `accounts` and `users` collision
 
-Both migration sets define `accounts` and `users`. Compared by reading
-`000001_create_users_and_accounts.sql` and `waas/027_baseline_accounts_users.sql`:
-the `CREATE TABLE` bodies have the same columns (`id`, `name`, timestamps for
-`accounts`; `id`, `account_id`, `full_name`, `avatar_url`, timestamps for `users`).
-**That is not the whole CRM shape.** Later CRM migrations add 29 distinct columns to
-`accounts` (for example `onboarding_completed`, `onboarding_step`, `company_size`,
-`timezone`, `settings`, `plan`, `crm_plan_tier`) and 8 to `users` (for example `email`,
-`role`, `status`, `crm_stripe_customer_id`) by `ALTER TABLE ... ADD COLUMN`, counted by
-grep. The WaaS baseline has none of them. The WaaS copy was
-written "to match the exact live schema" of the WaaS project and is not wired into
-any WaaS feature (`schema_investigation/SCHEMA_GAP_ANALYSIS.md`). Our code calls
-`users` in 58 files and `accounts` in 13, and a grep found no file that calls them also references the WaaS client.
+Both projects have both tables, with different live shapes (audit).
 
-The consequence: after the move, the CRM client and the WaaS client point at one
-project, and the WaaS project already has (unused) `accounts` and `users` tables.
-Whether the live WaaS copies hold rows is **not verified**. Our code needs the CRM
-columns, so whichever definition is the base, the added columns must be created. The
-final shape comes from comparing both live tables, not from the migration files.
+`accounts`: `rankedceo-waas` has 4 columns (`id`, `name`, `created_at`, `updated_at`,
+timestamps with time zone). `rankedceo-crm-production` has 28, including `slug`
+(NOT NULL, no default), `status`, `plan`, the onboarding columns, `settings`,
+`timezone` and the three `crm_*` billing columns. Nine columns that the CRM migrations
+add are **not** live in the CRM project: `billing_email`, `deleted_at`, `deleted_by`,
+`is_active`, `is_deleted`, `logo_url`, `metadata`, `user_count`, `website_url`. Four
+live columns have no migration: `is_pool_account`, `onboarding_data`, `platform_type`,
+`stripe_subscription_id`.
+
+`users`: `rankedceo-waas` has 6 columns (`id` with no default, `account_id`,
+`full_name`, `avatar_url`, timestamps with time zone). `rankedceo-crm-production` has
+14 (`email` and `name` NOT NULL, `role`, `status`, `base_commission_rate`, `phone`,
+`title`, `last_login_at`, `crm_stripe_customer_id`, and others), no `full_name`, and a
+gap at column position 13 (a dropped column).
+
+Rows: CRM `accounts` 6, `users` 1. WaaS `accounts` 6, `users` 2. Both are small, so
+copying rows later is a small job, but the WaaS rows are not empty and cannot be
+dropped.
+
+**Hazard to design around.** `rankedceo-waas` has a live trigger
+`on_auth_user_created` that calls `handle_new_user()` (audit). The repo copy of that
+function (`waas/027_baseline_accounts_users.sql`) inserts only `accounts(name)` and
+`users(id, account_id, full_name, avatar_url)`. If the repo copy matches the live
+body, any column added to the WaaS `accounts` or `users` that is NOT NULL without a
+default (for example `accounts.slug`, `users.email`, `users.name`) would make every new
+WaaS sign-up fail. Added columns therefore must be nullable or have a default. The
+live function body has **not** been read yet. We never edit that trigger.
+
+Our code calls `users` in 58 files and `accounts` in 13 (repo); a grep found no file
+that calls them and also references the WaaS client.
+
+Another behaviour change: after the move, a CRM sign-up would fire the WaaS
+`handle_new_user()` and create an account and user row on its own. Today the CRM
+project has no such link for our tables (`lib/supabase/ensure-crm-profile.ts` explains
+that the CRM trigger belongs to the other product), so our code creates them itself.
+The two must not both write.
 
 ## 4. Things that come with the tables
 
-- **Policies.** The CRM policies use `get_current_user_account_id()`: 248 occurrences in migrations, including its definitions and grants. It is
-  `SECURITY DEFINER`, redefined in 7 migrations; the latest is
-  `000018_fix_users_rls_permissions.sql`. It must exist in `rankedceo-waas` before any
-  policy that uses it. Which version is live in `rankedceo-crm` is **not verified**.
-  `get_current_user_email()` (9 uses), `get_current_smile_account_id()` (7) and
-  `get_current_user_id()` (4) are used the same way.
-- **RPC functions.** Our CRM onboarding routes call five functions through
-  `supabase.rpc()` with the CRM server client: `complete_onboarding`,
-  `update_onboarding_step` and `skip_onboarding` (defined in
-  `20240116000005_add_onboarding_fields.sql`), and `update_company_info` and
-  `update_preferences` (defined in `20240116000006_add_update_company_info_function.sql`).
-  All five are `SECURITY DEFINER` and update `accounts`, including the onboarding
-  columns. They are not in the table inventory above, and neither file has a `GRANT`
-  (grep). If the CRM client is switched to `rankedceo-waas` before they are recreated
-  there, the onboarding routes fail. They must be created, with their grants checked
-  against the live definition, before the client switch. The other four RPCs our code
-  calls (`resolve_tenant_by_hostname`, `capture_audit_lead`, `create_prospect_audit`,
-  `get_audit_status`) are defined in `waas/000_waas_complete_idempotent.sql`; whether
-  they are live is **not verified**.
-- **Triggers and functions.** `handle_new_user` and `update_updated_at_column` are
-  defined by both migration sets. The rule never to edit the live `handle_new_user()`
-  stands. Whether `rankedceo-waas` already has a trigger on `auth.users` is **not
-  verified** from the repo (027 says it preserves one "for parity with production").
-- **Logins.** Each project has its own `auth.users`. `users.id` references
-  `auth.users(id)`, so a CRM user row cannot move without a matching login in
-  `rankedceo-waas`. Moving logins is live-data work, and its method is undecided.
-- **Data.** This plan covers structure. Whether to copy rows, and which, is a
-  separate decision once row counts are known (**not verified**).
+- **Policy helper functions.** Live in the CRM project (audit): `get_current_user_account_id()`
+  and `get_current_user_id()`. Not live there, although migrations use them:
+  `get_current_user_email()` (9 mentions) and `get_current_smile_account_id()` (7).
+  None of the four exists in `rankedceo-waas`. The live
+  `get_current_user_account_id()` differs from the latest migration
+  (`000018_fix_users_rls_permissions.sql`): the live one is `STABLE SECURITY DEFINER`
+  with an empty `search_path`, and finds the row where `users.id = auth.uid()` or the
+  email matches the JWT email. It has no `auth_user_id` branch and no
+  `SET LOCAL row_security = off`. We must copy the live definition, not the migration,
+  or access rules change silently. Which live policies use which helper has **not
+  been read yet** (`pg_policies`); the 248 migration mentions include definitions.
+- **RPC functions.** Our onboarding routes call five functions with the CRM client:
+  `complete_onboarding`, `update_onboarding_step`, `skip_onboarding`,
+  `update_company_info`, `update_preferences` (repo). All five are live in the CRM
+  project and none exists in `rankedceo-waas` (audit). They are `SECURITY DEFINER` and
+  update `accounts`, including the onboarding columns, so they must be created in
+  `rankedceo-waas` (and the `accounts` columns they write must exist) before the client
+  switch. Grants must be read from the live definition; the migrations have none.
+  The other four RPCs our code calls (`resolve_tenant_by_hostname`,
+  `capture_audit_lead`, `create_prospect_audit`, `get_audit_status`) are live in both
+  projects (audit).
+- **Triggers.** `rankedceo-waas` has `on_auth_user_created` and `on_auth_user_deleted`
+  on `auth.users`, with `handle_new_user` and `handle_user_delete`. The CRM project has
+  `on_auth_user_created`. These are never edited. The statements that create them
+  (`handle_new_user` in 5 CRM migration files plus `waas/027`) must be excluded from
+  any SQL applied to QA or `rankedceo-waas`, with a grep check on the final SQL.
+  `rankedceo-waas` also has an event trigger function `rls_auto_enable`, not defined
+  anywhere in the repo (grep). Its effect on newly created tables is **not verified**,
+  and it may turn on row-level security for them.
+- **Logins.** Each project has its own `auth.users`. A CRM login cannot appear in
+  `rankedceo-waas` by moving table rows alone. The method is undecided.
+- **Buckets.** `rankedceo-waas` has `logos`. The CRM project has `avatars`,
+  `client-uploads` and `listing-images`. Our code uses `client-uploads` and `logos`
+  (repo). The upload route that uses `client-uploads` creates the bucket itself if it is
+  missing, through the WaaS client, so the bucket is not a blocker. Whether the CRM
+  copy of `client-uploads` holds files we need is **not verified**.
+- **Data.** Structure only so far. Copying rows is a separate step.
 
-## 5. The five names with no `CREATE TABLE`
+## 5. Names with no live table
 
-Read from the code and migrations:
+| Name | Finding |
+|---|---|
+| `logos` | A storage bucket, not a table. It exists in `rankedceo-waas`. |
+| `calendar_provider_connections` | Not in either project. Called once in `lib/services/calendar-routing-service.ts`, and the call ignores the error, so it silently returns nothing today. The only definition is the migration `20260702000000_add_calendar_provider_routing.sql` (foreign keys to `accounts` and `users`). |
+| `tenant_variant_regenerations` | Not in either project. Called in `app/_preview/[tenantId]/page.tsx` and 8 times in `lib/waas/actions/admin/client-review.ts`. Defined only by `waas/026_waas_variant_regenerations.sql`. |
+| `waas_tenants` | Not in either project. Called once, in `lib/waas/actions/client-edit/section-regen.ts`, and when the query fails that code returns "Could not load tenant information." The migrations create `tenants`, and every neighbouring file queries `tenants`, so this looks like a wrong name. Changing it is a code fix, and under DEC-0021 it should be Tommy's call, because I cannot prove from the repo that `tenants` is what was meant. |
+| `audit_abandonment_tracking` | Not in either project. Called in two routes using the WaaS env vars. No `CREATE` anywhere in the repo. The routes contain a guard that looks for a "does not exist" message and then skips; I did not test whether it fires. |
 
-| Name | What it is | Evidence |
-|---|---|---|
-| `logos` | A storage bucket, not a table. | `storage.from("logos")` in `app/api/onboarding/logo-upload/route.ts`; the route creates the bucket itself; `waas/007_waas_storage.sql` documents it. Needs creating in the new project if it is not already there. |
-| `qa_runs`, `qa_scenarios` | Tables in the `qa` schema. | `waas/021_qa_schema.sql` creates `qa.qa_runs` and `qa.qa_scenarios`; `getWaasQaClient()` sets `db.schema = "qa"`. The gap analysis lists both as not yet applied to production, so whether they exist live is **not verified**. |
-| `waas_tenants` | **Unexplained.** | One call in `lib/waas/actions/client-edit/section-regen.ts`, selecting `brand_config, legal_name, primary_trade, target_industry`. The migrations create `tenants`, and every neighbouring file queries `tenants`. Possibly a stale name; a live view or table with this name is not ruled out. |
-| `audit_abandonment_tracking` | **Unexplained.** | Called in two routes, using the WaaS project's env vars. No `CREATE` in any `.sql` or `.md` file in the repo. Probably created by hand in the dashboard. |
+## 6. Finding: WaaS features already straddle both projects
 
-For the two unexplained names, DEC-0021 applies: they are called by our code by exact
-name, so they are ours, but their shape must come from the live database before
-anything is written.
+Production's `NEXT_PUBLIC_WAAS_SUPABASE_URL` is `rankedceo-waas`, and that project
+lacks six tables our code calls (section 1). Reading which client each file uses
+(repo, by imports and env var names):
 
-## 6. Code changes after the data moves
+- The client edit actions, the edit and preview pages, `edit-session.ts`, the
+  notification service and the initial-site generator use the **WaaS** client
+  (`NEXT_PUBLIC_WAAS_SUPABASE_URL`). They call `tenant_site_variants`,
+  `client_uploaded_assets`, `client_domain_change_requests`, `notification_log` and
+  `tenant_variant_regenerations`, none of which exists in `rankedceo-waas`.
+- The admin actions that import `lib/waas/actions/admin/_shared.ts` use
+  `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. By the repo's naming that
+  is the **CRM** project, which is where `tenant_site_variants`,
+  `tenant_site_versions` and `tenant_site_deployments` live. `lib/waas/actions/admin/tenants.ts`
+  also reads `tenants`, `audits` and `tenant_site_config` through that client (the
+  other admin files were not checked for those tables).
+
+So the repo suggests admin tools write to the CRM project while client-facing pages
+read from `rankedceo-waas`. If that is how production runs, a variant created in the
+admin would not be visible to the client edit page, and the client edit pages would
+fail on missing tables. This is a **reading of the code, not a test of production**.
+What the Vercel production variables actually hold is not verified, and the 2026-10-14
+note in `docs/waas/USER_IDENTITY_CONSISTENCY_PLAN.md` says the CRM copy of `tenants`
+had 2 rows against 18 in `rankedceo-waas`, which does not obviously fit admin tools
+using the CRM copy. It needs a read-only check (section 8) before anything is built.
+
+## 7. Code changes after the data moves
 
 The CRM client is built from `NEXT_PUBLIC_SUPABASE_URL` in `lib/supabase/admin.ts`,
 `audit-client.ts`, `client.ts`, `middleware.ts`, `server.ts`, in
@@ -142,26 +198,36 @@ environment change in Vercel plus a cleanup of the two-client split, and it chan
 where every CRM user signs in. That is the riskiest step and should be its own PR,
 after the data is in place and tested.
 
-## 7. Safe order of work
+## 8. Safe order of work
 
-1. Compare the live shapes of `accounts` and `users` in both projects (read-only).
-2. Check the two unexplained names live (read-only).
-3. Replay the migrations on a local throwaway Postgres, write the new-table SQL, and
-   test it there. The generated SQL must **exclude** every `CREATE OR REPLACE FUNCTION
-   handle_new_user()` and every `DROP TRIGGER` / `CREATE TRIGGER` on `auth.users`. The
-   CRM migrations contain these in 5 files (`000001`, `000003`, `000005`, `000006`,
-   `000007`), and `waas/027_baseline_accounts_users.sql` has them too. Those statements
-   may run only on the throwaway local database, never on QA or `rankedceo-waas`, which
-   keeps the "never edit the live `handle_new_user()`" rule intact. Check the final SQL
-   with a grep for both patterns before applying it.
-4. Apply to a QA project, then to `rankedceo-waas`. The SQL for `deals` includes
-   `pipeline_stages` (DEC-0023).
-5. Recreate the five onboarding RPCs and check their grants (section 4).
-6. Decide about data and logins.
-7. Switch the CRM client to the single project (separate PR).
+1. Done: compare the live shapes of `accounts` and `users`, the functions, the
+   `auth.users` triggers, the buckets and the row counts in both projects (audit).
+2. Next read-only round (all `SELECT`): the live body of WaaS `handle_new_user()` and
+   `handle_user_delete()`; the row counts of the 6 CRM-only WaaS tables plus `tenants`,
+   `audits` and `leads` in the CRM project (settles section 6); the live columns,
+   foreign keys, indexes and RLS policies of the 28 CRM-only tables; the live
+   definitions of the five onboarding RPCs and the other helper functions the live
+   policies use; what `rls_auto_enable` does.
+3. Decide the four missing names (section 5) and the base shape for `accounts` and
+   `users` (section 3).
+4. Write the new-table SQL from the live shapes, excluding `handle_new_user()` and
+   every `auth.users` trigger statement, and test it on a local throwaway Postgres.
+5. Apply to `rankedceo-waas`. QA is the existing `qa` schema in `rankedceo-waas`
+   (see section 9), so no extra project is needed for this step.
+6. Create the five onboarding RPCs and the helper functions, and check their grants.
+7. Decide about data and logins.
+8. Switch the CRM client to the single project (separate PR).
 
-## 8. Open questions
+## 9. Open questions
 
-1. Does `rankedceo-qa` get created, and does the Supabase plan allow it at no cost?
-2. Which definition of `accounts` and `users` is the base once live shapes are known?
+1. QA project. Tommy said (2026-10-19) that once our tables are combined into
+   `rankedceo-waas` and the other product's `listing-assistant-pro` is combined into
+   `listrassistr-official`, `rankedceo-crm-production` could be repurposed as the QA
+   project, so no new project is created and no extra $10 a month is spent. This is
+   not yet in the decision log, and it differs from the DEC-0022 wording that leaves
+   `rankedceo-crm` to the other product. Until then QA stays on the `qa` schema in
+   `rankedceo-waas`, which already exists.
+2. Which definition of `accounts` and `users` is the base (section 3)?
 3. How do CRM logins reach `rankedceo-waas`?
+4. The four missing names in section 5, especially `waas_tenants`.
+5. Which project does production admin code really read and write (section 6)?
