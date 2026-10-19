@@ -41,8 +41,8 @@ The 23 CRM-only tables: `activities`, `agent_conversations`, `appointments`,
 
 One more table is needed that our code does not call: `deals` has a foreign key to
 `pipeline_stages` (created in `0000085_baseline_forward_referenced_crm_tables.sql`).
-DEC-0021 does not cover it. **Tommy to decide** whether it counts as in scope
-because a table we call depends on it.
+DEC-0021 does not cover it directly. **DEC-0023** records Tommy's 2026-10-19 ruling
+that it is in scope, because a table our code calls (`deals`) depends on it.
 
 ## 2. Order of creation
 
@@ -53,7 +53,7 @@ created before the tables it references.
 |---|---|
 | 1 | `accounts` (if kept), `crm_billing_events` |
 | 2 | `users` (if kept), `pipelines`, `email_threads` |
-| 3 | `calendar_provider_connections`, `calendly_connections`, `commission_rates`, `companies`, `crm_subscriptions`, `email_templates`, `forms`, `industry_leads`, `smile_assessments`; plus `pipeline_stages` **only if** Tommy puts it in scope (section 1) |
+| 3 | `calendar_provider_connections`, `calendly_connections`, `commission_rates`, `companies`, `crm_subscriptions`, `email_templates`, `forms`, `industry_leads`, `pipeline_stages` (DEC-0023), `smile_assessments` |
 | 4 | `campaigns`, `contacts`, `form_fields` |
 | 5 | `deals`, `form_submissions` |
 | 6 | `activities`, `appointments`, `campaign_emails`, `commissions`, `email_messages` |
@@ -154,15 +154,14 @@ after the data is in place and tested.
    may run only on the throwaway local database, never on QA or `rankedceo-waas`, which
    keeps the "never edit the live `handle_new_user()`" rule intact. Check the final SQL
    with a grep for both patterns before applying it.
-4. Apply to a QA project, then to `rankedceo-waas`. The SQL for `deals` and the creation
-   order include `pipeline_stages` only if Tommy has decided it is in scope (section 1).
+4. Apply to a QA project, then to `rankedceo-waas`. The SQL for `deals` includes
+   `pipeline_stages` (DEC-0023).
 5. Recreate the five onboarding RPCs and check their grants (section 4).
 6. Decide about data and logins.
 7. Switch the CRM client to the single project (separate PR).
 
 ## 8. Open questions
 
-1. Is `pipeline_stages` in scope under DEC-0021 as a dependency of `deals`?
-2. Does `rankedceo-qa` get created, and does the Supabase plan allow it at no cost?
-3. Which definition of `accounts` and `users` is the base once live shapes are known?
-4. How do CRM logins reach `rankedceo-waas`?
+1. Does `rankedceo-qa` get created, and does the Supabase plan allow it at no cost?
+2. Which definition of `accounts` and `users` is the base once live shapes are known?
+3. How do CRM logins reach `rankedceo-waas`?
