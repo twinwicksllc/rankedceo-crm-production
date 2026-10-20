@@ -1,6 +1,12 @@
 -- ============================================================================
 -- Fix: Resolve Infinite Recursion in Users Table RLS Policies
 -- ============================================================================
+-- NOTE (PR #313): this file was renamed from 000008_fix_users_policies.sql.
+-- The Supabase CLI sorts local migration files by filename but the remote
+-- versions from supabase_migrations.schema_migrations lexicographically, so a
+-- version that is a prefix of another (000008 vs 0000085_baseline...) makes
+-- `supabase db push` fail with "Remote migration versions not found in local
+-- migrations directory." See lib/ci/migration-order.test.ts.
 -- Problem: The current policies create a circular reference when querying users
 -- Solution: Use a simpler approach with direct auth.uid() comparison via email
 
