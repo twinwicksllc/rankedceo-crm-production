@@ -274,6 +274,9 @@ after the data is in place and tested.
    `users` (section 3).
 4. Write the new-table SQL from the live shapes, excluding `handle_new_user()` and
    every `auth.users` trigger statement, and test it on a local throwaway Postgres.
+   Written for the WaaS group only: `supabase/migrations/waas/029_waas_client_edit_tables.sql`
+   (seven tables, additive and idempotent, rollback at the bottom). Tested on a local
+   throwaway Postgres only; not applied to any live project. The CRM group is not started.
 5. Apply to `rankedceo-waas`. The existing `qa` schema holds only `qa.qa_runs` and
    `qa.qa_scenarios` (audit), so it is not a separate copy of the new tables and is not
    a staging area for this step. The repo's `docs/deployment/qa-deployment.md` states
