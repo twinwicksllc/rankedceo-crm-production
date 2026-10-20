@@ -2,7 +2,9 @@
 -- 029_waas_client_edit_tables
 --
 -- Creates, in the rankedceo-waas project, the seven WaaS tables that the code
--- already calls but that do not exist there (live audit, 2026-10-19):
+-- already calls but that do not exist there (live audit, 2026-10-19), and
+-- REBUILDS an eighth, client_variant_edit_events (section 9), whose live shape
+-- is the old migration-000 shape and matches nothing the code reads or writes:
 --   tenant_site_versions, tenant_site_variants, tenant_site_deployments,
 --   client_uploaded_assets, client_domain_change_requests, notification_log,
 --   tenant_variant_regenerations.
@@ -56,6 +58,28 @@ BEGIN
      OR to_regclass('public.deals') IS NOT NULL THEN
     RAISE EXCEPTION
       '029: public.contacts / public.deals exist, so this looks like the CRM project (rankedceo-crm-production). This migration is for rankedceo-waas only. Aborting.';
+  END IF;
+END $$;
+
+-- Pre-check for section 9, done here so a refusal happens BEFORE anything is
+-- created: if client_variant_edit_events is still the old shape and has rows,
+-- abort now (the run would otherwise stop half-way through).
+DO $$
+DECLARE
+  n BIGINT;
+BEGIN
+  IF to_regclass('public.client_variant_edit_events') IS NOT NULL
+     AND NOT EXISTS (
+       SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public'
+         AND table_name = 'client_variant_edit_events'
+         AND column_name = 'tenant_id'
+     ) THEN
+    EXECUTE 'SELECT count(*) FROM public.client_variant_edit_events' INTO n;
+    IF n > 0 THEN
+      RAISE EXCEPTION
+        '029: old-shape client_variant_edit_events has % rows; refusing to continue. Migrate the rows first. Nothing was changed.', n;
+    END IF;
   END IF;
 END $$;
 
@@ -359,11 +383,123 @@ CREATE POLICY "tenant_variant_regenerations_service_role_all"
   USING (true)
   WITH CHECK (true);
 
+-- ---------------------------------------------------------------------------
+-- 9. client_variant_edit_events: rebuild to the shape the code uses.
+--    Live shape (read 2026-10-20): id, tenant_site_config_id, event_type,
+--    section_id, section_data, edit_data, client_session_id, created_at, with
+--    0 rows. No code reads or writes those columns. The code uses tenant_id,
+--    variant_id, variant_index, field_path, old_value, new_value, edit_type,
+--    source, review_token_hash, ai_intent, created_at.
+--    Safety: the old table is dropped ONLY if it is the old shape (no tenant_id
+--    column) AND empty. If it has rows, section 0 aborts before anything is
+--    created, so nothing is lost and nothing is half-applied. The check is
+--    repeated here as a second guard.
+--    DROP TABLE has no CASCADE, so it also fails if anything depends on it.
+--    Re-running after the rebuild is a no-op.
+-- ---------------------------------------------------------------------------
+DO $$
+DECLARE
+  n BIGINT;
+BEGIN
+  IF to_regclass('public.client_variant_edit_events') IS NOT NULL
+     AND NOT EXISTS (
+       SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public'
+         AND table_name = 'client_variant_edit_events'
+         AND column_name = 'tenant_id'
+     ) THEN
+    EXECUTE 'SELECT count(*) FROM public.client_variant_edit_events' INTO n;
+    IF n > 0 THEN
+      RAISE EXCEPTION
+        '029: old-shape client_variant_edit_events has % rows; refusing to drop it. Migrate the rows first.', n;
+    END IF;
+    DROP TABLE public.client_variant_edit_events;
+  END IF;
+END $$;
+
+-- variant_index is nullable on purpose: the brand-config and approval audit
+-- inserts have no variant. The source CHECK lists every value the code writes
+-- today (client, ai_assisted, client_approval, client_revoke) plus the three
+-- older values from migration 016, so no existing code path is rejected.
+CREATE TABLE IF NOT EXISTS public.client_variant_edit_events (
+  id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id         UUID        NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+  variant_id        UUID        NULL REFERENCES public.tenant_site_variants(id) ON DELETE SET NULL,
+  variant_index     INTEGER     NULL CHECK (variant_index BETWEEN 1 AND 3),
+  field_path        TEXT        NOT NULL,
+  old_value         TEXT        NULL,
+  new_value         TEXT        NULL,
+  edit_type         TEXT        NOT NULL DEFAULT 'text_edit'
+                    CHECK (edit_type IN (
+                      'text_edit', 'image_swap', 'color_change', 'ai_rewrite',
+                      'section_toggle', 'font_change', 'config_change'
+                    )),
+  source            TEXT        NOT NULL DEFAULT 'client'
+                    CHECK (source IN (
+                      'client', 'ai_assisted', 'client_approval', 'client_revoke',
+                      'client_editor', 'ai_assist', 'admin_override'
+                    )),
+  review_token_hash TEXT        NULL,
+  ai_intent         TEXT        NULL,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- The code inserts variant_id but never variant_index, and the history and undo
+-- code reads variant_index. This trigger fills it from the variant row, so the
+-- migration needs no code change. Not SECURITY DEFINER: it runs as the caller.
+CREATE OR REPLACE FUNCTION public.client_variant_edit_events_fill_variant_index()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  IF NEW.variant_index IS NULL AND NEW.variant_id IS NOT NULL THEN
+    SELECT v.variant_index INTO NEW.variant_index
+    FROM public.tenant_site_variants v
+    WHERE v.id = NEW.variant_id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_client_variant_edit_events_fill_variant_index
+  ON public.client_variant_edit_events;
+
+CREATE TRIGGER trg_client_variant_edit_events_fill_variant_index
+  BEFORE INSERT ON public.client_variant_edit_events
+  FOR EACH ROW EXECUTE FUNCTION public.client_variant_edit_events_fill_variant_index();
+
+CREATE INDEX IF NOT EXISTS idx_client_variant_edit_events_tenant
+  ON public.client_variant_edit_events (tenant_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_client_variant_edit_events_variant
+  ON public.client_variant_edit_events (tenant_id, variant_index, created_at DESC);
+
+ALTER TABLE public.client_variant_edit_events ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "client_variant_edit_events_admin_all" ON public.client_variant_edit_events;
+CREATE POLICY "client_variant_edit_events_admin_all"
+  ON public.client_variant_edit_events FOR ALL TO authenticated
+  USING (
+    auth.jwt() ->> 'role' = 'waas_admin'
+    OR auth.jwt() -> 'app_metadata' ->> 'waas_admin' = 'true'
+  )
+  WITH CHECK (
+    auth.jwt() ->> 'role' = 'waas_admin'
+    OR auth.jwt() -> 'app_metadata' ->> 'waas_admin' = 'true'
+  );
+
 -- =============================================================================
--- ROLLBACK (run only if needed; the seven tables are new and empty on day one).
+-- ROLLBACK (run only if needed; the seven tables are new and empty on day one;
+-- client_variant_edit_events was empty before the rebuild).
 -- Reverse order of creation. The tenant_site_config columns are left in place on
 -- purpose: dropping them could destroy data the app has since written.
 --
+--   DROP TABLE IF EXISTS public.client_variant_edit_events;
+--   DROP FUNCTION IF EXISTS public.client_variant_edit_events_fill_variant_index();
+--   (The old migration-000 shape had 0 rows and no code reads it; to recreate it,
+--    run the CREATE TABLE for client_variant_edit_events in 000_waas_complete_idempotent.sql.)
+--   Run those two drops FIRST, before tenant_site_variants is dropped (FK).
 --   DROP TABLE IF EXISTS public.tenant_variant_regenerations;
 --   DROP TABLE IF EXISTS public.notification_log;
 --   DROP TABLE IF EXISTS public.client_domain_change_requests;
