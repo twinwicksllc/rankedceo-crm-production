@@ -19,8 +19,14 @@ import { test } from "node:test";
 // order "000008" < "0000085". That single inversion is what made the check red on
 // every PR that touched `supabase/`. This test fails first, naming the files.
 //
-// Fix by renaming the file so no version is a prefix of another (keep versions the
-// same length, or at least never let one be a prefix of another).
+// A separate failure mode: two files sharing one version (e.g. the old
+// `20240301000001_create_agent_conversations` / `..._normalize_calendly_uris` pair).
+// `schema_migrations.version` is a primary key, so the second insert fails. The two
+// files have identical versions, so the ordering/prefix checks above cannot see it;
+// this test checks duplicates explicitly.
+//
+// Fix by renaming files so every version is unique and none is a prefix of another
+// (keep versions the same length, or at least never let one be a prefix of another).
 
 const MIGRATIONS_DIR = join("supabase", "migrations");
 const FILE_RE = /^([0-9]+)_.*\.sql$/;
@@ -41,7 +47,20 @@ export function localMigrations(dir = MIGRATIONS_DIR): MigrationEntry[] {
 export function orderingProblems(entries: MigrationEntry[]): string[] {
   const problems: string[] = [];
 
-  // 1. No version may be a prefix of another (that is the only way the CLI's
+  // 1. Every version must be unique (`schema_migrations.version` is a primary key).
+  const byVersionMap = new Map<string, string[]>();
+  for (const e of entries) {
+    const files = byVersionMap.get(e.version) ?? [];
+    files.push(e.file);
+    byVersionMap.set(e.version, files);
+  }
+  for (const [version, files] of byVersionMap) {
+    if (files.length > 1) {
+      problems.push(`duplicate version "${version}" used by ${files.join(", ")}`);
+    }
+  }
+
+  // 2. No version may be a prefix of another (that is the only way the CLI's
   //    lexicographic version sort and filename sort can disagree).
   for (const a of entries) {
     for (const b of entries) {
@@ -53,7 +72,7 @@ export function orderingProblems(entries: MigrationEntry[]): string[] {
     }
   }
 
-  // 2. Filename order must equal lexicographic version order.
+  // 3. Filename order must equal lexicographic version order.
   const byFile = entries.map((e) => e.version);
   const byVersion = [...byFile].sort();
   for (let i = 0; i < byFile.length; i++) {
@@ -74,6 +93,6 @@ test("supabase migrations are ordered so `supabase db push` can merge local and 
   assert.deepEqual(
     orderingProblems(entries),
     [],
-    "Rename the file so no migration version is a prefix of another; the Supabase CLI sorts local files by filename but remote versions lexicographically, and a prefix pair makes them disagree.",
+    "Rename the file so every migration version is unique and none is a prefix of another; the Supabase CLI sorts local files by filename but remote versions lexicographically, and a duplicate or prefix pair makes them disagree.",
   );
 });
