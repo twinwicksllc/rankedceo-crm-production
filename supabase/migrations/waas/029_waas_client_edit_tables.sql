@@ -36,7 +36,14 @@
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
--- 0. Guard: refuse to run where `tenants` is missing (wrong project).
+-- 0. Guard: refuse to run in the CRM project.
+--    `tenants` and `tenant_site_config` exist in BOTH projects (live audit), so
+--    they cannot tell them apart. The CRM project (rankedceo-crm-production)
+--    has the CRM tables `contacts` and `deals`; rankedceo-waas has neither.
+--    This is a safety net, not proof of the project: ALSO check that the browser
+--    URL contains klgvdvryewykzlumbkei before pressing Run.
+--    Limit: once DEC-0022 moves the CRM tables into rankedceo-waas, `contacts`
+--    and `deals` will exist there too and this guard must be removed.
 -- ---------------------------------------------------------------------------
 DO $$
 BEGIN
@@ -44,6 +51,11 @@ BEGIN
      OR to_regclass('public.tenant_site_config') IS NULL THEN
     RAISE EXCEPTION
       '029: public.tenants / public.tenant_site_config not found. Wrong project? Run this in rankedceo-waas only.';
+  END IF;
+  IF to_regclass('public.contacts') IS NOT NULL
+     OR to_regclass('public.deals') IS NOT NULL THEN
+    RAISE EXCEPTION
+      '029: public.contacts / public.deals exist, so this looks like the CRM project (rankedceo-crm-production). This migration is for rankedceo-waas only. Aborting.';
   END IF;
 END $$;
 
