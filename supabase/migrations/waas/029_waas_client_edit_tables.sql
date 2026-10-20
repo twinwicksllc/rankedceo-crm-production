@@ -10,9 +10,16 @@
 -- exists in neither project. Without them the client editor (/edit/[reviewToken])
 -- loads with no sections and a save returns "Variant not found."
 --
--- Also adds, if missing, the tenant_site_config columns the editor reads. The
--- live column list of rankedceo-waas.tenant_site_config was NOT audited, so
--- every column is ADD COLUMN IF NOT EXISTS (a no-op where it already exists).
+-- Also adds the tenant_site_config columns the code reads that the live table
+-- lacks. Live columns were read on 2026-10-20 (the live table has 35 columns); the
+-- 10 added here are client_approval_note, client_approved_by_token_hash,
+-- client_regen_count, client_regen_quota, initial_build_completed_at,
+-- ai_enhancement_status, ai_enhancement_completed_at, seo_keywords,
+-- seo_keywords_provider, seo_last_generated_at. Every column is
+-- ADD COLUMN IF NOT EXISTS, so existing ones are left untouched.
+-- NOT added: website_blocks / website_html. step-builder.ts ignores the
+-- missing-column error, so the page-builder save silently stores nothing.
+-- Left out on purpose: a product call, not part of this fix.
 --
 -- Safe properties:
 --   - Additive only. No DROP, no data changes, no existing object is altered
@@ -57,12 +64,16 @@ ALTER TABLE public.tenant_site_config
   ADD COLUMN IF NOT EXISTS client_feedback_layout_preference TEXT       NULL,
   ADD COLUMN IF NOT EXISTS client_feedback_notes            TEXT        NULL,
   ADD COLUMN IF NOT EXISTS client_feedback_submitted_at     TIMESTAMPTZ NULL,
-  ADD COLUMN IF NOT EXISTS client_mix_source_templates      JSONB       NULL,
+  ADD COLUMN IF NOT EXISTS client_mix_source_templates      TEXT[]      NULL,
   ADD COLUMN IF NOT EXISTS client_mix_submitted_at          TIMESTAMPTZ NULL,
   ADD COLUMN IF NOT EXISTS client_regen_count               INTEGER     NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS client_regen_quota               INTEGER     NOT NULL DEFAULT 3,
   ADD COLUMN IF NOT EXISTS initial_build_completed_at       TIMESTAMPTZ NULL,
-  ADD COLUMN IF NOT EXISTS ai_enhancement_status            TEXT        NULL;
+  ADD COLUMN IF NOT EXISTS ai_enhancement_status            TEXT        NULL,
+  ADD COLUMN IF NOT EXISTS ai_enhancement_completed_at      TIMESTAMPTZ NULL,
+  ADD COLUMN IF NOT EXISTS seo_keywords                     TEXT[]      NULL,
+  ADD COLUMN IF NOT EXISTS seo_keywords_provider            TEXT        NULL,
+  ADD COLUMN IF NOT EXISTS seo_last_generated_at            TIMESTAMPTZ NULL;
 
 -- The editor looks a session up by token with .single(), so the token must be
 -- unique. Create the unique index only if no unique index already covers the
