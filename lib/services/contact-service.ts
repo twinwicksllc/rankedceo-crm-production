@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { resolveAccountId } from "@/lib/services/account-context";
 import {
   Contact,
   CreateContactInput,
@@ -42,22 +43,14 @@ export class ContactService {
       throw new Error("User not authenticated");
     }
 
-    // users.id IS the auth uid; the account is reached via users.account_id.
-    // accounts has no user_id column (see migration 030 / DEC-0022).
-    const { data: accountData, error: accountError } = await client
-      .from("users")
-      .select("account_id")
-      .eq("id", user.id)
-      .single();
-
-    if (accountError || !accountData) {
-      throw new Error("Account not found");
-    }
+    // users.id IS the auth uid; accounts has no user_id column. The helper
+    // also covers a legacy profile whose id is not the auth id.
+    const accountId = await resolveAccountId(client, user);
 
     const { data, error } = await client
       .from("contacts")
       .insert({
-        account_id: accountData.account_id,
+        account_id: accountId,
         user_id: user.id,
         ...validatedInput,
       })
