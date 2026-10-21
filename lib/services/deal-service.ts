@@ -36,10 +36,12 @@ export class DealService {
       throw new Error("User not authenticated");
     }
 
+    // users.id IS the auth uid; the account is reached via users.account_id.
+    // accounts has no user_id column (see migration 030 / DEC-0022).
     const { data: accountData, error: accountError } = await client
-      .from("accounts")
-      .select("id")
-      .eq("user_id", user.id)
+      .from("users")
+      .select("account_id")
+      .eq("id", user.id)
       .single();
 
     if (accountError || !accountData) {
@@ -49,7 +51,7 @@ export class DealService {
     const { data, error } = await client
       .from("deals")
       .insert({
-        account_id: accountData.id,
+        account_id: accountData.account_id,
         user_id: user.id,
         ...validatedInput,
       })
