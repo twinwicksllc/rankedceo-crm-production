@@ -23,7 +23,7 @@ trust/correctness risk, P1 = biggest product gains, P2 = polish/scale).
 | A5 | P1 | No real on-page crawl | **Fixed** | `audit-engine/on-page-crawl.ts` (+ test) (#297) |
 | A6 | P1 | Placeholder authority data (backlinks/DA = 0) | **Open** | `audit-engine/index.ts` still sets `domain_authority: 0`, `referring_domains: 0`, `estimated_traffic: 0` |
 | A7 | P1 | Competitors typed in by the user | **Open** | `app/audit/start/audit-start-form.tsx` still takes `competitors` as free text; no auto-discovery |
-| A8 | P1 | Findings not tied to fixes or value | **Fixed** | `audit-engine/findings.ts` (one impact vocabulary, effort, ranking) (#302) |
+| A8 | P1 | Findings not tied to fixes or value | **Partial** | `audit-engine/findings.ts` normalizes impact and adds effort + ranking (#302); but `AuditOpportunity` (`lib/waas/types.ts`) still has no "fix in builder" action and no lead-value estimate, so 2 of the 3 original pieces are open |
 | A9 | P2 | No automated re-audit/monitoring | **Open** | no `crons` in `vercel.json` |
 | A10 | P2 | Zero tests on the audit engine | **Fixed** | `audit-engine/` now has `findings`, `gap-analysis`, `leaderboard`, `location`, `on-page-crawl`, `scoring` tests (#301) |
 
@@ -39,7 +39,7 @@ trust/correctness risk, P1 = biggest product gains, P2 = polish/scale).
 | B6 | P1 | Domain go-live is manual | **Open** | grep for `api.vercel.com` in `lib/` and `app/`: none |
 | B7 | P1 | No analytics/tracking settings | **Open** | grep for `ga4`/`gtm`/`gtag`/`tracking_id` in `lib/waas/` and `app/_sites/`: none |
 | B8 | P2 | No brand/contrast guardrails | **Open** | grep for `contrast`/`wcag`/`luminance` in `lib/waas/` and `components/waas/`: only template names |
-| B9 | P2 | Preview / draft-publish / schedule | **Partial** | `app/edit/[reviewToken]/preview` exists; no draft-vs-published, scheduled publish or rollback UX found |
+| B9 | P2 | Preview / draft-publish / schedule | **Partial** | `app/edit/[reviewToken]/preview` exists; admin rollback + version history exist (`app/admin/dashboard/[tenantId]/version-rollback-button.tsx` "Restore" → `rollbackTenantSiteVersion`, "Recent Version History" at `page.tsx:432`); no draft-vs-published or scheduled publish |
 
 ### Engineering and repo health (E1–E5)
 
@@ -47,16 +47,16 @@ trust/correctness risk, P1 = biggest product gains, P2 = polish/scale).
 |---|-----|---------|--------|--------------------|
 | E1 | P1 | CI didn't run lint/typecheck/tests; lint script broken | **Fixed** | `.github/workflows/ci-checks.yml` runs `typecheck`, `typecheck:qa`, `lint-changed`, `npm test`; ESLint 9 + `eslint-config-next` 16 (#277, #281–288) |
 | E2 | P1 | Messy migration history | **Partial** | replayable on a fresh DB (#295), baseline (#266), ordering guard `lib/ci/migration-order.test.ts` (#313); still 48 top-level + 32 WaaS `.sql` files |
-| E3 | P1 | Shared Supabase project | **Partial** | DEC-0021/0022/0023/0024 + `docs/engineering/DB_CONSOLIDATION_PLAN.md`; 029 creates the WaaS client-edit tables in `rankedceo-waas` and is applied; the CRM group is not started |
+| E3 | P1 | Shared Supabase project | **Partial** | DEC-0021/0022/0023/0024 + `docs/engineering/DB_CONSOLIDATION_PLAN.md`; 029 creates the WaaS client-edit tables in `rankedceo-waas` (its application is owner-reported in `STATUS_2026-10-20.md`, not independently verified here); the CRM group is not started |
 | E4 | P2 | Repo clutter and stale docs | **Fixed** | stale root clutter removed (#304) |
 | E5 | P2 | No decision log | **Fixed** | `docs/engineering/DECISIONS.md` (#303) |
 
 ## Tally
 
-- **Audit:** 5 fixed (A1, A2, A5, A8, A10), 0 partial, 5 open (A3, A4, A6, A7, A9).
+- **Audit:** 4 fixed (A1, A2, A5, A10), 1 partial (A8), 5 open (A3, A4, A6, A7, A9).
 - **Builder:** 1 fixed (B1), 3 partial (B3, B4, B9), 5 open (B2, B5, B6, B7, B8).
 - **Engineering:** 3 fixed (E1, E4, E5), 2 partial (E2, E3), 0 open.
-- **Overall:** 9 fixed, 5 partial, 10 open of 24.
+- **Overall:** 8 fixed, 6 partial, 10 open of 24.
 
 ## What it means
 
@@ -72,7 +72,7 @@ Against the vision's own recommended order (Part 3):
 4. B5 + B7 lead form + tracking — **not started**.
 5. A3 + A4 + A5 GBP/NAP/citations, local pack on, on-page crawl — **one of three done** (A5).
 6. B2 + B3 multi-page + restructure — **not started** (B3 groundwork only).
-7. A8 + A9 ranked fixes + monthly re-audit — **one of two done** (A8).
+7. A8 + A9 ranked fixes + monthly re-audit — **partial** (A8 ranking/effort landed, but no "fix in builder" action or lead-value estimate; A9 not started).
 8. B6 automated domain connect — **not started**.
 9. E2/E3/E4/E5 migration and ownership audit, cleanup, decision log — **E4/E5 done, E2/E3 partial**.
 
