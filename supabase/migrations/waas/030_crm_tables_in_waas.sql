@@ -542,6 +542,70 @@ CREATE TABLE IF NOT EXISTS public.agent_conversations (
 );
 
 -- ============================================================================
+-- 2b. App-contract columns the LIVE tables lack (Copilot PR #316).
+--     The live CRM tables drifted from what this repo's code reads and writes.
+--     Every column here is NULLABLE or DEFAULTed, so existing rows and the
+--     WaaS handle_new_user() path keep working. See the PR body for the
+--     per-table evidence (lib/services/*, lib/validations/*).
+-- ============================================================================
+ALTER TABLE public.companies ADD COLUMN IF NOT EXISTS "user_id" uuid;
+ALTER TABLE public.email_templates ADD COLUMN IF NOT EXISTS "created_by" uuid;
+ALTER TABLE public.forms ADD COLUMN IF NOT EXISTS "status" text DEFAULT 'draft'::text;
+ALTER TABLE public.forms ADD COLUMN IF NOT EXISTS "description" text;
+ALTER TABLE public.forms ADD COLUMN IF NOT EXISTS "thank_you_message" text;
+ALTER TABLE public.forms ADD COLUMN IF NOT EXISTS "submit_button_text" text;
+ALTER TABLE public.forms ADD COLUMN IF NOT EXISTS "submit_button_color" text;
+ALTER TABLE public.forms ADD COLUMN IF NOT EXISTS "background_color" text;
+ALTER TABLE public.forms ADD COLUMN IF NOT EXISTS "allow_multiple_submissions" boolean DEFAULT false;
+ALTER TABLE public.forms ADD COLUMN IF NOT EXISTS "collect_email" boolean DEFAULT false;
+ALTER TABLE public.forms ADD COLUMN IF NOT EXISTS "send_notification_email" boolean DEFAULT false;
+ALTER TABLE public.forms ADD COLUMN IF NOT EXISTS "notification_emails" text[];
+ALTER TABLE public.industry_leads ADD COLUMN IF NOT EXISTS "customer_name" text;
+ALTER TABLE public.industry_leads ADD COLUMN IF NOT EXISTS "customer_email" text;
+ALTER TABLE public.industry_leads ADD COLUMN IF NOT EXISTS "customer_phone" text;
+ALTER TABLE public.industry_leads ADD COLUMN IF NOT EXISTS "service_address" text;
+ALTER TABLE public.industry_leads ADD COLUMN IF NOT EXISTS "city" text;
+ALTER TABLE public.industry_leads ADD COLUMN IF NOT EXISTS "state" text;
+ALTER TABLE public.industry_leads ADD COLUMN IF NOT EXISTS "zip_code" text;
+ALTER TABLE public.industry_leads ADD COLUMN IF NOT EXISTS "preferred_contact_method" text DEFAULT 'phone'::text;
+ALTER TABLE public.industry_leads ADD COLUMN IF NOT EXISTS "preferred_time" text;
+ALTER TABLE public.industry_leads ADD COLUMN IF NOT EXISTS "notes" text;
+ALTER TABLE public.industry_leads ADD COLUMN IF NOT EXISTS "service_details" jsonb DEFAULT '{}'::jsonb;
+ALTER TABLE public.industry_leads ADD COLUMN IF NOT EXISTS "submitted_at" timestamptz DEFAULT now();
+ALTER TABLE public.campaigns ADD COLUMN IF NOT EXISTS "created_by" uuid;
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS "user_id" uuid;
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS "status" varchar DEFAULT 'active'::varchar;
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS "job_title" varchar;
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS "notes" text;
+ALTER TABLE public.form_fields ADD COLUMN IF NOT EXISTS "field_key" text;
+ALTER TABLE public.form_fields ADD COLUMN IF NOT EXISTS "field_label" text;
+ALTER TABLE public.form_submissions ADD COLUMN IF NOT EXISTS "submission_data" jsonb DEFAULT '{}'::jsonb;
+ALTER TABLE public.form_submissions ADD COLUMN IF NOT EXISTS "submitted_at" timestamptz DEFAULT now();
+ALTER TABLE public.activities ADD COLUMN IF NOT EXISTS "updated_at" timestamptz DEFAULT now();
+ALTER TABLE public.agent_conversations ADD COLUMN IF NOT EXISTS "metadata" jsonb DEFAULT '{}'::jsonb;
+
+-- ============================================================================
+-- 2c. Pool accounts. The live CRM project has these seeded out-of-band; a
+--     fresh rankedceo-waas does not. Three code paths depend on them:
+--       lib/data/pool-accounts.ts          (hvac / plumbing / electrical)
+--       get_smile_pool_account_id()        (…0004)
+--       submit_smile_assessment_with_pool() raises 'Account not found'
+--     ON CONFLICT DO NOTHING keeps this idempotent.
+-- ============================================================================
+INSERT INTO public.accounts (id, name, slug, status, plan, is_pool_account)
+VALUES ('00000000-0000-0000-0001-000000000001', 'HVAC Pool', 'hvac-pool', 'active', 'free', true)
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.accounts (id, name, slug, status, plan, is_pool_account)
+VALUES ('00000000-0000-0000-0002-000000000002', 'Plumbing Pool', 'plumbing-pool', 'active', 'free', true)
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.accounts (id, name, slug, status, plan, is_pool_account)
+VALUES ('00000000-0000-0000-0003-000000000003', 'Electrical Pool', 'electrical-pool', 'active', 'free', true)
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.accounts (id, name, slug, status, plan, is_pool_account)
+VALUES ('00000000-0000-4000-a000-000000000004', 'Smile Pool Account', 'smile-pool', 'active', 'free', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================================
 -- 3. Foreign keys, unique constraints and check constraints (live).
 -- ============================================================================
 DO $$
@@ -1003,7 +1067,7 @@ END $$;
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'agent_conversations_source_check' AND conrelid = 'public.agent_conversations'::regclass) THEN
-    ALTER TABLE public.agent_conversations ADD CONSTRAINT agent_conversations_source_check CHECK ((source = ANY (ARRAY['crm'::text, 'hvac'::text, 'plumbing'::text, 'electrical'::text, 'smile'::text])));
+    ALTER TABLE public.agent_conversations ADD CONSTRAINT agent_conversations_source_check CHECK ((source = ANY (ARRAY['crm'::text, 'hvac'::text, 'plumbing'::text, 'electrical'::text, 'smile'::text, 'manual'::text, 'ai_agent'::text])));
   END IF;
 END $$;
 DO $$
@@ -1052,6 +1116,32 @@ DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'crm_billing_events_stripe_event_id_key' AND conrelid = 'public.crm_billing_events'::regclass) THEN
     ALTER TABLE public.crm_billing_events ADD CONSTRAINT crm_billing_events_stripe_event_id_key UNIQUE (stripe_event_id);
+  END IF;
+END $$;
+ALTER TABLE public.agent_conversations DROP CONSTRAINT IF EXISTS agent_conversations_source_check;
+ALTER TABLE public.agent_conversations ADD CONSTRAINT agent_conversations_source_check CHECK ((source = ANY (ARRAY['crm'::text, 'hvac'::text, 'plumbing'::text, 'electrical'::text, 'smile'::text, 'manual'::text, 'ai_agent'::text])));
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'companies_user_id_fkey' AND conrelid = 'public.companies'::regclass) THEN
+    ALTER TABLE public.companies ADD CONSTRAINT companies_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'contacts_user_id_fkey' AND conrelid = 'public.contacts'::regclass) THEN
+    ALTER TABLE public.contacts ADD CONSTRAINT contacts_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'campaigns_created_by_fkey' AND conrelid = 'public.campaigns'::regclass) THEN
+    ALTER TABLE public.campaigns ADD CONSTRAINT campaigns_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'email_templates_created_by_fkey' AND conrelid = 'public.email_templates'::regclass) THEN
+    ALTER TABLE public.email_templates ADD CONSTRAINT email_templates_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
   END IF;
 END $$;
 
@@ -1160,54 +1250,6 @@ BEGIN
 END;
 $function$;
 
-CREATE OR REPLACE FUNCTION public.auto_create_commission()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-DECLARE
-    v_rate DECIMAL(5,2);
-    v_amount DECIMAL(12,2);
-    v_user_id UUID;
-BEGIN
-    -- Only create commission when deal is marked as won (case-insensitive)
-    IF LOWER(NEW.stage) = 'won' AND (OLD.stage IS NULL OR LOWER(OLD.stage) != 'won') THEN
-        -- Get the user who owns the deal (assigned_to or user_id or owner_user_id)
-        v_user_id := COALESCE(NEW.assigned_to, NEW.user_id, NEW.owner_user_id);
-        
-        IF v_user_id IS NOT NULL THEN
-            -- Get active commission rate for the user
-            v_rate := get_active_commission_rate(v_user_id, CURRENT_DATE);
-            
-            -- Calculate commission amount using the new value column
-            v_amount := calculate_commission_amount(NEW.value, v_rate);
-            
-            -- Create commission record
-            INSERT INTO commissions (
-                account_id,
-                deal_id,
-                user_id,
-                amount,
-                rate,
-                deal_value,
-                status
-            ) VALUES (
-                NEW.account_id,
-                NEW.id,
-                v_user_id,
-                v_amount,
-                v_rate,
-                NEW.value,
-                'pending'
-            );
-        END IF;
-    END IF;
-    
-    RETURN NEW;
-END;
-$function$;
-
 CREATE OR REPLACE FUNCTION public.calculate_commission_amount(p_deal_value numeric, p_rate numeric)
  RETURNS numeric
  LANGUAGE plpgsql
@@ -1216,21 +1258,6 @@ CREATE OR REPLACE FUNCTION public.calculate_commission_amount(p_deal_value numer
 AS $function$
 BEGIN
     RETURN ROUND(p_deal_value * (p_rate / 100), 2);
-END;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.complete_onboarding(p_account_id uuid)
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-BEGIN
-    UPDATE accounts
-    SET onboarding_completed = true,
-        onboarding_completed_at = NOW(),
-        onboarding_step = 5
-    WHERE id = p_account_id;
 END;
 $function$;
 
@@ -1328,24 +1355,6 @@ BEGIN
   END IF;
   
   RETURN v_conversation_id;
-END;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.get_smile_account_id()
- RETURNS uuid
- LANGUAGE plpgsql
- STABLE SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-DECLARE
-    user_account_id UUID;
-BEGIN
-    SET LOCAL row_security = off;
-    SELECT account_id INTO user_account_id
-    FROM public.users
-    WHERE auth_user_id = auth.uid()
-    LIMIT 1;
-    RETURN user_account_id;
 END;
 $function$;
 
@@ -1618,6 +1627,92 @@ BEGIN
 END;
 $function$;
 
+CREATE OR REPLACE FUNCTION public.auto_create_commission()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+    v_rate DECIMAL(5,2);
+    v_amount DECIMAL(12,2);
+    v_user_id UUID;
+    v_old_stage TEXT;
+BEGIN
+    -- OLD is not assigned on INSERT, so read it only for UPDATE.
+    IF TG_OP = 'INSERT' THEN
+        v_old_stage := NULL;
+    ELSE
+        v_old_stage := OLD.stage;
+    END IF;
+
+    -- Only create a commission when the deal becomes won (case-insensitive).
+    IF LOWER(NEW.stage) = 'won' AND (v_old_stage IS NULL OR LOWER(v_old_stage) != 'won') THEN
+        -- Get the user who owns the deal (assigned_to or user_id or owner_user_id)
+        v_user_id := COALESCE(NEW.assigned_to, NEW.user_id, NEW.owner_user_id);
+
+        IF v_user_id IS NOT NULL THEN
+            v_rate := get_active_commission_rate(v_user_id, CURRENT_DATE);
+            v_amount := calculate_commission_amount(NEW.value, v_rate);
+
+            INSERT INTO commissions (
+                account_id, deal_id, user_id, amount, rate, deal_value, status
+            ) VALUES (
+                NEW.account_id, NEW.id, v_user_id, v_amount, v_rate, NEW.value, 'pending'
+            );
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.complete_onboarding(p_account_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+    v_account_id UUID;
+BEGIN
+    -- Derive the caller's account; never trust p_account_id on its own.
+    v_account_id := public.get_current_user_account_id();
+
+    IF v_account_id IS NULL THEN
+        RAISE EXCEPTION 'Not authenticated';
+    END IF;
+
+    IF p_account_id IS NOT NULL AND p_account_id <> v_account_id THEN
+        RAISE EXCEPTION 'Cannot complete onboarding for another account';
+    END IF;
+
+    UPDATE accounts
+    SET onboarding_completed = true,
+        onboarding_completed_at = NOW(),
+        onboarding_step = 5
+    WHERE id = v_account_id;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.get_smile_account_id()
+ RETURNS uuid
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+    user_account_id UUID;
+BEGIN
+    -- 027 maps users.id to auth.users.id; there is no auth_user_id column.
+    SELECT account_id INTO user_account_id
+    FROM public.users
+    WHERE id = auth.uid()
+    LIMIT 1;
+    RETURN user_account_id;
+END;
+$function$;
+
 -- ============================================================================
 -- 6. Table triggers (live).
 -- ============================================================================
@@ -1698,7 +1793,7 @@ ALTER TABLE public.agent_conversations ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users manage own activities" ON public.activities;
 CREATE POLICY "Users manage own activities" ON public.activities FOR ALL TO public USING ((auth.uid() = user_id));
 DROP POLICY IF EXISTS "Users can view own agent history" ON public.agent_conversations;
-CREATE POLICY "Users can view own agent history" ON public.agent_conversations FOR SELECT TO public USING (((auth.uid())::text = (account_id)::text));
+CREATE POLICY "Users can view own agent history" ON public.agent_conversations FOR SELECT TO authenticated USING ((account_id = get_current_user_account_id()));
 DROP POLICY IF EXISTS "Users manage own appointments" ON public.appointments;
 CREATE POLICY "Users manage own appointments" ON public.appointments FOR ALL TO public USING ((auth.uid() = booked_by_user_id));
 DROP POLICY IF EXISTS "Users can manage their own Calendly connection" ON public.calendly_connections;
@@ -1764,13 +1859,13 @@ CREATE POLICY "manage_account_data_non_recursive" ON public.email_threads FOR AL
 DROP POLICY IF EXISTS "view_account_data_non_recursive" ON public.email_threads;
 CREATE POLICY "view_account_data_non_recursive" ON public.email_threads FOR SELECT TO authenticated USING ((account_id = get_current_user_account_id()));
 DROP POLICY IF EXISTS "Users can delete fields for their account's forms" ON public.form_fields;
-CREATE POLICY "Users can delete fields for their account's forms" ON public.form_fields FOR DELETE TO public USING ((form_id IN (SELECT forms.id FROM forms WHERE forms.account_id IN (SELECT users.account_id FROM users WHERE users.email = (SELECT email FROM auth.users WHERE id = auth.uid())))));
+CREATE POLICY "Users can delete fields for their account's forms" ON public.form_fields FOR DELETE TO authenticated USING ((form_id IN (SELECT forms.id FROM forms WHERE forms.account_id = get_current_user_account_id())));
 DROP POLICY IF EXISTS "Users can insert fields for their account's forms" ON public.form_fields;
-CREATE POLICY "Users can insert fields for their account's forms" ON public.form_fields FOR INSERT TO public WITH CHECK ((form_id IN (SELECT forms.id FROM forms WHERE forms.account_id IN (SELECT users.account_id FROM users WHERE users.email = (SELECT email FROM auth.users WHERE id = auth.uid())))));
+CREATE POLICY "Users can insert fields for their account's forms" ON public.form_fields FOR INSERT TO authenticated WITH CHECK ((form_id IN (SELECT forms.id FROM forms WHERE forms.account_id = get_current_user_account_id())));
 DROP POLICY IF EXISTS "Users can update fields for their account's forms" ON public.form_fields;
-CREATE POLICY "Users can update fields for their account's forms" ON public.form_fields FOR UPDATE TO public USING ((form_id IN (SELECT forms.id FROM forms WHERE forms.account_id IN (SELECT users.account_id FROM users WHERE users.email = (SELECT email FROM auth.users WHERE id = auth.uid())))));
+CREATE POLICY "Users can update fields for their account's forms" ON public.form_fields FOR UPDATE TO authenticated USING ((form_id IN (SELECT forms.id FROM forms WHERE forms.account_id = get_current_user_account_id()))) WITH CHECK ((form_id IN (SELECT forms.id FROM forms WHERE forms.account_id = get_current_user_account_id())));
 DROP POLICY IF EXISTS "Users can view fields for their account's forms" ON public.form_fields;
-CREATE POLICY "Users can view fields for their account's forms" ON public.form_fields FOR SELECT TO public USING ((form_id IN (SELECT forms.id FROM forms WHERE forms.account_id IN (SELECT users.account_id FROM users WHERE users.email = (SELECT email FROM auth.users WHERE id = auth.uid())))));
+CREATE POLICY "Users can view fields for their account's forms" ON public.form_fields FOR SELECT TO authenticated USING ((form_id IN (SELECT forms.id FROM forms WHERE forms.account_id = get_current_user_account_id())));
 DROP POLICY IF EXISTS "manage_account_data_non_recursive" ON public.form_submissions;
 CREATE POLICY "manage_account_data_non_recursive" ON public.form_submissions FOR ALL TO authenticated USING ((account_id = get_current_user_account_id())) WITH CHECK ((account_id = get_current_user_account_id()));
 DROP POLICY IF EXISTS "view_account_data_non_recursive" ON public.form_submissions;
@@ -1780,7 +1875,7 @@ CREATE POLICY "manage_account_data_non_recursive" ON public.forms FOR ALL TO aut
 DROP POLICY IF EXISTS "view_account_data_non_recursive" ON public.forms;
 CREATE POLICY "view_account_data_non_recursive" ON public.forms FOR SELECT TO authenticated USING ((account_id = get_current_user_account_id()));
 DROP POLICY IF EXISTS "Users see own leads" ON public.industry_leads;
-CREATE POLICY "Users see own leads" ON public.industry_leads FOR ALL TO public USING ((auth.uid() = auth_user_id));
+CREATE POLICY "Users see own leads" ON public.industry_leads FOR ALL TO authenticated USING ((account_id = get_current_user_account_id())) WITH CHECK ((account_id = get_current_user_account_id()));
 DROP POLICY IF EXISTS "Users can delete pipeline stages in their account" ON public.pipeline_stages;
 CREATE POLICY "Users can delete pipeline stages in their account" ON public.pipeline_stages FOR DELETE TO authenticated USING ((pipeline_id IN (SELECT pipelines.id FROM pipelines WHERE pipelines.account_id IN (SELECT users.account_id FROM users WHERE users.id = auth.uid()))));
 DROP POLICY IF EXISTS "Users can insert pipeline stages in their account" ON public.pipeline_stages;
@@ -1808,7 +1903,26 @@ CREATE POLICY "view_account_data_non_recursive" ON public.pipelines FOR SELECT T
 DROP POLICY IF EXISTS "Public intake blind insert" ON public.smile_assessments;
 CREATE POLICY "Public intake blind insert" ON public.smile_assessments FOR INSERT TO anon WITH CHECK ((account_id = '00000000-0000-4000-a000-000000000004'::uuid));
 DROP POLICY IF EXISTS "Staff account isolation" ON public.smile_assessments;
-CREATE POLICY "Staff account isolation" ON public.smile_assessments FOR ALL TO authenticated USING ((account_id = (SELECT users.account_id FROM users WHERE smile_assessments.auth_user_id = auth.uid() LIMIT 1)));
+CREATE POLICY "Staff account isolation" ON public.smile_assessments FOR ALL TO authenticated USING ((account_id = get_current_user_account_id())) WITH CHECK ((account_id = get_current_user_account_id()));
+
+DROP POLICY IF EXISTS "Public lead intake" ON public.industry_leads;
+CREATE POLICY "Public lead intake" ON public.industry_leads FOR INSERT TO anon WITH CHECK ((auth_user_id IS NOT NULL OR account_id IN ('00000000-0000-0000-0001-000000000001'::uuid, '00000000-0000-0000-0002-000000000002'::uuid, '00000000-0000-0000-0003-000000000003'::uuid)));
+
+-- ============================================================================
+-- 7b. Function grants. PostgreSQL grants EXECUTE to PUBLIC on every new
+--     function. These RPCs are SECURITY DEFINER, so lock them down: only
+--     authenticated may call them, and anon may call the public intake RPC.
+-- ============================================================================
+REVOKE ALL ON FUNCTION public.complete_onboarding FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_current_user_account_id FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_smile_account_id FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_smile_pool_account_id FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.submit_smile_assessment_with_pool FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_current_user_account_id() TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.get_smile_account_id() TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.complete_onboarding(uuid) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.get_smile_pool_account_id() TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.submit_smile_assessment_with_pool TO anon, authenticated, service_role;
 
 -- ============================================================================
 -- ROLLBACK (run only if needed; commented out on purpose).
