@@ -20,7 +20,7 @@ I said 030 locked down the SECURITY DEFINER functions. That was too strong.
 
 - READ (Supabase docs, "Database functions > Function privileges"): by default any role can run a database function, including `anon`. Revoking from `PUBLIC` alone is not enough; you must also revoke from `anon` and `authenticated` explicitly. Supabase GitHub issue #43884 describes the same default.
 - VERIFIED (on my local throwaway Postgres, NOT on your live project): with Supabase-style default privileges added to the harness, all 18 SECURITY DEFINER functions from 030 were executable by `anon`. I then called `update_company_info` and `update_onboarding_step` as `anon` against another account's id and changed that account's name. That is a real hole **if the live project has the same default privileges**.
-- NOT VERIFIED: the live grants in `rankedceo-waas`. `tmp/waas_grants_check.sql` (read-only) answers it. Until it is run, treat the hole as probable, not proven.
+- VERIFIED live (Tommy ran the read-only query on 2026-10-21): `anon_exec = true` on all 25 SECURITY DEFINER functions in `rankedceo-waas`, and `pg_default_acl` grants `anon`/`authenticated` EXECUTE on every new function in `public`. The hole is confirmed, not theoretical. Note the ACLs show `complete_onboarding` lost its `PUBLIC` grant (so 030 §7b did work) but kept direct `anon` and `authenticated` grants, which is exactly the gap.
 - Why it matters now, not later: the 4 onboarding RPCs (`update_company_info`, `update_onboarding_step`, `skip_onboarding`, `update_preferences`) update `accounts WHERE id = p_account_id` with no ownership check. Only `complete_onboarding` checks the caller. In the CRM project these RPCs already exist with the same shape (READ, not checked live), so this is not new exposure from 030 itself, but moving production to the WaaS project should not carry it over.
 - Fix = new migration 031 (separate PR, applied by hand like 030):
   1. `REVOKE EXECUTE ... FROM PUBLIC, anon, authenticated` on every SECURITY DEFINER function in `public`.
@@ -68,3 +68,19 @@ Known code follow-ups (not blockers for the env flip, but they break once `users
 ## 6. Out of scope here
 
 The four table names with no live table (`waas_tenants`, `calendar_provider_connections`, `audit_abandonment_tracking`; `tenant_variant_regenerations` was created by 029) and the CRM project's `schema_migrations` bookkeeping repair. Both stay on the reminder list.
+
+### 1a. What 031 does, and what it was proven against
+
+Written 2026-10-21, tested locally only. Applied to nothing.
+
+- Default privileges: future functions created by `postgres` in `public` no longer grant EXECUTE to `anon`/`authenticated`, and no longer grant to `PUBLIC` globally.
+- Revokes EXECUTE from `PUBLIC` and `anon` on: the 7 trigger functions, the 3 audit RPCs, the 6 account-scoped/conversation RPCs, the 5 onboarding RPCs, `get_current_user_id`, `get_current_user_account_id`, `get_active_commission_rate`, `assert_own_account`.
+- Re-grants to `authenticated` where a signed-in user calls it (including `get_current_user_account_id`, which RLS policies need) and to `service_role` for the audit RPCs.
+- Keeps `anon` on `resolve_tenant_by_hostname` only (the code falls back to the anon key).
+- Adds `assert_own_account()` and rewrites `update_company_info`, `update_onboarding_step`, `skip_onboarding`, `update_preferences` to use it, so `p_account_id` can no longer name someone else's account. `service_role` callers bypass the check.
+- Removes `TRUNCATE`, `REFERENCES`, `TRIGGER` from `anon`/`authenticated` on all `public` tables and from the default table grant. RLS cannot gate `TRUNCATE`, and PostgREST never uses it.
+- Deliberately untouched: the `handle_new_user()` body, and the smile-assessment functions (`get_smile_account_id`, `get_smile_pool_account_id`, `submit_smile_assessment_with_pool`). No caller in this repo; changing them blind could break the other product. `submit_smile_assessment_with_pool` is still anon-executable and accepts `p_account_id`, so an anon caller can write an assessment into any account. That is a separate decision.
+
+Proof (`tmp/test_031.py`, throwaway Postgres, 030 then 031): 10/10 pass. anon is refused on the onboarding RPCs; a signed-in user updates their own account; the same user is refused on another account with "Cannot modify another account"; an RLS policy using `get_current_user_account_id()` still returns only the user's own rows; anon cannot `TRUNCATE`; the signup trigger still fires with its EXECUTE grant revoked; `resolve_tenant_by_hostname` still works for anon; `service_role` can act on any account; 031 re-runs cleanly. `npm run check` passes.
+
+Not covered by that proof: the real PostgREST role/JWT plumbing. The service-role bypass reads `request.jwt.claims`, which PostgREST sets; the harness sets it by hand.
