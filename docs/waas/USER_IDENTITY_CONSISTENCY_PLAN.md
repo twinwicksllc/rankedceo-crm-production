@@ -332,7 +332,7 @@ Rollback: every DB phase takes a snapshot before it runs (phase 3: the three Waa
 3. **D3.** Source of truth for admins: env allowlist only, JWT claim only, or `users.role`? (Recommendation: JWT `app_metadata` claim, since WaaS RLS already depends on it, with the env allowlist as the bootstrap. Caveat from 4.3: no WaaS login holds that claim (3.11), and exactly 1 CRM login does (2.14). Since the two projects have separate JWT secrets, that claim may not help in the WaaS project (untested).)
 4. **D4.** Answered by the evidence: the CRM production project is shared with the other product (live trigger body, 2.6). Remaining question for Tommy: who owns that product, and do they agree that this plan never edits `handle_new_user()` or the other product's tables?
 5. **D5.** Should anonymous audit requesters be auto-created as auth users, or stay as an email string until they sign in (current behaviour)?
-6. **D6.** Of the 10 logins with no CRM profile (list in 4.3), which should get one (real CRM users), and which stay audit-only?
+6. **D6.** Of the 10 logins with no CRM profile (list in 4.3), which should get one (real CRM users), and which stay audit-only? **Closed 2026-10-22 (DEC-0026):** there are no external users and no logins move to `rankedceo-waas`, so no backfill is needed. See `docs/engineering/E3_CLIENT_SWITCH_PLAN.md` section 1c.
 
 ## 7. Risks
 

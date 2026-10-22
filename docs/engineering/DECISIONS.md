@@ -261,6 +261,31 @@ Status values: **in force**, **implemented**, **on hold**, **superseded**. Imple
 
 ---
 
+## DEC-0026 - No logins are moved to rankedceo-waas; users sign up again (E3 D1, D2, D6)
+
+- Date: 2026-10-22
+- Status: in force
+- Decision: There are no external users. The only logins are Tommy, his partner and
+  test users, and they can create new logins at any time. So no `auth.users` row is
+  moved, invited or created in `rankedceo-waas` ahead of the cutover. After the client
+  switch they sign up again. The WaaS `handle_new_user()` trigger creates each new
+  user's account and profile, and `ensureCrmProfile()` then finds the profile and does
+  nothing.
+- Replaces: E3 D1 option A (invite the 11 CRM users), D2 steps 1 and 2 (uid map and id
+  rewrite), and D6 in `docs/waas/USER_IDENTITY_CONSISTENCY_PLAN.md` (which
+  profile-less logins get a profile).
+- Consequences: the 11 CRM logins stay in `rankedceo-crm-production`, untouched, until
+  DEC-0024. The 2 existing `rankedceo-waas` auth users are kept. New profiles get
+  `users.role = 'rep'`, so admin access comes from the `WAAS_ADMIN_EMAILS` allowlist or
+  the `app_metadata` claim, and that allowlist must be set before the cutover.
+- Still open: which data rows (leads, chat conversations, the CRM copies of the WaaS
+  tables) are copied. This decision covers logins only.
+- Used in: `docs/engineering/E3_CLIENT_SWITCH_PLAN.md` (section 1c, D1, D2, sequence),
+  `docs/waas/USER_IDENTITY_CONSISTENCY_PLAN.md` (D6).
+- Source: Tommy, 2026-10-22 ("Users are a non-issue").
+
+---
+
 ## Not yet recorded
 
 The numbers **DEC-0002, DEC-0009, DEC-0010 and DEC-0011** are not defined anywhere
