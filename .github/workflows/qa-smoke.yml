@@ -59,14 +59,16 @@ jobs:
         working-directory: qa-agent
         run: npx playwright install-deps chromium
 
-      - name: Check QA_BASE_URL prerequisite
+      # Secrets are absent on PRs GitHub runs without them (Dependabot, forks);
+      # skip there instead of failing on a login that cannot work.
+      - name: Check QA credentials prerequisite
         id: prereqs
         env:
-          QA_BASE_URL: ${{ secrets.QA_PREVIEW_BASE_URL }}
+          QA_ADMIN_EMAIL: ${{ secrets.QA_ADMIN_EMAIL }}
         run: |
-          if [ -z "$QA_BASE_URL" ]; then
+          if [ -z "$QA_ADMIN_EMAIL" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "⚠️  QA_PREVIEW_BASE_URL secret is not set — smoke suite skipped"
+            echo "⚠️  QA_ADMIN_EMAIL secret is not available — smoke suite skipped"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
@@ -75,11 +77,11 @@ jobs:
         if: steps.prereqs.outputs.skip == 'false'
         working-directory: qa-agent
         env:
-          # Target: Vercel preview URL for this PR
-          # Use existing repo secret names; keep fallback order to avoid empty envs.
-          # Preferred: QA_PREVIEW_BASE_URL (explicit smoke target)
-          # Fallback: Vercel preview URL if your org exposes it as VERCEL_URL
-          QA_BASE_URL: ${{ secrets.QA_PREVIEW_BASE_URL || secrets.VERCEL_URL }}
+          # Target: the QA deployment, the same host qa-weekly.yml uses, where
+          # the QA admin credentials are known to work. This is NOT the PR's
+          # own preview, so smoke checks the QA site, not the PR's code. The
+          # smoke scenario only reads (login, navigate, tab clicks).
+          QA_BASE_URL: https://qa.rankedceo.com
           QA_ADMIN_EMAIL: ${{ secrets.QA_ADMIN_EMAIL }}
           QA_ADMIN_PASSWORD: ${{ secrets.QA_ADMIN_PASSWORD }}
           QA_CLIENT_REVIEW_TOKEN: ${{ secrets.QA_CLIENT_REVIEW_TOKEN }}
