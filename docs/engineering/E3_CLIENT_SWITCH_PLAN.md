@@ -172,7 +172,7 @@ The check scripts now live in the repo, so an operator can reproduce every gate 
 1. Run `docs/engineering/checks/waas_function_grants_check.sql` in `rankedceo-waas` (read-only). Already done on 2026-10-21: the hole is confirmed.
 2. Merge #319, apply `031_harden_function_grants.sql` by hand, run `031_postcheck.sql` (10 rows, all PASS, `handle_new_user` md5 unchanged).
 3. PR: move the 8 email-based account lookups in section 4 to `resolveAccountId`.
-4. Decide D2, D3, D5. D1 is settled: A. D4 is settled (DEC-0025).
+4. Decide D2, D3, D5. D1 is settled: no logins move (DEC-0026). D4 is settled (DEC-0025).
 5. Replicate dashboard settings and buckets (section 3).
 6. No logins are created in advance (section 1c, DEC-0026). Confirm that the admin allowlist is set in Vercel Production.
 7. Copy only the rows Tommy decides to keep (D2 step 3), with the pool accounts matched, not re-inserted, and every CRM user-id column set to NULL (section 1c). Then run the copy verification in section 1c. If nothing is kept, skip this step.
