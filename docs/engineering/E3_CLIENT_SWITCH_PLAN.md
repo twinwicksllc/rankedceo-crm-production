@@ -28,7 +28,7 @@ I said 030 locked down the SECURITY DEFINER functions. That was too strong.
   3. Keeps `anon` on `resolve_tenant_by_hostname` only, because `lib/waas/supabase.ts` falls back to the anon key.
   4. Adds `assert_own_account()` and rewrites the 4 onboarding RPCs to use it.
   5. Revokes `TRUNCATE`/`REFERENCES`/`TRIGGER` from `anon`/`authenticated` on all `public` tables, and from the default table grant.
-  6. **Exceptions, deliberately left alone:** the `handle_new_user()` body (other product), and the smile functions `get_smile_account_id`, `get_smile_pool_account_id`, `submit_smile_assessment_with_pool` — no caller in this repo, and changing them blind could break the other product. `submit_smile_assessment_with_pool` therefore stays anon-executable and takes `p_account_id`; that is D5 below, not something 031 fixes.
+  6. **Exceptions, deliberately left alone:** the `handle_new_user()` body (other product), and the smile functions `get_smile_account_id`, `get_smile_pool_account_id`, `submit_smile_assessment_with_pool` — no caller in this repo, and changing them blind could break the other product. `submit_smile_assessment_with_pool` therefore stays anon-executable and takes `p_account_id`; that is D5 below, not something 031 fixes. _Superseded 2026-10-22: D5 = B (DEC-0027). Migration `waas/032` removes anon and authenticated EXECUTE on it, and anon EXECUTE on `get_smile_account_id`. Not yet applied._
 - Risk of 031: revoking from `authenticated` on a function an RLS policy calls would break reads. Mitigation: the policy-dependency list is derived from `pg_policies` before writing the revokes, and the local harness runs 030+031 and then exercises each policy as `authenticated`.
 
 ## 1b. Corrections to sections 2 and 5 (2026-10-22, both ASSUMED until the one-user test)
@@ -130,6 +130,19 @@ D2 therefore needs, in this order:
 
 READ from the plan doc: the rows are few (`agent_conversations` 31, `industry_leads` 5, `appointments` 2, `calendly_connections` 1, `accounts` 6 incl. 4 pool rows). Counts must be re-verified the day of cutover; they will have changed.
 
+**Inventory 2026-10-22.** VERIFIED: Tommy ran `docs/engineering/checks/data_inventory.sql` in both projects and pasted the results. The script returns counts, dates, categories and email domains only.
+
+- **CRM project, unchanged since audit 2.** No row in any listed table was created on or after 2026-10-19. The counts match audit 2: `agent_conversations` 31, `industry_leads` 5, `appointments` 2, `calendly_connections` 1, `accounts` 6 (4 pool), `users` 1.
+  - All CRM-group data was created 2026-03-01 to 2026-03-02.
+  - Every lead and conversation email domain with a value is `test.com`, `test2.com`, `example.com` or `deployment.com`; 6 conversations have none. That reads as test data, not real prospects. It is an inference from the domains; no row was read.
+- **The CRM copies of the WaaS tables hold almost nothing.** `tenants` 2 and `tenant_site_config` 1 (last written 2026-05-11), `site_templates` 3, everything else 0. So the admin tools (DEC-0025) have written nothing there since May, and the cutover strands no admin edits. Whether the 2 tenants and 3 templates have counterparts in WaaS has not been checked row by row.
+- **WaaS project.**
+  - `tenants` 18, `audits` 32, `domain_requests` 13, `tenant_site_config` 10, `site_templates` 1, `leads` 1.
+  - `accounts` 9: the 4 pool rows seeded by 030, 2 named 'My Account' (made by `handle_new_user()` for the 2 existing auth users), and 3 others.
+  - `users` 2, both with NULL email.
+  - The CRM-group tables are empty.
+- **What this suggests (Tommy's call):** copy nothing from the CRM project. Every non-empty CRM-group table holds test-domain data, and the CRM copies of the WaaS tables have not been written since May.
+
 D3. Staging. `rankedceo-waas` is **not** a safe rehearsal target as-is: per DEC-0024 the QA agent already writes browser-driven rows into its `public` schema, and a rehearsal that creates companies, contacts and deals would mix test rows into the data we are about to call production. Options:
 - A (recommended): a disposable Supabase project (or a restored branch) for the rehearsal, torn down afterwards. Cost is the open question, and "no new expenses until revenue" applies, so this needs your call.
 - B: rehearse against `rankedceo-waas` using one dedicated test account, with a written list of every row created and a cleanup script that deletes exactly those rows, run and verified before cutover.
@@ -144,7 +157,9 @@ D4. Which project production admin code truly reads/writes. **Settled 2026-10-22
 - **Condition on all of the above:** `getAdminClient()` passes `SUPABASE_SERVICE_ROLE_KEY` as well as the URL. The admin actions read and write the CRM copies only if that key belongs to the CRM project. If it belongs to another project, they fail rather than reaching the CRM copies, and nothing was written there. Only the URLs were read, so this is ASSUMED. The anon key is the same kind of question; a mismatched anon key would already break login, so a match is likely. To check without exposing the key: open Supabase → CRM project → Settings → API Keys and compare the start of the service-role key with the one in Vercel Production, by eye only.
 - The data-copy conclusion holds either way. VERIFIED: a read-only inventory Tommy ran in the CRM project on 2026-10-22 found its copies of the WaaS tables last written 2026-05-11 (`tenants` 2, `tenant_site_config` 1, `site_templates` 3, the rest 0). So there is nothing to strand, whichever project the key belongs to.
 
-D5. `submit_smile_assessment_with_pool` stays anon-executable and accepts `p_account_id`, so an anon caller can write an assessment into any account. Nothing in this repo calls it, so 031 leaves it alone rather than break the other product blind. Options: A (recommended) add an ownership/allow-list check inside the function in a follow-up migration once the other product's caller is identified; B revoke anon and let it fail loudly, accepting that the other product's public form breaks; C accept the risk in writing and move on. **This must be decided before the cutover**, because after the switch this function is reachable in the project that serves production.
+D5. **Settled: B (DEC-0027); see the paragraph after the options.** The question as first written: `submit_smile_assessment_with_pool` stays anon-executable and accepts `p_account_id`, so an anon caller can write an assessment into any account. Nothing in this repo calls it, so 031 leaves it alone rather than break the other product blind. Options: A (recommended) add an ownership/allow-list check inside the function in a follow-up migration once the other product's caller is identified; B revoke anon and let it fail loudly, accepting that the other product's public form breaks; C accept the risk in writing and move on. **This must be decided before the cutover**, because after the switch this function is reachable in the project that serves production.
+
+**Settled 2026-10-22: B (DEC-0027).** VERIFIED (`gh search code --owner twinwicksllc`, `git log -S` on `origin/main`): nothing calls the function, in any twinwicksllc repo or in this repo's history. The "other product's public form" the options above assumed was never found. Migration `waas/032_revoke_smile_pool_rpc.sql` keeps EXECUTE for `service_role` only. It also removes the direct `anon` grant on `get_smile_account_id`; `authenticated` keeps the grant 030 gave it. The post-check is `docs/engineering/checks/032_postcheck.sql`. Tested on a throwaway Postgres (PGlite, in-process). Before 032, anon wrote an assessment into another account and the post-check failed rows 2, 4 and 6. After 032, anon was refused, `service_role` could still call it, and every row passed. A re-run gave the same result, and the rollback block restored the old grants. The local test does not reproduce Supabase's default ACL; the live post-check is the real check.
 
 ## 3. Supabase dashboard settings to replicate in `rankedceo-waas` (ASSUMED needed; compare against CRM project)
 
@@ -172,7 +187,7 @@ The check scripts now live in the repo, so an operator can reproduce every gate 
 1. Run `docs/engineering/checks/waas_function_grants_check.sql` in `rankedceo-waas` (read-only). Already done on 2026-10-21: the hole is confirmed.
 2. Merge #319, apply `031_harden_function_grants.sql` by hand, run `031_postcheck.sql` (10 rows, all PASS, `handle_new_user` md5 unchanged).
 3. PR: move the 8 email-based account lookups in section 4 to `resolveAccountId`.
-4. Decide D2, D3, D5. D1 is settled: no logins move (DEC-0026). D4 is settled (DEC-0025).
+4. Decide D2, D3. D1 is settled: no logins move (DEC-0026). D4 is settled (DEC-0025). D5 is settled: B (DEC-0027). Apply `waas/032` and run `032_postcheck.sql` before the cutover.
 5. Replicate dashboard settings and buckets (section 3).
 6. No logins are created in advance (section 1c, DEC-0026). Confirm that the admin allowlist is set in Vercel Production.
 7. Copy only the rows Tommy decides to keep (D2 step 3), with the pool accounts matched, not re-inserted, and every CRM user-id column set to NULL (section 1c). Then run the copy verification in section 1c. If nothing is kept, skip this step.
@@ -193,7 +208,7 @@ Written 2026-10-21, tested locally only. Applied to nothing.
 - Keeps `anon` on `resolve_tenant_by_hostname` only (the code falls back to the anon key).
 - Adds `assert_own_account()` and rewrites `update_company_info`, `update_onboarding_step`, `skip_onboarding`, `update_preferences` to use it, so `p_account_id` can no longer name someone else's account. `service_role` callers bypass the check.
 - Removes `TRUNCATE`, `REFERENCES`, `TRIGGER` from `anon`/`authenticated` on all `public` tables and from the default table grant. RLS cannot gate `TRUNCATE`, and PostgREST never uses it.
-- Deliberately untouched: the `handle_new_user()` body, and the smile-assessment functions (`get_smile_account_id`, `get_smile_pool_account_id`, `submit_smile_assessment_with_pool`). No caller in this repo; changing them blind could break the other product. `submit_smile_assessment_with_pool` is still anon-executable and accepts `p_account_id`, so an anon caller can write an assessment into any account. That is a separate decision.
+- Deliberately untouched: the `handle_new_user()` body, and the smile-assessment functions (`get_smile_account_id`, `get_smile_pool_account_id`, `submit_smile_assessment_with_pool`). No caller in this repo; changing them blind could break the other product. `submit_smile_assessment_with_pool` is still anon-executable and accepts `p_account_id`, so an anon caller can write an assessment into any account. That is a separate decision. _Superseded 2026-10-22: decided as D5 = B (DEC-0027), fixed by `waas/032`, not yet applied._
 
 Proof (`tmp/test_031.py`, throwaway Postgres, 030 then 031): 10/10 pass. anon is refused on the onboarding RPCs; a signed-in user updates their own account; the same user is refused on another account with "Cannot modify another account"; an RLS policy using `get_current_user_account_id()` still returns only the user's own rows; anon cannot `TRUNCATE`; the signup trigger still fires with its EXECUTE grant revoked; `resolve_tenant_by_hostname` still works for anon; `service_role` can act on any account; 031 re-runs cleanly. `npm run check` passes.
 
