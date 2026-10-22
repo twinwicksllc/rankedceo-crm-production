@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { resolveAccountId } from "@/lib/services/account-context";
 import { revalidatePath } from "next/cache";
 import { POOL_ACCOUNTS } from "@/lib/data/pool-accounts";
 import type {
@@ -125,14 +126,12 @@ export async function getIndustryLeads(
       return { success: false, data: [], error: "Not authenticated" };
     }
 
-    // Get user's account_id
-    const { data: userData, error: userError } = await supabase
-      .from("users")
-      .select("account_id")
-      .eq("email", user.email)
-      .single();
-
-    if (userError || !userData) {
+    // users.id IS the auth uid; resolveAccountId also covers a legacy profile
+    // whose id is not the auth id.
+    let accountId: string;
+    try {
+      accountId = await resolveAccountId(supabase, user);
+    } catch {
       return { success: false, data: [], error: "Account not found" };
     }
 
@@ -140,7 +139,7 @@ export async function getIndustryLeads(
     let query = supabase
       .from("industry_leads")
       .select("*")
-      .eq("account_id", userData.account_id)
+      .eq("account_id", accountId)
       .eq("industry", industry)
       .order("submitted_at", { ascending: false });
 
@@ -270,14 +269,12 @@ export async function getIndustryLeadStats(
       return { success: false, data: null, error: "Not authenticated" };
     }
 
-    // Get user's account_id
-    const { data: userData, error: userError } = await supabase
-      .from("users")
-      .select("account_id")
-      .eq("email", user.email)
-      .single();
-
-    if (userError || !userData) {
+    // users.id IS the auth uid; resolveAccountId also covers a legacy profile
+    // whose id is not the auth id.
+    let accountId: string;
+    try {
+      accountId = await resolveAccountId(supabase, user);
+    } catch {
       return { success: false, data: null, error: "Account not found" };
     }
 
@@ -285,7 +282,7 @@ export async function getIndustryLeadStats(
     const { data: leads, error: fetchError } = await supabase
       .from("industry_leads")
       .select("status, urgency, estimated_value")
-      .eq("account_id", userData.account_id)
+      .eq("account_id", accountId)
       .eq("industry", industry);
 
     if (fetchError) {

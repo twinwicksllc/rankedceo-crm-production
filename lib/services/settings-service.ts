@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { resolveAccountId } from "@/lib/services/account-context";
 import type {
   UserProfile,
   AccountSettings,
@@ -16,17 +17,11 @@ export class SettingsService {
       throw new Error("Not authenticated");
     }
 
-    const { data: userData, error: userError } = await supabase
-      .from("users")
-      .select("account_id, id")
-      .eq("email", user.email)
-      .single();
+    // users.id IS the auth uid; accounts has no user_id column. The helper
+    // also covers a legacy profile whose id is not the auth id.
+    const account_id = await resolveAccountId(supabase, user);
 
-    if (userError || !userData) {
-      throw new Error("User not found");
-    }
-
-    return { user, account_id: userData.account_id, user_id: userData.id };
+    return { user, account_id, user_id: user.id };
   }
 
   // User Profile
@@ -37,7 +32,7 @@ export class SettingsService {
     const { data, error } = await supabase
       .from("users")
       .select("id, name, email, avatar_url, role, phone, title")
-      .eq("email", user.email)
+      .eq("id", user.id)
       .single();
 
     if (error) {
@@ -54,7 +49,7 @@ export class SettingsService {
     const { data, error } = await supabase
       .from("users")
       .update(updates)
-      .eq("email", user.email)
+      .eq("id", user.id)
       .select()
       .single();
 

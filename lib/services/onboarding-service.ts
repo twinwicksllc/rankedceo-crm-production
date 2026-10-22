@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { resolveAccountId } from "@/lib/services/account-context";
 import type {
   AccountInfo,
   OnboardingStatus,
@@ -16,17 +17,11 @@ export class OnboardingService {
       throw new Error("Not authenticated");
     }
 
-    const { data: userData, error: userError } = await supabase
-      .from("users")
-      .select("account_id")
-      .eq("email", user.email)
-      .single();
+    // users.id IS the auth uid; accounts has no user_id column. The helper
+    // also covers a legacy profile whose id is not the auth id.
+    const account_id = await resolveAccountId(supabase, user);
 
-    if (userError || !userData) {
-      throw new Error("User not found");
-    }
-
-    return { user, account_id: userData.account_id };
+    return { user, account_id };
   }
 
   async getOnboardingStatus(): Promise<OnboardingStatus | null> {
