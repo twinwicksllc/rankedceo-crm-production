@@ -2,7 +2,8 @@ id: smoke
 name: Smoke — Core Navigation & Admin Dashboard
 description: >
   Fast smoke test covering essential routes for both personas.
-  No billing, no email. Runs on every PR against Vercel preview URL.
+  No billing, no email. Runs on every PR against https://qa.rankedceo.com
+  (see .github/workflows/qa-smoke.yml), not the PR's own preview.
   Max runtime: ~2 minutes.
 modes:
   - smoke

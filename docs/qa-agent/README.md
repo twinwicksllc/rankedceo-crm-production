@@ -130,10 +130,12 @@ npx tsx src/cli.ts --scenario scenarios/canary_prod_readonly.yaml --mode smoke
 
 ### Exit codes
 
-| Code | Meaning                                             |
-| ---- | --------------------------------------------------- |
-| `0`  | Run passed (with or without informational findings) |
-| `1`  | Run ended with `error` or `critical_halt` status    |
+Set by `exitCodeFor` in `qa-agent/src/orchestrator/exit-code.ts`.
+
+| Code | `--mode smoke` (PR check)                                                    | `--mode full` (weekly, monthly)                              |
+| ---- | ---------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `0`  | Status `pass`, or `pass_with_findings` with only `warning` / `info` findings | Status `pass` or `pass_with_findings`, whatever the findings |
+| `1`  | Status `error` or `critical_halt`, or any `error`-severity finding           | Status `error` or `critical_halt`                            |
 
 ---
 
@@ -164,12 +166,12 @@ The `modes:` field in each YAML scenario file controls which modes the scenario 
 
 ## Severity Taxonomy
 
-| Level      | Behaviour                                                            | Example                                               |
-| ---------- | -------------------------------------------------------------------- | ----------------------------------------------------- |
-| `info`     | Logged only, run continues                                           | Navigation step, persona handoff                      |
-| `warning`  | Logged + counted, run continues                                      | Non-critical UI element missing                       |
-| `error`    | Logged + counted, run continues, status becomes `pass_with_findings` | Form element not found                                |
-| `critical` | Run halts immediately, Resend email fired, GitHub Issue opened       | Redirect after failed auth, portal down in production |
+| Level      | Behaviour                                                                                               | Example                                               |
+| ---------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `info`     | Logged only, run continues                                                                              | Navigation step, persona handoff                      |
+| `warning`  | Logged + counted, run continues                                                                         | Non-critical UI element missing                       |
+| `error`    | Logged + counted, run continues, status becomes `pass_with_findings`; fails a smoke run (exit code `1`) | Form element not found                                |
+| `critical` | Run halts immediately, Resend email fired, GitHub Issue opened                                          | Redirect after failed auth, portal down in production |
 
 The `EscalationEngine` governs this behaviour. Only one `critical` finding is needed to trigger a halt.
 
