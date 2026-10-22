@@ -59,13 +59,35 @@ select * from (
   where table_schema = 'public' and grantee = 'anon' and privilege_type = 'TRUNCATE'
 
   union all
-  select 9, 'default privileges: no EXECUTE for anon on future functions',
-         coalesce((select string_agg(defaclacl::text, ' | ') from pg_default_acl
-                   where defaclnamespace = 'public'::regnamespace and defaclobjtype = 'f'
-                     and defaclacl::text like '%anon=X%'), 'none'),
-         case when exists (select 1 from pg_default_acl
-                           where defaclnamespace = 'public'::regnamespace and defaclobjtype = 'f'
-                             and defaclacl::text like '%anon=X%') then 'FAIL' else 'PASS' end
+  -- Row 9 tests only the default-ACL row of roles that OWN a public function.
+  -- A row owned by a role that owns nothing is dormant and is reported by
+  -- docs/engineering/checks/default_acl_audit.sql instead of failing here.
+  -- ACL items are unnested, so a PUBLIC entry is found wherever it sits, and a
+  -- missing row is a FAIL because PostgreSQL then falls back to PUBLIC EXECUTE.
+  select 9, 'default ACL: owners of public functions grant no anon/authenticated/PUBLIC EXECUTE',
+         coalesce((select string_agg(d.defaclrole::regrole::text || ' -> ' || d.defaclacl::text, ' | ')
+                   from pg_default_acl d
+                   where d.defaclnamespace = 'public'::regnamespace and d.defaclobjtype = 'f'
+                     and d.defaclrole::regrole::text in (
+                       select distinct pg_get_userbyid(p.proowner)
+                       from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                       where n.nspname = 'public')), 'none'),
+         case when not exists (
+                select 1
+                from (select distinct pg_get_userbyid(p.proowner) as owner_role
+                      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                      where n.nspname = 'public') o
+                where not exists (
+                  select 1 from pg_default_acl d
+                  where d.defaclnamespace = 'public'::regnamespace
+                    and d.defaclobjtype = 'f'
+                    and d.defaclrole::regrole::text = o.owner_role
+                    and not exists (
+                      select 1 from unnest(d.defaclacl) a
+                      where a::text like 'anon=X%'
+                         or a::text like 'authenticated=X%'
+                         or a::text like '=X%')))
+              then 'PASS' else 'FAIL' end
 
   union all
   select 10, 'handle_new_user body unchanged (compare to pre-check md5)',
