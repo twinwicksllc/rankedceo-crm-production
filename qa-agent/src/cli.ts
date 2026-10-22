@@ -23,6 +23,7 @@
 import { parseArgs } from "node:util";
 import { randomBytes } from "node:crypto";
 import { Orchestrator } from "./orchestrator/Orchestrator.js";
+import { exitCodeFor } from "./orchestrator/exit-code.js";
 import type { RunConfig, RunMode } from "./types.js";
 
 // ─── Parse args ───────────────────────────────────────────────────────────────
@@ -105,8 +106,5 @@ const config: RunConfig = {
 const orchestrator = new Orchestrator(config);
 const report = await orchestrator.run();
 
-// Exit code reflects run status
-const exitCode =
-  report.status === "pass" || report.status === "pass_with_findings" ? 0 : 1;
-
-process.exit(exitCode);
+// Exit code reflects run status; smoke also fails on any "error" finding.
+process.exit(exitCodeFor(report, mode));

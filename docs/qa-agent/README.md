@@ -141,7 +141,9 @@ npx tsx src/cli.ts --scenario scenarios/canary_prod_readonly.yaml --mode smoke
 
 ### `qa-smoke.yml` — every PR
 
-Triggers on every pull request to `main`. Runs the smoke scenario against the Vercel preview URL deployed for that PR. Posts the result as a PR comment via `gh pr comment`. Uses `BILLING_MOCK=true` so no Stripe calls are made.
+Triggers on every pull request to `main`. Runs the smoke scenario against `https://qa.rankedceo.com`, the same host as `qa-weekly.yml`. That host is **not** the PR's own Vercel preview, so the smoke result checks the QA deployment, not the PR's code. Posts the result as a PR comment. Uses `BILLING_MOCK=true` so no Stripe calls are made. Skipped when `QA_ADMIN_EMAIL` is unavailable (Dependabot and fork PRs).
+
+The job fails on any `error`-severity finding (`qa-agent/src/orchestrator/exit-code.ts`), including the admin persona not reaching `/admin/dashboard` and the smoke fast-fail guard. A broken QA admin login therefore turns the PR check red instead of passing with most steps skipped. Screenshots and the report are uploaded as an artifact when the job fails.
 
 ### `qa-weekly.yml` — Monday 06:00 UTC
 

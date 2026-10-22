@@ -102,7 +102,7 @@ steps:
   - id: admin_assert_dashboard
     type: wait_for_url
     persona: admin
-    severity: warning
+    severity: error
     description: Confirm redirect to /admin/dashboard after admin login
     pattern: /admin/dashboard
     timeout_ms: 30000
@@ -111,13 +111,15 @@ steps:
       Wait for the pathname to become /admin/dashboard. This avoids false
       positives from /login?next=/admin/dashboard while also avoiding brittle
       dependency on data-testid attributes that may be stripped in production
-      builds. Warning-level so stale QA admin credentials do not hard-stop
-      smoke; deeper auth verification is covered by full_lifecycle.
+      builds. Error-level: a smoke run fails on any error finding
+      (src/orchestrator/exit-code.ts), so a broken or stale QA admin login
+      fails the PR check instead of passing with most steps skipped. Not
+      critical, so the run still finishes and writes its report.
 
   - id: admin_navigate_dashboard_explicit
     type: navigate
     persona: admin
-    severity: warning
+    severity: error
     description: Navigate explicitly to admin dashboard to ensure full page load
     url: /admin/dashboard
     retries: 1
@@ -125,9 +127,9 @@ steps:
       After login redirect, navigate explicitly to /admin/dashboard.
       The stepNavigate waits for networkidle, ensuring the server component
       (DB queries, Supabase calls) finishes before asserting content.
-      Warning-level (not critical) so that stale or invalid QA admin
-      credentials do not hard-stop the smoke run — consistent with the
-      warning on admin_assert_dashboard directly above.
+      Error-level (not critical), consistent with admin_assert_dashboard
+      directly above: a failed admin login fails the smoke job but does not
+      halt the run.
 
   - id: admin_assert_dashboard_heading
     type: assert_text
