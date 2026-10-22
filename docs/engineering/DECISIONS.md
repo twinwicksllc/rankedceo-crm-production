@@ -268,13 +268,19 @@ Status values: **in force**, **implemented**, **on hold**, **superseded**. Imple
   re-asked)
 - Decision: In Vercel Production, `NEXT_PUBLIC_SUPABASE_URL` points at
   `rankedceo-crm-production` (`wcednzaxmxwfiijzmjmx`) and `NEXT_PUBLIC_WAAS_SUPABASE_URL`
-  points at `rankedceo-waas` (`klgvdvryewykzlumbkei`). The admin actions built on
-  `lib/waas/actions/admin/_shared.ts` therefore read and write the CRM project's copies
-  of the WaaS tables, while the client-facing WaaS code uses `rankedceo-waas`. The
-  client switch (E3 step 8) ends the split. The data copy must also reconcile the CRM
-  project's copies of the WaaS tables.
+  points at `rankedceo-waas` (`klgvdvryewykzlumbkei`). So the admin client in
+  `lib/waas/actions/admin/_shared.ts` is **pointed at** the CRM project's copies of the
+  WaaS tables, while the client-facing WaaS code uses `rankedceo-waas`. The client switch
+  (E3 step 8) ends the split. The data copy must also reconcile the CRM project's copies
+  of the WaaS tables.
+- Condition: `getAdminClient()` also passes `SUPABASE_SERVICE_ROLE_KEY`. The admin
+  actions actually read and write the CRM copies only if that key belongs to the CRM
+  project. If it belongs to another project, they fail instead. Not verified: only the
+  URL refs were read, never a key.
 - Not confirmed: the Production anon and service-role keys were not checked against
-  their URLs (refs only, never keys).
+  their URLs. The test is: in Supabase → CRM project → Settings → API Keys, does the
+  service-role key shown there match the start of the one in Vercel? Compare it by eye;
+  never paste it.
 - Used in: `docs/engineering/E3_CLIENT_SWITCH_PLAN.md` (D4),
   `docs/engineering/DB_CONSOLIDATION_PLAN.md` (sections 6 and 9).
 - Source: Tommy, 2026-10-22 (option A: both refs as expected).
