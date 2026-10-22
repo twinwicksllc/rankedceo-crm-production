@@ -98,6 +98,13 @@ Tommy, 2026-10-22: there are no external users. The only logins are Tommy, his p
   - the 11 CRM logins stay in `rankedceo-crm-production`, untouched, until DEC-0024 repurposes that project;
   - the 2 existing `rankedceo-waas` auth users are kept.
 - **Still open: which rows, if any, come across.** "No external users" covers logins, not data. `industry_leads` and `agent_conversations` hold leads captured from public forms and the website chat, which may be real prospects. Since DEC-0025, the admin tools have also been writing to the CRM project's copies of the WaaS tables. D2 steps 3 and 4 apply only to the rows Tommy decides to keep.
+- **Rule for any copied row that holds a CRM user id.** No login moves, so a CRM user id has no matching user in `rankedceo-waas`. READ from `waas/030`, the columns on the four tables with data:
+  - `industry_leads.auth_user_id` has **no** foreign key in WaaS. A CRM id would copy silently and point at nobody.
+  - `appointments.booked_by_user_id` → `users(id)` (`ON DELETE SET NULL`).
+  - `calendly_connections.user_id` → `users(id)` (unique, `ON DELETE CASCADE`). Those two would fail on the foreign key.
+
+  Rule: set each of these columns to NULL on the way in. Skip a `calendly_connections` row entirely, because it holds OAuth tokens tied to that CRM user. Account ids are not user ids and copy as they are; pool accounts are matched by their seeded ids. Before writing the copy, get the full list of user-id columns from `information_schema` on the CRM project, not from this list.
+- **Verification for a copy (replaces D2 step 4, which was a per-invited-user check):** for each copied table, row counts before and after. A query showing every copied `account_id` exists in `public.accounts`. A query showing every user-id column above is NULL or matches a `public.users` row. A reconciliation listing each source row as copied or skipped. If no rows are copied, there is nothing to verify and the step is dropped.
 
 ## 2. Gating decisions (one at a time; I recommend, you choose)
 
@@ -109,7 +116,7 @@ D1. How the 11 CRM logins reach `rankedceo-waas`. `auth.users` is separate per p
 
 D2. Data copy — **this is the gate that D1=A creates, and it is not a "copy the rows" step.**
 
-> Narrowed 2026-10-22, see section 1c (DEC-0026). No logins are moved, so steps 1 and 2 are dropped. Steps 3 and 4 apply only to the rows Tommy decides to copy. Section 1b corrected the text below; it matters only if logins are ever moved.
+> Narrowed 2026-10-22, see section 1c (DEC-0026). No logins are moved, so steps 1 and 2 are dropped. Step 3 applies only to the rows Tommy decides to copy, with the user-id rule in section 1c. Step 4 is replaced by the copy verification in section 1c, because there are no invited users to check. Section 1b corrected the text below; it matters only if logins are ever moved.
 >
 > Corrected 2026-10-22, see section 1b. The text below holds for the invite endpoint. `POST /admin/users` can keep the original uid (Correction 1), which would turn step 2 into a check. Every created user also gets a trigger-made account and `users` row (Correction 2), which changes step 3. Both are ASSUMED until the one-user test.
 
@@ -162,7 +169,7 @@ The check scripts now live in the repo, so an operator can reproduce every gate 
 4. Decide D2, D3, D4, D5. D1 is settled: A.
 5. Replicate dashboard settings and buckets (section 3).
 6. No logins are created in advance (section 1c, DEC-0026). Confirm that the admin allowlist is set in Vercel Production.
-7. Copy only the rows Tommy decides to keep (D2 steps 3-4), with the pool accounts matched, not re-inserted. If nothing is kept, skip this step.
+7. Copy only the rows Tommy decides to keep (D2 step 3), with the pool accounts matched, not re-inserted, and every CRM user-id column set to NULL (section 1c). Then run the copy verification in section 1c. If nothing is kept, skip this step.
 8. Rehearse (D3), then cut over: change **URL, anon key and service-role key** in Production, redeploy, then run the manual checks. Tommy and his partner sign up fresh (password, magic link, Google), then onboarding, create company/contact/deal, and avatar upload.
 9. Rollback: set the same three variables back to the CRM project values and redeploy. Data written to waas after cutover would not exist in the CRM project, so keep the window short and during low usage. The CRM project is not deleted or repurposed (DEC-0024) until the rollback window has passed.
 
