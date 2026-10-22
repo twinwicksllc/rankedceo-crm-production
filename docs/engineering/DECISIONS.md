@@ -315,11 +315,13 @@ Status values: **in force**, **implemented**, **on hold**, **superseded**. Imple
 ## DEC-0027 - Lock submit_smile_assessment_with_pool to the service role (E3 D5)
 
 - Date: 2026-10-22
-- Status: in force (decided). Implementation: **not yet applied.**
+- Status: in force. Implementation: **applied 2026-10-22.**
 - Implementation: migration `supabase/migrations/waas/032_revoke_smile_pool_rpc.sql`,
-  to be applied by hand in `rankedceo-waas` before the cutover, then checked with
-  `docs/engineering/checks/032_postcheck.sql` (all rows PASS). Update this entry when
-  the live post-check has been run.
+  applied by Tommy by hand in `rankedceo-waas` on 2026-10-22 ("Success. No rows
+  returned"). VERIFIED: `docs/engineering/checks/032_postcheck.sql` run live the same
+  day, all 6 rows PASS. Row 4 listed exactly `get_smile_pool_account_id` and
+  `resolve_tenant_by_hostname` as the only anon-callable SECURITY DEFINER functions in
+  `public`.
 - Decision: option B. `submit_smile_assessment_with_pool()` is SECURITY DEFINER, takes
   `p_account_id` and checks only that the account exists, so with the anon grant from
   030 anyone with the public key could write a patient record into any account. Only
