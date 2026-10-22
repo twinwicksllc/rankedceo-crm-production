@@ -261,6 +261,26 @@ Status values: **in force**, **implemented**, **on hold**, **superseded**. Imple
 
 ---
 
+## DEC-0025 - Production admin code uses the CRM project (E3 D4)
+
+- Date: 2026-10-22
+- Status: in force (a confirmed fact that the E3 plan depends on, recorded so it is not
+  re-asked)
+- Decision: In Vercel Production, `NEXT_PUBLIC_SUPABASE_URL` points at
+  `rankedceo-crm-production` (`wcednzaxmxwfiijzmjmx`) and `NEXT_PUBLIC_WAAS_SUPABASE_URL`
+  points at `rankedceo-waas` (`klgvdvryewykzlumbkei`). The admin actions built on
+  `lib/waas/actions/admin/_shared.ts` therefore read and write the CRM project's copies
+  of the WaaS tables, while the client-facing WaaS code uses `rankedceo-waas`. The
+  client switch (E3 step 8) ends the split. The data copy must also reconcile the CRM
+  project's copies of the WaaS tables.
+- Not confirmed: the Production anon and service-role keys were not checked against
+  their URLs (refs only, never keys).
+- Used in: `docs/engineering/E3_CLIENT_SWITCH_PLAN.md` (D4),
+  `docs/engineering/DB_CONSOLIDATION_PLAN.md` (sections 6 and 9).
+- Source: Tommy, 2026-10-22 (option A: both refs as expected).
+
+---
+
 ## DEC-0026 - No logins are moved to rankedceo-waas; users sign up again (E3 D1, D2, D6)
 
 - Date: 2026-10-22

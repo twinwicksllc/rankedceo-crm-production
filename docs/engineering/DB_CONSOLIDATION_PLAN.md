@@ -307,3 +307,7 @@ after the data is in place and tested.
 3. How do CRM logins reach `rankedceo-waas`?
 4. The four missing names in section 5, especially `waas_tenants`.
 5. Which project does production admin code really read and write (section 6)?
+   Answered 2026-10-22 (DEC-0025): the CRM project. Tommy confirmed in Vercel
+   Production that `NEXT_PUBLIC_SUPABASE_URL` is `wcednzaxmxwfiijzmjmx` and
+   `NEXT_PUBLIC_WAAS_SUPABASE_URL` is `klgvdvryewykzlumbkei`, so the split described in
+   section 6 is how production runs. See `E3_CLIENT_SWITCH_PLAN.md`, D4.
