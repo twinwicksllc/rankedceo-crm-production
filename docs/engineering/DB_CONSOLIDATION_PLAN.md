@@ -237,13 +237,18 @@ So the repo suggests admin tools write to the CRM project while client-facing pa
 read from `rankedceo-waas`. If that is how production runs, a variant created in the
 admin would not be visible to the client edit page, and the client edit pages would
 fail on missing tables. This is a **reading of the code, not a test of production**.
-What the Vercel production variables actually hold is not verified. Audit 2 read the CRM
+Update 2026-10-22 (DEC-0025): Tommy confirmed in Vercel Production that
+`NEXT_PUBLIC_SUPABASE_URL` is the CRM project and `NEXT_PUBLIC_WAAS_SUPABASE_URL` is
+`rankedceo-waas`, so the URLs match this reading. Still unverified: that
+`SUPABASE_SERVICE_ROLE_KEY` belongs to the CRM project. If it belongs to another project,
+the admin calls fail rather than reaching the CRM copies. The rest of this paragraph is
+the original pre-check text. Audit 2 read the CRM
 row counts (CRM-B1): the six WaaS-style tables are all empty, `tenants` has 2 rows,
 `audits` and `leads` 0 and `tenant_site_config` 1, against 18 `tenants`, 32 `audits` and
 1 `leads` in `rankedceo-waas` (audit). That fits the idea that the CRM copies are
 leftovers rather than the tables the admin tools write to, but it does not prove which
-project the admin code reads and writes. It still needs a check of the Vercel variables
-(section 8) before anything is built. Note also that the live `tenants` table has no
+project the admin code reads and writes. The URL half of that check is now done (DEC-0025);
+the service-role key half is still open. Note also that the live `tenants` table has no
 foreign key on `crm_account_id` (audit), so the link from a tenant to a CRM account is by
 convention only.
 
@@ -307,3 +312,9 @@ after the data is in place and tested.
 3. How do CRM logins reach `rankedceo-waas`?
 4. The four missing names in section 5, especially `waas_tenants`.
 5. Which project does production admin code really read and write (section 6)?
+   Answered for the URLs on 2026-10-22 (DEC-0025): the admin client is pointed at the CRM
+   project. Tommy confirmed in Vercel Production that `NEXT_PUBLIC_SUPABASE_URL` is
+   `wcednzaxmxwfiijzmjmx` and `NEXT_PUBLIC_WAAS_SUPABASE_URL` is `klgvdvryewykzlumbkei`.
+   The split described in section 6 is how production runs **if**
+   `SUPABASE_SERVICE_ROLE_KEY` also belongs to the CRM project, which is not verified.
+   See `E3_CLIENT_SWITCH_PLAN.md`, D4.
