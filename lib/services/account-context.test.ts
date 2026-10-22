@@ -2,10 +2,11 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   resolveAccountId,
+  resolveUserProfile,
   type AccountLookupClient,
 } from "@/lib/services/account-context";
 
-type Row = { account_id?: string | null } | null;
+type Row = { id?: string | null; account_id?: string | null } | null;
 
 /**
  * Minimal stand-in for the Supabase builder: records the filters used and
@@ -91,4 +92,44 @@ test("skips the email fallback when the user has no email (WaaS signups)", async
     /Account not found/,
   );
   assert.deepEqual(calls, [{ column: "id", value: "auth-uid" }]);
+});
+
+test("resolveUserProfile returns the matched profile id, not the auth uid", async () => {
+  const { client } = stubClient({
+    id: { id: "auth-uid", account_id: "acct-1" },
+  });
+  const resolved = await resolveUserProfile(client, {
+    id: "auth-uid",
+    email: "a@b.com",
+  });
+  assert.deepEqual(resolved, { account_id: "acct-1", user_id: "auth-uid" });
+});
+
+test("resolveUserProfile returns the legacy row id so the users row can be addressed", async () => {
+  // Regression: the email fallback matches a profile whose id is NOT the auth
+  // uid. Callers that filter `users` by `user.id` would then get zero rows.
+  const { client, calls } = stubClient({
+    id: null,
+    email: { id: "legacy-profile-id", account_id: "acct-legacy" },
+  });
+  const resolved = await resolveUserProfile(client, {
+    id: "auth-uid",
+    email: "legacy@b.com",
+  });
+  assert.deepEqual(resolved, {
+    account_id: "acct-legacy",
+    user_id: "legacy-profile-id",
+  });
+  assert.deepEqual(calls, [
+    { column: "id", value: "auth-uid" },
+    { column: "email", value: "legacy@b.com" },
+  ]);
+});
+
+test("resolveAccountId still returns only the account id", async () => {
+  const { client } = stubClient({ id: { id: "auth-uid", account_id: "acct-1" } });
+  assert.equal(
+    await resolveAccountId(client, { id: "auth-uid", email: "a@b.com" }),
+    "acct-1",
+  );
 });

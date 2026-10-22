@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // ============================================================
-// Resolve the signed-in user's account
+// Resolve the signed-in user's account (and profile row)
 // ============================================================
 // `users.id` IS the auth uid in both projects:
 //   - WaaS: `handle_new_user()` in 027 inserts `users(id, ...)` from NEW.id.
@@ -17,6 +17,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // match its auth id (the shape `000007_correct_link_auth_users.sql` would
 // have produced had that trigger ever been live). It is a no-op in WaaS,
 // where `users.email` is NULL, so it can never mask a real mismatch there.
+//
+// IMPORTANT: when the email fallback matches, the profile row's `id` is NOT
+// the auth uid. Callers that address the `users` row itself (select or
+// update it) must use the `user_id` returned by `resolveUserProfile`, never
+// `user.id` — otherwise the legacy case silently returns no row.
 // ============================================================
 
 /** The slice of the Supabase client this helper needs (keeps it testable). */
@@ -28,7 +33,7 @@ export interface AccountLookupClient {
         value: string,
       ): {
         maybeSingle(): Promise<{
-          data: { account_id?: string | null } | null;
+          data: { id?: string | null; account_id?: string | null } | null;
           error: { message: string } | null;
         }>;
       };
@@ -41,22 +46,30 @@ export interface AccountLookupUser {
   email?: string | null;
 }
 
+/** The caller's account plus the `users` row that matched. */
+export interface ResolvedUserProfile {
+  /** `accounts.id` — the tenant scope. */
+  account_id: string;
+  /** `users.id` of the matched row. Equals the auth uid except in the legacy case. */
+  user_id: string;
+}
+
 /**
- * Returns the caller's `account_id`.
+ * Resolves the caller's `users` row and `account_id`.
  *
  * Looks up `users` by `id` (the auth uid) first, then by `email` for a
  * legacy profile. Throws `Account not found` when neither matches, which is
  * the same error the create paths threw before.
  */
-export async function resolveAccountId(
+export async function resolveUserProfile(
   client: AccountLookupClient | SupabaseClient,
   user: AccountLookupUser,
-): Promise<string> {
+): Promise<ResolvedUserProfile> {
   const db = client as AccountLookupClient;
 
   const byId = await db
     .from("users")
-    .select("account_id")
+    .select("id, account_id")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -66,9 +79,11 @@ export async function resolveAccountId(
     throw new Error(`Account lookup failed: ${byId.error.message}`);
   }
 
-  const idAccount = byId.data?.account_id;
-  if (idAccount) {
-    return idAccount;
+  if (byId.data?.account_id) {
+    return {
+      account_id: byId.data.account_id,
+      user_id: byId.data.id ?? user.id,
+    };
   }
 
   // Legacy fallback: a profile row exists but its id is not the auth uid.
@@ -76,15 +91,30 @@ export async function resolveAccountId(
   if (email) {
     const byEmail = await db
       .from("users")
-      .select("account_id")
+      .select("id, account_id")
       .eq("email", email)
       .maybeSingle();
 
     const emailAccount = byEmail.data?.account_id;
     if (!byEmail.error && emailAccount) {
-      return emailAccount;
+      // The matched row's own id — NOT the auth uid.
+      return { account_id: emailAccount, user_id: byEmail.data?.id ?? user.id };
     }
   }
 
   throw new Error("Account not found");
+}
+
+/**
+ * Returns the caller's `account_id`.
+ *
+ * Thin wrapper over {@link resolveUserProfile} for callers that only need
+ * the tenant scope.
+ */
+export async function resolveAccountId(
+  client: AccountLookupClient | SupabaseClient,
+  user: AccountLookupUser,
+): Promise<string> {
+  const { account_id } = await resolveUserProfile(client, user);
+  return account_id;
 }

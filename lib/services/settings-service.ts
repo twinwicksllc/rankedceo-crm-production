@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { resolveAccountId } from "@/lib/services/account-context";
+import { resolveUserProfile } from "@/lib/services/account-context";
 import type {
   UserProfile,
   AccountSettings,
@@ -18,21 +18,23 @@ export class SettingsService {
     }
 
     // users.id IS the auth uid; accounts has no user_id column. The helper
-    // also covers a legacy profile whose id is not the auth id.
-    const account_id = await resolveAccountId(supabase, user);
+    // also covers a legacy profile whose id is not the auth id — in that case
+    // `user_id` is the matched row's id, NOT the auth uid, so the profile
+    // queries below must filter on it.
+    const { account_id, user_id } = await resolveUserProfile(supabase, user);
 
-    return { user, account_id, user_id: user.id };
+    return { user, account_id, user_id };
   }
 
   // User Profile
   async getUserProfile(): Promise<UserProfile | null> {
     const supabase = await createClient();
-    const { user } = await this.getUserInfo();
+    const { user_id } = await this.getUserInfo();
 
     const { data, error } = await supabase
       .from("users")
       .select("id, name, email, avatar_url, role, phone, title")
-      .eq("id", user.id)
+      .eq("id", user_id)
       .single();
 
     if (error) {
@@ -44,12 +46,12 @@ export class SettingsService {
 
   async updateUserProfile(updates: Partial<UserProfile>): Promise<UserProfile> {
     const supabase = await createClient();
-    const { user } = await this.getUserInfo();
+    const { user_id } = await this.getUserInfo();
 
     const { data, error } = await supabase
       .from("users")
       .update(updates)
-      .eq("id", user.id)
+      .eq("id", user_id)
       .select()
       .single();
 
