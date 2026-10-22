@@ -33,6 +33,8 @@ I said 030 locked down the SECURITY DEFINER functions. That was too strong.
 
 ## 1b. Corrections to sections 2 and 5 (2026-10-22, both ASSUMED until the one-user test)
 
+> Superseded in part by section 1c (2026-10-22): no logins are moved, so Correction 1 and the one-user test are not needed for the cutover. They stay written down in case real users ever have to be moved between projects. Correction 2 still applies to every new sign-up.
+
 Two statements below were incomplete. Both corrections are READ from source code, not run against the hosted project. Treat both as **ASSUMED** until a one-user test in `rankedceo-waas` has run (see "The one-user test" at the end of this section).
 
 Sources read: `supabase/auth` at `c3348e8f1cb3` (`internal/api/admin.go`, `internal/api/invite.go`, `internal/api/external.go`, `internal/models/linking.go`, `internal/conf/configuration.go`) and `supabase/supabase-js` at `db8c3a450e06` (`packages/core/auth-js/src/lib/types.ts`). The hosted project may run a different auth version.
@@ -79,9 +81,27 @@ Run by Tommy in `rankedceo-waas` with a service-role call. The service-role key 
 
 Record what was observed in the PR that turns these corrections from ASSUMED into VERIFIED.
 
+## 1c. No login migration (2026-10-22, DEC-0026)
+
+Tommy, 2026-10-22: there are no external users. The only logins are Tommy, his partner and test users, and they can create new logins at any time.
+
+- **Dropped:**
+  - moving the 11 CRM logins (D1);
+  - the uid map and the id rewrite (D2 steps 1 and 2);
+  - choosing which profile-less logins get a profile (D6 in `docs/waas/USER_IDENTITY_CONSISTENCY_PLAN.md`).
+- **New path.** After the cutover, Tommy and his partner sign up again in `rankedceo-waas` (password, magic link or Google). Each sign-up fires `handle_new_user()`, which creates one `accounts` row and one `users` row (Correction 2). READ (`lib/supabase/ensure-crm-profile.ts:144-165`): `ensureCrmProfile()` then finds that `users` row by id and does nothing, so the two do not both write. The first real sign-up after the cutover is the check.
+- **What those new rows look like** (READ from `waas/027` and `waas/030`):
+  - `users.role` gets the column default `'rep'`. `users.email` and `users.name` are NULL. Account lookups go by id (`resolveAccountId`, #323), so a NULL email does not break them.
+  - `'rep'` is not an admin role. Access to `/admin` then comes only from the `WAAS_ADMIN_EMAILS` / `WAAS_ADMIN_EMAIL` allowlist or the `app_metadata` admin claim (`lib/auth/admin.ts`). Whether the allowlist is set in Vercel Production is **not verified**. It must be before the cutover, or nobody can open the admin dashboard.
+  - Each sign-up gets its own account. If Tommy and his partner should share one account, one `users.account_id` update is needed afterwards (Tommy's call).
+- **Left alone:**
+  - the 11 CRM logins stay in `rankedceo-crm-production`, untouched, until DEC-0024 repurposes that project;
+  - the 2 existing `rankedceo-waas` auth users are kept.
+- **Still open: which rows, if any, come across.** "No external users" covers logins, not data. `industry_leads` and `agent_conversations` hold leads captured from public forms and the website chat, which may be real prospects. Since DEC-0025, the admin tools have also been writing to the CRM project's copies of the WaaS tables. D2 steps 3 and 4 apply only to the rows Tommy decides to keep.
+
 ## 2. Gating decisions (one at a time; I recommend, you choose)
 
-D1. How the 11 CRM logins reach `rankedceo-waas`. `auth.users` is separate per project, so moving table rows does not move logins.
+D1. How the 11 CRM logins reach `rankedceo-waas`. `auth.users` is separate per project, so moving table rows does not move logins. **Settled 2026-10-22 (DEC-0026): they are not moved. See section 1c.** The options below were written before that and are kept for the record.
 - A (recommended): create the users in WaaS auth through the Supabase Admin invite API and have each set a new password / use magic link. 11 users is small; no password hashes handled.
 - B: scripted recreation of auth users preserving ids (needs service-role access to both projects; password hashes cannot be copied without the Supabase support path).
 - C: keep CRM project as the auth source only. Not a real consolidation; rejected unless A and B fail.
@@ -89,6 +109,8 @@ D1. How the 11 CRM logins reach `rankedceo-waas`. `auth.users` is separate per p
 
 D2. Data copy — **this is the gate that D1=A creates, and it is not a "copy the rows" step.**
 
+> Narrowed 2026-10-22, see section 1c (DEC-0026). No logins are moved, so steps 1 and 2 are dropped. Steps 3 and 4 apply only to the rows Tommy decides to copy. Section 1b corrected the text below; it matters only if logins are ever moved.
+>
 > Corrected 2026-10-22, see section 1b. The text below holds for the invite endpoint. `POST /admin/users` can keep the original uid (Correction 1), which would turn step 2 into a check. Every created user also gets a trigger-made account and `users` row (Correction 2), which changes step 3. Both are ASSUMED until the one-user test.
 
 The Admin invite API mints a **new** auth UUID. This repo keys `public.users.id` to the auth UUID, and `accounts.id` is referenced by every CRM table. So inviting first and copying rows afterwards would attach the copied rows to the wrong people, and `ensureCrmProfile()` would then create a second profile for each invited user.
@@ -139,9 +161,9 @@ The check scripts now live in the repo, so an operator can reproduce every gate 
 3. PR: move the 8 email-based account lookups in section 4 to `resolveAccountId`.
 4. Decide D2, D3, D4, D5. D1 is settled: A.
 5. Replicate dashboard settings and buckets (section 3).
-6. Run the one-user test (section 1b). Then create the users, with the original uid if the test showed it is kept, or by invite otherwise. Build the uid map (D2 step 1), and record the trigger-made account id for each user. **Do not copy any rows until the map exists.**
-7. Reconcile and copy data (D2 steps 2-4), with the pool accounts matched, not re-inserted. Repoint the trigger-made `users` rows, then delete the trigger-made accounts by recorded id (section 1b, Correction 2).
-8. Rehearse (D3), then cut over: change **URL, anon key and service-role key** in Production, redeploy, run the manual checks (password, magic link, Google, onboarding, create company/contact/deal, avatar upload).
+6. No logins are created in advance (section 1c, DEC-0026). Confirm that the admin allowlist is set in Vercel Production.
+7. Copy only the rows Tommy decides to keep (D2 steps 3-4), with the pool accounts matched, not re-inserted. If nothing is kept, skip this step.
+8. Rehearse (D3), then cut over: change **URL, anon key and service-role key** in Production, redeploy, then run the manual checks. Tommy and his partner sign up fresh (password, magic link, Google), then onboarding, create company/contact/deal, and avatar upload.
 9. Rollback: set the same three variables back to the CRM project values and redeploy. Data written to waas after cutover would not exist in the CRM project, so keep the window short and during low usage. The CRM project is not deleted or repurposed (DEC-0024) until the rollback window has passed.
 
 ## 6. Out of scope here
