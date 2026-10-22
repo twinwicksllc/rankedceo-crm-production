@@ -1,7 +1,7 @@
 # E3 Client Switch Plan (step 8 of DB_CONSOLIDATION_PLAN.md)
 
 Status: DRAFT for Tommy's decision. Nothing in this document has been executed.
-Written: 2026-10-21. Base: main `fcd4219`.
+Written: 2026-10-21. Base: main `fcd4219`. Section 1b added 2026-10-22 (base `e34ca73`).
 
 "Client switch" = pointing the CRM app at `rankedceo-waas` (ref `klgvdvryewykzlumbkei`) instead of `rankedceo-crm-production` (ref `wcednzaxmxwfiijzmjmx`), so there is one project.
 
@@ -31,6 +31,54 @@ I said 030 locked down the SECURITY DEFINER functions. That was too strong.
   6. **Exceptions, deliberately left alone:** the `handle_new_user()` body (other product), and the smile functions `get_smile_account_id`, `get_smile_pool_account_id`, `submit_smile_assessment_with_pool` — no caller in this repo, and changing them blind could break the other product. `submit_smile_assessment_with_pool` therefore stays anon-executable and takes `p_account_id`; that is D5 below, not something 031 fixes.
 - Risk of 031: revoking from `authenticated` on a function an RLS policy calls would break reads. Mitigation: the policy-dependency list is derived from `pg_policies` before writing the revokes, and the local harness runs 030+031 and then exercises each policy as `authenticated`.
 
+## 1b. Corrections to sections 2 and 5 (2026-10-22, both ASSUMED until the one-user test)
+
+Two statements below were incomplete. Both corrections are READ from source code, not run against the hosted project. Treat both as **ASSUMED** until a one-user test in `rankedceo-waas` has run (see "The one-user test" at the end of this section).
+
+Sources read: `supabase/auth` at `c3348e8f1cb3` (`internal/api/admin.go`, `internal/api/invite.go`, `internal/api/external.go`, `internal/models/linking.go`, `internal/conf/configuration.go`) and `supabase/supabase-js` at `db8c3a450e06` (`packages/core/auth-js/src/lib/types.ts`). The hosted project may run a different auth version.
+
+### Correction 1: the user id can be kept, so D2 may need no id rewrite
+
+D2 says "The Admin invite API mints a **new** auth UUID". That is true of the invite endpoint only.
+
+- READ: `POST /invite` (`invite.go`) accepts only `email` and `data`. It always creates a new id.
+- READ: `POST /admin/users` (`adminUserCreate` in `admin.go`) accepts `id`. A non-nil uuid replaces the generated id before the row is written. It also accepts `email_confirm` and `password_hash`. If neither `password` nor `password_hash` is given, it sets a random 64-character password. supabase-js exposes the same fields on `auth.admin.createUser()` (`AdminUserAttributes.id`, `email_confirm`, `password_hash`).
+- If the hosted project honours `id`, each login can be created in `rankedceo-waas` with the same uid it has in `rankedceo-crm-production`. Then `users.id`, every user-id column and every `account_id` mapping stays valid with no rewrite. The old-to-new table in D2 step 1 becomes an identity map, kept as an audit record of who was created, when, and by whom. D2 step 2 becomes a check that proves nothing needs rewriting.
+- Fallback if the test fails: invite, plus an `old_uid -> new_uid` table and the full rewrite in D2 step 2, as written.
+
+Conditions on that path (READ from the same source; each must hold in the test):
+
+- **Create users with `email_confirm: true`.** For a Google sign-in, `external.go` treats an existing _unconfirmed_ user specially: it calls `RemoveUnconfirmedIdentities`, then confirms the user only if Google reports the email as verified or the project auto-confirms emails. Otherwise it sends a confirmation email and refuses the sign-in. Creating confirmed users avoids that branch.
+- **Google linking must not be isolated.** `linking.go` links a new Google identity to an existing user that has the same verified email only when Google shares the default linking domain. If `rankedceo-waas` maps `google` to its own linking domain (the `ProviderLinkingDomains` setting, or the deprecated `ProvidersWithOwnLinkingDomain`), a Google sign-in creates a **second** user with a new uid. ASSUMED: hosted Supabase does not expose this setting in the dashboard, so the test is the check.
+- **Do not send `password_hash` by default.** Copying hashes needs a method Tommy confirms. The default is that each user sets a new password or uses a magic link. The random password the API generates is never used or shown.
+
+### Correction 2: every created user also gets a junk account in `rankedceo-waas`
+
+Section 2 does not say this, and it changes D2 step 3.
+
+- READ (`waas/027_baseline_accounts_users.sql:70-95`, and the live body matched it in audit 2, `DB_CONSOLIDATION_PLAN.md` section 3): `rankedceo-waas` has `on_auth_user_created` → `handle_new_user()`. For every new `auth.users` row it inserts one `accounts` row named from `raw_user_meta_data.full_name`, else `'My Account'`, and one `users` row with `id = <the new uid>` pointing at that account.
+- This fires on any insert into `auth.users`, so **invite and create both trigger it**.
+- So after creating the 11 users, `rankedceo-waas` holds 11 new `accounts` rows (not all of them named `'My Account'`, if any user has `full_name` metadata) and 11 `users` rows pointing at them. If the CRM `public.users` row is then copied with the same id, it collides with the trigger's row on the primary key.
+- The data copy must therefore **update** each trigger-made `users` row (point `account_id` at the real account, fill the CRM columns) and then delete the trigger-made accounts. It must not insert over them.
+- The set of accounts to delete is identified by id, captured at create time (the `account_id` of the trigger-made `users` row, recorded next to each created uid). It is not identified by name. A post-check must prove that no other row references a deleted account.
+- This is the step most likely to corrupt data, so it is rehearsed (D3) before it runs on the real users.
+- `handle_new_user()` itself is not changed. That rule is set out in DEC-0022 ("Rules that still apply") and in `USER_IDENTITY_CONSISTENCY_PLAN.md`.
+
+A related hazard, for deleting the test user. `rankedceo-waas` also has `on_auth_user_deleted` → `handle_user_delete()` (audit, `DB_CONSOLIDATION_PLAN.md` section 4). Its live body was read in audit 2 but is not recorded in this repo. The CRM migration copy (`000005_fix_users_accounts_with_correct_schema.sql:271-299`) deletes the `users` row and then marks or updates the account. In `waas/027`, `public.users.id` references `auth.users(id) ON DELETE CASCADE`. If the live table matches (not verified), deleting an auth user removes its `users` row whatever that body does. So the test user's cleanup must check which rows remain afterwards, and must never be run against a real user's uid.
+
+### The one-user test (decides D2 and settles both corrections)
+
+Run by Tommy in `rankedceo-waas` with a service-role call. The service-role key is never pasted into chat, a PR or a log.
+
+1. Create one throwaway user with `POST /admin/users`, a chosen uuid, `email_confirm: true` and no password.
+2. Confirm that the returned id equals the supplied uuid.
+3. Confirm the trigger's side effect: exactly one new `accounts` row and one `users` row with `id` = the supplied uuid.
+4. Sign in as that user by magic link.
+5. If a Google account with a verified email is available for the test, sign in with Google on the same address. Confirm that `auth.identities` gains a `google` row for the **same** user id, and that `auth.users` gains no new user.
+6. Delete the test user. Confirm what `handle_user_delete()` and the cascade left behind, and remove any leftover account by id.
+
+Record what was observed in the PR that turns these corrections from ASSUMED into VERIFIED.
+
 ## 2. Gating decisions (one at a time; I recommend, you choose)
 
 D1. How the 11 CRM logins reach `rankedceo-waas`. `auth.users` is separate per project, so moving table rows does not move logins.
@@ -40,6 +88,8 @@ D1. How the 11 CRM logins reach `rankedceo-waas`. `auth.users` is separate per p
 - Whichever is chosen, user ids must be preserved or `users.id` / `account_id` mappings rewritten, because `users.id` IS the auth uid.
 
 D2. Data copy — **this is the gate that D1=A creates, and it is not a "copy the rows" step.**
+
+> Corrected 2026-10-22, see section 1b. The text below holds for the invite endpoint. `POST /admin/users` can keep the original uid (Correction 1), which would turn step 2 into a check. Every created user also gets a trigger-made account and `users` row (Correction 2), which changes step 3. Both are ASSUMED until the one-user test.
 
 The Admin invite API mints a **new** auth UUID. This repo keys `public.users.id` to the auth UUID, and `accounts.id` is referenced by every CRM table. So inviting first and copying rows afterwards would attach the copied rows to the wrong people, and `ensureCrmProfile()` would then create a second profile for each invited user.
 
@@ -89,8 +139,8 @@ The check scripts now live in the repo, so an operator can reproduce every gate 
 3. PR: move the 8 email-based account lookups in section 4 to `resolveAccountId`.
 4. Decide D2, D3, D4, D5. D1 is settled: A.
 5. Replicate dashboard settings and buckets (section 3).
-6. Invite the users and build the old-to-new uid map (D2 step 1). **Do not copy any rows until the map exists.**
-7. Reconcile and copy data (D2 steps 2-4), with the pool accounts matched, not re-inserted.
+6. Run the one-user test (section 1b). Then create the users, with the original uid if the test showed it is kept, or by invite otherwise. Build the uid map (D2 step 1), and record the trigger-made account id for each user. **Do not copy any rows until the map exists.**
+7. Reconcile and copy data (D2 steps 2-4), with the pool accounts matched, not re-inserted. Repoint the trigger-made `users` rows, then delete the trigger-made accounts by recorded id (section 1b, Correction 2).
 8. Rehearse (D3), then cut over: change **URL, anon key and service-role key** in Production, redeploy, run the manual checks (password, magic link, Google, onboarding, create company/contact/deal, avatar upload).
 9. Rollback: set the same three variables back to the CRM project values and redeploy. Data written to waas after cutover would not exist in the CRM project, so keep the window short and during low usage. The CRM project is not deleted or repurposed (DEC-0024) until the rollback window has passed.
 
