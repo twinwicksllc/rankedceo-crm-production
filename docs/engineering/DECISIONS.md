@@ -312,6 +312,31 @@ Status values: **in force**, **implemented**, **on hold**, **superseded**. Imple
 
 ---
 
+## DEC-0027 - Lock submit_smile_assessment_with_pool to the service role (E3 D5)
+
+- Date: 2026-10-22
+- Status: in force
+- Implementation: migration `supabase/migrations/waas/032_revoke_smile_pool_rpc.sql`,
+  applied by hand in `rankedceo-waas`, checked with
+  `docs/engineering/checks/032_postcheck.sql`.
+- Decision: option B. `submit_smile_assessment_with_pool()` is SECURITY DEFINER, takes
+  `p_account_id` and checks only that the account exists, so with the anon grant from
+  030 anyone with the public key could write a patient record into any account. Only
+  `service_role` keeps EXECUTE. The function body is not changed.
+- Why B over A (add an ownership check): A guards a function nobody calls. A code
+  search across every twinwicksllc repo and this repo's history found no caller, and
+  this repo writes assessments through the table and its RLS policies.
+- Why B over C (accept the risk): C leaves an anon path for writing medical-history
+  data in the project that will serve production.
+- Also in 032: `get_smile_account_id` loses its direct `anon` grant (from Supabase's
+  default ACL); `authenticated` keeps the grant 030 gave it.
+  `get_smile_pool_account_id` stays anon-callable, because it only returns the fixed
+  pool id.
+- Used in: `docs/engineering/E3_CLIENT_SWITCH_PLAN.md` (D5).
+- Source: Tommy, 2026-10-22 ("B please").
+
+---
+
 ## Not yet recorded
 
 The numbers **DEC-0002, DEC-0009, DEC-0010 and DEC-0011** are not defined anywhere
