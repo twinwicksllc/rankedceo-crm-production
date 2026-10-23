@@ -105,24 +105,27 @@ test("the public insert goes through the admin client", () => {
     /import \{ createAdminClient \} from "@\/lib\/supabase\/admin"/,
   );
   assert.ok(!/createAnonClient/.test(source), "anon has no insert policy");
-  const insertAt = source.indexOf(".insert(");
-  assert.ok(insertAt > 0);
-  const before = source.slice(Math.max(0, insertAt - 120), insertAt);
+  // `admin` is created from createAdminClient(), and the insert runs on it.
+  assert.match(source, /const admin = createAdminClient\(\)/);
   assert.match(
-    before,
-    /createAdminClient\(\)/,
-    "insert must follow the admin client",
+    source,
+    /await admin\s*\n\s*\.from\("industry_leads"\)\s*\n\s*\.insert\(/,
   );
   assert.equal(source.split(".insert(").length, 2, "exactly one insert");
 });
 
-test("the operator lookup stays on the cookie client", () => {
+// The operator id comes from a public URL, so it is checked by resolveLeadTarget
+// (lib/services/lead-operator.test.ts) before it may choose the account. That
+// lookup runs with the admin client: on the cookie client a signed-out visitor
+// is anon, and any RLS on users would make every share link fall back to the pool.
+test("the operator id is resolved by resolveLeadTarget with the admin client", () => {
   const submit = source.slice(
     source.indexOf("export async function submitIndustryLead"),
     source.indexOf("export async function getIndustryLeads"),
   );
-  assert.match(submit, /const supabase = await createClient\(\)/);
-  assert.match(submit, /supabase\s*\n\s*\.from\("users"\)/);
+  assert.match(submit, /const admin = createAdminClient\(\)/);
+  assert.match(submit, /resolveLeadTarget\(\s*admin,/);
+  assert.ok(!/\.from\("users"\)/.test(submit), "no inline users lookup");
 });
 
 test("single read and update are scoped to the caller's account", () => {

@@ -17,8 +17,8 @@ import {
   applyLeadUpdate,
 } from "@/lib/services/industry-lead-update";
 import { validateLeadInput } from "@/lib/services/lead-submit-validation";
+import { resolveLeadTarget } from "@/lib/services/lead-operator";
 import { revalidatePath } from "next/cache";
-import { POOL_ACCOUNTS } from "@/lib/data/pool-accounts";
 import type {
   IndustryType,
   IndustryLead,
@@ -55,42 +55,21 @@ export async function submitIndustryLead(
     }
     const data = validated.data;
 
-    const supabase = await createClient();
-
-    let accountId: string;
-    let authUserId: string | null = null;
-
-    if (data.operator_id) {
-      // Attributed lead — look up operator's account
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("account_id")
-        .eq("id", data.operator_id)
-        .single();
-
-      if (userError || !userData) {
-        // Operator not found — fall back to pool rather than failing
-        console.error(
-          "[IndustryLead] Operator not found, falling back to pool:",
-          data.operator_id,
-        );
-        accountId = POOL_ACCOUNTS[data.industry];
-      } else {
-        accountId = userData.account_id;
-        authUserId = data.operator_id;
-      }
-    } else {
-      // Unattributed lead — use pool account
-      accountId = POOL_ACCOUNTS[data.industry];
-    }
-
-    // The admin client, like the landing quote route: the live CRM
-    // industry_leads table has one policy, "Users see own leads"
+    // Everything below runs with the admin client, like the landing quote route:
+    // the live CRM industry_leads table has one policy, "Users see own leads"
     // (auth.uid() = auth_user_id), and none that lets anon insert, so an anon or
-    // cookie-bound insert is refused (42501). The id is generated here instead of
-    // read back with a returning select.
+    // cookie-bound insert is refused (42501). The operator id from the share link
+    // is checked before it may choose the account (see lead-operator.ts).
+    const admin = createAdminClient();
+    const { accountId, authUserId } = await resolveLeadTarget(
+      admin,
+      data.industry,
+      data.operator_id,
+    );
+
+    // The id is generated here instead of read back with a returning select.
     const leadId = crypto.randomUUID();
-    const { error: insertError } = await createAdminClient()
+    const { error: insertError } = await admin
       .from("industry_leads")
       .insert({ id: leadId, ...toLeadInsertRow(accountId, authUserId, data) });
 
