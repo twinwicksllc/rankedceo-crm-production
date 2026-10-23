@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { POOL_ACCOUNTS } from "../data/pool-accounts";
 import type { AccountLookupClient } from "../services/account-context";
 import {
   SMILE_POOL_ACCOUNT_ID,
@@ -133,22 +134,9 @@ test("the assessment page passes the URL dentistId, not the pool account id", ()
   );
 });
 
-test("SMILE_POOL_ACCOUNT_ID is the smile pool account seeded by waas/030", () => {
-  const migration = readFileSync(
-    new URL(
-      "../../supabase/migrations/waas/030_crm_tables_in_waas.sql",
-      import.meta.url,
-    ),
-    "utf-8",
-  ).replace(/\r\n/g, "\n");
-  const seeded = migration
-    .split("\n")
-    .filter((line) => line.startsWith("VALUES ('"))
-    .map((line) => line.slice("VALUES ('".length).split("'")[0]);
-  assert.ok(
-    seeded.includes(SMILE_POOL_ACCOUNT_ID),
-    `not seeded; seeded ids: ${seeded.join(", ")}`,
-  );
+test("SMILE_POOL_ACCOUNT_ID is the shared smile pool id", () => {
+  // lib/data/pool-accounts.test.ts checks that this id is seeded by waas/030.
+  assert.equal(SMILE_POOL_ACCOUNT_ID, POOL_ACCOUNTS.smile);
 });
 
 test("the action no longer looks up users by auth_user_id", () => {

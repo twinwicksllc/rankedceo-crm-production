@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { POOL_ACCOUNTS } from "../data/pool-accounts";
 import {
   resolveAccountId,
   type AccountLookupClient,
@@ -16,11 +17,8 @@ import {
 // dentist's submission must go to their own account or not be inserted.
 // ============================================================
 
-/**
- * Seeded in waas/030; the anon insert policy is hard-coded to this id.
- * Must equal POOL_ACCOUNTS.smile in lib/data/pool-accounts.ts.
- */
-export const SMILE_POOL_ACCOUNT_ID = "00000000-0000-4000-a000-000000000004";
+/** The smile pool account; the anon insert policy is hard-coded to this id. */
+export const SMILE_POOL_ACCOUNT_ID = POOL_ACCOUNTS.smile;
 
 /**
  * The dentist id from a public link, or null. Older links carried the pool
