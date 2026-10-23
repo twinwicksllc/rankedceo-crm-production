@@ -1,8 +1,10 @@
 "use server";
 
+import { createAnonClient } from "@/lib/supabase/anon";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import {
+  pickInsertClient,
   publicDentistId,
   resolveSmileTarget,
 } from "@/lib/actions/smile-assessment-target";
@@ -71,7 +73,10 @@ export async function submitSmileAssessment(
     }
 
     // ── 3. Insert assessment into database ────────────────────────────────────
-    const { error: insertError } = await supabase
+    // Pool rows go through a session-less client: the pool policy is TO anon,
+    // and a signed-in visitor's cookie client would run as authenticated.
+    const insertClient = pickInsertClient(target, supabase, createAnonClient);
+    const { error: insertError } = await insertClient
       .from("smile_assessments")
       .insert({
         account_id: target.accountId,

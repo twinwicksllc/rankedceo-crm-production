@@ -5,6 +5,7 @@ import { POOL_ACCOUNTS } from "../data/pool-accounts";
 import type { AccountLookupClient } from "../services/account-context";
 import {
   SMILE_POOL_ACCOUNT_ID,
+  pickInsertClient,
   publicDentistId,
   resolveSmileTarget,
 } from "./smile-assessment-target";
@@ -154,4 +155,46 @@ test("the action no longer looks up users by auth_user_id", () => {
       `users query still filters on auth_user_id: ${chain.slice(0, 120)}`,
     );
   }
+});
+
+// Copilot #331: the "pool" insert policy is TO anon. A signed-in browser's
+// cookie-bound client runs as authenticated, whose policy only allows its own
+// account, so a pool insert must go through a session-less client.
+test("a pool-bound insert uses the anon client, never the cookie session", () => {
+  const cookie = { name: "cookie" };
+  const anon = { name: "anon" };
+  const chosen = pickInsertClient(
+    { accountId: SMILE_POOL_ACCOUNT_ID, authUserId: "dentist-uid" },
+    cookie,
+    () => anon,
+  );
+  assert.equal(chosen, anon);
+});
+
+test("an insert into the signed-in dentist's own account keeps the cookie session", () => {
+  const cookie = { name: "cookie" };
+  const chosen = pickInsertClient(
+    { accountId: "acct-own", authUserId: "dentist-uid" },
+    cookie,
+    () => {
+      throw new Error(
+        "anon client must not be built for an own-account insert",
+      );
+    },
+  );
+  assert.equal(chosen, cookie);
+});
+
+test("the action inserts through pickInsertClient", () => {
+  const source = readFileSync(
+    new URL("./smile-assessment.ts", import.meta.url),
+    "utf-8",
+  ).replace(/\r\n/g, "\n");
+  assert.match(source, /pickInsertClient\(/);
+  assert.match(source, /createAnonClient/);
+  assert.match(
+    source,
+    /insertClient\s*\.from\("smile_assessments"\)/,
+    "the insert must run on the picked client, not the cookie client",
+  );
 });

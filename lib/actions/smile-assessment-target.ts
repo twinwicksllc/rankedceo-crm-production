@@ -72,3 +72,18 @@ export async function resolveSmileTarget(
     };
   }
 }
+
+/**
+ * The client to insert with. A pool-bound row must go through a client with no
+ * session: the pool policy is TO anon, and a signed-in visitor's cookie client
+ * runs as authenticated, whose policy only allows its own account.
+ *
+ * @param makeAnon builds a session-less client; only called for the pool.
+ */
+export function pickInsertClient<T>(
+  target: { accountId: string },
+  cookieClient: T,
+  makeAnon: () => T,
+): T {
+  return target.accountId === SMILE_POOL_ACCOUNT_ID ? makeAnon() : cookieClient;
+}

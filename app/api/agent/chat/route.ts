@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { chat, extractLeadInfo } from "@/lib/services/ai-agent-service";
 import { getEventTypes } from "@/lib/services/calendly-service";
-import { agentConversationService } from "@/lib/services/agent-conversation-service";
+import { AgentConversationService } from "@/lib/services/agent-conversation-service";
 import { agentChatSchema } from "@/lib/validations/appointment";
 import type {
   AgentMessage,
@@ -229,6 +229,7 @@ export async function POST(request: NextRequest) {
     });
 
     const supabase = createAdminClient();
+    const agentConversationService = new AgentConversationService(supabase);
 
     // Build referral metadata if present
     const referralMetadata =
