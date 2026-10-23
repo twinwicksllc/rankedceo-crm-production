@@ -340,6 +340,53 @@ Status values: **in force**, **implemented**, **on hold**, **superseded**. Imple
 
 ---
 
+## DEC-0028 - Copy no data to rankedceo-waas at the E3 switch (E3 D2)
+
+- Date: 2026-10-23
+- Status: in force
+- Decision: no rows are copied from `rankedceo-crm-production` to `rankedceo-waas`. The
+  CRM copies stay where they are until DEC-0024.
+- Evidence: VERIFIED by `docs/engineering/checks/crm_group_recount.sql`, run by Tommy in
+  the CRM project on 2026-10-23. Four of the 22 CRM-group tables hold rows:
+  `agent_conversations` 32, `industry_leads` 6, `appointments` 2,
+  `calendly_connections` 1. The other 18 hold none. Apart from two tests Tommy ran on
+  2026-10-23, every row dates from 2026-03-01 or 2026-03-02 and the leads and chats use
+  test email domains (the 2026-10-22 inventory).
+- Why not copy: nothing in those rows is worth keeping, and a copy would need every CRM
+  user id set to NULL and a verification (E3 plan section 1c). The
+  `calendly_connections` row holds an OAuth token tied to a CRM user and is skipped even
+  in a partial copy.
+- Reversible: the CRM project is not deleted or repurposed until the rollback window
+  has passed, so a copy can still be made later.
+- Used in: `docs/engineering/E3_CLIENT_SWITCH_PLAN.md` (D2, sequence step 7, which is
+  skipped).
+- Source: Tommy, 2026-10-23 ("D2 - Copy nothing is correct").
+
+---
+
+## DEC-0029 - Rehearse the E3 switch in rankedceo-waas from a Vercel preview (E3 D3)
+
+- Date: 2026-10-23
+- Status: in force. Implementation: not started.
+- Decision: option B of E3 D3. The rehearsal runs in `rankedceo-waas` with one dedicated
+  test account, from a Vercel preview deployment whose three Supabase variables
+  (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`)
+  point at WaaS, so Production is untouched. Before it starts, the rows it will create
+  are listed; afterwards a cleanup script that deletes exactly those rows is run and
+  verified. Rollback is tested once by pointing the preview back at the CRM values.
+- Why B over A (a disposable Supabase project): A costs money ("no new expenses until
+  revenue") and does not exercise the dashboard settings of the project that will serve
+  production, which are per project and not carried by migrations.
+- Why B over C (no rehearsal): rollback has never been tested, so a bad switch could
+  leave sign-up broken with no proven way back.
+- Not covered: changing the real Production variables is the cutover itself and is not
+  rehearsed.
+- The rehearsal must not touch the existing `accounts` rows or the four pool accounts.
+- Used in: `docs/engineering/E3_CLIENT_SWITCH_PLAN.md` (D3, sequence step 8).
+- Source: Tommy, 2026-10-23 ("B, but I will need direct steps").
+
+---
+
 ## Not yet recorded
 
 The numbers **DEC-0002, DEC-0009, DEC-0010 and DEC-0011** are not defined anywhere
