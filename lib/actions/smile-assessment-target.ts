@@ -61,11 +61,16 @@ export async function resolveSmileTarget(
   try {
     const accountId = await resolveAccountId(client, input.user);
     return { accountId, authUserId: input.user.id };
-  } catch {
-    // The pool fallback would fail the authenticated policy, so do not insert.
+  } catch (err) {
+    // Either way, do not insert: the pool fallback would fail the
+    // authenticated policy. resolveAccountId throws "Account not found" when
+    // there is no profile, and "Account lookup failed: ..." on a query error.
+    const noProfile =
+      err instanceof Error && err.message === "Account not found";
     return {
-      error:
-        "Your account profile was not found. Please sign out and back in, or contact support.",
+      error: noProfile
+        ? "Your account profile was not found. Please sign out and back in, or contact support."
+        : "We could not save your assessment right now. Please try again.",
     };
   }
 }

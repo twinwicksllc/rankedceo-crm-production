@@ -68,6 +68,33 @@ test("signed-in dentist without a profile: error, not the pool", async () => {
     user: { id: "dentist-uid", email: null },
   });
   assert.ok("error" in target, "expected an error result");
+  assert.match(target.error, /profile was not found/);
+});
+
+test("signed-in dentist when the lookup query fails: a retry error, not 'no profile'", async () => {
+  const client: AccountLookupClient = {
+    from() {
+      return {
+        select() {
+          return {
+            eq() {
+              return {
+                async maybeSingle() {
+                  return { data: null, error: { message: "connection reset" } };
+                },
+              };
+            },
+          };
+        },
+      };
+    },
+  };
+  const target = await resolveSmileTarget(client, {
+    user: { id: "dentist-uid", email: null },
+  });
+  assert.ok("error" in target, "expected an error result");
+  assert.match(target.error, /try again/);
+  assert.doesNotMatch(target.error, /profile/);
 });
 
 test("anonymous with no dentist id: pool account, auth_user_id null", async () => {
