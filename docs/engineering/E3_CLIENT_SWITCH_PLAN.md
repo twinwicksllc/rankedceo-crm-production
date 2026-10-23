@@ -114,7 +114,7 @@ D1. How the 11 CRM logins reach `rankedceo-waas`. `auth.users` is separate per p
 - C: keep CRM project as the auth source only. Not a real consolidation; rejected unless A and B fail.
 - Whichever is chosen, user ids must be preserved or `users.id` / `account_id` mappings rewritten, because `users.id` IS the auth uid.
 
-D2. Data copy — **this is the gate that D1=A creates, and it is not a "copy the rows" step.**
+D2. Data copy — **this is the gate that D1=A creates, and it is not a "copy the rows" step.** **Settled 2026-10-23: copy nothing (DEC-0028).** The re-count in `docs/engineering/checks/crm_group_recount.sql` found rows in four CRM-group tables only, all test data, so sequence step 7 is skipped.
 
 > Narrowed 2026-10-22, see section 1c (DEC-0026). No logins are moved, so steps 1 and 2 are dropped. Step 3 applies only to the rows Tommy decides to copy, with the user-id rule in section 1c. Step 4 is replaced by the copy verification in section 1c, because there are no invited users to check. Section 1b corrected the text below; it matters only if logins are ever moved.
 >
@@ -143,7 +143,7 @@ READ from the plan doc: the rows are few (`agent_conversations` 31, `industry_le
   - The CRM-group tables are empty.
 - **What this suggests (Tommy's call):** copy nothing from the CRM project. Every non-empty CRM-group table holds test-domain data, and the CRM copies of the WaaS tables have not been written since May.
 
-D3. Staging. `rankedceo-waas` is **not** a safe rehearsal target as-is: per DEC-0024 the QA agent already writes browser-driven rows into its `public` schema, and a rehearsal that creates companies, contacts and deals would mix test rows into the data we are about to call production. Options:
+D3. Staging. **Settled 2026-10-23: option B, run from a Vercel preview that points at `rankedceo-waas` (DEC-0029).** The options below are kept for review. `rankedceo-waas` is **not** a safe rehearsal target as-is: per DEC-0024 the QA agent already writes browser-driven rows into its `public` schema, and a rehearsal that creates companies, contacts and deals would mix test rows into the data we are about to call production. Options:
 - A (recommended): a disposable Supabase project (or a restored branch) for the rehearsal, torn down afterwards. Cost is the open question, and "no new expenses until revenue" applies, so this needs your call.
 - B: rehearse against `rankedceo-waas` using one dedicated test account, with a written list of every row created and a cleanup script that deletes exactly those rows, run and verified before cutover.
 - C: no rehearsal; cut over and rely on rollback. Only acceptable if the cutover window is short and rollback has been tested once.
@@ -187,7 +187,7 @@ The check scripts now live in the repo, so an operator can reproduce every gate 
 1. Run `docs/engineering/checks/waas_function_grants_check.sql` in `rankedceo-waas` (read-only). Already done on 2026-10-21: the hole is confirmed.
 2. Merge #319, apply `031_harden_function_grants.sql` by hand, run `031_postcheck.sql` (10 rows, all PASS, `handle_new_user` md5 unchanged).
 3. PR: move the 8 email-based account lookups in section 4 to `resolveAccountId`.
-4. Decide D2, D3. D1 is settled: no logins move (DEC-0026). D4 is settled (DEC-0025). D5 is settled: B (DEC-0027); `waas/032` applied and `032_postcheck.sql` all PASS on 2026-10-22.
+4. D2 is settled: copy nothing (DEC-0028). D3 is settled: B on a Vercel preview (DEC-0029). D1 is settled: no logins move (DEC-0026). D4 is settled (DEC-0025). D5 is settled: B (DEC-0027); `waas/032` applied and `032_postcheck.sql` all PASS on 2026-10-22.
 5. Replicate dashboard settings and buckets (section 3).
 6. No logins are created in advance (section 1c, DEC-0026). Confirm that the admin allowlist is set in Vercel Production.
 7. Copy only the rows Tommy decides to keep (D2 step 3), with the pool accounts matched, not re-inserted, and every CRM user-id column set to NULL (section 1c). Then run the copy verification in section 1c. If nothing is kept, skip this step.

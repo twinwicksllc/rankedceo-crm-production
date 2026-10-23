@@ -7,6 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { LeadFormShell } from "@/components/industry/lead-form-shell";
 import type { HvacLeadInput } from "@/lib/validations/industry-lead";
+import {
+  isRedirectError,
+  submitErrorMessage,
+  type LeadSubmitOutcome,
+} from "@/lib/services/lead-submit-result";
 
 const TOTAL_STEPS = 5;
 
@@ -48,7 +53,7 @@ const STEP_TITLES = [
 ];
 
 interface HvacLeadFormProps {
-  onSubmit: (data: HvacLeadInput) => Promise<void>;
+  onSubmit: (data: HvacLeadInput) => Promise<LeadSubmitOutcome | void>;
   operatorId?: string;
 }
 
@@ -112,6 +117,7 @@ export function HvacLeadForm({ onSubmit, operatorId }: HvacLeadFormProps) {
     {},
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const update = (field: keyof FormData, value: unknown) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -162,6 +168,7 @@ export function HvacLeadForm({ onSubmit, operatorId }: HvacLeadFormProps) {
   const handleSubmit = async () => {
     if (!validateStep(step)) return;
     setIsSubmitting(true);
+    setSubmitError(null);
     try {
       const payload: HvacLeadInput = {
         operator_id: operatorId ?? null,
@@ -198,9 +205,13 @@ export function HvacLeadForm({ onSubmit, operatorId }: HvacLeadFormProps) {
           problem_description: formData.problem_description || undefined,
         },
       };
-      await onSubmit(payload);
-    } catch {
+      // A success redirects away and never returns; a failure is returned.
+      setSubmitError(submitErrorMessage(await onSubmit(payload)));
+    } catch (err) {
+      // Next's redirect() throws to navigate; let it through.
+      if (isRedirectError(err)) throw err;
       console.error("[HvacLeadForm] Submission error");
+      setSubmitError(submitErrorMessage(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -213,6 +224,7 @@ export function HvacLeadForm({ onSubmit, operatorId }: HvacLeadFormProps) {
       currentStep={step}
       stepTitle={STEP_TITLES[step - 1]}
       isSubmitting={isSubmitting}
+      submitError={submitError}
       onNext={handleNext}
       onPrevious={handlePrevious}
       onSubmit={handleSubmit}

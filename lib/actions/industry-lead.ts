@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { createAnonClient } from "@/lib/supabase/anon";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveAccountId } from "@/lib/services/account-context";
 import {
   fromLeadRow,
@@ -16,8 +16,9 @@ import {
   LEAD_CHANGED_ERROR,
   applyLeadUpdate,
 } from "@/lib/services/industry-lead-update";
+import { validateLeadInput } from "@/lib/services/lead-submit-validation";
+import { resolveLeadTarget } from "@/lib/services/lead-operator";
 import { revalidatePath } from "next/cache";
-import { POOL_ACCOUNTS } from "@/lib/data/pool-accounts";
 import type {
   IndustryType,
   IndustryLead,
@@ -39,44 +40,36 @@ import type { UpdateLeadInput } from "@/lib/validations/industry-lead";
 // ---------------------------------------------------------------------------
 
 export async function submitIndustryLead(
-  data: SubmitLeadInput,
+  input: SubmitLeadInput,
 ): Promise<SubmitLeadResult> {
   try {
-    const supabase = await createClient();
-
-    let accountId: string;
-    let authUserId: string | null = null;
-
-    if (data.operator_id) {
-      // Attributed lead — look up operator's account
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("account_id")
-        .eq("id", data.operator_id)
-        .single();
-
-      if (userError || !userData) {
-        // Operator not found — fall back to pool rather than failing
-        console.error(
-          "[IndustryLead] Operator not found, falling back to pool:",
-          data.operator_id,
-        );
-        accountId = POOL_ACCOUNTS[data.industry];
-      } else {
-        accountId = userData.account_id;
-        authUserId = data.operator_id;
-      }
-    } else {
-      // Unattributed lead — use pool account
-      accountId = POOL_ACCOUNTS[data.industry];
+    // The insert below uses the admin client, which bypasses row-level
+    // security, so nothing in the database limits what a caller can send.
+    const validated = validateLeadInput(input);
+    if (!validated.ok) {
+      console.error("[IndustryLead] Rejected submission:", validated.error);
+      return {
+        success: false,
+        error: "Please check your details and try again.",
+      };
     }
+    const data = validated.data;
 
-    // The insert goes through a session-less client: "Public lead intake" is
-    // TO anon, and the cookie client runs as authenticated for a signed-in
-    // visitor. anon has no SELECT policy, so the id is generated here instead
-    // of read back with a returning select.
+    // Everything below runs with the admin client, like the landing quote route:
+    // the live CRM industry_leads table has one policy, "Users see own leads"
+    // (auth.uid() = auth_user_id), and none that lets anon insert, so an anon or
+    // cookie-bound insert is refused (42501). The operator id from the share link
+    // is checked before it may choose the account (see lead-operator.ts).
+    const admin = createAdminClient();
+    const { accountId, authUserId } = await resolveLeadTarget(
+      admin,
+      data.industry,
+      data.operator_id,
+    );
+
+    // The id is generated here instead of read back with a returning select.
     const leadId = crypto.randomUUID();
-    const { error: insertError } = await createAnonClient()
+    const { error: insertError } = await admin
       .from("industry_leads")
       .insert({ id: leadId, ...toLeadInsertRow(accountId, authUserId, data) });
 
