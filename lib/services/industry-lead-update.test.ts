@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { applyLeadUpdate, type LeadUpdateClient } from "./industry-lead-update";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { applyLeadUpdate } from "./industry-lead-update";
 
 // A fake table with one row. `beforeWrite` runs between the read and the
 // write, which is where a second operator's update lands.
@@ -15,7 +16,7 @@ function fakeClient(
 ) {
   const writes: Array<Record<string, unknown>> = [];
   const filters: Array<[string, unknown]> = [];
-  const client: LeadUpdateClient = {
+  const fake = {
     from() {
       return {
         select() {
@@ -59,6 +60,8 @@ function fakeClient(
       };
     },
   };
+  // The action passes a real SupabaseClient; the fake covers the calls it makes.
+  const client = fake as unknown as SupabaseClient;
   return { client, writes, filters };
 }
 
