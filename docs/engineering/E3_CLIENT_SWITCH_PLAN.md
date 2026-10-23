@@ -176,7 +176,7 @@ Known code follow-ups. These break once `users.email` is NULL in waas, so they a
 - `lib/services/settings-service.ts:22, 40, 57`
 - `lib/services/commission-service.ts:29` (commission pages)
 - `lib/actions/industry-lead.ts:132, 277` (industry-lead reads and stats)
-All of them move to `resolveAccountId` from #317 in one small PR before cutover.
+All of them move to `resolveAccountId` from #317 in one small PR before cutover. **Done (#323, `e34ca73`).** VERIFIED 2026-10-23 by grep: none of these four files has an `.eq("email", ...)` lookup left, and each uses `resolveAccountId`. The line numbers above are from before that change.
 
 Two other `.eq("email", ...)` sites are **not** this problem and stay as they are: `lib/services/form-submission-service.ts:154` and `app/api/audit/abandonment-check/route.ts:216, 231` look up a lead by the email a visitor submitted, not the signed-in user's account.
 
