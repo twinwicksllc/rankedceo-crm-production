@@ -1,7 +1,13 @@
 "use server";
 
+import { createAnonClient } from "@/lib/supabase/anon";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import {
+  pickInsertClient,
+  publicDentistId,
+  resolveSmileTarget,
+} from "@/lib/actions/smile-assessment-target";
 
 export interface SubmitAssessmentData {
   patient_name: string;
@@ -37,16 +43,14 @@ export interface SubmitAssessmentResult {
  * - No PII is logged or exposed in error messages
  * - Supports both authenticated dentist submissions and public patient submissions
  *
- * Public Patient Flow:
- * - Patient visits link with dentistId in URL: /smile/assessment?dentistId=xxx
- * - Form submission includes dentistId
- * - Data is inserted using admin client (bypasses RLS for insert)
- * - RLS still protects reads (only dentist can view their assessments)
- *
- * Pool Account Fallback:
- * - If dentistId is invalid or user is not authenticated
- * - Assessment is attributed to Smile Pool Account (00000000-0000-4000-a000-000000000004)
- * - Ensures no assessment data is lost
+ * Which account receives the assessment is decided by resolveSmileTarget
+ * (lib/actions/smile-assessment-target.ts):
+ * - Public link (/smile/assessment?dentistId=xxx): the Smile Pool Account,
+ *   with the dentist id kept in auth_user_id. The anon insert policy only
+ *   allows the pool account.
+ * - Signed-in dentist: their own account, resolved by users.id. If they
+ *   have no profile, nothing is inserted and an error is returned.
+ * - Neither: the Smile Pool Account, with auth_user_id null.
  */
 export async function submitSmileAssessment(
   data: SubmitAssessmentData,
@@ -54,72 +58,29 @@ export async function submitSmileAssessment(
   try {
     const supabase = await createClient();
 
-    // ── Determine if this is a public submission or authenticated dentist ──
-    const isPublicSubmission = !!data.dentistId;
-    let targetUserId: string;
-    let accountId: string | null = null;
+    // ── 1. Who is submitting (only needed when there is no public dentistId) ─
+    const dentistId = publicDentistId(data.dentistId);
+    let user: { id: string; email?: string | null } | null = null;
+    if (!dentistId) {
+      const { data: auth, error: authError } = await supabase.auth.getUser();
+      user = authError ? null : auth.user;
+    }
 
-    // Smile Pool Account ID for fallback
-    const SMILE_POOL_ACCOUNT_ID = "00000000-0000-4000-a000-000000000004";
-
-    if (isPublicSubmission) {
-      // Public patient submission: use dentistId from URL
-      targetUserId = data.dentistId!;
-
-      // Get account_id for the dentist
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("account_id")
-        .eq("auth_user_id", targetUserId)
-        .single();
-
-      if (userError || !userData) {
-        // If dentist not found, fall back to Pool Account
-        console.log("[Smile Assessment] Dentist not found, using Pool Account");
-        accountId = SMILE_POOL_ACCOUNT_ID;
-      } else {
-        accountId = userData.account_id;
-      }
-    } else {
-      // Authenticated dentist submission: use logged-in user
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-
-      if (authError || !user) {
-        // If not authenticated, fall back to Pool Account
-        console.log("[Smile Assessment] Not authenticated, using Pool Account");
-        targetUserId = SMILE_POOL_ACCOUNT_ID;
-        accountId = SMILE_POOL_ACCOUNT_ID;
-      } else {
-        targetUserId = user.id;
-
-        // Get user's account_id
-        const { data: userData, error: userError } = await supabase
-          .from("users")
-          .select("account_id")
-          .eq("auth_user_id", user.id)
-          .single();
-
-        if (userError || !userData) {
-          // If account not found, fall back to Pool Account
-          console.log(
-            "[Smile Assessment] Account not found, using Pool Account",
-          );
-          accountId = SMILE_POOL_ACCOUNT_ID;
-        } else {
-          accountId = userData.account_id;
-        }
-      }
+    // ── 2. Which account receives it ─────────────────────────────────────────
+    const target = await resolveSmileTarget(supabase, { dentistId, user });
+    if ("error" in target) {
+      return { success: false, error: target.error };
     }
 
     // ── 3. Insert assessment into database ────────────────────────────────────
-    const { error: insertError } = await supabase
+    // Pool rows go through a session-less client: the pool policy is TO anon,
+    // and a signed-in visitor's cookie client would run as authenticated.
+    const insertClient = pickInsertClient(target, supabase, createAnonClient);
+    const { error: insertError } = await insertClient
       .from("smile_assessments")
       .insert({
-        account_id: accountId,
-        auth_user_id: targetUserId,
+        account_id: target.accountId,
+        auth_user_id: target.authUserId,
         patient_name: data.patient_name,
         patient_email: data.patient_email,
         patient_phone: data.patient_phone,

@@ -4,7 +4,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // Manages AI chat conversations with persistent storage
 // ============================================================
 
-import { createClient } from "@/lib/supabase/server";
 import type {
   AgentConversation,
   AgentConversationMetadata,
@@ -13,12 +12,14 @@ import type {
 } from "@/lib/types/appointment";
 
 export class AgentConversationService {
-  private supabase: SupabaseClient | null = null;
+  /**
+   * The client is passed in, not built here: the public chat widgets are
+   * anonymous, and agent_conversations has no anon write policy. The chat
+   * route passes its service-role client.
+   */
+  constructor(private readonly supabase: SupabaseClient) {}
 
   private async getClient() {
-    if (!this.supabase) {
-      this.supabase = await createClient();
-    }
     return this.supabase;
   }
 
@@ -432,6 +433,3 @@ export class AgentConversationService {
     }
   }
 }
-
-// Export singleton instance
-export const agentConversationService = new AgentConversationService();
