@@ -14,6 +14,10 @@ export const POOL_ACCOUNTS = {
   hvac: "00000000-0000-0000-0001-000000000001",
   plumbing: "00000000-0000-0000-0002-000000000002",
   electrical: "00000000-0000-0000-0003-000000000003",
+  // Not the same shape as the three above: this is the id the smile pool is
+  // seeded with (waas/030), and the smile_assessments anon insert policy is
+  // hard-coded to it.
+  smile: "00000000-0000-4000-a000-000000000004",
 } as const;
 
 export type PoolIndustry = keyof typeof POOL_ACCOUNTS;

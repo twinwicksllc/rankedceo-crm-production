@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { POOL_ACCOUNTS, type PoolIndustry } from "@/lib/data/pool-accounts";
 
 export const dynamic = "force-dynamic";
 
-// Pool account UUIDs — pre-seeded in the industry_leads migration
-const POOL_ACCOUNTS: Record<string, string> = {
-  hvac: "00000000-0000-0000-0001-000000000001",
-  plumbing: "00000000-0000-0000-0002-000000000002",
-  electrical: "00000000-0000-0000-0003-000000000003",
-  smile: "00000000-0000-0000-0004-000000000004",
-};
+const VALID_INDUSTRIES: readonly PoolIndustry[] = [
+  "hvac",
+  "plumbing",
+  "electrical",
+  "smile",
+];
 
-const VALID_INDUSTRIES = ["hvac", "plumbing", "electrical", "smile"];
+function isPoolIndustry(value: string): value is PoolIndustry {
+  return (VALID_INDUSTRIES as readonly string[]).includes(value);
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -62,7 +64,7 @@ export async function POST(request: NextRequest) {
 
     // ── 3. Validate industry
     const industryLower = industry.toLowerCase();
-    if (!VALID_INDUSTRIES.includes(industryLower)) {
+    if (!isPoolIndustry(industryLower)) {
       console.error("[Landing Quote] Invalid industry:", industry);
       return NextResponse.redirect(
         new URL("/thank-you?status=error&reason=invalid_industry", request.url),
