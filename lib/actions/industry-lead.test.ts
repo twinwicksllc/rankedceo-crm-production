@@ -17,6 +17,11 @@ const source = readFileSync(
   "utf8",
 ).replace(/\r\n/g, "\n");
 
+const updateSource = readFileSync(
+  new URL("../services/industry-lead-update.ts", import.meta.url),
+  "utf8",
+).replace(/\r\n/g, "\n");
+
 const LIVE = new Set<string>(LEAD_COLUMNS);
 
 /** Names that are NOT columns of the live table but were used by the old code. */
@@ -77,8 +82,10 @@ test("rows are written and read through the shared contract", () => {
   assert.match(source, /toLeadInsertRow\(accountId, authUserId, data\)/);
   assert.match(source, /\.map\(fromLeadRow\)/);
   assert.match(source, /fromLeadRow\(lead as LeadRow\)/);
-  assert.match(source, /toLeadUpdatePatch\(existing, updates\)/);
+  // The update's read-merge-write lives in industry-lead-update.ts.
+  assert.match(updateSource, /toLeadUpdatePatch\(existing, updates\)/);
   assert.ok(!/\.\.\.updates/.test(source), "updates must not be spread");
+  assert.ok(!/\.\.\.updates/.test(updateSource), "updates must not be spread");
 });
 
 test("list orders and date-filters on created_at", () => {
@@ -125,13 +132,21 @@ test("single read and update are scoped to the caller's account", () => {
     source.indexOf("export async function getIndustryLeadStats"),
   );
   assert.match(update, /resolveAccountId\(supabase, user\)/);
-  // Both the read and the write filter by account.
-  assert.equal(update.split('.eq("account_id", accountId)').length - 1, 2);
-  // The read comes before the write.
+  assert.match(
+    update,
+    /applyLeadUpdate\(supabase, leadId, accountId, updates\)/,
+  );
+  // Both the read and the write in applyLeadUpdate filter by account.
+  assert.equal(
+    updateSource.split('.eq("account_id", accountId)').length - 1,
+    2,
+  );
+  // The read comes before the write, and the write also matches updated_at.
   assert.ok(
-    update.indexOf(".maybeSingle()") < update.indexOf(".update("),
+    updateSource.indexOf(".maybeSingle()") < updateSource.indexOf(".update("),
     "existing row must be read before the update",
   );
+  assert.match(updateSource, /\.eq\("updated_at", existing\.updated_at\)/);
 });
 
 test("stats select metadata, not an estimated_value column", () => {
@@ -176,6 +191,14 @@ test("search strips wildcards, quotes and escapes, and caps the length", () => {
   }
   const long = buildSearchFilter("z".repeat(500)) ?? "";
   assert.equal(long.split(",")[0].length, "lead_name.ilike.%%".length + 100);
+});
+
+test("an underscore is removed too, because ILIKE reads it as a one-character wildcard", () => {
+  const filter = buildSearchFilter("a_b") ?? "";
+  for (const cond of filter.split(",")) {
+    assert.match(cond, /^lead_(name|email|phone).ilike.%a b%$/);
+  }
+  assert.equal(buildSearchFilter("___"), null);
 });
 
 test("a normal email or phone search keeps its characters", () => {

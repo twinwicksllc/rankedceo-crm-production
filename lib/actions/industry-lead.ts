@@ -13,6 +13,10 @@ import {
   buildSearchFilter,
   computeLeadStats,
 } from "@/lib/services/industry-lead-query";
+import {
+  LEAD_CHANGED_ERROR,
+  applyLeadUpdate,
+} from "@/lib/services/industry-lead-update";
 import { revalidatePath } from "next/cache";
 import { POOL_ACCOUNTS } from "@/lib/data/pool-accounts";
 import type {
@@ -244,35 +248,15 @@ export async function updateIndustryLead(
       return { success: false, error: "Account not found" };
     }
 
-    // Read the row first, scoped to the caller's account: the jsonb columns are
-    // merged, not replaced, and a lead in another account is not found.
-    const { data: existing, error: readError } = await supabase
-      .from("industry_leads")
-      .select("problem_description, metadata")
-      .eq("id", leadId)
-      .eq("account_id", accountId)
-      .maybeSingle();
-
-    if (readError) {
-      console.error("[IndustryLead] Update read failed:", readError.code);
-      return { success: false, error: "Failed to update lead" };
-    }
-    if (!existing) {
-      return { success: false, error: "Lead not found" };
-    }
-
-    const { error: updateError } = await supabase
-      .from("industry_leads")
-      .update({
-        ...toLeadUpdatePatch(existing, updates),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", leadId)
-      .eq("account_id", accountId);
-
-    if (updateError) {
-      console.error("[IndustryLead] Update failed:", updateError.code);
-      return { success: false, error: "Failed to update lead" };
+    // Reads the row scoped to the caller's account, merges the jsonb columns and
+    // writes only if no one else updated it in between (see industry-lead-update).
+    const result = await applyLeadUpdate(supabase, leadId, accountId, updates);
+    if (!result.success) {
+      // A conflict is expected under concurrent edits; only real failures log.
+      if (result.error !== LEAD_CHANGED_ERROR) {
+        console.error("[IndustryLead] Update failed:", result.error);
+      }
+      return { success: false, error: result.error };
     }
 
     return { success: true };

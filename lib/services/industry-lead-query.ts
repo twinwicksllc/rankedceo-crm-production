@@ -14,16 +14,16 @@ const MAX_SEARCH_LENGTH = 100;
  *
  * `.or()` takes one comma-separated string, so a raw term containing `,` or
  * `)` could add its own conditions (filter injection). Those characters, the
- * quote and backslash that open escapes, and the wildcards `%` and `*` are
- * removed from the term, which leaves nothing that can end the condition or
- * add a wildcard of the caller's choosing.
+ * quote and backslash that open escapes, and the wildcards `%`, `*` and `_` (a
+ * one-character wildcard in ILIKE) are removed from the term, which leaves
+ * nothing that can end the condition or add a wildcard of the caller's choosing.
  *
  * Only live columns are searched; city is not a column.
  */
 export function buildSearchFilter(search: string | undefined): string | null {
   if (!search) return null;
   const term = search
-    .replace(/[,()"\\*%]/g, " ")
+    .replace(/[,()"\\*%_]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, MAX_SEARCH_LENGTH)
