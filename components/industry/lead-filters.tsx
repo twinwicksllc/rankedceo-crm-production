@@ -71,7 +71,7 @@ export function LeadFiltersBar({
         <Input
           value={searchValue}
           onChange={(e) => handleSearchChange(e.target.value)}
-          placeholder="Search by name, email, phone, city..."
+          placeholder="Search by name, email, phone..."
           className="pl-9 pr-4"
         />
         {searchValue && (
