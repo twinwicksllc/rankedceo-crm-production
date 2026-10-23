@@ -81,7 +81,7 @@ export async function resolveSmileTarget(
  * @param makeAnon builds a session-less client; only called for the pool.
  */
 export function pickInsertClient<T>(
-  target: { accountId: string },
+  target: Extract<SmileTarget, { accountId: string }>,
   cookieClient: T,
   makeAnon: () => T,
 ): T {
