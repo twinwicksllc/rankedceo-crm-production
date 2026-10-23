@@ -11,11 +11,9 @@ import type {
   CalendlyEventType,
 } from "@/lib/types/appointment";
 import type { IndustryType } from "@/lib/types/industry-lead";
+import { resolveChatAccountId } from "@/lib/services/chat-account";
 
 export const dynamic = "force-dynamic";
-
-const DEFAULT_ACCOUNT_ID =
-  process.env.DEFAULT_ACCOUNT_ID || "00000000-0000-4000-a000-000000000001";
 
 async function upsertChatLead(
   supabase: SupabaseClient,
@@ -212,7 +210,16 @@ export async function POST(request: NextRequest) {
       companyName,
       referralSource,
     } = parsed.data;
-    const resolvedAccountId = accountId || DEFAULT_ACCOUNT_ID;
+    const account = resolveChatAccountId(
+      source,
+      accountId,
+      process.env.DEFAULT_ACCOUNT_ID,
+    );
+    if (account.error !== undefined) {
+      console.error("[Agent Chat]", account.error);
+      return NextResponse.json({ error: account.error }, { status: 400 });
+    }
+    const resolvedAccountId = account.accountId;
 
     console.log("[Agent Chat] Processing message:", {
       sessionId,
