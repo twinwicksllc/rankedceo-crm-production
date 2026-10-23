@@ -6,7 +6,6 @@ import { resolveAccountId } from "@/lib/services/account-context";
 import {
   fromLeadRow,
   toLeadInsertRow,
-  toLeadUpdatePatch,
   type LeadRow,
 } from "@/lib/services/industry-lead-row";
 import {
