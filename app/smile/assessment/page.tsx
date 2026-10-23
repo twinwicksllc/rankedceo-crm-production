@@ -35,8 +35,6 @@ export default async function SmileAssessmentPage({
   const dentistId = resolvedSearchParams.dentistId;
   const companyName = resolvedSearchParams.company;
   const referralSource = resolvedSearchParams.ref;
-  const POOL_ACCOUNT_ID = "00000000-0000-4000-a000-000000000004";
-  const finalDentistId = dentistId || POOL_ACCOUNT_ID;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-25">
@@ -78,7 +76,7 @@ export default async function SmileAssessmentPage({
           </p>
         </div>
 
-        <AssessmentClientWrapper dentistId={finalDentistId} />
+        <AssessmentClientWrapper dentistId={dentistId} />
 
         {/* HIPAA Notice */}
         <div className="mt-8 rounded-lg border border-purple-200 bg-purple-50 p-4">
