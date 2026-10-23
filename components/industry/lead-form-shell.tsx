@@ -51,6 +51,8 @@ interface LeadFormShellProps {
   currentStep: number;
   stepTitle: string;
   isSubmitting: boolean;
+  /** Shown above the buttons when the last submit failed. */
+  submitError?: string | null;
   onNext: () => void;
   onPrevious: () => void;
   onSubmit: () => void;
@@ -67,6 +69,7 @@ export function LeadFormShell({
   currentStep,
   stepTitle,
   isSubmitting,
+  submitError,
   onNext,
   onPrevious,
   onSubmit,
@@ -129,6 +132,15 @@ export function LeadFormShell({
           🔒 Your information is kept private and only shared with your service
           provider.
         </p>
+
+        {submitError && (
+          <p
+            role="alert"
+            className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+          >
+            {submitError}
+          </p>
+        )}
 
         {/* Navigation buttons */}
         <div

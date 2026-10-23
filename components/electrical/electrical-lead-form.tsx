@@ -7,6 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { LeadFormShell } from "@/components/industry/lead-form-shell";
 import type { ElectricalLeadInput } from "@/lib/validations/industry-lead";
+import {
+  isRedirectError,
+  submitErrorMessage,
+  type LeadSubmitOutcome,
+} from "@/lib/services/lead-submit-result";
 
 const TOTAL_STEPS = 5;
 
@@ -52,7 +57,7 @@ const STEP_TITLES = [
 ];
 
 interface ElectricalLeadFormProps {
-  onSubmit: (data: ElectricalLeadInput) => Promise<void>;
+  onSubmit: (data: ElectricalLeadInput) => Promise<LeadSubmitOutcome | void>;
   operatorId?: string;
 }
 
@@ -114,6 +119,7 @@ export function ElectricalLeadForm({
     {},
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const update = (field: keyof FormData, value: unknown) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -160,6 +166,7 @@ export function ElectricalLeadForm({
   const handleSubmit = async () => {
     if (!validateStep(step)) return;
     setIsSubmitting(true);
+    setSubmitError(null);
     try {
       const payload: ElectricalLeadInput = {
         operator_id: operatorId ?? null,
@@ -199,9 +206,13 @@ export function ElectricalLeadForm({
           problem_description: formData.problem_description || undefined,
         },
       };
-      await onSubmit(payload);
-    } catch {
+      // A success redirects away and never returns; a failure is returned.
+      setSubmitError(submitErrorMessage(await onSubmit(payload)));
+    } catch (err) {
+      // Next's redirect() throws to navigate; let it through.
+      if (isRedirectError(err)) throw err;
       console.error("[ElectricalLeadForm] Submission error");
+      setSubmitError(submitErrorMessage(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -214,6 +225,7 @@ export function ElectricalLeadForm({
       currentStep={step}
       stepTitle={STEP_TITLES[step - 1]}
       isSubmitting={isSubmitting}
+      submitError={submitError}
       onNext={handleNext}
       onPrevious={handlePrevious}
       onSubmit={handleSubmit}

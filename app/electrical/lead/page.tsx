@@ -22,9 +22,10 @@ async function ElectricalLeadFormWrapper({
     });
     if (result.success) {
       redirect("/lead/success");
-    } else {
-      throw new Error(result.error || "Submission failed");
     }
+    // Returned, not thrown: a thrown server-action error reaches the browser
+    // as an opaque digest, so the form could not show it.
+    return { error: result.error || "Submission failed" };
   }
   return <ElectricalLeadForm onSubmit={handleSubmit} operatorId={operatorId} />;
 }
