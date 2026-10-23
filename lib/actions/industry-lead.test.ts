@@ -94,18 +94,24 @@ test("list orders and date-filters on created_at", () => {
   assert.match(source, /\.lte\("created_at", filters\.date_to\)/);
 });
 
-test("the public insert goes through the session-less anon client", () => {
+// The live CRM industry_leads table has one policy, "Users see own leads"
+// (auth.uid() = auth_user_id), and none that lets anon insert, so an anon or
+// cookie-bound insert is refused with 42501. The public insert therefore uses
+// the admin client, like the landing quote route, after server-side validation
+// (lib/services/lead-submit-validation.test.ts).
+test("the public insert goes through the admin client", () => {
   assert.match(
     source,
-    /import \{ createAnonClient \} from "@\/lib\/supabase\/anon"/,
+    /import \{ createAdminClient \} from "@\/lib\/supabase\/admin"/,
   );
+  assert.ok(!/createAnonClient/.test(source), "anon has no insert policy");
   const insertAt = source.indexOf(".insert(");
   assert.ok(insertAt > 0);
   const before = source.slice(Math.max(0, insertAt - 120), insertAt);
   assert.match(
     before,
-    /createAnonClient\(\)/,
-    "insert must follow the anon client",
+    /createAdminClient\(\)/,
+    "insert must follow the admin client",
   );
   assert.equal(source.split(".insert(").length, 2, "exactly one insert");
 });

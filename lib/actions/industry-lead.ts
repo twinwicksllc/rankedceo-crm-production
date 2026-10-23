@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { createAnonClient } from "@/lib/supabase/anon";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveAccountId } from "@/lib/services/account-context";
 import {
   fromLeadRow,
@@ -16,6 +16,7 @@ import {
   LEAD_CHANGED_ERROR,
   applyLeadUpdate,
 } from "@/lib/services/industry-lead-update";
+import { validateLeadInput } from "@/lib/services/lead-submit-validation";
 import { revalidatePath } from "next/cache";
 import { POOL_ACCOUNTS } from "@/lib/data/pool-accounts";
 import type {
@@ -39,9 +40,21 @@ import type { UpdateLeadInput } from "@/lib/validations/industry-lead";
 // ---------------------------------------------------------------------------
 
 export async function submitIndustryLead(
-  data: SubmitLeadInput,
+  input: SubmitLeadInput,
 ): Promise<SubmitLeadResult> {
   try {
+    // The insert below uses the admin client, which bypasses row-level
+    // security, so nothing in the database limits what a caller can send.
+    const validated = validateLeadInput(input);
+    if (!validated.ok) {
+      console.error("[IndustryLead] Rejected submission:", validated.error);
+      return {
+        success: false,
+        error: "Please check your details and try again.",
+      };
+    }
+    const data = validated.data;
+
     const supabase = await createClient();
 
     let accountId: string;
@@ -71,12 +84,13 @@ export async function submitIndustryLead(
       accountId = POOL_ACCOUNTS[data.industry];
     }
 
-    // The insert goes through a session-less client: "Public lead intake" is
-    // TO anon, and the cookie client runs as authenticated for a signed-in
-    // visitor. anon has no SELECT policy, so the id is generated here instead
-    // of read back with a returning select.
+    // The admin client, like the landing quote route: the live CRM
+    // industry_leads table has one policy, "Users see own leads"
+    // (auth.uid() = auth_user_id), and none that lets anon insert, so an anon or
+    // cookie-bound insert is refused (42501). The id is generated here instead of
+    // read back with a returning select.
     const leadId = crypto.randomUUID();
-    const { error: insertError } = await createAnonClient()
+    const { error: insertError } = await createAdminClient()
       .from("industry_leads")
       .insert({ id: leadId, ...toLeadInsertRow(accountId, authUserId, data) });
 
