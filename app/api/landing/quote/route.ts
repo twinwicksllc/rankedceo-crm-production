@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { POOL_ACCOUNTS, type PoolIndustry } from "@/lib/data/pool-accounts";
+import { buildQuoteLeadRow } from "@/lib/services/quote-lead";
 
 export const dynamic = "force-dynamic";
 
@@ -85,19 +86,18 @@ export async function POST(request: NextRequest) {
     // ── 6. Insert into industry_leads using admin client (bypasses RLS)
     const supabase = createAdminClient();
 
-    const { error } = await supabase.from("industry_leads").insert({
-      account_id,
-      industry: industryLower,
-      customer_name: `${firstname} ${lastname}`.trim(),
-      customer_email: email.toLowerCase(),
-      customer_phone: phone,
-      zip_code: zipcode,
-      urgency: urgency || "scheduled",
-      preferred_contact_method: preferred_contact_method || "phone",
-      notes: notes || null,
-      service_details: {},
-      status: "new",
-    });
+    const { error } = await supabase.from("industry_leads").insert(
+      buildQuoteLeadRow(account_id, industryLower, {
+        firstname,
+        lastname,
+        email,
+        phone,
+        zipcode,
+        notes,
+        urgency,
+        preferred_contact_method,
+      }),
+    );
 
     if (error) {
       console.error("[Landing Quote] Supabase insert error:", error);
