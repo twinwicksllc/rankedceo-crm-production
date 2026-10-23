@@ -20,6 +20,16 @@ import type {
   IndustryType,
 } from "@/lib/types/industry-lead";
 import { INDUSTRY_CONFIGS } from "@/lib/types/industry-lead";
+import {
+  contactMethodOf,
+  detailsOf,
+  displayName,
+  formatEstimatedValue,
+  getServiceTypeLabel,
+  problemDescriptionOf,
+  symptomsOf,
+  timeAgo,
+} from "@/lib/services/lead-display";
 
 interface LeadCardProps {
   lead: IndustryLead;
@@ -27,31 +37,17 @@ interface LeadCardProps {
   onStatusChange?: (leadId: string, newStatus: LeadStatus) => void;
 }
 
-function timeAgo(dateStr: string): string {
-  const now = new Date();
-  const date = new Date(dateStr);
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString();
-}
-
-function getServiceTypeLabel(serviceDetails: Record<string, unknown>): string {
-  const type = serviceDetails?.service_type as string | undefined;
-  if (!type) return "General Service";
-  return type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
 export function LeadCard({ lead, industry, onStatusChange }: LeadCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [updating, setUpdating] = useState(false);
   const config = INDUSTRY_CONFIGS[industry];
+  // Quote-form and chat leads carry only part of the details, so nothing below
+  // may assume a field is present.
+  const serviceDetails = detailsOf(lead.service_details);
+  const symptoms = symptomsOf(serviceDetails);
+  const problemDescription = problemDescriptionOf(serviceDetails);
+  const estimatedValue = formatEstimatedValue(lead.estimated_value);
+  const contactMethod = contactMethodOf(lead.preferred_contact_method);
 
   const handleStatusChange = async (newStatus: LeadStatus) => {
     setUpdating(true);
@@ -69,7 +65,7 @@ export function LeadCard({ lead, industry, onStatusChange }: LeadCardProps) {
     phone: <Phone className="h-3 w-3" />,
     email: <Mail className="h-3 w-3" />,
     text: <MessageSquare className="h-3 w-3" />,
-  }[lead.preferred_contact_method] ?? <Phone className="h-3 w-3" />;
+  }[contactMethod];
 
   const isEmergency = lead.urgency === "emergency";
 
@@ -84,20 +80,20 @@ export function LeadCard({ lead, industry, onStatusChange }: LeadCardProps) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-semibold text-gray-900 truncate">
-              {lead.customer_name}
+              {displayName(lead.customer_name)}
             </h3>
             <UrgencyBadge urgency={lead.urgency} />
             <LeadStatusBadge status={lead.status} />
           </div>
 
           <p className="mt-1 text-sm text-gray-500">
-            {getServiceTypeLabel(lead.service_details)}
+            {getServiceTypeLabel(serviceDetails)}
           </p>
 
           <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
             <span className="flex items-center gap-1">
               <Phone className="h-3 w-3" />
-              {lead.customer_phone}
+              {lead.customer_phone || "No phone"}
             </span>
             {lead.city && (
               <span className="flex items-center gap-1">
@@ -114,7 +110,7 @@ export function LeadCard({ lead, industry, onStatusChange }: LeadCardProps) {
               className={`flex items-center gap-1 font-medium text-${config.color.text}`}
             >
               {contactIcon}
-              Prefers {lead.preferred_contact_method}
+              Prefers {contactMethod}
             </span>
           </div>
         </div>
@@ -142,7 +138,9 @@ export function LeadCard({ lead, industry, onStatusChange }: LeadCardProps) {
               <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">
                 Email
               </span>
-              <p className="text-gray-700">{lead.customer_email}</p>
+              <p className="text-gray-700">
+                {lead.customer_email || "No email"}
+              </p>
             </div>
             {lead.service_address && (
               <div>
@@ -165,42 +163,37 @@ export function LeadCard({ lead, industry, onStatusChange }: LeadCardProps) {
                 <p className="text-gray-700">{lead.preferred_time}</p>
               </div>
             )}
-            {lead.estimated_value != null && (
+            {estimatedValue && (
               <div>
                 <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">
                   Est. Value
                 </span>
-                <p className="text-gray-700 font-semibold">
-                  ${lead.estimated_value.toLocaleString()}
-                </p>
+                <p className="text-gray-700 font-semibold">{estimatedValue}</p>
               </div>
             )}
           </div>
 
           {/* Service details */}
-          {Object.keys(lead.service_details).length > 0 && (
+          {Object.keys(serviceDetails).length > 0 && (
             <div>
               <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">
                 Service Details
               </span>
               <div className="mt-1 flex flex-wrap gap-2">
-                {(lead.service_details.symptoms as string[] | undefined)?.map(
-                  (s) => (
-                    <span
-                      key={s}
-                      className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
-                    >
-                      {s.replace(/_/g, " ")}
-                    </span>
-                  ),
-                )}
+                {symptoms.map((s, i) => (
+                  <span
+                    key={`${s}-${i}`}
+                    className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
+                  >
+                    {s.replace(/_/g, " ")}
+                  </span>
+                ))}
               </div>
-              {typeof lead.service_details.problem_description === "string" &&
-                lead.service_details.problem_description && (
-                  <p className="mt-2 text-sm text-gray-600 italic">
-                    &ldquo;{lead.service_details.problem_description}&rdquo;
-                  </p>
-                )}
+              {problemDescription && (
+                <p className="mt-2 text-sm text-gray-600 italic">
+                  &ldquo;{problemDescription}&rdquo;
+                </p>
+              )}
             </div>
           )}
 

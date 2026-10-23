@@ -185,7 +185,7 @@ export interface LeadFilters {
   industry?: IndustryType;
   status?: LeadStatus | "all";
   urgency?: ServiceUrgency | "all";
-  search?: string; // searches customer_name, email, phone, city
+  search?: string; // matches lead_name, lead_email, lead_phone; city is in jsonb, so not searchable
   date_from?: string;
   date_to?: string;
 }

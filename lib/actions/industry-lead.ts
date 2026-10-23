@@ -1,7 +1,21 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAnonClient } from "@/lib/supabase/anon";
 import { resolveAccountId } from "@/lib/services/account-context";
+import {
+  fromLeadRow,
+  toLeadInsertRow,
+  type LeadRow,
+} from "@/lib/services/industry-lead-row";
+import {
+  buildSearchFilter,
+  computeLeadStats,
+} from "@/lib/services/industry-lead-query";
+import {
+  LEAD_CHANGED_ERROR,
+  applyLeadUpdate,
+} from "@/lib/services/industry-lead-update";
 import { revalidatePath } from "next/cache";
 import { POOL_ACCOUNTS } from "@/lib/data/pool-accounts";
 import type {
@@ -57,29 +71,14 @@ export async function submitIndustryLead(
       accountId = POOL_ACCOUNTS[data.industry];
     }
 
-    // Insert the lead with NEW column names
-    const { data: lead, error: insertError } = await supabase
+    // The insert goes through a session-less client: "Public lead intake" is
+    // TO anon, and the cookie client runs as authenticated for a signed-in
+    // visitor. anon has no SELECT policy, so the id is generated here instead
+    // of read back with a returning select.
+    const leadId = crypto.randomUUID();
+    const { error: insertError } = await createAnonClient()
       .from("industry_leads")
-      .insert({
-        account_id: accountId,
-        auth_user_id: authUserId,
-        industry: data.industry,
-        lead_name: data.customer_name,
-        lead_email: data.customer_email,
-        lead_phone: data.customer_phone,
-        service_address: data.service_address || null,
-        city: data.city || null,
-        state: data.state || null,
-        zip_code: data.zip_code || null,
-        urgency: data.urgency,
-        preferred_contact_method: data.preferred_contact_method,
-        preferred_time: data.preferred_time || null,
-        notes: data.notes || null,
-        service_details: data.service_details || {},
-        status: "new",
-      })
-      .select("id")
-      .single();
+      .insert({ id: leadId, ...toLeadInsertRow(accountId, authUserId, data) });
 
     if (insertError) {
       console.error(
@@ -96,7 +95,7 @@ export async function submitIndustryLead(
     // Revalidate the operator's dashboard
     revalidatePath(`/${data.industry}`);
 
-    return { success: true, leadId: lead.id };
+    return { success: true, leadId };
   } catch (err) {
     console.error("[IndustryLead] Unexpected error during submission:", err);
     return {
@@ -141,7 +140,7 @@ export async function getIndustryLeads(
       .select("*")
       .eq("account_id", accountId)
       .eq("industry", industry)
-      .order("submitted_at", { ascending: false });
+      .order("created_at", { ascending: false });
 
     // Apply optional filters
     if (filters?.status && filters.status !== "all") {
@@ -150,17 +149,15 @@ export async function getIndustryLeads(
     if (filters?.urgency && filters.urgency !== "all") {
       query = query.eq("urgency", filters.urgency);
     }
-    if (filters?.search) {
-      // Updated to use NEW column names
-      query = query.or(
-        `lead_name.ilike.%${filters.search}%,lead_email.ilike.%${filters.search}%,lead_phone.ilike.%${filters.search}%,city.ilike.%${filters.search}%`,
-      );
+    const searchFilter = buildSearchFilter(filters?.search);
+    if (searchFilter) {
+      query = query.or(searchFilter);
     }
     if (filters?.date_from) {
-      query = query.gte("submitted_at", filters.date_from);
+      query = query.gte("created_at", filters.date_from);
     }
     if (filters?.date_to) {
-      query = query.lte("submitted_at", filters.date_to);
+      query = query.lte("created_at", filters.date_to);
     }
 
     const { data: leads, error: fetchError } = await query;
@@ -170,7 +167,10 @@ export async function getIndustryLeads(
       return { success: false, data: [], error: "Failed to load leads" };
     }
 
-    return { success: true, data: (leads as IndustryLead[]) || [] };
+    return {
+      success: true,
+      data: ((leads as LeadRow[] | null) ?? []).map(fromLeadRow),
+    };
   } catch {
     console.error("[IndustryLead] Unexpected error fetching leads");
     return { success: false, data: [], error: "Unexpected error" };
@@ -195,17 +195,26 @@ export async function getIndustryLead(
       return { success: false, data: null, error: "Not authenticated" };
     }
 
+    let accountId: string;
+    try {
+      accountId = await resolveAccountId(supabase, user);
+    } catch {
+      return { success: false, data: null, error: "Account not found" };
+    }
+
+    // Scoped to the caller's account here as well as by RLS.
     const { data: lead, error: fetchError } = await supabase
       .from("industry_leads")
       .select("*")
       .eq("id", leadId)
+      .eq("account_id", accountId)
       .single();
 
     if (fetchError || !lead) {
       return { success: false, data: null, error: "Lead not found" };
     }
 
-    return { success: true, data: lead as IndustryLead };
+    return { success: true, data: fromLeadRow(lead as LeadRow) };
   } catch {
     console.error("[IndustryLead] Unexpected error fetching lead");
     return { success: false, data: null, error: "Unexpected error" };
@@ -231,17 +240,22 @@ export async function updateIndustryLead(
       return { success: false, error: "Not authenticated" };
     }
 
-    const { error: updateError } = await supabase
-      .from("industry_leads")
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", leadId);
+    let accountId: string;
+    try {
+      accountId = await resolveAccountId(supabase, user);
+    } catch {
+      return { success: false, error: "Account not found" };
+    }
 
-    if (updateError) {
-      console.error("[IndustryLead] Update failed:", updateError.code);
-      return { success: false, error: "Failed to update lead" };
+    // Reads the row scoped to the caller's account, merges the jsonb columns and
+    // writes only if no one else updated it in between (see industry-lead-update).
+    const result = await applyLeadUpdate(supabase, leadId, accountId, updates);
+    if (!result.success) {
+      // A conflict is expected under concurrent edits; only real failures log.
+      if (result.error !== LEAD_CHANGED_ERROR) {
+        console.error("[IndustryLead] Update failed:", result.error);
+      }
+      return { success: false, error: result.error };
     }
 
     return { success: true };
@@ -281,7 +295,7 @@ export async function getIndustryLeadStats(
     // Fetch all leads for stats calculation
     const { data: leads, error: fetchError } = await supabase
       .from("industry_leads")
-      .select("status, urgency, estimated_value")
+      .select("status, urgency, metadata")
       .eq("account_id", accountId)
       .eq("industry", industry);
 
@@ -289,43 +303,7 @@ export async function getIndustryLeadStats(
       return { success: false, data: null, error: "Failed to load stats" };
     }
 
-    const all = leads || [];
-    const total = all.length;
-    const new_count = all.filter((l) => l.status === "new").length;
-    const emergency_count = all.filter((l) => l.urgency === "emergency").length;
-    const urgent_count = all.filter((l) => l.urgency === "urgent").length;
-    const scheduled_count = all.filter((l) => l.status === "scheduled").length;
-    const completed_count = all.filter((l) => l.status === "completed").length;
-    const lost_count = all.filter((l) => l.status === "lost").length;
-
-    const closedCount = completed_count + lost_count;
-    const conversion_rate =
-      closedCount > 0 ? Math.round((completed_count / closedCount) * 100) : 0;
-
-    const leadsWithValue = all.filter((l) => l.estimated_value != null);
-    const avg_estimated_value =
-      leadsWithValue.length > 0
-        ? leadsWithValue.reduce((sum, l) => sum + (l.estimated_value || 0), 0) /
-          leadsWithValue.length
-        : null;
-
-    const total_pipeline_value = all.reduce(
-      (sum, l) => sum + (l.estimated_value || 0),
-      0,
-    );
-
-    const stats: LeadStats = {
-      total,
-      new_count,
-      emergency_count,
-      urgent_count,
-      scheduled_count,
-      completed_count,
-      lost_count,
-      conversion_rate,
-      avg_estimated_value,
-      total_pipeline_value,
-    };
+    const stats: LeadStats = computeLeadStats(leads || []);
 
     return { success: true, data: stats };
   } catch {
