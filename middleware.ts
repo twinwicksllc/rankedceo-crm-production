@@ -329,6 +329,7 @@ function handleIndustrySubdomain(
     "/api/",
     "/onboarding",
     "/get-started",
+    "/thank-you",
     "/_next",
   ].some((p) => pathname.startsWith(p));
   if (isSharedRoute) return response;
