@@ -5,8 +5,13 @@
 -- exactly the rows that rehearsal created for ONE test login, and nothing else.
 -- Steps for the human are in docs/engineering/E3_REHEARSAL_PLAN.md.
 --
--- STATUS: tested only on a throwaway Postgres (PGlite) built from waas/027, 029 and 030.
--- It has NOT been run against rankedceo-waas. The first run there is a 'preview'.
+-- STATUS: tested only on a throwaway Postgres (PGlite) built from the repo's waas
+-- migrations (000a to 030), not from the live project. It has NOT been run against
+-- rankedceo-waas. The first run there is a 'preview'.
+-- History: the first version had a 30-day window and no p_confirm_account, and a re-test on
+-- 2026-10-27 showed it deleted a real customer who had signed up 5 days earlier. Its header
+-- claimed it refused that case. Do not trust a guard because this header says so: the
+-- confirmation id is the protection, and E3_REHEARSAL_PLAN.md says what was checked.
 --
 -- HOW TO USE: edit the lines under "EDIT HERE" at the bottom, paste the whole file into the
 -- SQL Editor, press Run. The script has three modes:
@@ -15,7 +20,8 @@
 --              the accounts table.
 --   'delete'   runs the deletes. With p_commit => false (the default) it DOES the deletes and
 --              then rolls them back, so you see exactly what a real run would do and
---              nothing changes. Set p_commit => true to keep the deletes.
+--              nothing changes. Set p_commit => true to keep the deletes, and also set
+--              p_confirm_account => '<the account id from the preview's CONFIRM row>'.
 --   'verify'   read-only. Proves nothing of the test login is left, the 4 pool accounts are
 --              present and unchanged, and lists storage objects whose tenant is gone.
 --
@@ -34,7 +40,12 @@
 -- WHAT IT REFUSES (RAISE EXCEPTION, nothing is changed):
 --   - the email is still REPLACE-ME or has no '@';
 --   - no auth user has that email (modes preview and delete);
---   - the login is older than 30 days;
+--   - the login is older than 3 days;
+--   - (committed delete only) p_confirm_account is missing or is not the account id that
+--     the preview printed in its CONFIRM row for this email. This is the protection against
+--     a mistyped email: a real customer who signed up recently has one user and an account
+--     made at sign-up, so they look exactly like a rehearsal login, and the age and
+--     one-user checks alone would not stop a delete. A dry run does not need the id;
 --   - the login's account is one of the 4 pool accounts, or is flagged is_pool_account;
 --   - the account has any other user, or was not created within 10 minutes of the login;
 --   - any table outside the handled list has a row mentioning the test user id, account id,
