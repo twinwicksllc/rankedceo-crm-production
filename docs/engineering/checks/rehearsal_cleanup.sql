@@ -41,6 +41,10 @@
 --   - the email is still REPLACE-ME or has no '@';
 --   - no auth user has that email (modes preview and delete);
 --   - the login is older than 3 days;
+--   - (committed delete only) no account resolves for the login, for example because the
+--     sign-up trigger did not make a public.users row. There is then no id to confirm, and
+--     the email-matched rows would otherwise be deleted with no confirmation. Use the
+--     preview or a dry run to look, and tell Tommy;
 --   - (committed delete only) p_confirm_account is missing or is not the account id that
 --     the preview printed in its CONFIRM row for this email. This is the protection against
 --     a mistyped email: a real customer who signed up recently has one user and an account
@@ -386,7 +390,15 @@ begin
     -- A committed delete must name the account the PREVIEW printed. A mistyped email that
     -- happens to match another recent sign-up resolves to a different account, so the ids
     -- differ and nothing is deleted. A dry run (p_commit false) does not need it.
-    if p_commit and v_account is not null and p_confirm_account is distinct from v_account then
+    -- It fails CLOSED: if no account resolves for the login (for example the sign-up trigger
+    -- did not make a public.users row), there is nothing to confirm, so a committed delete is
+    -- refused. The email-matched rows would otherwise be deleted with no confirmation at all.
+    -- The preview and a dry run still work in that case, so you can look at what is there.
+    if p_commit and v_account is null then
+      raise exception 'REFUSED: no account resolves for % (the login has no public.users row), so there is no account id to confirm and a committed delete is not allowed. Run the preview or a dry run to look at it, and tell Tommy. Nothing was changed.',
+        v_email;
+    end if;
+    if p_commit and p_confirm_account is distinct from v_account then
       raise exception 'REFUSED: a committed delete needs p_confirm_account => ''%'' (the account id the preview printed for % ). You passed %. Nothing was changed.',
         v_account, v_email, coalesce(p_confirm_account::text, 'nothing');
     end if;
