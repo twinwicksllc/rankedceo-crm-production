@@ -71,7 +71,8 @@ create or replace function pg_temp.e3_rehearsal_cleanup(
   p_mode             text    default 'preview',
   p_commit           boolean default false,
   p_session_ids      text[]  default array[]::text[],
-  p_delete_auth_user boolean default false
+  p_delete_auth_user boolean default false,
+  p_confirm_account  uuid    default null
 ) returns table (ord int, section text, item text, n bigint, verdict text, detail text)
 language plpgsql as $fn$
 #variable_conflict use_variable
@@ -83,7 +84,10 @@ declare
     '00000000-0000-4000-a000-000000000004']::uuid[];
   c_nil           constant uuid     := '00000000-0000-0000-0000-000000000000';
   c_max_rows      constant bigint   := 200;
-  c_max_user_age  constant interval := interval '30 days';
+  -- A rehearsal login is created, used and cleaned up within days. A short window keeps a
+  -- real customer who signed up recently from looking like a rehearsal login. The window is
+  -- not the main protection: a committed delete also needs p_confirm_account (below).
+  c_max_user_age  constant interval := interval '3 days';
   c_max_acct_gap  constant interval := interval '10 minutes';
   -- Tables the script deletes from or deliberately reads. Every other table in public is
   -- scanned for the test identity and blocks the run if it holds a row.
@@ -140,7 +144,7 @@ begin
 
   if v_uid is not null then
     if v_user_created < now() - c_max_user_age then
-      raise exception 'This login was created % ago (more than 30 days). A rehearsal login is new. Refusing.',
+      raise exception 'This login was created % ago (more than 3 days). A rehearsal login is new. Refusing.',
         now() - v_user_created;
     end if;
 
@@ -181,6 +185,10 @@ begin
       case when v_account is null then 0 else 1 end,
       case when v_account is null then 'NONE' else 'PASS' end,
       coalesce(v_account::text, 'no users row: account steps are skipped'));
+    if v_account is not null then
+      v_rpt := pg_temp.e3_add(v_rpt, 'CONFIRM', 'p_confirm_account to copy into a committed delete', null, 'COPY',
+        v_account::text || '  (account name: ' || coalesce((select a.name from public.accounts a where a.id = v_account), '?') || ')');
+    end if;
   end if;
 
   -- ---- the delete steps, in FK-safe order. Count and delete use the SAME predicate. -----
@@ -364,6 +372,13 @@ begin
 
   -- ---- delete mode ------------------------------------------------------------------------------
   if p_mode = 'delete' then
+    -- A committed delete must name the account the PREVIEW printed. A mistyped email that
+    -- happens to match another recent sign-up resolves to a different account, so the ids
+    -- differ and nothing is deleted. A dry run (p_commit false) does not need it.
+    if p_commit and v_account is not null and p_confirm_account is distinct from v_account then
+      raise exception 'REFUSED: a committed delete needs p_confirm_account => ''%'' (the account id the preview printed for % ). You passed %. Nothing was changed.',
+        v_account, v_email, coalesce(p_confirm_account::text, 'nothing');
+    end if;
     if v_blocked <> '' then
       raise exception 'BLOCKED. These tables hold rows that mention the test login and the script does not handle them: %. Nothing was changed. Look at those rows, then extend this script on purpose.', v_blocked;
     end if;
@@ -461,5 +476,6 @@ from pg_temp.e3_rehearsal_cleanup(
   p_mode             => 'preview',                  -- 'preview' | 'delete' | 'verify'
   p_commit           => false,                      -- 'delete' only. false = rolled back. true = KEEP THE DELETES
   p_session_ids      => array[]::text[],            -- chat session id(s), e.g. array['session_123_abc']
-  p_delete_auth_user => false                       -- true = also delete the login here (else use the dashboard)
+  p_delete_auth_user => false,                      -- true = also delete the login here (else use the dashboard)
+  p_confirm_account  => null                        -- committed delete only: paste the account id the preview printed
 );

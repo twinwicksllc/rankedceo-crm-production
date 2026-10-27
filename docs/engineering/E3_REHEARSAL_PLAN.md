@@ -31,7 +31,7 @@ One test login and the rows below. Each claim is READ from the code unless marke
 
 ## Rules
 
-1. Use one test login. Never run the cleanup with a real person's email. The script refuses a login older than 30 days, an account with more than one user, and an account not made at that login's sign-up (VERIFIED on a throwaway Postgres).
+1. Use one test login. Never run the cleanup with a real person's email. The script refuses a login older than 3 days, an account with more than one user, and an account not made at that login's sign-up (VERIFIED on a throwaway Postgres). **Those checks alone do not stop a mistyped email.** A real customer who signed up yesterday has one user and an account made at sign-up, so they look exactly like a rehearsal login. In a test on a throwaway Postgres (2026-10-27), the first version of the script, which had a 30-day window and no confirmation, deleted such a customer's account and lead. The protection is that a committed delete must be given the account id that the preview printed (`p_confirm_account`, steps 9 and 10): a mistyped email resolves to a different account, so the ids differ and nothing is deleted.
 2. Type the test email in `/get-started` step 1 and in the HVAC lead form exactly. The cleanup keys on it.
 3. Do not add `?auditId=` to `/get-started`. That links the tenant to an existing audit row.
 4. Do not pass `operatorId` to the lead form.
@@ -123,7 +123,7 @@ Open `/get-started` (no query string). Walk all six steps. In step 1 type the te
 
 ### 8. Run the PREVIEW
 
-Open the SQL editor, paste the whole of `docs/engineering/checks/rehearsal_cleanup.sql`. At the bottom, change `REPLACE-ME@example.com` to the test email and `p_session_ids` to `array['<the agent_session_id value>']`. Leave `p_mode => 'preview'`. Run. The output is one table.
+Open the SQL editor, paste the whole of `docs/engineering/checks/rehearsal_cleanup.sql`. At the bottom, change `REPLACE-ME@example.com` to the test email and `p_session_ids` to `array['<the agent_session_id value>']`. Leave `p_mode => 'preview'`. Run. The output is one table. Find the row with section `CONFIRM`: its `detail` column holds the **account id** and the account name (`My Account`). Copy that id, and check the name is the one you expect. You will paste it in step 10.
 
 Check:
 
@@ -146,7 +146,7 @@ Same file. Change `p_mode` to `'delete'`. Leave `p_commit => false`. Run.
 
 ### 10. Run the cleanup for real
 
-Same file. Set `p_commit => true`. Run.
+Same file. Set `p_commit => true` and set `p_confirm_account => '<the account id from step 8>'` (inside the quotes, nothing else). Run. If the id is missing or belongs to a different account, the script stops with `REFUSED: a committed delete needs p_confirm_account` and changes nothing; the dry run in step 9 does not need the id.
 
 - Expected: `RESULT` = `COMMITTED`, the `DELETE` counts equal the preview, and `pool accounts md5 after` and `other accounts md5 after` read `PASS`.
 - VERIFIED (throwaway Postgres): a committed run left every public table identical to its state before the test login existed; a second run deleted zero rows and did not error.
@@ -191,11 +191,12 @@ Tell me, in plain words: which steps passed, any `FAIL`, `BLOCK`, `REVIEW` or `M
 
 Script: `docs/engineering/checks/rehearsal_cleanup.sql`.
 
-**It refuses (raises, nothing changes):** a placeholder or empty email; an email with no auth user (preview and delete); a login older than 30 days; a login whose account is one of the four pool accounts or flagged `is_pool_account`; an account with more than one user; an account not made when the login was. It also refuses to delete when a table it does not handle holds a row that mentions the test login, account, tenant or email, or when more than 200 rows would go. After the deletes it rolls the whole run back if a per-table count differs from the preview, a matching row is left, the pool accounts or any other account row changed, or the total row count of all public tables fell by anything other than the previewed total.
+**It refuses (raises, nothing changes):** a placeholder or empty email; an email with no auth user (preview and delete); a login older than 3 days; a committed delete whose `p_confirm_account` is missing or is not the account the email resolves to; a login whose account is one of the four pool accounts or flagged `is_pool_account`; an account with more than one user; an account not made when the login was. It also refuses to delete when a table it does not handle holds a row that mentions the test login, account, tenant or email, or when more than 200 rows would go. After the deletes it rolls the whole run back if a per-table count differs from the preview, a matching row is left, the pool accounts or any other account row changed, or the total row count of all public tables fell by anything other than the previewed total.
 
 - VERIFIED (throwaway Postgres, PGlite, schema from the real `waas/027`, `029`, `030`): each of those refusals fired, and a hostile trigger that deleted an unlisted row, edited a pool account, or edited an ordinary account was caught and rolled back. Each deliberate break I made to the script (removing the pool guard, widening the lead delete to the pool account, removing the scan, removing each post-delete check, ignoring the dry run) made at least one test fail.
 - VERIFIED: the HVAC pool account's own leads (visitors) and chats survived, including a lead made after the login by someone else, and an earlier lead that used the same email.
 - READ: the test schema was built from the repo migrations, not from the live project. The live project may carry tables, triggers or policies the repo does not show. The scan and the total-row check exist for that, and the first live run is the preview.
+- VERIFIED (2026-10-27, independent re-test on a throwaway Postgres, PGlite, with the real `waas/000a` to `030` migrations): the first version of the script had a 30-day age window and no confirmation. It deleted the account and the lead of a real customer who had signed up 5 days earlier, because that customer has one user and an account made at sign-up, exactly like a rehearsal login, and the preview showed only counts. The script now uses a 3-day window and requires `p_confirm_account` (the account id the preview prints) for a committed delete. Checked: a customer who signed up 1 day ago (inside the window) is refused without the id, refused with another account's id, and untouched by a dry run; a genuine rehearsal login is deleted with the right id; removing the confirmation check, widening the window, loosening the id check, or removing the pool guard each made the matching test fail. The tests are not kept in the repo (no PGlite harness exists here); the first live run is still a read-only preview.
 
 **It cannot:** delete storage objects, delete rows in `auth.*` other than the login (and only when asked), or find a pool-account lead or chat that carries a different email or none and no session id. Those are listed under `INFO` for you to read.
 
