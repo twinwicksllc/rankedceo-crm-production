@@ -52,12 +52,12 @@ ASSUMED: whether Supabase matches an address with a `?next=...` query against an
 
 ## Step 2. Email confirmation, password rules (WaaS, compare with CRM)
 
-**Why.** The code behaves as if email confirmation is off: after sign-up it goes straight to onboarding with no "check your email" screen (READ: `app/(auth)/signup/page.tsx:72-75`). If WaaS has confirmation on, a new person signs up and lands in a broken state. The repo cannot tell us the CRM setting, so look at it.
+**Why.** The sign-up page has no "check your email" screen: after sign-up it always goes to `/onboarding` (READ: `app/(auth)/signup/page.tsx:72-75`). With **Confirm email** on, a new person has no session until they click the link in the email, so `/onboarding` sends them to `/login` (READ: `app/(dashboard)/onboarding/page.tsx:15-18`) and they get no on-screen hint. That is how the CRM project works today. VERIFIED by Tommy on 2026-10-27: **Confirm email is on in both projects**, and the minimum password length is 8 in both. The repo cannot tell us the CRM setting, so look at it. In the current Supabase dashboard, **Confirm email** is a switch in the **User Signups** section at the top of the Providers page, above the provider list, not inside the Email panel.
 
 **Do this.**
 
-1. Open the **CRM** project: <https://supabase.com/dashboard/project/wcednzaxmxwfiijzmjmx/auth/providers>. Look only. Click **Email**. Write down: is **Confirm email** on or off? What is **Minimum password length**?
-2. Open the **WaaS** project: <https://supabase.com/dashboard/project/klgvdvryewykzlumbkei/auth/providers>. Click **Email**. Make **Confirm email** and **Minimum password length** match the CRM project.
+1. Open the **CRM** project: <https://supabase.com/dashboard/project/wcednzaxmxwfiijzmjmx/auth/providers>. Look only. Scroll to the top: is **Confirm email** (User Signups section) on or off? Then click **Email** and write down **Minimum password length**, **Password requirements** and **Prevent use of leaked passwords**.
+2. Open the **WaaS** project: <https://supabase.com/dashboard/project/klgvdvryewykzlumbkei/auth/providers>. Make **Confirm email** (User Signups section, top of the page) match the CRM project. Then click **Email** and make **Minimum password length**, **Password requirements** and **Prevent use of leaked passwords** match too.
 3. Save.
 
 **Tell me:** the two values you saw in the CRM project, and whether WaaS now matches.

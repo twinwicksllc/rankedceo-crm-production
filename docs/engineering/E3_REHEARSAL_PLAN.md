@@ -95,7 +95,7 @@ On the preview, open `/signup`. Use an address you can read mail at, in the form
 
 - READ: the page runs reCAPTCHA, calls `supabase.auth.signUp`, and sends you to `/onboarding`.
 - ASSUMED: the reCAPTCHA key accepts the preview's domain. A failure here is a finding about the preview, not about the cleanup.
-- ASSUMED: the `rankedceo-waas` Auth setting "Confirm email" decides whether you must click a link first. Whichever it is, note it. It is one of the dashboard settings E3 section 3 lists.
+- VERIFIED by Tommy on 2026-10-27: **Confirm email is on** in both `rankedceo-waas` and the CRM project. READ: with it on, signing up gives no session, the page sends you to `/onboarding`, and `/onboarding` sends you on to `/login` with no message (`app/(dashboard)/onboarding/page.tsx:15-18`). That is expected, not a failure. Open the confirmation email, click its link (it returns through `/api/auth/callback`, so the redirect list from the dashboard steps must be saved first), and you arrive signed in. If the email does not arrive, or its link goes to the wrong address, stop and tell me; the dashboard steps (email templates and sender) are the place to look. The login's age for the cleanup script counts from sign-up, not from the click.
 - READ: the `on_auth_user_created` trigger then makes one `accounts` row (name `My Account`) and one `users` row with `id` = the login's id, with `role` `rep` and `email`, `name` empty.
 - Optional: sign in once with a magic link or Google on the same address. If it creates a second login, that second login is not covered by this script. Tell me before cleaning up.
 
