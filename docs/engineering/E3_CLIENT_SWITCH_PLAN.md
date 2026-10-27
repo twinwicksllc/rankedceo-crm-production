@@ -163,7 +163,7 @@ D5. **Settled: B (DEC-0027); see the paragraph after the options.** The question
 
 ## 3. Supabase dashboard settings to replicate in `rankedceo-waas` (ASSUMED needed; compare against CRM project)
 
-Auth settings live per project and are not carried by migrations: Site URL and redirect URLs (the CRM's `/api/auth/callback`), Google OAuth provider credentials, email templates and SMTP, email-confirmation setting, password rules. Storage buckets `avatars`, `client-uploads`, `listing-images` (WaaS currently has only `logos`) and their policies. Each is a manual dashboard step by you; I will provide the exact list after you give me the CRM-side values, with secrets never pasted.
+Auth settings live per project and are not carried by migrations: Site URL and redirect URLs (the CRM's `/api/auth/callback`), Google OAuth provider credentials, email templates and SMTP, email-confirmation setting, password rules. Storage buckets `avatars`, `client-uploads`, `listing-images` (WaaS currently has only `logos`) and their policies. **Corrected 2026-10-27:** the code uses only `logos` and `client-uploads`, both with the WaaS service-role key, and creates each if missing (VERIFIED by grep of `.storage`); nothing uses `avatars` or `listing-images`, so no bucket needs copying by hand. Each is a manual dashboard step by you; I will provide the exact list after you give me the CRM-side values, with secrets never pasted.
 
 ## 4. Code changes
 
@@ -191,7 +191,7 @@ The check scripts now live in the repo, so an operator can reproduce every gate 
 5. Replicate dashboard settings and buckets (section 3).
 6. No logins are created in advance (section 1c, DEC-0026). Confirm that the admin allowlist is set in Vercel Production.
 7. Copy only the rows Tommy decides to keep (D2 step 3), with the pool accounts matched, not re-inserted, and every CRM user-id column set to NULL (section 1c). Then run the copy verification in section 1c. If nothing is kept, skip this step.
-8. Rehearse (D3), then cut over: change **URL, anon key and service-role key** in Production, redeploy, then run the manual checks. Tommy and his partner sign up fresh (password, magic link, Google), then onboarding, create company/contact/deal, and avatar upload.
+8. Rehearse (D3), then cut over: change **URL, anon key and service-role key** in Production, redeploy, then run the manual checks. Tommy and his partner sign up fresh (password, magic link, Google), then onboarding, and one industry lead and one website chat message. **Changed 2026-10-27 (DEC-0030):** the original list also had "create company/contact/deal, and avatar upload". The CRM dashboard is not part of this cutover, because its forms write columns neither project has (VERIFIED by `checks/crm_dashboard_columns_check.sql`), and no avatar upload exists in the code (VERIFIED by grep).
 9. Rollback: set the same three variables back to the CRM project values and redeploy. Data written to waas after cutover would not exist in the CRM project, so keep the window short and during low usage. The CRM project is not deleted or repurposed (DEC-0024) until the rollback window has passed.
 
 ## 6. Out of scope here
