@@ -11,6 +11,20 @@ Two projects appear below. Name the one you are in before every change:
 
 Never paste a key, secret, password or token into chat. Tell me names and yes or no.
 
+## Where each step stands
+
+Updated 2026-10-27 as Tommy did them.
+
+| Step                                  | State                                                                                                                                                                                            |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1. Site URL and redirect URLs         | **Done** 2026-10-27. Site URL `https://crm.rankedceo.com`, redirects `https://*.rankedceo.com/**` and `https://rankedceo.com/**`. WaaS had Supabase's defaults before (localhost, empty list).   |
+| 2. Email confirmation, password rules | **Done** 2026-10-27. Confirm email on, minimum 8, lowercase + uppercase + digit, leaked-password check on, matching the CRM project.                                                             |
+| 3. Email templates and sender         | **Done** 2026-10-27 for `rankedceo-waas` (copies in `docs/engineering/auth-email-templates/`). Custom SMTP is off in both projects. The CRM templates are still the plain default and unchanged. |
+| 4. Google sign-in                     | **Deferred by Tommy to the live switch.** Not needed for the rehearsal, which signs up with a password. Do it before the real switch, or sign-in with Google will fail on the new project.       |
+| 5. Storage                            | Not done. One check.                                                                                                                                                                             |
+| 6. Admin access (Vercel)              | Not done. One check.                                                                                                                                                                             |
+| 7. Test it                            | Not done. The magic-link test needs the preview to exist. The Google test waits for step 4.                                                                                                      |
+
 ## How to work through this
 
 Do the steps in order. Each step says what to do, then what to tell me. A step takes a few minutes. You can stop between steps and nothing is half-done, because each setting stands on its own. The rehearsal (DEC-0029) signs up with a password, so it needs steps 1, 2, 3 and 6. Step 4 (Google) is needed only if you also test Google sign-in on the preview (step 7, point 2). Step 5 is one check and can be done any time. Before the real switch, do all of them.
@@ -129,7 +143,7 @@ This proves the settings work, before the rehearsal depends on them. It uses the
 **Then test.**
 
 1. On the preview address, open `/login` and request a **magic link** for a new test email. The email should arrive from the sender you set in step 3, and the link should return to the preview address. If it opens a Supabase error saying the redirect is not allowed, step 1 is missing an entry. Tell me the address in the error bar.
-2. Click **Sign in with Google**. It should return to the preview address. If Google says `redirect_uri_mismatch`, step 4 point 4 is missing the WaaS callback address.
+2. (Skip until step 4 is done; Tommy deferred it to the live switch.) Click **Sign in with Google**. It should return to the preview address. If Google says `redirect_uri_mismatch`, step 4 point 4 is missing the WaaS callback address.
 
 **Tell me:** which of the two worked.
 
