@@ -21,9 +21,9 @@ Updated 2026-10-27 as Tommy did them.
 | 2. Email confirmation, password rules | **Done** 2026-10-27. Confirm email on, minimum 8, lowercase + uppercase + digit, leaked-password check on, matching the CRM project.                                                             |
 | 3. Email templates and sender         | **Done** 2026-10-27 for `rankedceo-waas` (copies in `docs/engineering/auth-email-templates/`). Custom SMTP is off in both projects. The CRM templates are still the plain default and unchanged. |
 | 4. Google sign-in                     | **Deferred by Tommy to the live switch.** Not needed for the rehearsal, which signs up with a password. Do it before the real switch, or sign-in with Google will fail on the new project.       |
-| 5. Storage                            | Not done. One check.                                                                                                                                                                             |
-| 6. Admin access (Vercel)              | Not done. One check.                                                                                                                                                                             |
-| 7. Test it                            | Not done. The magic-link test needs the preview to exist. The Google test waits for step 4.                                                                                                      |
+| 5. Storage                            | **Done** 2026-10-27. `logos` exists in `rankedceo-waas` and is public.                                                                                                                           |
+| 6. Admin access (Vercel)              | **Done** 2026-10-27. `WAAS_ADMIN_EMAILS` is set for Production, Preview and Development (Tommy; the value was not read).                                                                         |
+| 7. Test it                            | Not done. It needs the rehearsal preview to exist, so it happens during the rehearsal. The Google test waits for step 4.                                                                         |
 
 ## How to work through this
 
@@ -130,9 +130,11 @@ ASSUMED: the callback address format above is how Supabase OAuth works in genera
 
 **Tell me:** whether Preview is ticked. Never the value.
 
-## Step 7. Test it (WaaS, after steps 1 to 4)
+## Step 7. Allow the preview address, then test it (WaaS)
 
-This proves the settings work, before the rehearsal depends on them. It uses the Vercel preview from the rehearsal plan (`E3_REHEARSAL_PLAN.md`, step 3), so do it as part of that, not before.
+This proves the settings work, before the rehearsal depends on them. It uses the Vercel preview from the rehearsal plan (`E3_REHEARSAL_PLAN.md`, step 3), so it starts once that preview exists.
+
+**What the preview address is for.** Only the magic link (and Google, later) return to the preview address, so those need it on the redirect list. The sign-up confirmation email does not: `/signup` passes no redirect (READ: `app/(auth)/signup/page.tsx`), so that link goes to the Site URL, `https://crm.rankedceo.com`, which is the production app, not the preview. After clicking it, go back to the preview address by hand and sign in there with the password you chose. Add the preview address to the list before you test the magic link.
 
 **First, allow that one preview address, and only it.**
 
