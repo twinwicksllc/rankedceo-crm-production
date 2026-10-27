@@ -213,7 +213,7 @@ export async function regenerateSection(
 
   // --- Extract business context from tenant brand_config ---
   const { data: tenantRow, error: tenantErr } = await supabase
-    .from("waas_tenants")
+    .from("tenants")
     .select("brand_config, legal_name, primary_trade, target_industry")
     .eq("id", session.tenantId)
     .single();

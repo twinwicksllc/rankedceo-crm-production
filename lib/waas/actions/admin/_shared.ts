@@ -23,7 +23,7 @@ export interface ActionResult<T = null> {
 }
 
 export function parseMissingTenantColumn(msg: string): string | null {
-  const match = msg.match(/column "([^"]+)" of relation "waas_tenants"/);
+  const match = msg.match(/column "([^"]+)" of relation "tenants"/);
   return match ? match[1] : null;
 }
 

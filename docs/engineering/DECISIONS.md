@@ -387,6 +387,49 @@ Status values: **in force**, **implemented**, **on hold**, **superseded**. Imple
 
 ---
 
+## DEC-0030 - The CRM dashboard is not part of the E3 cutover
+
+- Date: 2026-10-27
+- Status: in force
+- Decision: the E3 switch covers the paths that have real users and work on the WaaS
+  tables: audits, WaaS sites and tenants, industry leads, the website chat and the
+  quote forms. The CRM dashboard (companies, contacts, deals, activities, campaigns,
+  email, forms, commissions) is a separate project with its own data-model decision,
+  after the switch. The cutover check "create company/contact/deal" and "avatar
+  upload" are dropped.
+- Evidence: VERIFIED by `docs/engineering/checks/crm_dashboard_columns_check.sql`, run
+  by Tommy in both projects on 2026-10-27. Both projects lack columns the dashboard
+  code names, and they lack different ones. In the CRM project, `companies` lacks
+  `website`, `phone`, `status`, `notes` and others; `contacts` lacks `name`, `status`,
+  `owner_id`; `deals` lacks `name` and `source`; `activities` lacks `status` and
+  `due_date`; the `forms` tables lack most columns; `calendar_provider_connections` does
+  not exist. WaaS lacks fewer (the forms tables and part of `contacts` are there), but
+  still lacks the company, deal, activity and campaign columns.
+- Why the problem is a data-model choice, not a missing-column fix: READ from the code
+  and `0000085_baseline_forward_referenced_crm_tables.sql`. The baseline `companies`
+  table has `domain`, `size`, `zip`, `owner_user_id`, `tags`, `custom_fields`. The forms
+  and zod schemas write `website`, `company_size`, `employee_count`, `zip_code`,
+  `postal_code`, `phone`, `status`. The app's own forms disagree with its zod schemas
+  (`postal_code` against `zip_code`, `company_size` against `employee_count`). Adding
+  columns to `rankedceo-waas` would mean choosing one model and inventing the types of
+  about a hundred columns in the project that serves production.
+- Why defer over fixing now: the 22 CRM-group tables hold no real data (DEC-0028), so
+  nothing that works today is lost. VERIFIED that the company and contact forms already
+  fail in the CRM project.
+- Options not taken, kept for review: (A) add the missing columns to `rankedceo-waas`
+  by migration, which Tommy first chose and then withdrew when the two conflicting
+  models appeared; (B) treat the baseline tables as the model and change the code;
+  (C) treat the app's forms as the model and write the migration after reconciling
+  every conflicting field with Tommy.
+- Consequence: the CRM dashboard stays broken in Production until its own project. The
+  plan's manual checks become sign-up (password, magic link, Google), onboarding, and
+  one lead and one chat. The rehearsal cleanup list (DEC-0029) no longer needs company,
+  contact or deal rows.
+- Used in: `docs/engineering/E3_CLIENT_SWITCH_PLAN.md` (sequence step 8).
+- Source: Tommy, 2026-10-27 ("Defer the CRM dashboard; cut over the WaaS paths").
+
+---
+
 ## Not yet recorded
 
 The numbers **DEC-0002, DEC-0009, DEC-0010 and DEC-0011** are not defined anywhere
