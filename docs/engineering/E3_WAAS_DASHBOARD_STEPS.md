@@ -27,7 +27,7 @@ Do the steps in order. Each step says what to do, then what to tell me. A step t
 | `audit.rankedceo.com`                                           | `https://audit.rankedceo.com/audit/auth/confirm?next=...` and, for forgot-password, `https://audit.rankedceo.com/api/auth/callback?next=/reset-password` |
 | `smile.`, `hvac.`, `plumbing.`, `electrical.` + `rankedceo.com` | `https://<that host>/` (just the front page)                                                                                                             |
 | `qa.rankedceo.com`                                              | `https://qa.rankedceo.com/api/auth/callback?next=...`                                                                                                    |
-| a Vercel preview, for the rehearsal                             | `https://<preview address>.vercel.app/api/auth/callback?next=...`                                                                                        |
+| a Vercel preview, for the rehearsal (added in step 7, not here) | `https://<preview address>.vercel.app/api/auth/callback?next=...`                                                                                        |
 
 Tenant websites such as `client-a.rankedceo.com` have no sign-in, so they need no entry (READ: `grep signIn app/_sites` found nothing).
 
@@ -38,12 +38,11 @@ Tenant websites such as `client-a.rankedceo.com` have no sign-in, so they need n
 3. Under **Redirect URLs**, add these, one per line:
    - `https://*.rankedceo.com/**`
    - `https://rankedceo.com/**`
-   - `https://*.vercel.app/**`
 4. Save.
 
-**Why a wildcard.** One `https://*.rankedceo.com/**` line covers `crm.`, `audit.`, `qa.` and the four industry hosts, and it is the shortest list to keep right. The cost is that any `rankedceo.com` subdomain can receive a sign-in. If you prefer a strict list, add one line per host from the table instead. Your call.
+Do **not** add a `vercel.app` wildcard. Supabase sends the sign-in code to whatever address is on this list, and `https://*.vercel.app/**` would let anyone's Vercel app receive it. The rehearsal preview gets its own single, exact entry in step 7.
 
-**The `https://\*.vercel.app/**` line is for the rehearsal only.\*\* It allows any Vercel preview address. Remove it after the switch is done and settled.
+**Why a wildcard.** One `https://*.rankedceo.com/**` line covers `crm.`, `audit.`, `qa.` and the four industry hosts, and it is the shortest list to keep right. The cost is that any `rankedceo.com` subdomain can receive a sign-in. If you prefer a strict list, add one line per host from the table instead. Your call.
 
 **Do not copy the old deploy guide.** `docs/deployment/DEPLOYMENT_GUIDE.md` lists `https://crm.rankedceo.com/auth/callback`. The code uses `/api/auth/callback`, so that guide is out of line with the code.
 
@@ -120,6 +119,14 @@ ASSUMED: the callback address format above is how Supabase OAuth works in genera
 ## Step 7. Test it (WaaS, after steps 1 to 4)
 
 This proves the settings work, before the rehearsal depends on them. It uses the Vercel preview from the rehearsal plan (`E3_REHEARSAL_PLAN.md`, step 3), so do it as part of that, not before.
+
+**First, allow that one preview address, and only it.**
+
+1. Copy the preview's exact address from Vercel (for example `https://ranked-ceo-xxxx-tom-fenwicks-projects.vercel.app`). Check it is the preview you created for this rehearsal.
+2. Open <https://supabase.com/dashboard/project/klgvdvryewykzlumbkei/auth/url-configuration> (project ref `klgvdvryewykzlumbkei`). Under **Redirect URLs**, add exactly that address followed by `/**`. Save.
+3. When the rehearsal is finished (rollback test done), come back here and **delete that line**.
+
+**Then test.**
 
 1. On the preview address, open `/login` and request a **magic link** for a new test email. The email should arrive from the sender you set in step 3, and the link should return to the preview address. If it opens a Supabase error saying the redirect is not allowed, step 1 is missing an entry. Tell me the address in the error bar.
 2. Click **Sign in with Google**. It should return to the preview address. If Google says `redirect_uri_mismatch`, step 4 point 4 is missing the WaaS callback address.
