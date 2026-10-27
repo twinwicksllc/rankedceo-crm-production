@@ -1,6 +1,6 @@
 # E3 steps: set up the rankedceo-waas dashboard
 
-Status: DRAFT for Tommy. Nothing here has been done. It follows the settings list in `E3_CLIENT_SWITCH_PLAN.md` section 3 and DEC-0029 (the rehearsal runs from a Vercel preview).
+Status: a working checklist for Tommy. Steps 1 to 3, 5 and 6 are **done** (2026-10-27); step 4 is deferred to the live switch; step 7 waits for the rehearsal preview. The table below is the authority on state; the step texts are kept as the record of what was done and why. It follows the settings list in `E3_CLIENT_SWITCH_PLAN.md` section 3 and DEC-0029 (the rehearsal runs from a Vercel preview).
 
 Labels: **READ** = taken from the code. **VERIFIED** = checked by a command or query. **ASSUMED** = not checked; check it when you reach that step.
 
@@ -29,7 +29,7 @@ Updated 2026-10-27 as Tommy did them.
 
 Do the steps in order. Each step says what to do, then what to tell me. A step takes a few minutes. You can stop between steps and nothing is half-done, because each setting stands on its own. The rehearsal (DEC-0029) signs up with a password, so it needs steps 1, 2, 3 and 6. Step 4 (Google) is needed only if you also test Google sign-in on the preview (step 7, point 2). Step 5 is one check and can be done any time. Before the real switch, do all of them.
 
-## Step 1. Site URL and redirect URLs (WaaS)
+## Step 1. Site URL and redirect URLs (WaaS) — DONE 2026-10-27
 
 **Why.** Sign-in emails and Google sign-in send the person back to the app. Supabase only allows addresses on a list. The list lives in each project, and WaaS has the wrong or empty one. READ: the sign-in pages build the return address from whatever host the person is on, so every host needs an entry.
 
@@ -64,7 +64,7 @@ Do **not** add a `vercel.app` wildcard. Supabase sends the sign-in code to whate
 
 ASSUMED: whether Supabase matches an address with a `?next=...` query against an entry ending in `/**`. Step 7 tests it.
 
-## Step 2. Email confirmation, password rules (WaaS, compare with CRM)
+## Step 2. Email confirmation, password rules (WaaS, compare with CRM) — DONE 2026-10-27
 
 **Why.** The sign-up page has no "check your email" screen: after sign-up it always goes to `/onboarding` (READ: `app/(auth)/signup/page.tsx:72-75`). With **Confirm email** on, a new person has no session until they click the link in the email, so `/onboarding` sends them to `/login` (READ: `app/(dashboard)/onboarding/page.tsx:15-18`) and they get no on-screen hint. That is how the CRM project works today. VERIFIED by Tommy on 2026-10-27: **Confirm email is on in both projects**, and the minimum password length is 8 in both. The repo cannot tell us the CRM setting, so look at it. In the current Supabase dashboard, **Confirm email** is a switch in the **User Signups** section at the top of the Providers page, above the provider list, not inside the Email panel.
 
@@ -78,7 +78,7 @@ ASSUMED: whether Supabase matches an address with a `?next=...` query against an
 
 READ: the app requires at least 8 characters on four sign-up pages and the reset page, and checks nothing on the main `/signup` page. A server minimum below 8 would let that page accept weak passwords.
 
-## Step 3. Email templates and sender (WaaS, compare with CRM)
+## Step 3. Email templates and sender (WaaS, compare with CRM) — DONE 2026-10-27
 
 **Why.** Sign-up, magic-link and password-reset emails use templates and a sender stored in each project. The repo has no copy of them (READ: no `supabase/config.toml`, no templates). If WaaS still has Supabase's default, people get a generic email from a Supabase address.
 
@@ -93,7 +93,7 @@ READ: the app requires at least 8 characters on four sign-up pages and the reset
 
 READ: a different set of emails (the ones the app sends itself, such as site-ready notices) goes through Resend or SendGrid using Vercel variables, not through this page.
 
-## Step 4. Google sign-in (WaaS, compare with CRM)
+## Step 4. Google sign-in (WaaS, compare with CRM) — DEFERRED to the live switch
 
 **Why.** Two pages offer "Sign in with Google": the CRM login and the audit login (READ). Google must be enabled in WaaS with the same Google app, and Google must be told the WaaS project's return address.
 
@@ -108,7 +108,7 @@ READ: a different set of emails (the ones the app sends itself, such as site-rea
 
 ASSUMED: the callback address format above is how Supabase OAuth works in general; the WaaS panel in point 3 above shows the exact one, so use that.
 
-## Step 5. Storage (WaaS)
+## Step 5. Storage (WaaS) — DONE 2026-10-27
 
 **Nothing to copy by hand.** READ and VERIFIED by `grep .storage`: the code uses only two buckets, `logos` and `client-uploads`. Both go through the WaaS service-role key and are created by the code when missing, so no bucket needs to be made. `avatars` and `listing-images` are not used by any code, and no avatar upload exists.
 
@@ -119,7 +119,7 @@ ASSUMED: the callback address format above is how Supabase OAuth works in genera
 
 **Tell me:** whether `logos` is there and public. If it is missing, say so; the code will create it on the first logo upload.
 
-## Step 6. Admin access (Vercel, not Supabase)
+## Step 6. Admin access (Vercel, not Supabase) — DONE 2026-10-27
 
 **Why.** The `/admin` area lets in anyone on the `WAAS_ADMIN_EMAILS` list. READ: new sign-ups get the role `rep`, so the list is the only way in. The rehearsal preview needs the variable too.
 
@@ -130,7 +130,7 @@ ASSUMED: the callback address format above is how Supabase OAuth works in genera
 
 **Tell me:** whether Preview is ticked. Never the value.
 
-## Step 7. Allow the preview address, then test it (WaaS)
+## Step 7. Allow the preview address, then test it (WaaS) — WAITS for the rehearsal preview
 
 This proves the settings work, before the rehearsal depends on them. It uses the Vercel preview from the rehearsal plan (`E3_REHEARSAL_PLAN.md`, step 3), so it starts once that preview exists.
 
