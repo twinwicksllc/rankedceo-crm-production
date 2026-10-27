@@ -1,0 +1,22 @@
+<!--
+  Supabase auth email template: Magic Link
+  Project: rankedceo-waas (ref klgvdvryewykzlumbkei)
+  Subject: Your RankedCEO sign-in link
+  Applied by Tommy in the dashboard on 2026-10-27 (Authentication > Emails > Templates).
+  This file is a record of what is live, not something the app reads. Keep
+  {{ .ConfirmationURL }} exactly as written: Supabase fills it in.
+-->
+<div style="font-family: Arial, Helvetica, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; color: #1f2937;">
+  <h2 style="margin: 0 0 16px; font-size: 20px;">Sign in to RankedCEO</h2>
+  <p style="margin: 0 0 16px; font-size: 15px; line-height: 1.5;">
+    Use the button below to sign in. The link works once and expires after a short time.
+  </p>
+  <p style="margin: 24px 0;">
+    <a href="{{ .ConfirmationURL }}" style="display: inline-block; background: #2563eb; color: #ffffff; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: bold;">Sign in</a>
+  </p>
+  <p style="margin: 0 0 8px; font-size: 13px; color: #6b7280;">
+    If the button does not work, copy and paste this link into your browser:
+  </p>
+  <p style="margin: 0 0 16px; font-size: 13px; color: #6b7280; word-break: break-all;">{{ .ConfirmationURL }}</p>
+  <p style="margin: 0; font-size: 13px; color: #6b7280;">If you did not ask to sign in, you can ignore this email.</p>
+</div>
