@@ -1,6 +1,6 @@
 # Progress tracker: B5 + A3 + A7 (and the parked CRM grants work)
 
-Last updated: 2026-10-31 (review fixes for PR #340 added). Branch: `ccr-d199a1f3-go2zy8`. **If a session is interrupted, read this file first**, then `git log --oneline origin/main..HEAD`.
+Last updated: 2026-10-31, after PR #340 was squashed and merged to `main` as `d178b1b`. Branch: `ccr-d199a1f3-go2zy8`. **If a session is interrupted, read this file first**, then `git log --oneline origin/main..HEAD`.
 
 Status legend: DONE (committed and pushed), TODO (not started), BLOCKED-ON-TOMMY (needs a person).
 
@@ -43,20 +43,21 @@ Earlier docs commits on the same branch: `98ea0de` (DEC-0031, `STATUS_2026-10-31
 
 ## Remaining steps
 
+PR #340 is merged. Dependabot PR #339 (zod 4) is closed; zod stays on 3.x until the planned upgrade below.
+
 | Step | Who | State |
 |---|---|---|
-| Apply `033_waas_leads_tenant_site_source.sql` to `rankedceo-waas` (alone, let it finish) | Tommy | BLOCKED-ON-TOMMY |
-| Apply `034_waas_leads_tenant_site_columns.sql`, then run `docs/engineering/checks/034_postcheck.sql` (expect 6 PASS) | Tommy; Claude can run the read-only post-check | BLOCKED-ON-TOMMY |
-| Apply `035_insert_tenant_lead_limited.sql` after 033 and 034 (atomic rate limit; the form will not submit without it) | Tommy | BLOCKED-ON-TOMMY |
-| Set `WAAS_LEAD_FORM_SECRET` and `WAAS_LEAD_IP_SALT` in Vercel (form is hidden on live sites without a secret) | Tommy | BLOCKED-ON-TOMMY |
-| Apply migrations BEFORE deploying to Production (else visitors see the "call us" fallback and no lead is saved) | Tommy | BLOCKED-ON-TOMMY |
-| Open the PR for this branch (not opened; branch also carries the earlier docs commits) | Claude, when asked | TODO |
-| Vercel Preview: set `WAAS_LOCAL_PACK_ENABLED=true`, run one real audit with no typed competitors; expect exactly one Serper `/places` call, 3 AUTO-DETECTED competitors, a GBP card, `score_version` 3 | Tommy + Claude | TODO |
-| Save the real `/places` response as a test fixture; confirm field names (`phoneNumber`, hours, thumbnail). Code is defensive and skips absent fields, but they were assumed | Claude | TODO |
-| Preview: open an existing tenant site, confirm the booking form looks right in its brand; submit it; check the email, `/admin/leads` and the portal Leads tab; trip the honeypot and rate limit | Tommy + Claude | TODO |
-| Open an old stored v2 audit report to confirm it still renders and the PDF still builds | Tommy | TODO |
+| Migrations 033 and 034 applied to `rankedceo-waas` | Tommy | DONE |
+| Migration 035 applied to `rankedceo-waas`, then the seven-check post-check (all PASS) | Claude ran it at Tommy's request | DONE |
+| `WAAS_LOCAL_PACK_ENABLED`: `false` on `ranked-ceo-crm` (production), `true` on `rankedceo-crm-qa` (preview) | Claude, via Vercel | DONE |
+| `WAAS_LEAD_FORM_SECRET` and `WAAS_LEAD_IP_SALT`, set separately on each project (different values; production on `ranked-ceo-crm`, preview on `rankedceo-crm-qa`) | Tommy, Vercel dashboard. Not set by Claude, so the values never went through chat | BLOCKED-ON-TOMMY |
+| Deploy and test on the QA preview: submit a lead on a tenant preview host; check the owner email, `/admin/leads` and the portal Leads tab; trip the honeypot | Tommy + Claude | TODO |
+| Vercel Preview with the flag on: run one real audit with no typed competitor; expect one Serper `/places` call, AUTO-DETECTED competitors, a GBP card, `score_version` 3 | Tommy + Claude | TODO |
+| Save a real `/places` response as a fixture and confirm the field names (`phoneNumber`, hours, thumbnail). The code skips absent fields, but these names were assumed | Claude | TODO |
+| Open an old stored v2 report and its PDF to confirm they still render | Tommy | TODO |
 | Production flag rollout after about a week of Serper spend review | Tommy | TODO |
-| Optional follow-ups: AUTO-DETECTED badge on leaderboard/gap analysis/local-pack panel (only on the deep-dive card now); owner-email fallback for tenants with no contact email; A3 deferrals below | Claude | TODO |
+| Upgrade zod 3 to 4 as its own planned piece of work: about ten call sites in six files plus tests (see Dependabot PR #339; the typecheck errors are listed there). Re-check `lib/waas/validation/tenant-lead.ts` as part of it | Claude, when planned | TODO (later) |
+| Optional follow-ups: AUTO-DETECTED badge on the leaderboard, gap analysis and local-pack panel (currently only on the deep-dive card); owner-email fallback for tenants with no contact email; A3 deferrals below | Claude | TODO (later) |
 
 ## Known gaps and things not verified
 
