@@ -31,6 +31,11 @@ import { AboutSection } from "@/components/waas/sections/AboutSection";
 import { FAQSection } from "@/components/waas/sections/FAQSection";
 import { HowItWorksSection } from "@/components/waas/sections/HowItWorksSection";
 import { GallerySection } from "@/components/waas/sections/GallerySection";
+import { signSiteLeadToken } from "@/lib/waas/lead-form-token";
+import {
+  bookingFormMode,
+  resolveBookingFormSettings,
+} from "@/lib/waas/booking-form-config";
 
 interface SectionRendererProps {
   tenant: ResolvedTenant;
@@ -96,15 +101,26 @@ function renderSection(
       );
     case "financing":
       return <FinancingBlock key={`financing-${section.order}`} {...props} />;
-    case "booking":
+    case "booking": {
+      // B5: the lead form. Signed here, on the server, so the browser can only
+      // submit for the tenant this page was rendered for.
+      const token = signSiteLeadToken(tenant.id);
+      const formMode = bookingFormMode({
+        settingsEnabled: resolveBookingFormSettings(section.config).enabled,
+        tenantStatus: tenant.status,
+        hasToken: token !== null,
+      });
       return (
         <BookingSection
           key={`booking-${section.order}`}
           tenant={tenant}
           config={section.config}
           content={section.content as BookingSectionContent | undefined}
+          formMode={formMode}
+          siteLeadToken={formMode === "live" ? token : null}
         />
       );
+    }
     case "reviews":
       return (
         <ReviewNFCSection

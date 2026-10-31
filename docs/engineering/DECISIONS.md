@@ -463,6 +463,26 @@ Status values: **in force**, **implemented**, **on hold**, **superseded**. Imple
 
 ---
 
+## DEC-0033 - Tenant-site contact form lives in the booking section; leads reach the owner by email and the portal (B5)
+
+- Date: 2026-10-31
+- Status: implemented in the combined B5/A3/A7 PR. Live for visitors once migrations 033 and 034 are applied to `rankedceo-waas` and the site is `active`.
+- Decision (Tommy, 2026-10-31):
+  - The form extends the required `booking` section instead of adding a section type. A new type would touch about ten files and give a site two contact slots next to the required booking section.
+  - Default ON for existing tenants: form only if there is no Calendly link; a "Prefer to send a message?" form under the Calendly embed if there is one. The owner can switch it off in the editor.
+  - Spam protection without reCAPTCHA (tenant custom domains): honeypot field, minimum fill time (2s) and a per-hour limit counted in the `leads` table (5 per IP, 3 per email, per tenant). A tripped honeypot or timing check returns a fake success. The IP is stored only as a salted SHA-256 hash.
+  - Leads are emailed to the owner (`tenant_lead_received`) and listed in the portal under a Leads tab; admins see them in `/admin/leads` under a "Website Forms" filter.
+- How it was built (differs from the plan in these ways):
+  - The form settings are `config` keys on the booking section (`formEnabled`, `formHeading`, `formButtonLabel`, `formSuccessMessage`, `formServices`), not content keys. They reuse the editor's existing boolean/text/list fields and allow-lists.
+  - The tenant is not resolved from the request host. The server page signs the tenant id (`lib/waas/lead-form-token.ts`, HMAC; secret `WAAS_LEAD_FORM_SECRET`, then `AUDIT_SHARE_SECRET`, then the service-role key) and the action verifies it, then requires `tenants.status = 'active'`. With no secret the form is not shown (fail closed). In owner previews the form shows but cannot send.
+  - No owner-email fallback: if a tenant has no `brand_config.contact.email` the email is skipped and logged, and the lead is still saved and visible in the portal.
+  - Instead of a digest, emails stop for a tenant after 20 leads in an hour (leads are still saved).
+- Data: `waas_lead_source` gains `tenant_site` (033, run alone); `leads` gains `message`, `page_url`, `service_requested`, `ip_hash`, three indexes and a CHECK that a `tenant_site` lead has a tenant (034). No RLS or grant change; `leads_anon_insert` still allows only `audit_tool` and `email_capture`. Verify with `docs/engineering/checks/034_postcheck.sql`.
+- Used in: `components/waas/sections/{BookingSection,booking-form}.tsx`, `lib/waas/actions/tenant-lead.ts`, `lib/waas/services/{tenant-lead-service,tenant-lead-guard}.ts`, `lib/waas/validation/tenant-lead.ts`, `app/edit/[reviewToken]/leads-tab.tsx`.
+- Source: Tommy approved the plan and the four rollout choices in the 2026-10-31 session.
+
+---
+
 ## Not yet recorded
 
 The numbers **DEC-0002, DEC-0009, DEC-0010 and DEC-0011** are not defined anywhere

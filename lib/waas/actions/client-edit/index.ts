@@ -10,5 +10,6 @@ export * from "./history";
 export * from "./portal";
 export * from "./domains";
 export * from "./audit";
+export * from "./leads";
 export * from "./compute-audit-score-comparison";
 export * from "./section-regen";

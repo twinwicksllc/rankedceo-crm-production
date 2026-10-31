@@ -9,7 +9,7 @@ interface LeadListProps {
 
 export function LeadList({ initialLeads }: LeadListProps) {
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"all" | "optimization">("all");
+  const [filter, setFilter] = useState<"all" | "optimization" | "website">("all");
 
   const filteredLeads = useMemo(() => {
     return initialLeads.filter((lead) => {
@@ -17,9 +17,13 @@ export function LeadList({ initialLeads }: LeadListProps) {
         !search ||
         lead.email.toLowerCase().includes(search.toLowerCase()) ||
         (lead.company?.toLowerCase() || "").includes(search.toLowerCase()) ||
-        (lead.name?.toLowerCase() || "").includes(search.toLowerCase());
+        (lead.name?.toLowerCase() || "").includes(search.toLowerCase()) ||
+        (lead.tenant_name?.toLowerCase() || "").includes(search.toLowerCase());
 
-      const matchesFilter = filter === "all" || lead.optimization_requested === true;
+      const matchesFilter =
+        filter === "all" ||
+        (filter === "optimization" && lead.optimization_requested === true) ||
+        (filter === "website" && lead.source === "tenant_site");
 
       return matchesSearch && matchesFilter;
     });
@@ -45,6 +49,14 @@ export function LeadList({ initialLeads }: LeadListProps) {
             }`}
           >
             Optimization Requests 🚀
+          </button>
+          <button
+            onClick={() => setFilter("website")}
+            className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              filter === "website" ? "bg-emerald-500/20 text-emerald-400" : "text-white/40 hover:text-white"
+            }`}
+          >
+            Website Forms 📬
           </button>
         </div>
 
@@ -92,15 +104,32 @@ export function LeadList({ initialLeads }: LeadListProps) {
                       {lead.phone && <div className="text-[10px] text-white/30 mt-0.5">{lead.phone}</div>}
                     </td>
                     <td className="px-6 py-4 text-sm text-white/60">
-                      {lead.company || "—"}
+                      {lead.source === "tenant_site"
+                        ? lead.tenant_name || "—"
+                        : lead.company || "—"}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-xs text-blue-400 truncate max-w-[200px]" title={lead.target_url || ""}>
-                        {lead.target_url ? lead.target_url.replace(/^https?:\/\//, "") : "—"}
-                      </div>
+                      {lead.source === "tenant_site" ? (
+                        <div className="text-xs text-white/60 max-w-[260px]">
+                          {lead.service_requested ? (
+                            <div className="text-white/40">{lead.service_requested}</div>
+                          ) : null}
+                          <div className="line-clamp-2 break-words" title={lead.message || ""}>
+                            {lead.message || "—"}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-xs text-blue-400 truncate max-w-[200px]" title={lead.target_url || ""}>
+                          {lead.target_url ? lead.target_url.replace(/^https?:\/\//, "") : "—"}
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4">
-                      {lead.optimization_requested ? (
+                      {lead.source === "tenant_site" ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          WEBSITE FORM 📬
+                        </span>
+                      ) : lead.optimization_requested ? (
                         <span className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">
                           OPTIMIZATION 🚀
                         </span>
@@ -114,6 +143,9 @@ export function LeadList({ initialLeads }: LeadListProps) {
                       {new Date(lead.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4">
+                      {lead.source === "tenant_site" || !lead.audit_id ? (
+                        <span className="text-[10px] text-white/20">—</span>
+                      ) : (
                       <div className="flex gap-2">
                         <a
                           href={`/audit/${lead.audit_id}`}
@@ -130,6 +162,7 @@ export function LeadList({ initialLeads }: LeadListProps) {
                           PDF
                         </a>
                       </div>
+                      )}
                     </td>
                   </tr>
                 ))

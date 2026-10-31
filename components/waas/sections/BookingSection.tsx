@@ -7,6 +7,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import {
+  resolveBookingFormSettings,
+  type BookingFormMode,
+} from "@/lib/waas/booking-form-config";
+import { BookingForm } from "./booking-form";
 import type {
   BookingSectionContent,
   ResolvedTenant,
@@ -17,6 +22,10 @@ interface BookingSectionProps {
   tenant: ResolvedTenant;
   config: SectionConfig["config"];
   content?: BookingSectionContent;
+  /** B5: decided on the server (see bookingFormMode). Absent means no form. */
+  formMode?: BookingFormMode;
+  /** Signed tenant token for the lead form; null when not live. */
+  siteLeadToken?: string | null;
 }
 
 // Inline Calendly embed (client component)
@@ -59,6 +68,8 @@ export function BookingSection({
   tenant,
   config,
   content,
+  formMode = "off",
+  siteLeadToken = null,
 }: BookingSectionProps) {
   const variant = (config.variant as string) ?? "inline";
   const calendlyUrl = tenant.calendly_url;
@@ -66,6 +77,18 @@ export function BookingSection({
     tenant.brand_config.business_name ?? tenant.legal_name ?? "Us";
   const primaryColor = tenant.brand_config.colors?.primary ?? "#2563EB";
   const phone = tenant.brand_config.contact?.phone;
+  const formSettings = resolveBookingFormSettings(config);
+  const showForm = formMode === "live" || formMode === "preview";
+  const form = showForm ? (
+    <BookingForm
+      tenantId={tenant.id}
+      siteToken={siteLeadToken}
+      mode={formMode === "live" ? "live" : "preview"}
+      settings={formSettings}
+      phone={phone}
+      headingId="booking-form-heading"
+    />
+  ) : null;
 
   // Don't render if no Calendly URL configured
   if (!calendlyUrl) {
@@ -90,6 +113,7 @@ export function BookingSection({
             {content?.subheadline ??
               `Contact ${businessName} today for a free estimate. We respond fast.`}
           </p>
+          {form ? <div className="mb-8 text-left">{form}</div> : null}
           {phone && (
             <a
               href={`tel:${phone.replace(/\D/g, "")}`}
@@ -165,6 +189,18 @@ export function BookingSection({
             </p>
           </div>
         )}
+
+        {form ? (
+          <div className="mx-auto mt-12 max-w-2xl">
+            <p
+              className="mb-4 text-center text-sm font-brand-body"
+              style={{ color: "var(--brand-text)", opacity: 0.6 }}
+            >
+              Prefer to send a message?
+            </p>
+            {form}
+          </div>
+        ) : null}
       </div>
     </section>
   );

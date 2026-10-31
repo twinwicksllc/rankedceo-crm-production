@@ -90,6 +90,13 @@ export interface WaasLead {
   utm_campaign: string | null;
   referrer_url: string | null;
   optimization_requested: boolean;
+  /** audit_tool | email_capture | onboarding | referral | manual | tenant_site */
+  source?: string;
+  tenant_id?: string | null;
+  /** tenant_site leads (B5): what the visitor wrote and where they sent it from. */
+  message?: string | null;
+  service_requested?: string | null;
+  page_url?: string | null;
   created_at: string;
   updated_at: string;
 }
