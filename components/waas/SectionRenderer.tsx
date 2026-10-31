@@ -41,6 +41,11 @@ interface SectionRendererProps {
   tenant: ResolvedTenant;
   sections: SectionConfig[];
   siteConfig: TenantSiteConfig | null;
+  /**
+   * True for owner and admin previews. Previews never receive a lead-form token,
+   * so a preview cannot create real leads, even for an active tenant.
+   */
+  previewMode?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -50,6 +55,7 @@ interface SectionRendererProps {
 function renderSection(
   section: SectionConfig,
   tenant: ResolvedTenant,
+  previewMode: boolean,
 ): React.ReactNode {
   const props = { tenant, config: section.config };
 
@@ -104,12 +110,16 @@ function renderSection(
     case "booking": {
       // B5: the lead form. Signed here, on the server, so the browser can only
       // submit for the tenant this page was rendered for.
-      const token = signSiteLeadToken(tenant.id);
-      const formMode = bookingFormMode({
-        settingsEnabled: resolveBookingFormSettings(section.config).enabled,
-        tenantStatus: tenant.status,
-        hasToken: token !== null,
-      });
+      const token = previewMode ? null : signSiteLeadToken(tenant.id);
+      const formMode = previewMode
+        ? resolveBookingFormSettings(section.config).enabled
+          ? "preview"
+          : "off"
+        : bookingFormMode({
+            settingsEnabled: resolveBookingFormSettings(section.config).enabled,
+            tenantStatus: tenant.status,
+            hasToken: token !== null,
+          });
       return (
         <BookingSection
           key={`booking-${section.order}`}
@@ -176,6 +186,7 @@ export function SectionRenderer({
   tenant,
   sections,
   siteConfig,
+  previewMode = false,
 }: SectionRendererProps) {
   const enabledSections = sections
     .filter((s) => s.enabled)
@@ -191,7 +202,9 @@ export function SectionRenderer({
 
   return (
     <main id="main-content">
-      {enabledSections.map((section) => renderSection(section, tenant))}
+      {enabledSections.map((section) =>
+        renderSection(section, tenant, previewMode),
+      )}
 
       {/* Custom CSS injection */}
       {siteConfig?.custom_css && (

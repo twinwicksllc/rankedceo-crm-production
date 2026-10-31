@@ -96,29 +96,25 @@ This scorecard is a point-in-time snapshot. Update it when a gap in
 `docs/waas/IDEAL_AUDIT_AND_BUILDER_VISION.md` is closed, and bump the `main` ref and date
 at the top.
 
-## Re-check, 2026-10-31 (`main` @ `0e0da60`)
+## Re-check, 2026-10-31 (`main` @ `0e0da60`, before PR #340)
 
-No status changed. Every open item was re-checked by grep against the current code, and
-each one is still open:
+This was a snapshot taken on `main` before PR #340. Its findings are superseded by the
+table and tally above, which reflect PR #340. Do not read the list below as the current
+status.
 
-- **A3** no GBP, NAP or citation logic in `audit-engine/`.
+- **A3, A7, B5:** open on `main` at that point. PR #340 changes all three; see the table.
 - **A4** `WAAS_LOCAL_PACK_ENABLED` still defaults to `false` (`.env.example`).
 - **A6** `domain_authority: 0` and `referring_domains: 0` still hardcoded in `audit-engine/index.ts`.
-- **A7** the audit start form still takes competitor URLs as typed text.
 - **A9** no `crons` in `vercel.json`.
 - **B2** `app/_sites/[site]/` still has only `page.tsx`.
-- **B5** no `<form>` or submit handler in `components/waas/sections/`. The word "lead" appears in section copy only.
 - **B6** no calls to the Vercel domains API in `lib/` or `app/`.
 - **B7** no GA4, GTM or tracking settings in `lib/waas/`, `app/_sites/` or `components/waas/`.
 
 Work since 2026-10-21 that touched the vision's areas but did not close a gap:
 
 - **E3 (still partial), database.** `rankedceo-waas` has migrations 030, 031 and 032 applied and verified (`docs/engineering/DECISIONS.md`, DEC-0027). `anon` can run only the two intended functions there. The CRM project (`wcednzaxmxwfiijzmjmx`) was found to be missing signed-in access to its RLS helper functions and to have unguarded onboarding RPCs. A fix is drafted and tested locally, not applied (DEC-0031, `docs/engineering/checks/crm_grants_*`). Paused until the CRM login is tested by hand.
-- **B5 neighbours.** #332, #333 and #335 fixed the industry landing quote forms and their lead inserts. Those are not the tenant-site builder, so B5 stays open.
+- **Lead-form neighbours.** #332, #333 and #335 fixed the industry landing quote forms and their lead inserts. Those are not the tenant-site builder.
 - **Smile.** #331 fixed quote pool and assessment account lookups. No gap in this scorecard.
 
-Not re-verified today: B4 PR 2 (stable ids) state, A8's builder-action half, and B9's
-version history. They are marked as they were on 2026-10-21.
-
-Tally unchanged: 8 fixed, 6 partial, 10 open of 24.
-
+Not re-verified: B4 PR 2 (stable ids) state, A8's builder-action half, and B9's version
+history. They are marked as they were on 2026-10-21.

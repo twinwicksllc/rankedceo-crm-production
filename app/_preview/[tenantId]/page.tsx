@@ -178,6 +178,7 @@ export default async function PreviewTenantPage({
       tenant={result.tenant}
       sections={sections}
       siteConfig={result.siteConfig}
+      previewMode
     />
   );
 }

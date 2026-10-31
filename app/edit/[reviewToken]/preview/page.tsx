@@ -146,6 +146,7 @@ export default async function ClientEditorPreviewPage({
       tenant={data.tenant}
       sections={data.sections}
       siteConfig={data.siteConfig}
+      previewMode
     />
   );
 }

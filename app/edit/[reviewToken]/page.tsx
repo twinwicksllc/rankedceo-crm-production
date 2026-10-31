@@ -154,12 +154,18 @@ export default async function ClientEditorPage({
   if (tab === "leads") {
     const leadsResult = await getTenantLeads(reviewToken);
 
+    // A failed load is shown as an error, not as "no messages yet".
     return (
       <PortalShell
         session={sessionShape}
         portalData={null}
         activeTab="leads"
         leads={leadsResult.success ? (leadsResult.data ?? []) : []}
+        leadsError={
+          leadsResult.success
+            ? null
+            : (leadsResult.error ?? "Your messages could not be loaded.")
+        }
       />
     );
   }

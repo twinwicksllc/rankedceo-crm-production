@@ -157,6 +157,31 @@ export async function runFullAudit(
     searchLocation,
   )();
 
+  // ── On-page crawl (A5) ──
+  // A real crawl of the target site, run in parallel with PageSpeed. Best-effort:
+  // a crawl failure resolves to null and never fails the audit. Skipped in mock
+  // mode so offline/demo audits make no network calls.
+  const onPagePromise: Promise<OnPageCrawlResult | null> =
+    provider === "mock"
+      ? Promise.resolve(null)
+      : crawlOnPage(targetUrl, { locationHint: searchLocation }).catch((err) => {
+          auditDebug("onpage:error", { error: String(err).slice(0, 200) });
+          return null;
+        });
+
+  // PageSpeed depends only on the target URL, so start it now too. Errors are
+  // captured here and handled where the result is used, so a failure cannot
+  // reject before we await it.
+  const pageSpeedPromise: Promise<
+    { ok: true; value: PageSpeedReport | null } | { ok: false; err: unknown }
+  > | null =
+    provider === "mock"
+      ? null
+      : runPageSpeedAudit(targetUrl).then(
+          (value) => ({ ok: true as const, value }),
+          (err: unknown) => ({ ok: false as const, err }),
+        );
+
   // A7: competitors the visitor typed always win; the local pack fills any
   // remaining slots (up to 3). Rankings need the final list, so wait for the
   // lookup here (it is time-limited and never throws).
@@ -254,18 +279,6 @@ export async function runFullAudit(
         : null,
     );
 
-  // ── On-page crawl (A5) ──
-  // A real crawl of the target site, run in parallel with PageSpeed. Best-effort:
-  // a crawl failure resolves to null and never fails the audit. Skipped in mock
-  // mode so offline/demo audits make no network calls.
-  const onPagePromise: Promise<OnPageCrawlResult | null> =
-    provider === "mock"
-      ? Promise.resolve(null)
-      : crawlOnPage(targetUrl, { locationHint: searchLocation }).catch((err) => {
-          auditDebug("onpage:error", { error: String(err).slice(0, 200) });
-          return null;
-        });
-
   // ── 2. Run PageSpeed ────────────────────────────────────────────────────────────────────
   let pageSpeed: PageSpeedReport | null = null;
 
@@ -275,8 +288,9 @@ export async function runFullAudit(
       available: pageSpeed !== null,
     });
   } else {
-    try {
-      pageSpeed = await runPageSpeedAudit(targetUrl);
+    const outcome = await pageSpeedPromise!;
+    if (outcome.ok) {
+      pageSpeed = outcome.value;
       auditDebug("pagespeed:live_complete", {
         available: pageSpeed !== null,
       });
@@ -284,7 +298,8 @@ export async function runFullAudit(
         manualReview = true;
         manualReviewNote = "PageSpeed API returned no analyzable data.";
       }
-    } catch (err) {
+    } else {
+      const err = outcome.err;
       console.error("[AuditEngine] PageSpeed failed:", err);
       auditDebug("pagespeed:error", {
         error: String(err).slice(0, 200),

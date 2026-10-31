@@ -17,7 +17,6 @@ import {
   RATE_WINDOW_MS,
   checkSpamSignals,
   hashIp,
-  isRateLimited,
 } from "./tenant-lead-guard";
 
 export interface TenantLeadRow {
@@ -33,17 +32,27 @@ export interface TenantLeadRow {
   ip_hash: string | null;
 }
 
+export type SubmitLimitedResult =
+  | { status: "ok"; id: string; tenantCount: number }
+  | { status: "rate_limited" }
+  | { status: "error" };
+
 export interface TenantLeadDeps {
   now: () => number;
   loadTenant: (
     id: string,
   ) => Promise<{ id: string; status: string; businessName: string } | null>;
-  countRecent: (
-    tenantId: string,
-    keys: { ipHash: string | null; email: string },
-    sinceIso: string,
-  ) => Promise<{ ip: number; email: number; tenant: number }>;
-  insertLead: (row: TenantLeadRow) => Promise<{ id: string } | null>;
+  /**
+   * Checks the per-hour limits and inserts the lead in ONE database step, under
+   * a per-tenant lock (see migration 035). Two checks followed by a separate
+   * insert would let parallel requests bypass the limits.
+   */
+  submitLimited: (args: {
+    tenantId: string;
+    row: TenantLeadRow;
+    windowStartIso: string;
+    limits: { perIp: number; perEmail: number };
+  }) => Promise<SubmitLimitedResult>;
   /** Fire-and-forget email to the tenant. Failures must not reach the visitor. */
   notify: (args: {
     tenantId: string;
@@ -100,20 +109,6 @@ export async function processTenantLead(
   }
 
   const ipHash = hashIp(ctx.ip, tenant.id);
-  const counts = await deps.countRecent(
-    tenant.id,
-    { ipHash, email: data.email },
-    new Date(now - RATE_WINDOW_MS).toISOString(),
-  );
-  if (isRateLimited(counts)) {
-    return {
-      ok: false,
-      code: "rate_limited",
-      error:
-        "You have sent several messages recently. Please try again later or call us.",
-    };
-  }
-
   const row: TenantLeadRow = {
     tenant_id: tenant.id, // the verified tenant, never the raw request value
     source: "tenant_site",
@@ -126,8 +121,22 @@ export async function processTenantLead(
     page_url: data.pageUrl ?? null,
     ip_hash: ipHash,
   };
-  const saved = await deps.insertLead(row);
-  if (!saved) {
+
+  const result = await deps.submitLimited({
+    tenantId: tenant.id,
+    row,
+    windowStartIso: new Date(now - RATE_WINDOW_MS).toISOString(),
+    limits: { perIp: RATE_LIMITS.perIp, perEmail: RATE_LIMITS.perEmail },
+  });
+  if (result.status === "rate_limited") {
+    return {
+      ok: false,
+      code: "rate_limited",
+      error:
+        "You have sent several messages recently. Please try again later or call us.",
+    };
+  }
+  if (result.status === "error") {
     return {
       ok: false,
       code: "error",
@@ -136,11 +145,11 @@ export async function processTenantLead(
   }
 
   // The lead is saved. Email is best effort, and skipped during a flood.
-  if (counts.tenant < RATE_LIMITS.perTenantEmails) {
+  if (result.tenantCount < RATE_LIMITS.perTenantEmails) {
     try {
       await deps.notify({
         tenantId: tenant.id,
-        leadId: saved.id,
+        leadId: result.id,
         businessName: tenant.businessName,
         lead: row,
       });

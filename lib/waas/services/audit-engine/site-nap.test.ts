@@ -36,6 +36,14 @@ describe("extractNap", () => {
     assert.equal(nap.source, "tel-link");
   });
 
+  it("skips a tel: link with a malformed percent escape instead of throwing", () => {
+    const nap = extractNap(
+      `<a href="tel:%E0%A4%A">bad</a><a href="tel:+15125550142">good</a>`,
+    );
+    assert.equal(nap.phone, "+15125550142");
+    assert.equal(nap.source, "tel-link");
+  });
+
   it("falls back to a phone number printed in the text", () => {
     const nap = extractNap(`<body><p>Call us at (512) 555-0142 today</p></body>`);
     assert.equal(nap.phone, "(512) 555-0142");

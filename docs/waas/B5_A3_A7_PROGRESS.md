@@ -1,6 +1,6 @@
 # Progress tracker: B5 + A3 + A7 (and the parked CRM grants work)
 
-Last updated: 2026-10-31. Branch: `ccr-d199a1f3-go2zy8`. **If a session is interrupted, read this file first**, then `git log --oneline origin/main..HEAD`.
+Last updated: 2026-10-31 (review fixes for PR #340 added). Branch: `ccr-d199a1f3-go2zy8`. **If a session is interrupted, read this file first**, then `git log --oneline origin/main..HEAD`.
 
 Status legend: DONE (committed and pushed), TODO (not started), BLOCKED-ON-TOMMY (needs a person).
 
@@ -25,6 +25,7 @@ Full original plan (kept for reference): `/root/.claude/plans/plan-the-work-for-
 | 4 | `ade35e3` | A3 report card (`components/audit/gbp-card.tsx`), PDF section, shared wording `gbp-summary.ts` | DONE |
 | 5 | `a5ec1ce` | Migrations `033` (enum value, run alone) and `034` (columns, indexes, CHECK) + `docs/engineering/checks/034_postcheck.sql` | DONE (not applied) |
 | 6 | `63b927b` | B5 server side: signed tenant token, validation, spam guard, intake service, `tenant_lead_received` email (escaped), `submitTenantLead` action | DONE |
+| 7b | (review-fix commit) | PR #340 review fixes: PageSpeed and crawl start before waiting on `/places`; malformed `tel:` links skipped; atomic lead rate limit via migration 035; preview pages never get a lead token (`previewMode`); portal shows a load error instead of an empty list; gap scorecard re-check section relabelled; Places fixture test | DONE |
 | 7 | `b402b28` | B5 UI: `booking-form.tsx`, booking section wiring, editor config keys, portal Leads tab, admin "Website Forms" filter, gap scorecard, env docs, DEC-0033 | DONE |
 
 Checks at the last commit: `tsc --noEmit` clean, `npm --prefix qa-agent run typecheck` clean (needs `npm --prefix qa-agent ci --ignore-scripts` first), `lint:changed` no new errors, `npm test` 582 pass / 0 fail.
@@ -46,6 +47,7 @@ Earlier docs commits on the same branch: `98ea0de` (DEC-0031, `STATUS_2026-10-31
 |---|---|---|
 | Apply `033_waas_leads_tenant_site_source.sql` to `rankedceo-waas` (alone, let it finish) | Tommy | BLOCKED-ON-TOMMY |
 | Apply `034_waas_leads_tenant_site_columns.sql`, then run `docs/engineering/checks/034_postcheck.sql` (expect 6 PASS) | Tommy; Claude can run the read-only post-check | BLOCKED-ON-TOMMY |
+| Apply `035_insert_tenant_lead_limited.sql` after 033 and 034 (atomic rate limit; the form will not submit without it) | Tommy | BLOCKED-ON-TOMMY |
 | Set `WAAS_LEAD_FORM_SECRET` and `WAAS_LEAD_IP_SALT` in Vercel (form is hidden on live sites without a secret) | Tommy | BLOCKED-ON-TOMMY |
 | Apply migrations BEFORE deploying to Production (else visitors see the "call us" fallback and no lead is saved) | Tommy | BLOCKED-ON-TOMMY |
 | Open the PR for this branch (not opened; branch also carries the earlier docs commits) | Claude, when asked | TODO |

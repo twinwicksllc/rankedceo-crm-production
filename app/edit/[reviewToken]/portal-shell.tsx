@@ -53,6 +53,7 @@ interface PortalShellProps {
   autoOpenApproval?: boolean; // Task 8: auto-open approval panel after Stripe checkout
   auditHistory?: TenantAuditHistoryItem[];
   leads?: TenantLeadItem[];
+  leadsError?: string | null;
   editorProps?: {
     initialFields: EditableField[];
   };
@@ -86,6 +87,7 @@ export function PortalShell({
   autoOpenApproval,
   auditHistory,
   leads,
+  leadsError,
   editorProps,
 }: PortalShellProps) {
   const router = useRouter();
@@ -309,7 +311,7 @@ export function PortalShell({
         {/* Leads tab (B5) */}
         {activeTab === "leads" && (
           <div data-testid="leads-tab-content" className="flex flex-1 min-h-0">
-            <LeadsTab items={leads ?? []} />
+            <LeadsTab items={leads ?? []} error={leadsError ?? null} />
           </div>
         )}
 

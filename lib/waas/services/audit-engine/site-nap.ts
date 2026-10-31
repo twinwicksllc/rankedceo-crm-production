@@ -136,7 +136,14 @@ export function extractNap(html: string | null | undefined): SiteNap {
     let tel: RegExpExecArray | null;
     TEL_LINK.lastIndex = 0;
     while ((tel = TEL_LINK.exec(html)) !== null) {
-      const candidate = decodeURIComponent(tel[1]).trim();
+      // A malformed percent escape in site markup must not abort the audit:
+      // skip that link and keep scanning.
+      let candidate: string;
+      try {
+        candidate = decodeURIComponent(tel[1]).trim();
+      } catch {
+        continue;
+      }
       if (normalizePhone(candidate)) {
         phone = candidate;
         source = "tel-link";

@@ -8,8 +8,9 @@
 // headers and email.
 //
 // Writes use the WaaS service-role key, which bypasses row-level security; the
-// tenant id written is the one the service verified. No anon INSERT policy is
-// involved (leads_anon_insert still allows only audit_tool and email_capture).
+// tenant id written is the one the service verified. The rate-limit check and the
+// insert happen in one database function (migration 035), so parallel requests
+// cannot bypass the limit. No anon INSERT policy is involved.
 // =============================================================================
 
 import { headers } from "next/headers";
@@ -37,23 +38,6 @@ function getAdminClient(): SupabaseClient | null {
 }
 
 function buildDeps(client: SupabaseClient): TenantLeadDeps {
-  const countWhere = async (
-    tenantId: string,
-    sinceIso: string,
-    extra?: { column: "ip_hash" | "email"; value: string },
-  ): Promise<number> => {
-    let query = client
-      .from("leads")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", tenantId)
-      .eq("source", "tenant_site")
-      .gte("created_at", sinceIso);
-    if (extra) query = query.eq(extra.column, extra.value);
-    const { count, error } = await query;
-    if (error) throw new Error(`count failed: ${error.code ?? "unknown"}`);
-    return count ?? 0;
-  };
-
   return {
     now: () => Date.now(),
 
@@ -73,29 +57,37 @@ function buildDeps(client: SupabaseClient): TenantLeadDeps {
       };
     },
 
-    countRecent: async (tenantId, keys, sinceIso) => {
-      const [ip, email, tenant] = await Promise.all([
-        keys.ipHash
-          ? countWhere(tenantId, sinceIso, { column: "ip_hash", value: keys.ipHash })
-          : Promise.resolve(0),
-        countWhere(tenantId, sinceIso, { column: "email", value: keys.email }),
-        countWhere(tenantId, sinceIso),
-      ]);
-      return { ip, email, tenant };
-    },
-
-    insertLead: async (row) => {
-      const { data, error } = await client
-        .from("leads")
-        .insert(row)
-        .select("id")
-        .single();
-      if (error || !data) {
+    // One database step: the limits are checked and the lead inserted under a
+    // per-tenant lock (migration 035). See tenant-lead-service.ts.
+    submitLimited: async ({ tenantId, row, windowStartIso, limits }) => {
+      const { data, error } = await client.rpc("insert_tenant_lead_limited", {
+        p_tenant_id: tenantId,
+        p_row: row,
+        p_window_start: windowStartIso,
+        p_per_ip: limits.perIp,
+        p_per_email: limits.perEmail,
+        p_ip_hash: row.ip_hash,
+        p_email: row.email,
+      });
+      if (error) {
         // Code only: the row holds the visitor's contact details.
-        console.error("[tenant-lead] insert failed:", error?.code ?? "no row");
-        return null;
+        console.error("[tenant-lead] limited insert failed:", error.code ?? "unknown");
+        return { status: "error" };
       }
-      return { id: data.id as string };
+      const result = data as {
+        status?: string;
+        id?: string;
+        tenant_count?: number;
+      } | null;
+      if (result?.status === "rate_limited") return { status: "rate_limited" };
+      if (result?.status === "ok" && typeof result.id === "string") {
+        return {
+          status: "ok",
+          id: result.id,
+          tenantCount: Number(result.tenant_count ?? 0),
+        };
+      }
+      return { status: "error" };
     },
 
     notify: async ({ tenantId, leadId, businessName, lead }) => {

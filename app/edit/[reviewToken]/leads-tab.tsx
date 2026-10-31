@@ -13,6 +13,8 @@ import type { TenantLeadItem } from "@/lib/waas/client-edit/tenant-leads";
 
 interface LeadsTabProps {
   items: TenantLeadItem[];
+  /** Set when the messages could not be loaded (shown instead of the empty state). Not displayed as raw text. */
+  error?: string | null;
 }
 
 function formatWhen(iso: string): string {
@@ -90,7 +92,7 @@ function LeadRow({ item }: { item: TenantLeadItem }) {
   );
 }
 
-export function LeadsTab({ items }: LeadsTabProps) {
+export function LeadsTab({ items, error = null }: LeadsTabProps) {
   return (
     <div className="flex-1 overflow-y-auto" data-testid="leads-tab">
       <div className="mx-auto w-full max-w-3xl px-4 py-6">
@@ -100,7 +102,15 @@ export function LeadsTab({ items }: LeadsTabProps) {
             Messages sent through the contact form on your website.
           </p>
         </div>
-        {items.length === 0 ? (
+        {error ? (
+          <div
+            role="alert"
+            className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          >
+            Your messages could not be loaded right now. Please refresh the page
+            in a minute.
+          </div>
+        ) : items.length === 0 ? (
           <EmptyState />
         ) : (
           <ul className="space-y-3">

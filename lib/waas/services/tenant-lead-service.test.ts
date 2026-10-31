@@ -7,9 +7,12 @@ import {
   hashIp,
   isRateLimited,
   MIN_FILL_MS,
+  RATE_LIMITS,
+  RATE_WINDOW_MS,
 } from "./tenant-lead-guard";
 import {
   processTenantLead,
+  type SubmitLimitedResult,
   type TenantLeadDeps,
   type TenantLeadRow,
 } from "./tenant-lead-service";
@@ -35,23 +38,37 @@ afterEach(() => {
   }
 });
 
-function makeDeps(over: Partial<TenantLeadDeps> = {}) {
-  const calls = { inserted: [] as TenantLeadRow[], notified: 0, loaded: [] as string[] };
+function makeDeps(
+  over: Partial<TenantLeadDeps> & {
+    submitResult?: SubmitLimitedResult;
+  } = {},
+) {
+  const calls = {
+    inserted: [] as TenantLeadRow[],
+    notified: 0,
+    loaded: [] as string[],
+    submitArgs: [] as Array<{ limits: { perIp: number; perEmail: number }; windowStartIso: string }>,
+  };
+  const { submitResult, ...rest } = over;
   const deps: TenantLeadDeps = {
     now: () => NOW,
     loadTenant: async (id) => {
       calls.loaded.push(id);
       return { id, status: "active", businessName: "Acme Plumbing" };
     },
-    countRecent: async () => ({ ip: 0, email: 0, tenant: 0 }),
-    insertLead: async (row) => {
-      calls.inserted.push(row);
-      return { id: "lead-1" };
+    submitLimited: async (args) => {
+      calls.submitArgs.push({ limits: args.limits, windowStartIso: args.windowStartIso });
+      if (submitResult) {
+        if (submitResult.status === "ok") calls.inserted.push(args.row);
+        return submitResult;
+      }
+      calls.inserted.push(args.row);
+      return { status: "ok", id: "lead-1", tenantCount: 0 };
     },
     notify: async () => {
       calls.notified += 1;
     },
-    ...over,
+    ...rest,
   };
   return { deps, calls };
 }
@@ -160,18 +177,31 @@ describe("processTenantLead", () => {
     }
   });
 
-  it("blocks the sixth submission from one IP and the fourth with one email", async () => {
-    for (const counts of [{ ip: 5, email: 0, tenant: 5 }, { ip: 0, email: 3, tenant: 3 }]) {
-      const { deps, calls } = makeDeps({ countRecent: async () => counts });
-      const result = await processTenantLead(goodInput(), { ip: "203.0.113.9" }, deps);
-      assert.equal(result.ok, false);
-      if (!result.ok) assert.equal(result.code, "rate_limited");
-      assert.equal(calls.inserted.length, 0);
-    }
+  it("passes the configured per-IP and per-email limits and a one-hour window to the database step", async () => {
+    const { deps, calls } = makeDeps();
+    await processTenantLead(goodInput(), { ip: "203.0.113.9" }, deps);
+    assert.deepEqual(calls.submitArgs[0].limits, {
+      perIp: RATE_LIMITS.perIp,
+      perEmail: RATE_LIMITS.perEmail,
+    });
+    assert.equal(
+      calls.submitArgs[0].windowStartIso,
+      new Date(NOW - RATE_WINDOW_MS).toISOString(),
+    );
+    assert.equal(isRateLimited({ ip: 5, email: 0 }), true, "the helper agrees with the limit");
   });
 
-  it("reports a safe error when the insert fails", async () => {
-    const { deps, calls } = makeDeps({ insertLead: async () => null });
+  it("reports rate_limited when the database refuses, and stores nothing", async () => {
+    const { deps, calls } = makeDeps({ submitResult: { status: "rate_limited" } });
+    const result = await processTenantLead(goodInput(), { ip: "203.0.113.9" }, deps);
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.equal(result.code, "rate_limited");
+    assert.equal(calls.inserted.length, 0);
+    assert.equal(calls.notified, 0);
+  });
+
+  it("reports a safe error when the database step fails", async () => {
+    const { deps, calls } = makeDeps({ submitResult: { status: "error" } });
     const result = await processTenantLead(goodInput(), { ip: null }, deps);
     assert.equal(result.ok, false);
     if (!result.ok) {
@@ -192,7 +222,9 @@ describe("processTenantLead", () => {
   });
 
   it("saves but does not email during a flood", async () => {
-    const { deps, calls } = makeDeps({ countRecent: async () => ({ ip: 0, email: 0, tenant: 25 }) });
+    const { deps, calls } = makeDeps({
+      submitResult: { status: "ok", id: "lead-9", tenantCount: 25 },
+    });
     const result = await processTenantLead(goodInput(), { ip: null }, deps);
     assert.deepEqual(result, { ok: true });
     assert.equal(calls.inserted.length, 1);
