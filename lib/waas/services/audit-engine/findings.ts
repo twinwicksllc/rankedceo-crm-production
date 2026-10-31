@@ -14,6 +14,7 @@ export type AuditOpportunityEffort = "low" | "medium" | "high";
 export const MAX_MISSING_KEYWORD_OPPORTUNITIES = 3;
 export const MAX_SPEED_OPPORTUNITIES = 2;
 export const MAX_ON_PAGE_OPPORTUNITIES = 3;
+export const MAX_GBP_OPPORTUNITIES = 3;
 
 /**
  * The engine mixes two severity vocabularies: critical/warning/info (PageSpeed,
@@ -65,6 +66,10 @@ const HIGH_EFFORT_IDS = new Set([
  */
 export function effortForType(type: string): AuditOpportunityEffort {
   if (LOW_EFFORT_IDS.has(type)) return "low";
+  // Google Business Profile findings (A3): fixing details is quick, earning
+  // reviews or getting into the map results takes sustained work.
+  if (type === "nap_mismatch" || type === "gbp_incomplete") return "low";
+  if (type === "review_gap" || type === "gbp_not_found") return "medium";
   if (HIGH_EFFORT_IDS.has(type)) return "high";
   if (type === "missing_keyword" || type.startsWith("on_page_")) {
     return "medium";
@@ -124,6 +129,13 @@ export interface OpportunityInputs {
     savings_ms: number;
     impact: string;
   }>;
+  /** Google Business Profile findings (A3); optional so older callers still work. */
+  gbp?: ReadonlyArray<{
+    id: string;
+    title: string;
+    fix: string;
+    impact: string;
+  }>;
   onPage: ReadonlyArray<{
     id: string;
     title: string;
@@ -153,6 +165,11 @@ export function buildOpportunities(
       type: o.id,
       description: `${o.title} (saves ~${Math.round(o.savings_ms / 100) / 10}s)`,
       estimated_impact: normalizeImpact(o.impact),
+    })),
+    ...(input.gbp ?? []).slice(0, MAX_GBP_OPPORTUNITIES).map((f) => ({
+      type: f.id,
+      description: `${f.title}. ${f.fix}`,
+      estimated_impact: normalizeImpact(f.impact),
     })),
     ...input.onPage
       .filter((f) => f.severity !== "info")

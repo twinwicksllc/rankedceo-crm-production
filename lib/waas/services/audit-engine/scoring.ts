@@ -3,6 +3,8 @@
  *
  * v2 (score_version 2) mixes real local-search signals with Lighthouse scores
  * so a site that is fast but invisible in Google does not get a good grade.
+ * v3 (score_version 3) adds a Google Business Profile component (A3) and
+ * rebalances the weights. Stored v2 and v3 reports are shown exactly as stored.
  * Legacy audits (no score_version) were scored 0.40 performance + 0.30 seo +
  * 0.20 "mobile" + 0.10 accessibility, where "mobile" was a copy of mobile
  * performance. They keep that formula so stored reports do not change.
@@ -10,7 +12,10 @@
 
 export type Grade = "A" | "B" | "C" | "D" | "F";
 
-export const SCORE_VERSION = 2;
+export const SCORE_VERSION = 3;
+
+/** First version whose breakdown is stored in the report and shown as stored. */
+const FIRST_STORED_BREAKDOWN_VERSION = 2;
 
 export function gradeFromScore(score: number): Grade {
   if (score >= 80) return "A";
@@ -93,6 +98,7 @@ export type ScoreComponentKey =
   | "visibility"
   | "competitive"
   | "local_pack"
+  | "gbp"
   | "on_page"
   | "speed"
   | "seo"
@@ -104,18 +110,22 @@ const COMPONENTS: Array<{
   label: string;
   weight: number;
 }> = [
-  { key: "visibility", label: "Google search visibility", weight: 0.35 },
+  { key: "visibility", label: "Google search visibility", weight: 0.3 },
   { key: "competitive", label: "Competitive position", weight: 0.15 },
   { key: "local_pack", label: "Google Maps (local pack)", weight: 0.1 },
+  // A3: Google Business Profile completeness and NAP consistency, taken from
+  // the same /places lookup as the local pack. Not measured when the client's
+  // listing is not in the results.
+  { key: "gbp", label: "Google Business Profile", weight: 0.1 },
   // A5: real on-page crawl (title/meta/H1/schema/sitemap/...). The PageSpeed
   // "SEO" category is a Lighthouse heuristic that overlaps heavily with the
-  // crawl, so it is kept as a small "Lighthouse SEO" component (0.05) and the
-  // crawl takes the larger on-page weight.
+  // crawl, so it is kept as a small "Lighthouse SEO" component and the crawl
+  // takes the larger on-page weight.
   { key: "on_page", label: "On-page SEO", weight: 0.1 },
   { key: "speed", label: "Site speed (mobile)", weight: 0.15 },
-  { key: "seo", label: "Lighthouse SEO", weight: 0.05 },
-  { key: "accessibility", label: "Accessibility", weight: 0.05 },
-  { key: "best_practices", label: "Best practices", weight: 0.05 },
+  { key: "seo", label: "Lighthouse SEO", weight: 0.04 },
+  { key: "accessibility", label: "Accessibility", weight: 0.03 },
+  { key: "best_practices", label: "Best practices", weight: 0.03 },
 ];
 
 export interface ScoreInputs {
@@ -125,6 +135,8 @@ export interface ScoreInputs {
   competitive: number | null;
   /** Points for the Google Maps position. null = local pack not measured. */
   localPack: number | null;
+  /** GBP completeness + NAP consistency (0-100). null = listing not found / not measured. */
+  gbp: number | null;
   /** Real on-page crawl score (0-100). null = homepage could not be crawled. */
   onPage: number | null;
   /** Lighthouse mobile scores 0-100. null = PageSpeed unavailable. */
@@ -166,6 +178,7 @@ export function computeOverallScoreV2(inputs: ScoreInputs): OverallScoreV2 {
     visibility: inputs.visibility,
     competitive: inputs.competitive,
     local_pack: inputs.localPack,
+    gbp: inputs.gbp,
     on_page: inputs.onPage,
     speed: inputs.speed,
     seo: inputs.seo,
@@ -262,7 +275,8 @@ export interface DisplayScore {
  */
 export function getDisplayScore(summary: StoredScoreSummary): DisplayScore {
   if (
-    summary.score_version === SCORE_VERSION &&
+    typeof summary.score_version === "number" &&
+    summary.score_version >= FIRST_STORED_BREAKDOWN_VERSION &&
     Array.isArray(summary.overall_score_components) &&
     typeof summary.overall_score === "number"
   ) {
@@ -275,7 +289,7 @@ export function getDisplayScore(summary: StoredScoreSummary): DisplayScore {
     }));
     const score = Math.round(summary.overall_score);
     return {
-      version: SCORE_VERSION,
+      version: summary.score_version,
       score,
       grade: gradeFromScore(score),
       formula: summary.overall_score_formula ?? "",

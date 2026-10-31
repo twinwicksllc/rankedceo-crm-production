@@ -430,6 +430,59 @@ Status values: **in force**, **implemented**, **on hold**, **superseded**. Imple
 
 ---
 
+## DEC-0031 - CRM project: restore signed-in access to the RLS helpers and guard the onboarding RPCs (drafted, not applied)
+
+- Date: 2026-10-31
+- Status: on hold. Drafted and tested on a local copy only; waiting for Tommy's approval and a signed-in check in the CRM app.
+- Decision (proposed): in `rankedceo-crm-production` (ref `wcednzaxmxwfiijzmjmx`), grant `authenticated` EXECUTE on `get_current_user_account_id()` and `get_current_user_id()`, add `assert_own_account(uuid)`, and rewrite the five onboarding RPCs (`update_company_info`, `update_onboarding_step`, `complete_onboarding`, `update_preferences`, `skip_onboarding`) to call it before granting them to `authenticated`. `service_role` passes the guard. The conversation RPCs (`get_or_create_conversation`, `add_conversation_message`, `update_conversation_status`) stay revoked.
+- Evidence: VERIFIED by read-only queries run through the Supabase tool on 2026-10-31.
+  - In the CRM project, 33 SECURITY DEFINER functions in `public`, none executable by `anon`. `authenticated` has EXECUTE only on `accept_invitation`, `get_user_org_id`, `is_org_member` and `is_org_owner`.
+  - `get_current_user_account_id()` has ACL `{postgres, service_role}` only, although about 90 RLS policies call it and `supabase/migrations/000018_fix_users_rls_permissions.sql` grants it to `authenticated`. Something revoked it live without a migration in the repo. READ: the five onboarding routes use the user's own session client (`createClient` from `lib/supabase/server`), so they run as `authenticated`.
+  - The five onboarding RPC bodies update `accounts WHERE id = p_account_id` with no ownership check, the same hole that migration 031 closed in `rankedceo-waas`.
+  - Live data is small: 1 user, 9 accounts, 0 duplicate emails, 0 users without an account.
+- Not verified: what a signed-in CRM user actually sees. The permission denied result is inferred from the ACLs; nobody has signed in and tried it.
+- Test: `docs/engineering/checks/crm_grants_local_harness.sql` and `crm_grants_local_tests.sql` on a throwaway local Postgres 16. Before the fix, 10 of 17 checks pass; after, 17 of 17. The harness is not a copy of production: it has a small set of tables and policies.
+- Rollback: `docs/engineering/checks/crm_grants_rollback.sql`. Verified locally to restore the original ACLs and function bodies (bodies compared with whitespace ignored). It restores the broken state, so it is an undo, not a safe end state.
+- Related finding, WaaS project (VERIFIED, same day): `anon` executes only `resolve_tenant_by_hostname` and `get_smile_pool_account_id`, and `assert_own_account` exists, so 031 and 032 look applied. Both anon grants are intended (DEC-0027; `get_smile_pool_account_id` returns a fixed constant).
+- Open: whether to keep the email fallback in `get_current_user_account_id()` and `get_current_user_id()` (`email = auth.jwt() ->> 'email'`); who revoked the live grant and whether on purpose; where to test (local copy done; a Supabase branch was tried and timed out waiting for a cost confirmation).
+- Used in: `docs/engineering/E3_CLIENT_SWITCH_PLAN.md` (before the switch, the target must not carry over missing or open grants).
+- Source: Claude's read-only checks, 2026-10-31. Not yet decided by Tommy.
+
+---
+
+## DEC-0032 - Competitors are auto-discovered from the local pack; typed ones win (A7)
+
+- Date: 2026-10-31
+- Status: implemented in the combined B5/A3/A7 PR; the Serper /places lookup stays off in Production until Tommy turns it on.
+- Decision: the audit finds competitors itself from the Google Maps local pack for the resolved search location (DEC-0003), up to 3. Competitors the visitor typed always win; discovered ones only fill the remaining slots. Discovery skips places with no website, the client's own domain, directories and lead-gen sites (`audit-engine/directory-blocklist.ts`), and duplicates. A discovered competitor is labelled AUTO-DETECTED in the report. If nothing is typed and nothing is found, the audit continues with no competitors and says so.
+- Rollout (Tommy, 2026-10-31): `WAAS_LOCAL_PACK_ENABLED` keeps its code default of `false` (the `/places` call is billed separately). On in Vercel Preview first, Production after about a week of Serper spend review. While it is off, `/api/audit/run` still returns 400 with no typed competitor and the start form still marks the first competitor required.
+- Cache: the 24h audit cache and `audits.competitor_urls` use the typed list only; discovered competitors are stored in `report_data.competitors` with `source: "discovered"`. Otherwise the cache would never hit for visitors who type nothing.
+- Cost: one `/places` call per uncached audit, made once and shared by the Local Pack report and competitor discovery (and GBP analysis). The call times out after 8 seconds.
+- Used in: `lib/waas/services/audit-engine/{local-pack,competitor-discovery,directory-blocklist,index}.ts`, `app/api/audit/run/route.ts`, `app/audit/start/`, `components/audit/competitor-card.tsx`.
+- Source: Tommy approved the plan in the 2026-10-31 session.
+
+---
+
+## DEC-0033 - Tenant-site contact form lives in the booking section; leads reach the owner by email and the portal (B5)
+
+- Date: 2026-10-31
+- Status: implemented in the combined B5/A3/A7 PR. Live for visitors once migrations 033 and 034 are applied to `rankedceo-waas` and the site is `active`.
+- Decision (Tommy, 2026-10-31):
+  - The form extends the required `booking` section instead of adding a section type. A new type would touch about ten files and give a site two contact slots next to the required booking section.
+  - Default ON for existing tenants: form only if there is no Calendly link; a "Prefer to send a message?" form under the Calendly embed if there is one. The owner can switch it off in the editor.
+  - Spam protection without reCAPTCHA (tenant custom domains): honeypot field, minimum fill time (2s) and a per-hour limit counted in the `leads` table (5 per IP, 3 per email, per tenant). A tripped honeypot or timing check returns a fake success. The IP is stored only as a salted SHA-256 hash.
+  - Leads are emailed to the owner (`tenant_lead_received`) and listed in the portal under a Leads tab; admins see them in `/admin/leads` under a "Website Forms" filter.
+- How it was built (differs from the plan in these ways):
+  - The form settings are `config` keys on the booking section (`formEnabled`, `formHeading`, `formButtonLabel`, `formSuccessMessage`, `formServices`), not content keys. They reuse the editor's existing boolean/text/list fields and allow-lists.
+  - The tenant is not resolved from the request host. The server page signs the tenant id (`lib/waas/lead-form-token.ts`, HMAC; secret `WAAS_LEAD_FORM_SECRET`, then `AUDIT_SHARE_SECRET`, then the service-role key) and the action verifies it, then requires `tenants.status = 'active'`. With no secret the form is not shown (fail closed). In owner previews the form shows but cannot send.
+  - No owner-email fallback: if a tenant has no `brand_config.contact.email` the email is skipped and logged, and the lead is still saved and visible in the portal.
+  - Instead of a digest, emails stop for a tenant after 20 leads in an hour (leads are still saved).
+- Data: `waas_lead_source` gains `tenant_site` (033, run alone); `leads` gains `message`, `page_url`, `service_requested`, `ip_hash`, three indexes and a CHECK that a `tenant_site` lead has a tenant (034). No RLS or grant change; `leads_anon_insert` still allows only `audit_tool` and `email_capture`. Verify with `docs/engineering/checks/034_postcheck.sql`.
+- Used in: `components/waas/sections/{BookingSection,booking-form}.tsx`, `lib/waas/actions/tenant-lead.ts`, `lib/waas/services/{tenant-lead-service,tenant-lead-guard}.ts`, `lib/waas/validation/tenant-lead.ts`, `app/edit/[reviewToken]/leads-tab.tsx`.
+- Source: Tommy approved the plan and the four rollout choices in the 2026-10-31 session.
+
+---
+
 ## Not yet recorded
 
 The numbers **DEC-0002, DEC-0009, DEC-0010 and DEC-0011** are not defined anywhere

@@ -18,6 +18,7 @@ import { ScoreGauge } from "@/components/audit/score-gauge";
 import { RankingLeaderboard } from "@/components/audit/ranking-leaderboard";
 import { GapAnalysis } from "@/components/audit/gap-analysis";
 import { LocalPackPanel } from "@/components/audit/local-pack-panel";
+import { GbpCard } from "@/components/audit/gbp-card";
 import { CompetitorCard } from "@/components/audit/competitor-card";
 import { ExpiryCountdown } from "@/components/audit/expiry-countdown";
 import { ReportSkeleton } from "@/components/audit/report-skeleton";
@@ -453,7 +454,11 @@ function FullReport({
   const gapAnalysis = report.gap_analysis;
   const pageSpeed = report.page_speed_full;
   const keywords = report.keywords_used ?? [];
-  const competitors = audit.competitor_urls ?? [];
+  // The competitors actually audited: typed ones plus any found automatically
+  // (A7). Older reports have no report.competitors, so fall back to the typed list.
+  const competitors = report.competitors?.length
+    ? report.competitors.map((c) => c.url)
+    : (audit.competitor_urls ?? []);
   const localPack = report.local_pack;
 
   const primaryKeyword = keywords[0] ?? "your industry";
@@ -511,6 +516,16 @@ function FullReport({
           subtitle={`Local Pack presence for "${localPack.keyword}"`}
         >
           <LocalPackPanel localPack={localPack} targetDomain={targetDomain} />
+        </Section>
+      )}
+
+      {/* ── GOOGLE BUSINESS PROFILE (A3) ──────────────────────────────────── */}
+      {report.gbp && (
+        <Section
+          title="🏢 Google Business Profile"
+          subtitle="How complete and consistent your Google listing is"
+        >
+          <GbpCard gbp={report.gbp} />
         </Section>
       )}
 
@@ -606,6 +621,7 @@ function FullReport({
                     topKeywords:
                       compData?.top_keywords ??
                       (lbEntry?.bestPosition ? [primaryKeyword] : []),
+                    discovered: compData?.source === "discovered",
                   }}
                   targetDomain={targetDomain}
                   targetScore={score}
@@ -614,6 +630,17 @@ function FullReport({
               );
             })}
           </div>
+        </Section>
+      )}
+
+      {competitors.length === 0 && report.competitor_discovery?.note && (
+        <Section
+          title="🔎 Competitor Deep Dive"
+          subtitle="Individual breakdown of each competitor site"
+        >
+          <p style={{ fontSize: "0.9rem", opacity: 0.8 }}>
+            {report.competitor_discovery.note}
+          </p>
         </Section>
       )}
 

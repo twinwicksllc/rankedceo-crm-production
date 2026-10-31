@@ -1,15 +1,16 @@
 import {
   getSearchRankings,
   getMockSearchRankings,
-  getLocalPackRankings,
-  getMockLocalPackRankings,
-  LOCAL_PACK_ENABLED,
+  buildLocalPackReport,
   extractDomain,
   type SearchRankReport,
   type LocalPackReport,
 } from "../serper";
 import { extractCityFromAddress } from "../serper/location-utils";
 import { LocationUnresolvedError, resolveAuditLocation } from "./location";
+import { createPlacesFetcher } from "./local-pack";
+import { discoverCompetitors, mergeCompetitors } from "./competitor-discovery";
+import { analyzeGbp, buildGbpFindings } from "./gbp-analysis";
 import { generateIndustryKeywordPlan } from "../keyword-generator";
 import { collectSiteSignals } from "../keyword-generator/site-scraper";
 import {
@@ -100,7 +101,7 @@ export interface AuditEngineResult {
 
 export async function runFullAudit(
   targetUrl: string,
-  competitorUrls: string[],
+  typedCompetitorUrls: string[],
   industry: string | null = null,
   location: string | null = null,
 ): Promise<AuditEngineResult> {
@@ -134,13 +135,69 @@ export async function runFullAudit(
   auditDebug("audit:start", {
     provider,
     targetUrl,
-    competitorCount: competitorUrls.length,
+    competitorCount: typedCompetitorUrls.length,
     industryHint: industry,
     locationHint: location,
     detectedLocation,
     searchLocation,
     keywordProvider: keywordPlan.provider,
     keywords,
+  });
+
+  // One Serper /places lookup per audit, started now so it runs in parallel
+  // with the rankings below. Only the primary keyword is checked, which caps
+  // the billed /places cost at a single call. It never throws; a disabled,
+  // empty or failed lookup just yields no places.
+  const primaryKeyword = keywords[0];
+  const placesPromise = createPlacesFetcher(
+    provider,
+    targetUrl,
+    typedCompetitorUrls,
+    primaryKeyword,
+    searchLocation,
+  )();
+
+  // ── On-page crawl (A5) ──
+  // A real crawl of the target site, run in parallel with PageSpeed. Best-effort:
+  // a crawl failure resolves to null and never fails the audit. Skipped in mock
+  // mode so offline/demo audits make no network calls.
+  const onPagePromise: Promise<OnPageCrawlResult | null> =
+    provider === "mock"
+      ? Promise.resolve(null)
+      : crawlOnPage(targetUrl, { locationHint: searchLocation }).catch((err) => {
+          auditDebug("onpage:error", { error: String(err).slice(0, 200) });
+          return null;
+        });
+
+  // PageSpeed depends only on the target URL, so start it now too. Errors are
+  // captured here and handled where the result is used, so a failure cannot
+  // reject before we await it.
+  const pageSpeedPromise: Promise<
+    { ok: true; value: PageSpeedReport | null } | { ok: false; err: unknown }
+  > | null =
+    provider === "mock"
+      ? null
+      : runPageSpeedAudit(targetUrl).then(
+          (value) => ({ ok: true as const, value }),
+          (err: unknown) => ({ ok: false as const, err }),
+        );
+
+  // A7: competitors the visitor typed always win; the local pack fills any
+  // remaining slots (up to 3). Rankings need the final list, so wait for the
+  // lookup here (it is time-limited and never throws).
+  const { places: discoveryPlaces, status: placesStatus } = await placesPromise;
+  const discovered = discoverCompetitors({
+    places: discoveryPlaces,
+    targetUrl,
+    typedCompetitorUrls,
+  });
+  const mergedCompetitors = mergeCompetitors(typedCompetitorUrls, discovered);
+  const competitorUrls = mergedCompetitors.urls;
+  const discoveredCompetitorUrls = new Set(mergedCompetitors.discoveredUrls);
+  auditDebug("competitors:resolved", {
+    typed: typedCompetitorUrls.length,
+    discovered: mergedCompetitors.discoveredUrls.length,
+    placesStatus,
   });
 
   // ── 1. Get search rankings ─────────────────────────────────────────────────────────
@@ -207,42 +264,20 @@ export async function runFullAudit(
     searchLocation,
   );
 
-  // Kick off Google Maps Local Pack tracking (if enabled) in parallel too.
-  // Only the primary keyword is checked to cap the added Serper /places cost.
-  const primaryKeyword = keywords[0];
+  // Build the Local Pack report from the shared places lookup (null when the
+  // lookup is disabled, empty or failed).
   const localPackPromise: Promise<LocalPackReport | null> =
-    LOCAL_PACK_ENABLED && primaryKeyword
-      ? provider === "mock"
-        ? Promise.resolve(
-            getMockLocalPackRankings(
-              targetUrl,
-              competitorUrls,
-              primaryKeyword,
-              searchLocation,
-            ),
-          )
-        : getLocalPackRankings(
+    placesPromise.then(({ places }) =>
+      primaryKeyword
+        ? buildLocalPackReport(
+            places,
             targetUrl,
             competitorUrls,
             primaryKeyword,
             searchLocation,
-          ).catch((err) => {
-            auditDebug("places:error", { error: String(err).slice(0, 200) });
-            return null;
-          })
-      : Promise.resolve(null);
-
-  // ── On-page crawl (A5) ──
-  // A real crawl of the target site, run in parallel with PageSpeed. Best-effort:
-  // a crawl failure resolves to null and never fails the audit. Skipped in mock
-  // mode so offline/demo audits make no network calls.
-  const onPagePromise: Promise<OnPageCrawlResult | null> =
-    provider === "mock"
-      ? Promise.resolve(null)
-      : crawlOnPage(targetUrl, { locationHint: searchLocation }).catch((err) => {
-          auditDebug("onpage:error", { error: String(err).slice(0, 200) });
-          return null;
-        });
+          )
+        : null,
+    );
 
   // ── 2. Run PageSpeed ────────────────────────────────────────────────────────────────────
   let pageSpeed: PageSpeedReport | null = null;
@@ -253,8 +288,9 @@ export async function runFullAudit(
       available: pageSpeed !== null,
     });
   } else {
-    try {
-      pageSpeed = await runPageSpeedAudit(targetUrl);
+    const outcome = await pageSpeedPromise!;
+    if (outcome.ok) {
+      pageSpeed = outcome.value;
       auditDebug("pagespeed:live_complete", {
         available: pageSpeed !== null,
       });
@@ -262,7 +298,8 @@ export async function runFullAudit(
         manualReview = true;
         manualReviewNote = "PageSpeed API returned no analyzable data.";
       }
-    } catch (err) {
+    } else {
+      const err = outcome.err;
       console.error("[AuditEngine] PageSpeed failed:", err);
       auditDebug("pagespeed:error", {
         error: String(err).slice(0, 200),
@@ -291,8 +328,9 @@ export async function runFullAudit(
   });
 
   const localPack = await localPackPromise;
-  if (LOCAL_PACK_ENABLED) {
+  if (placesStatus !== "disabled") {
     auditDebug("places:complete", {
+      status: placesStatus,
       available: localPack !== null,
       targetPosition: localPack?.target.position ?? null,
     });
@@ -304,6 +342,29 @@ export async function runFullAudit(
     pagesCrawled: onPage?.pagesCrawled ?? 0,
     findings: onPage?.findings.length ?? 0,
     score: onPage?.score ?? null,
+  });
+
+  // A3: Google Business Profile / NAP / review analysis from the same shared
+  // places lookup plus the NAP read from the client's homepage. Null (not
+  // measured) when there were no places to look at.
+  const gbp = primaryKeyword
+    ? analyzeGbp({
+        places: discoveryPlaces,
+        targetUrl,
+        siteNap: onPage?.nap ?? null,
+        competitorUrls,
+        keyword: primaryKeyword,
+        location: searchLocation,
+      })
+    : null;
+  const gbpFindings = buildGbpFindings(gbp);
+  auditDebug("gbp:complete", {
+    measured: gbp !== null,
+    found: gbp?.found ?? null,
+    confidence: gbp?.match_confidence ?? null,
+    napStatus: gbp?.nap?.status ?? null,
+    score: gbp?.score ?? null,
+    findings: gbpFindings.map((f) => f.id),
   });
 
   const competitorLocalityByDomain = new Map<string, boolean | null>();
@@ -391,6 +452,7 @@ export async function runFullAudit(
         ? 100 - gapAnalysis.opportunityScore
         : null,
     localPack: localPack ? positionToPoints(localPack.target.position) : null,
+    gbp: gbp?.score ?? null,
     onPage: onPage?.score ?? null,
     speed: pageSpeed ? performanceScore : null,
     seo: pageSpeed ? seoScore : null,
@@ -521,8 +583,19 @@ export async function runFullAudit(
         top_keywords: topKeywords,
         is_local: locality?.isLocal ?? null,
         competitor_detected_location: locality?.detectedLocation ?? null,
+        source: discoveredCompetitorUrls.has(url)
+          ? ("discovered" as const)
+          : ("typed" as const),
       };
     }),
+    competitor_discovery: {
+      discovered_count: mergedCompetitors.discoveredUrls.length,
+      places_status: placesStatus,
+      note:
+        competitorUrls.length === 0
+          ? "No local competitors could be identified for this search, so the competitor comparison was skipped."
+          : null,
+    },
     technical_issues: [
       ...(onPage?.findings.map((f) => ({
         severity: f.severity,
@@ -570,8 +643,10 @@ export async function runFullAudit(
     opportunities: buildOpportunities({
       missingKeywords: gapAnalysis.missingKeywords,
       speed: pageSpeed?.opportunities ?? [],
+      gbp: gbpFindings,
       onPage: onPage?.findings ?? [],
     }),
+    ...(gbp ? { gbp } : {}),
     provider_meta: providerMeta,
     local_pack: localPack
       ? {

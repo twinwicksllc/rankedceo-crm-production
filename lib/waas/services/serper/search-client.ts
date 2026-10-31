@@ -4,6 +4,7 @@ import {
   SerperOrganicResults,
   SerperSearchResult,
   PlaceResult,
+  PLACES_TIMEOUT_MS,
   extractDomain,
 } from "./types";
 import { normalizeSerperLocation, inferGlFromLocation } from "./location-utils";
@@ -165,6 +166,24 @@ export function findDomainRank(
   return { position: null, title: "", snippet: "", link: "" };
 }
 
+// Serper names the phone `phoneNumber`; tolerate `phone` and the optional extras
+// too. The exact optional fields are confirmed against a real response before
+// anything depends on them (see gbp-analysis.ts, which skips absent fields).
+export function normalizePlace(
+  raw: PlaceResult & Record<string, unknown>,
+): PlaceResult {
+  const str = (v: unknown): string | undefined =>
+    typeof v === "string" && v.trim() ? v.trim() : undefined;
+  const { phoneNumber, openingHours, ...rest } = raw as PlaceResult &
+    Record<string, unknown>;
+  const place: PlaceResult = { ...rest };
+  const phone = str(phoneNumber) ?? str(rest.phone);
+  if (phone) place.phone = phone;
+  const hours = str(openingHours) ?? str(rest.hours);
+  if (hours) place.hours = hours;
+  return place;
+}
+
 // ---------------------------------------------------------------------------
 // Run a single Serper Places ("Local Pack") search
 // ---------------------------------------------------------------------------
@@ -197,6 +216,7 @@ export async function serperPlacesSearch(
         location: normalizedLocation,
       }),
       cache: "no-store",
+      signal: AbortSignal.timeout(PLACES_TIMEOUT_MS),
     });
 
     if (!response.ok) {
@@ -207,12 +227,20 @@ export async function serperPlacesSearch(
       return null;
     }
 
-    const parsed = (await response.json()) as { places?: PlaceResult[] };
-    const places = parsed.places ?? [];
+    const parsed = (await response.json()) as {
+      places?: Array<PlaceResult & Record<string, unknown>>;
+    };
+    const places = (parsed.places ?? []).map(normalizePlace);
 
     auditDebug("places:success", { query, count: places.length });
     return places;
   } catch (err) {
+    const timedOut =
+      err instanceof Error &&
+      (err.name === "TimeoutError" || err.name === "AbortError");
+    if (timedOut) {
+      auditDebug("places:timeout", { query, timeoutMs: PLACES_TIMEOUT_MS });
+    }
     console.error("[Serper] Places fetch error:", err);
     auditDebug("places:fetch_error", {
       query,

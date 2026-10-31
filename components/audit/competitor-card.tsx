@@ -2,7 +2,7 @@
 
 // =============================================================================
 // Competitor Card
-// Per-competitor breakdown: best position, keyword count, PageSpeed comparison
+// Per-competitor breakdown: best position, keyword count, top keywords
 // =============================================================================
 
 import { useOnboardingTheme } from "@/app/get-started/theme-context";
@@ -13,6 +13,8 @@ interface CompetitorMetrics {
   bestPosition: number | null;
   keywordsRanking: number | null;
   topKeywords: string[];
+  /** True when found automatically in Google Maps results (A7). */
+  discovered?: boolean;
 }
 
 interface CompetitorCardProps {
@@ -103,6 +105,29 @@ export function CompetitorCard({
           }}
         >
           {competitor.domain}
+          {competitor.discovered ? (
+            <span
+              title="Found in Google Maps results for your area"
+              style={{
+                marginLeft: 8,
+                background: isLight
+                  ? "rgba(14,165,233,0.12)"
+                  : "rgba(56,189,248,0.16)",
+                border: isLight
+                  ? "1px solid rgba(14,165,233,0.35)"
+                  : "1px solid rgba(56,189,248,0.35)",
+                borderRadius: 999,
+                padding: "1px 8px",
+                fontSize: "0.66rem",
+                fontWeight: 700,
+                color: isLight ? "#0369a1" : "#7dd3fc",
+                letterSpacing: "0.04em",
+                verticalAlign: "middle",
+              }}
+            >
+              AUTO-DETECTED
+            </span>
+          ) : null}
         </div>
         <div
           style={{

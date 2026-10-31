@@ -11,6 +11,7 @@ import { signAuditToken } from "@/lib/waas/audit-share-token";
 import type { WaasAuditInsert } from "@/lib/waas/supabase";
 import type { AuditSeoProvider } from "@/lib/waas/types";
 import { runAuditJob } from "@/lib/waas/services/audit-jobs";
+import { isPlacesAvailable } from "@/lib/waas/services/audit-engine/local-pack";
 import { createClient } from "@/lib/supabase/server";
 import { authorizeAuditAccess } from "@/lib/waas/audit-access-server";
 
@@ -68,7 +69,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (normalizedCompetitors.length === 0) {
+    // With the local-pack lookup available (A7) the engine finds competitors
+    // itself, so a competitor is only required when it is not.
+    if (
+      normalizedCompetitors.length === 0 &&
+      !isPlacesAvailable(process.env.WAAS_SEO_PROVIDER ?? "serper")
+    ) {
       return NextResponse.json(
         { error: "At least one competitor_url is required" },
         { status: 400 },

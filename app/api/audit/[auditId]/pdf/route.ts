@@ -13,6 +13,7 @@ import type {
   WaasAudit,
 } from "@/lib/waas/types";
 import { rankOpportunities } from "@/lib/waas/services/audit-engine/findings";
+import { gbpSummaryLines } from "@/lib/waas/services/audit-engine/gbp-summary";
 import { getDisplayScore } from "@/lib/waas/services/audit-engine/scoring";
 
 /**
@@ -523,6 +524,34 @@ export async function GET(req: NextRequest, context: RequestContext) {
         doc.moveDown(0.45);
       });
 
+      doc.moveDown(0.5);
+      hr(doc);
+      doc.moveDown(0.75);
+    }
+
+    // ==========================================================================
+    // SECTION 4c — GOOGLE BUSINESS PROFILE (A3). Absent on older reports.
+    // ==========================================================================
+    if (report.gbp) {
+      sectionHeader(doc, "Google Business Profile", "🏢");
+      if (report.gbp.score != null) {
+        doc
+          .fillColor("#0f172a")
+          .fontSize(9)
+          .font("Helvetica-Bold")
+          .text(`Profile score: ${report.gbp.score}/100`, MARGIN, doc.y, {
+            width: CONTENT_W,
+          });
+        doc.moveDown(0.3);
+      }
+      gbpSummaryLines(report.gbp).forEach((line) => {
+        doc
+          .fillColor("#334155")
+          .fontSize(8.5)
+          .font("Helvetica")
+          .text(`•  ${line}`, MARGIN, doc.y, { width: CONTENT_W });
+        doc.moveDown(0.25);
+      });
       doc.moveDown(0.5);
       hr(doc);
       doc.moveDown(0.75);

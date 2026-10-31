@@ -366,6 +366,45 @@ const SECTION_CONFIG_FIELDS: Partial<Record<SectionId, ConfigFieldDef[]>> = {
       helpText: "Comma-separated list of brand names shown as trust chips.",
     },
   ],
+  // B5: the lead form inside the booking section. Stored in config so these
+  // reuse the existing boolean/text/list editing; see lib/waas/booking-form-config.ts.
+  booking: [
+    {
+      key: "formEnabled",
+      label: "Show Contact Form",
+      kind: "boolean",
+      defaultValue: "true",
+      helpText:
+        "Lets visitors send you a message from your website. Messages are emailed to you and listed under Leads.",
+    },
+    {
+      key: "formHeading",
+      label: "Contact Form Heading",
+      kind: "text",
+      defaultValue: "Send us a message",
+    },
+    {
+      key: "formButtonLabel",
+      label: "Contact Form Button",
+      kind: "text",
+      defaultValue: "Send message",
+    },
+    {
+      key: "formSuccessMessage",
+      label: "Contact Form Thank-You Message",
+      kind: "text",
+      defaultValue: "Thanks! We got your message and will be in touch shortly.",
+      helpText: "Shown to the visitor after they send a message.",
+    },
+    {
+      key: "formServices",
+      label: "Contact Form Service Choices",
+      kind: "string_list",
+      defaultValue: "",
+      helpText:
+        "Optional. Comma-separated services (up to 8) shown as a drop-down. Leave blank to hide it.",
+    },
+  ],
   "answer-first-aeo": [
     {
       key: "maxItems",

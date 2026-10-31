@@ -6,7 +6,7 @@
 // Outer wrapper for the client portal — renders the top tab nav
 // (Overview / Edit / History / Billing) and switches between tab views.
 //
-// Tab state is URL-driven (?tab=overview | edit | history | billing).
+// Tab state is URL-driven (?tab=overview | edit | history | audits | leads | billing).
 // Navigating tabs does a shallow router.push so Next.js re-fetches
 // the correct server content.
 //
@@ -25,6 +25,8 @@ import { PortalHome } from "./portal-home";
 import { EditorShell } from "./editor-shell";
 import { BillingTab } from "./billing-tab";
 import { AuditHistoryTab } from "./audit-history-tab";
+import { LeadsTab } from "./leads-tab";
+import type { TenantLeadItem } from "@/lib/waas/client-edit/tenant-leads";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -45,11 +47,13 @@ export interface PortalSession {
 interface PortalShellProps {
   session: PortalSession;
   portalData: TenantPortalData | null;
-  activeTab: "overview" | "edit" | "history" | "billing" | "audits";
+  activeTab: "overview" | "edit" | "history" | "billing" | "audits" | "leads";
   billingStatus?: TenantBillingStatus | null;
   checkoutSuccess?: boolean;
   autoOpenApproval?: boolean; // Task 8: auto-open approval panel after Stripe checkout
   auditHistory?: TenantAuditHistoryItem[];
+  leads?: TenantLeadItem[];
+  leadsError?: string | null;
   editorProps?: {
     initialFields: EditableField[];
   };
@@ -64,6 +68,7 @@ const TABS = [
   { id: "edit", label: "Edit" },
   { id: "history", label: "History" },
   { id: "audits", label: "Audit" },
+  { id: "leads", label: "Leads" },
   { id: "billing", label: "Billing" },
 ] as const;
 
@@ -81,6 +86,8 @@ export function PortalShell({
   checkoutSuccess,
   autoOpenApproval,
   auditHistory,
+  leads,
+  leadsError,
   editorProps,
 }: PortalShellProps) {
   const router = useRouter();
@@ -298,6 +305,13 @@ export function PortalShell({
               billingStatus={billingStatus ?? null}
               checkoutSuccess={checkoutSuccess}
             />
+          </div>
+        )}
+
+        {/* Leads tab (B5) */}
+        {activeTab === "leads" && (
+          <div data-testid="leads-tab-content" className="flex flex-1 min-h-0">
+            <LeadsTab items={leads ?? []} error={leadsError ?? null} />
           </div>
         )}
 

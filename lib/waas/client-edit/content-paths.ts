@@ -222,6 +222,12 @@ const ALLOWED_SECTION_CONFIG_KEYS = new Set([
   "maxItems",
   "maxAnswerWords",
   "includeJsonLd",
+  // booking: lead form (B5)
+  "formEnabled",
+  "formHeading",
+  "formButtonLabel",
+  "formSuccessMessage",
+  "formServices",
 ]);
 
 // Keys permitted on items in arrays like services[i], faq[i], steps[i],
@@ -374,6 +380,12 @@ const CONFIG_VALUE_VALIDATORS: Record<string, ConfigValueValidator> = {
   maxItems: numberRangeValidator(1, 20),
   maxAnswerWords: numberRangeValidator(20, 300),
   includeJsonLd: booleanValidator,
+  // booking: lead form (B5)
+  formEnabled: booleanValidator,
+  formHeading: stringWithMaxLenValidator(80),
+  formButtonLabel: stringWithMaxLenValidator(30),
+  formSuccessMessage: stringWithMaxLenValidator(200),
+  formServices: stringArrayValidator(8, 40),
 };
 
 /**

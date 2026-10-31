@@ -296,3 +296,32 @@ test("tagline: null when nothing is high impact or there is no list", () => {
   assert.equal(taglineFromOpportunities(undefined), null);
   assert.equal(taglineFromOpportunities(null), null);
 });
+
+test("effortForType: GBP details are quick, reviews and map presence take work", () => {
+  assert.equal(effortForType("nap_mismatch"), "low");
+  assert.equal(effortForType("gbp_incomplete"), "low");
+  assert.equal(effortForType("review_gap"), "medium");
+  assert.equal(effortForType("gbp_not_found"), "medium");
+});
+
+test("buildOpportunities: GBP findings are pooled, capped at 3 and ranked with the rest", () => {
+  const gbp = [
+    { id: "nap_mismatch", title: "Phone differs", fix: "Match it", impact: "high" },
+    { id: "review_gap", title: "Few reviews", fix: "Ask", impact: "high" },
+    { id: "gbp_incomplete", title: "Incomplete", fix: "Fill in", impact: "medium" },
+    { id: "gbp_not_found", title: "Extra", fix: "Extra", impact: "medium" },
+  ];
+  const out = buildOpportunities({ missingKeywords: [], speed: [], onPage: [], gbp });
+  assert.equal(out.length, 3);
+  assert.deepEqual(
+    out.map((o) => o.type),
+    ["nap_mismatch", "review_gap", "gbp_incomplete"],
+  );
+  assert.equal(out[0].effort, "low");
+  assert.match(out[0].description, /Phone differs\. Match it/);
+});
+
+test("buildOpportunities: omitting gbp behaves as before", () => {
+  const out = buildOpportunities({ missingKeywords: [], speed: [], onPage: [] });
+  assert.deepEqual(out, []);
+});

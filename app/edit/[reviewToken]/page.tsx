@@ -22,6 +22,7 @@ import { buildEditableFields } from "@/lib/waas/client-edit/editable-fields";
 import {
   getTenantPortalData,
   getTenantAuditHistory,
+  getTenantLeads,
 } from "@/lib/waas/actions/client-edit";
 import { getTenantBillingStatus } from "@/lib/waas/actions/billing";
 import { PortalShell } from "./portal-shell";
@@ -143,6 +144,28 @@ export default async function ClientEditorPage({
         portalData={null}
         activeTab="audits"
         auditHistory={auditsResult.success ? (auditsResult.data ?? []) : []}
+      />
+    );
+  }
+
+  // ------------------------------------------------------------------
+  // Tab: leads — messages sent through the contact form on the tenant's site
+  // ------------------------------------------------------------------
+  if (tab === "leads") {
+    const leadsResult = await getTenantLeads(reviewToken);
+
+    // A failed load is shown as an error, not as "no messages yet".
+    return (
+      <PortalShell
+        session={sessionShape}
+        portalData={null}
+        activeTab="leads"
+        leads={leadsResult.success ? (leadsResult.data ?? []) : []}
+        leadsError={
+          leadsResult.success
+            ? null
+            : (leadsResult.error ?? "Your messages could not be loaded.")
+        }
       />
     );
   }

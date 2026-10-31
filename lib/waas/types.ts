@@ -4,6 +4,7 @@
 // =============================================================================
 
 import type { SectionConfig } from "@/lib/waas/templates/types";
+import type { GbpAnalysis } from "./services/audit-engine/gbp-analysis";
 
 // ---------------------------------------------------------------------------
 // ENUMS
@@ -362,6 +363,16 @@ export interface AuditCompetitor {
   top_keywords: string[];
   is_local?: boolean | null;
   competitor_detected_location?: string | null;
+  /** Typed by the visitor, or auto-detected from Google Maps results (A7). */
+  source?: "typed" | "discovered";
+}
+
+export interface AuditCompetitorDiscovery {
+  discovered_count: number;
+  /** ok | empty | error | disabled (see audit-engine/local-pack.ts). */
+  places_status: string;
+  /** Shown in the report when no competitor could be identified. */
+  note: string | null;
 }
 
 export type AuditIssueSeverity = "critical" | "warning" | "info";
@@ -437,6 +448,11 @@ export interface AuditLocalPackPlace {
   rating?: number;
   ratingCount?: number;
   category?: string;
+  cid?: string;
+  website?: string;
+  phone?: string;
+  thumbnailUrl?: string;
+  hours?: string;
 }
 
 export interface AuditLocalPackCompetitor {
@@ -496,6 +512,9 @@ export interface AuditReportData {
   summary?: AuditSummary;
   rankings?: AuditRanking[];
   competitors?: AuditCompetitor[];
+  competitor_discovery?: AuditCompetitorDiscovery;
+  /** Google Business Profile / NAP / review analysis (A3). Absent when not measured. */
+  gbp?: GbpAnalysis;
   technical_issues?: AuditTechnicalIssue[];
   page_speed?: AuditPageSpeed;
   backlinks?: AuditBacklinks;
