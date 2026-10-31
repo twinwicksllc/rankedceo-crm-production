@@ -9,6 +9,7 @@ import {
 import { extractCityFromAddress } from "../serper/location-utils";
 import { LocationUnresolvedError, resolveAuditLocation } from "./location";
 import { createPlacesFetcher } from "./local-pack";
+import { discoverCompetitors, mergeCompetitors } from "./competitor-discovery";
 import { generateIndustryKeywordPlan } from "../keyword-generator";
 import { collectSiteSignals } from "../keyword-generator/site-scraper";
 import {
@@ -99,7 +100,7 @@ export interface AuditEngineResult {
 
 export async function runFullAudit(
   targetUrl: string,
-  competitorUrls: string[],
+  typedCompetitorUrls: string[],
   industry: string | null = null,
   location: string | null = null,
 ): Promise<AuditEngineResult> {
@@ -133,7 +134,7 @@ export async function runFullAudit(
   auditDebug("audit:start", {
     provider,
     targetUrl,
-    competitorCount: competitorUrls.length,
+    competitorCount: typedCompetitorUrls.length,
     industryHint: industry,
     locationHint: location,
     detectedLocation,
@@ -150,10 +151,28 @@ export async function runFullAudit(
   const placesPromise = createPlacesFetcher(
     provider,
     targetUrl,
-    competitorUrls,
+    typedCompetitorUrls,
     primaryKeyword,
     searchLocation,
   )();
+
+  // A7: competitors the visitor typed always win; the local pack fills any
+  // remaining slots (up to 3). Rankings need the final list, so wait for the
+  // lookup here (it is time-limited and never throws).
+  const { places: discoveryPlaces, status: placesStatus } = await placesPromise;
+  const discovered = discoverCompetitors({
+    places: discoveryPlaces,
+    targetUrl,
+    typedCompetitorUrls,
+  });
+  const mergedCompetitors = mergeCompetitors(typedCompetitorUrls, discovered);
+  const competitorUrls = mergedCompetitors.urls;
+  const discoveredCompetitorUrls = new Set(mergedCompetitors.discoveredUrls);
+  auditDebug("competitors:resolved", {
+    typed: typedCompetitorUrls.length,
+    discovered: mergedCompetitors.discoveredUrls.length,
+    placesStatus,
+  });
 
   // ── 1. Get search rankings ─────────────────────────────────────────────────────────
   const rankReports: SearchRankReport[] = [];
@@ -293,7 +312,6 @@ export async function runFullAudit(
   });
 
   const localPack = await localPackPromise;
-  const placesStatus = (await placesPromise).status;
   if (placesStatus !== "disabled") {
     auditDebug("places:complete", {
       status: placesStatus,
@@ -525,8 +543,19 @@ export async function runFullAudit(
         top_keywords: topKeywords,
         is_local: locality?.isLocal ?? null,
         competitor_detected_location: locality?.detectedLocation ?? null,
+        source: discoveredCompetitorUrls.has(url)
+          ? ("discovered" as const)
+          : ("typed" as const),
       };
     }),
+    competitor_discovery: {
+      discovered_count: mergedCompetitors.discoveredUrls.length,
+      places_status: placesStatus,
+      note:
+        competitorUrls.length === 0
+          ? "No local competitors could be identified for this search, so the competitor comparison was skipped."
+          : null,
+    },
     technical_issues: [
       ...(onPage?.findings.map((f) => ({
         severity: f.severity,

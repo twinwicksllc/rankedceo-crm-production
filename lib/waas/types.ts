@@ -362,6 +362,16 @@ export interface AuditCompetitor {
   top_keywords: string[];
   is_local?: boolean | null;
   competitor_detected_location?: string | null;
+  /** Typed by the visitor, or auto-detected from Google Maps results (A7). */
+  source?: "typed" | "discovered";
+}
+
+export interface AuditCompetitorDiscovery {
+  discovered_count: number;
+  /** ok | empty | error | disabled (see audit-engine/local-pack.ts). */
+  places_status: string;
+  /** Shown in the report when no competitor could be identified. */
+  note: string | null;
 }
 
 export type AuditIssueSeverity = "critical" | "warning" | "info";
@@ -496,6 +506,7 @@ export interface AuditReportData {
   summary?: AuditSummary;
   rankings?: AuditRanking[];
   competitors?: AuditCompetitor[];
+  competitor_discovery?: AuditCompetitorDiscovery;
   technical_issues?: AuditTechnicalIssue[];
   page_speed?: AuditPageSpeed;
   backlinks?: AuditBacklinks;

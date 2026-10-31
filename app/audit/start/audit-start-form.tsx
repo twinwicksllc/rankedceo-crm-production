@@ -15,7 +15,11 @@ type AuditRunResponse = {
   error?: string;
 };
 
-function AuditStartFormContent() {
+function AuditStartFormContent({
+  discoveryAvailable,
+}: {
+  discoveryAvailable: boolean;
+}) {
   const router = useRouter();
   const { theme } = useOnboardingTheme();
   const isLight = theme === "light";
@@ -250,6 +254,14 @@ function AuditStartFormContent() {
                   (up to 3)
                 </span>
               </span>
+              {discoveryAvailable ? (
+                <p
+                  className={`mb-3 text-sm ${isLight ? "text-slate-500" : "text-slate-400"}`}
+                >
+                  Optional. Leave these blank and we&apos;ll find the local
+                  businesses that show up on Google Maps for your area.
+                </p>
+              ) : null}
 
               <div
                 role="group"
@@ -261,7 +273,7 @@ function AuditStartFormContent() {
                     <input
                       id={`competitor${index + 1}`}
                       type="text"
-                      required={index === 0}
+                      required={index === 0 && !discoveryAvailable}
                       placeholder={`https://competitor${index + 1}.com`}
                       value={value}
                       onChange={(e) => updateCompetitor(index, e.target.value)}
@@ -271,7 +283,7 @@ function AuditStartFormContent() {
                           : "border border-cyan-200/15 bg-[#13284d] text-slate-100 placeholder:text-slate-500 focus:border-emerald-300/40 focus:ring-emerald-400/20"
                       }`}
                     />
-                    {index === 0 && (
+                    {index === 0 && !discoveryAvailable && (
                       <span
                         className={`absolute right-3 top-1/2 -translate-y-1/2 rounded-full px-2 py-0.5 text-xs font-semibold ${
                           isLight
@@ -373,10 +385,14 @@ function AuditStartFormContent() {
   );
 }
 
-export function AuditStartForm() {
+export function AuditStartForm({
+  discoveryAvailable = false,
+}: {
+  discoveryAvailable?: boolean;
+}) {
   return (
     <OnboardingThemeProvider>
-      <AuditStartFormContent />
+      <AuditStartFormContent discoveryAvailable={discoveryAvailable} />
     </OnboardingThemeProvider>
   );
 }

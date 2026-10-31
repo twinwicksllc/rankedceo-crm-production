@@ -453,7 +453,11 @@ function FullReport({
   const gapAnalysis = report.gap_analysis;
   const pageSpeed = report.page_speed_full;
   const keywords = report.keywords_used ?? [];
-  const competitors = audit.competitor_urls ?? [];
+  // The competitors actually audited: typed ones plus any found automatically
+  // (A7). Older reports have no report.competitors, so fall back to the typed list.
+  const competitors = report.competitors?.length
+    ? report.competitors.map((c) => c.url)
+    : (audit.competitor_urls ?? []);
   const localPack = report.local_pack;
 
   const primaryKeyword = keywords[0] ?? "your industry";
@@ -606,6 +610,7 @@ function FullReport({
                     topKeywords:
                       compData?.top_keywords ??
                       (lbEntry?.bestPosition ? [primaryKeyword] : []),
+                    discovered: compData?.source === "discovered",
                   }}
                   targetDomain={targetDomain}
                   targetScore={score}
@@ -614,6 +619,17 @@ function FullReport({
               );
             })}
           </div>
+        </Section>
+      )}
+
+      {competitors.length === 0 && report.competitor_discovery?.note && (
+        <Section
+          title="🔎 Competitor Deep Dive"
+          subtitle="Individual breakdown of each competitor site"
+        >
+          <p style={{ fontSize: "0.9rem", opacity: 0.8 }}>
+            {report.competitor_discovery.note}
+          </p>
         </Section>
       )}
 

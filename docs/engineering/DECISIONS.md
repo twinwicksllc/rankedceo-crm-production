@@ -450,6 +450,19 @@ Status values: **in force**, **implemented**, **on hold**, **superseded**. Imple
 
 ---
 
+## DEC-0032 - Competitors are auto-discovered from the local pack; typed ones win (A7)
+
+- Date: 2026-10-31
+- Status: implemented in the combined B5/A3/A7 PR; the Serper /places lookup stays off in Production until Tommy turns it on.
+- Decision: the audit finds competitors itself from the Google Maps local pack for the resolved search location (DEC-0003), up to 3. Competitors the visitor typed always win; discovered ones only fill the remaining slots. Discovery skips places with no website, the client's own domain, directories and lead-gen sites (`audit-engine/directory-blocklist.ts`), and duplicates. A discovered competitor is labelled AUTO-DETECTED in the report. If nothing is typed and nothing is found, the audit continues with no competitors and says so.
+- Rollout (Tommy, 2026-10-31): `WAAS_LOCAL_PACK_ENABLED` keeps its code default of `false` (the `/places` call is billed separately). On in Vercel Preview first, Production after about a week of Serper spend review. While it is off, `/api/audit/run` still returns 400 with no typed competitor and the start form still marks the first competitor required.
+- Cache: the 24h audit cache and `audits.competitor_urls` use the typed list only; discovered competitors are stored in `report_data.competitors` with `source: "discovered"`. Otherwise the cache would never hit for visitors who type nothing.
+- Cost: one `/places` call per uncached audit, made once and shared by the Local Pack report and competitor discovery (and GBP analysis). The call times out after 8 seconds.
+- Used in: `lib/waas/services/audit-engine/{local-pack,competitor-discovery,directory-blocklist,index}.ts`, `app/api/audit/run/route.ts`, `app/audit/start/`, `components/audit/competitor-card.tsx`.
+- Source: Tommy approved the plan in the 2026-10-31 session.
+
+---
+
 ## Not yet recorded
 
 The numbers **DEC-0002, DEC-0009, DEC-0010 and DEC-0011** are not defined anywhere
