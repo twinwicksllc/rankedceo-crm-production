@@ -54,7 +54,9 @@ export type NotificationType =
   | "ai_enhancement_ready"
   // Task 10 — prospect → tenant conversion flow
   | "onboarding_started" // Prospect converted: account created, ready to start building
-  | "account_created"; // New user account created (no tenant yet), verify or set password
+  | "account_created" // New user account created (no tenant yet), verify or set password
+  // B5 — a visitor sent the contact form on the tenant's website
+  | "tenant_lead_received"; // Tenant: new lead from your website
 
 export interface SendNotificationArgs {
   type: NotificationType;

@@ -37,4 +37,11 @@ export interface NotificationTemplateData {
   nationalCompetitorNote?: string; // Caveat when tracked competitors aren't local
   // Task 10 — prospect → tenant conversion
   createAccountUrl?: string; // Link to create account/tenant from audit
+  // B5 — lead from the website's contact form (visitor-supplied: escape before use)
+  leadName?: string;
+  leadEmail?: string;
+  leadPhone?: string;
+  leadMessage?: string;
+  leadService?: string;
+  leadPageUrl?: string;
 }

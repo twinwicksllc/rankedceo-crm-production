@@ -18,6 +18,7 @@ import {
 } from "./abandonment";
 import { auditReportReady } from "./audit";
 import { onboardingStarted, accountCreated } from "./onboarding";
+import { tenantLeadReceived } from "./leads";
 
 // ---------------------------------------------------------------------------
 // Router: renderEmailTemplate
@@ -65,6 +66,9 @@ export function renderEmailTemplate(
       return onboardingStarted(data);
     case "account_created":
       return accountCreated(data);
+    // B5 — lead from the tenant's website form
+    case "tenant_lead_received":
+      return tenantLeadReceived(data);
     default: {
       const _never: never = type;
       return {
