@@ -1,15 +1,14 @@
 import {
   getSearchRankings,
   getMockSearchRankings,
-  getLocalPackRankings,
-  getMockLocalPackRankings,
-  LOCAL_PACK_ENABLED,
+  buildLocalPackReport,
   extractDomain,
   type SearchRankReport,
   type LocalPackReport,
 } from "../serper";
 import { extractCityFromAddress } from "../serper/location-utils";
 import { LocationUnresolvedError, resolveAuditLocation } from "./location";
+import { createPlacesFetcher } from "./local-pack";
 import { generateIndustryKeywordPlan } from "../keyword-generator";
 import { collectSiteSignals } from "../keyword-generator/site-scraper";
 import {
@@ -143,6 +142,19 @@ export async function runFullAudit(
     keywords,
   });
 
+  // One Serper /places lookup per audit, started now so it runs in parallel
+  // with the rankings below. Only the primary keyword is checked, which caps
+  // the billed /places cost at a single call. It never throws; a disabled,
+  // empty or failed lookup just yields no places.
+  const primaryKeyword = keywords[0];
+  const placesPromise = createPlacesFetcher(
+    provider,
+    targetUrl,
+    competitorUrls,
+    primaryKeyword,
+    searchLocation,
+  )();
+
   // ── 1. Get search rankings ─────────────────────────────────────────────────────────
   const rankReports: SearchRankReport[] = [];
   if (provider === "mock") {
@@ -207,30 +219,20 @@ export async function runFullAudit(
     searchLocation,
   );
 
-  // Kick off Google Maps Local Pack tracking (if enabled) in parallel too.
-  // Only the primary keyword is checked to cap the added Serper /places cost.
-  const primaryKeyword = keywords[0];
+  // Build the Local Pack report from the shared places lookup (null when the
+  // lookup is disabled, empty or failed).
   const localPackPromise: Promise<LocalPackReport | null> =
-    LOCAL_PACK_ENABLED && primaryKeyword
-      ? provider === "mock"
-        ? Promise.resolve(
-            getMockLocalPackRankings(
-              targetUrl,
-              competitorUrls,
-              primaryKeyword,
-              searchLocation,
-            ),
-          )
-        : getLocalPackRankings(
+    placesPromise.then(({ places }) =>
+      primaryKeyword
+        ? buildLocalPackReport(
+            places,
             targetUrl,
             competitorUrls,
             primaryKeyword,
             searchLocation,
-          ).catch((err) => {
-            auditDebug("places:error", { error: String(err).slice(0, 200) });
-            return null;
-          })
-      : Promise.resolve(null);
+          )
+        : null,
+    );
 
   // ── On-page crawl (A5) ──
   // A real crawl of the target site, run in parallel with PageSpeed. Best-effort:
@@ -291,8 +293,10 @@ export async function runFullAudit(
   });
 
   const localPack = await localPackPromise;
-  if (LOCAL_PACK_ENABLED) {
+  const placesStatus = (await placesPromise).status;
+  if (placesStatus !== "disabled") {
     auditDebug("places:complete", {
+      status: placesStatus,
       available: localPack !== null,
       targetPosition: localPack?.target.position ?? null,
     });

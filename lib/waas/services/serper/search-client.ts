@@ -4,6 +4,7 @@ import {
   SerperOrganicResults,
   SerperSearchResult,
   PlaceResult,
+  PLACES_TIMEOUT_MS,
   extractDomain,
 } from "./types";
 import { normalizeSerperLocation, inferGlFromLocation } from "./location-utils";
@@ -197,6 +198,7 @@ export async function serperPlacesSearch(
         location: normalizedLocation,
       }),
       cache: "no-store",
+      signal: AbortSignal.timeout(PLACES_TIMEOUT_MS),
     });
 
     if (!response.ok) {
@@ -213,6 +215,12 @@ export async function serperPlacesSearch(
     auditDebug("places:success", { query, count: places.length });
     return places;
   } catch (err) {
+    const timedOut =
+      err instanceof Error &&
+      (err.name === "TimeoutError" || err.name === "AbortError");
+    if (timedOut) {
+      auditDebug("places:timeout", { query, timeoutMs: PLACES_TIMEOUT_MS });
+    }
     console.error("[Serper] Places fetch error:", err);
     auditDebug("places:fetch_error", {
       query,

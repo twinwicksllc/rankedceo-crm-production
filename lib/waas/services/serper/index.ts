@@ -155,16 +155,41 @@ export async function getLocalPackRankings(
   keyword: string,
   location: string,
 ): Promise<LocalPackReport | null> {
-  const targetDomain = extractDomain(targetUrl);
-
-  auditDebug("places:keyword_start", { keyword, location, targetDomain });
+  auditDebug("places:keyword_start", {
+    keyword,
+    location,
+    targetDomain: extractDomain(targetUrl),
+  });
 
   const places = await serperPlacesSearch(keyword, location);
-  if (!places || places.length === 0) {
+  return buildLocalPackReport(
+    places ?? [],
+    targetUrl,
+    competitorUrls,
+    keyword,
+    location,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Pure: build the Local Pack report from an already-fetched places list.
+// The audit engine fetches places once (see audit-engine/local-pack.ts) and
+// reuses the list for the report, competitor discovery and GBP analysis.
+// Returns null when there are no places, as getLocalPackRankings always did.
+// ---------------------------------------------------------------------------
+export function buildLocalPackReport(
+  places: PlaceResult[],
+  targetUrl: string,
+  competitorUrls: string[],
+  keyword: string,
+  location: string,
+): LocalPackReport | null {
+  if (places.length === 0) {
     auditDebug("places:keyword_empty", { keyword, location });
     return null;
   }
 
+  const targetDomain = extractDomain(targetUrl);
   const targetPlace = findPlaceByDomain(targetDomain, places);
   const competitorResults = competitorUrls.map((url) => {
     const domain = extractDomain(url);
@@ -415,6 +440,43 @@ export function getMockLocalPackRankings(
   };
 }
 
+// ---------------------------------------------------------------------------
+// MOCK: raw places list for offline/demo audits. Same places as the mock Local
+// Pack report, padded with generic local businesses so competitor discovery has
+// something to find when the visitor typed no competitors.
+// ---------------------------------------------------------------------------
+export function getMockPlaces(
+  targetUrl: string,
+  competitorUrls: string[],
+  keyword: string,
+  location: string,
+): PlaceResult[] {
+  const base = getMockLocalPackRankings(
+    targetUrl,
+    competitorUrls,
+    keyword,
+    location,
+  ).places;
+  const otherCount = base.filter(
+    (place) => place.website !== targetUrl,
+  ).length;
+  const lastPosition = base.reduce((max, p) => Math.max(max, p.position), 0);
+  const padding: PlaceResult[] = [];
+  for (let i = otherCount; i < 3; i++) {
+    const n = i + 1;
+    padding.push({
+      position: lastPosition + padding.length + 1,
+      title: `Mock Local Services ${n}`,
+      address: location,
+      rating: 4.2,
+      ratingCount: 25 + n * 7,
+      category: "Local Business",
+      website: `https://mock-local-competitor-${n}.example`,
+    });
+  }
+  return [...base, ...padding];
+}
+
 // Barrel re-exports
 export type {
   SerperSearchResult,
@@ -424,7 +486,7 @@ export type {
   PlaceResult,
   LocalPackReport,
 } from "./types";
-export { extractDomain, LOCAL_PACK_ENABLED } from "./types";
+export { extractDomain, LOCAL_PACK_ENABLED, auditDebug } from "./types";
 export {
   normalizeSerperLocation,
   inferGlFromLocation,

@@ -16,6 +16,10 @@ export const SERPER_TARGET_RESULTS = (() => {
 export const LOCAL_PACK_ENABLED =
   process.env.WAAS_LOCAL_PACK_ENABLED === "true";
 
+// The /places call shares the audit route's time budget (maxDuration 90s) with
+// PageSpeed and the on-page crawl, so it must never hang: give up after 8s.
+export const PLACES_TIMEOUT_MS = 8000;
+
 export function auditDebug(event: string, payload: Record<string, unknown>) {
   if (!AUDIT_DEBUG) return;
   try {
