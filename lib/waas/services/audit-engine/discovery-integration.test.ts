@@ -56,4 +56,27 @@ describe("runFullAudit competitor discovery (mock provider)", () => {
       competitorsOf(result).every((c) => !c.url.includes("acme-plumbing")),
     );
   });
+
+  it("adds a v3 score with a GBP component and GBP analysis from the shared lookup", async () => {
+    const result = await runFullAudit(
+      "https://acme-plumbing.example",
+      [],
+      "plumbing",
+      "Austin, TX",
+    );
+    const report = result.reportData as unknown as {
+      summary?: {
+        score_version?: number;
+        overall_score_components?: Array<{ key?: string; label: string; measured: boolean }>;
+      };
+      gbp?: { found: boolean; places_checked: number };
+    };
+    assert.equal(report.summary?.score_version, 3);
+    const gbpComponent = report.summary?.overall_score_components?.find(
+      (c) => c.label === "Google Business Profile",
+    );
+    assert.ok(gbpComponent, "the GBP component is in the stored breakdown");
+    assert.ok(report.gbp, "gbp analysis is stored when places were available");
+    assert.ok(report.gbp.places_checked >= 3);
+  });
 });

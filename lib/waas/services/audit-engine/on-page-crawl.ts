@@ -21,6 +21,7 @@ import {
   cleanText,
 } from "../keyword-generator/text-utils";
 import { extractDomain } from "../serper";
+import { extractNap, type SiteNap } from "./site-nap";
 
 export const ON_PAGE_FETCH_TIMEOUT_MS = 12000;
 export const MAX_PAGES_TO_CRAWL = 8;
@@ -78,6 +79,8 @@ export interface OnPageCrawlResult {
   pages: OnPagePageResult[];
   /** 0-100 on-page score. null = homepage could not be fetched (not measured). */
   score: number | null;
+  /** Name, phone and address the homepage publishes (A3). null when not fetched. */
+  nap: SiteNap | null;
 }
 
 export interface OnPageCrawlOptions {
@@ -394,6 +397,7 @@ export async function crawlOnPage(
       ],
       pages: [],
       score: null,
+      nap: null,
     };
   }
 
@@ -439,6 +443,7 @@ export async function crawlOnPage(
     findings,
     pages,
     score,
+    nap: extractNap(homepageHtml),
   };
 }
 

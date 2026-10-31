@@ -15,6 +15,7 @@ const full: ScoreInputs = {
   visibility: 80,
   competitive: 70,
   localPack: 60,
+  gbp: 80,
   onPage: 100,
   speed: 90,
   seo: 100,
@@ -47,16 +48,27 @@ test("searchVisibilityScore: failed keyword searches make it not measured, not i
   assert.equal(searchVisibilityScore([1]), 100);
 });
 
-test("v2: weights sum to 1 and score matches hand calculation", () => {
+test("v3: weights sum to 1 and score matches hand calculation", () => {
   const r = computeOverallScoreV2(full);
   const sum = r.components.reduce((s, c) => s + c.weight, 0);
   assert.ok(Math.abs(sum - 1) < 0.001);
-  // .35*80 + .15*70 + .10*60 + .10*100 + .15*90 + .05*100 + .05*100 + .05*100
-  // = 28 + 10.5 + 6 + 10 + 13.5 + 5 + 5 + 5
-  assert.equal(r.score, 83);
+  // .30*80 + .15*70 + .10*60 + .10*80 + .10*100 + .15*90 + .04*100 + .03*100 + .03*100
+  // = 24 + 10.5 + 6 + 8 + 10 + 13.5 + 4 + 3 + 3
+  assert.equal(r.score, 82);
   assert.equal(r.grade, "A");
   assert.equal(r.version, SCORE_VERSION);
+  assert.equal(SCORE_VERSION, 3);
   assert.deepEqual(r.notMeasured, []);
+});
+
+test("v3: no GBP data shares its weight instead of counting as 0", () => {
+  const r = computeOverallScoreV2({ ...full, gbp: null });
+  const gbp = r.components.find((c) => c.key === "gbp");
+  assert.equal(gbp?.measured, false);
+  assert.equal(gbp?.weight, 0);
+  assert.deepEqual(r.notMeasured, ["Google Business Profile"]);
+  const sum = r.components.reduce((s, c) => s + c.weight, 0);
+  assert.ok(Math.abs(sum - 1) < 0.001);
 });
 
 test("v2: a fast site that is invisible in Google does NOT score well", () => {
@@ -65,6 +77,7 @@ test("v2: a fast site that is invisible in Google does NOT score well", () => {
     visibility: 0,
     competitive: 0,
     localPack: 0,
+    gbp: 0,
     speed: 100,
     seo: 100,
     accessibility: 100,
@@ -99,6 +112,7 @@ test("v2: nothing measured gives 0 and no divide-by-zero", () => {
     visibility: null,
     competitive: null,
     localPack: null,
+    gbp: null,
     onPage: null,
     speed: null,
     seo: null,
@@ -107,7 +121,7 @@ test("v2: nothing measured gives 0 and no divide-by-zero", () => {
   });
   assert.equal(r.score, 0);
   assert.equal(r.grade, "F");
-  assert.equal(r.notMeasured.length, 8);
+  assert.equal(r.notMeasured.length, 9);
 });
 
 test("v2: inputs are clamped to 0-100", () => {
@@ -152,7 +166,26 @@ test("getDisplayScore: v2 summary returns the stored breakdown", () => {
   });
   assert.equal(d.version, SCORE_VERSION);
   assert.equal(d.score, r.score);
-  assert.equal(d.components.length, 8);
+  assert.equal(d.components.length, 9);
+});
+
+test("getDisplayScore: a stored v2 report is still shown as stored after the v3 bump", () => {
+  const d = getDisplayScore({
+    performance_score: 90,
+    seo_score: 100,
+    mobile_score: 90,
+    accessibility_score: 100,
+    overall_score: 83,
+    score_version: 2,
+    overall_score_components: [
+      { label: "Google search visibility", weight: 0.35, score: 80, contribution: 28, measured: true },
+      { label: "Site speed (mobile)", weight: 0.65, score: 90, contribution: 58.5, measured: true },
+    ],
+    overall_score_formula: "35% Google search visibility + 65% Site speed (mobile)",
+  });
+  assert.equal(d.version, 2);
+  assert.equal(d.score, 83);
+  assert.equal(d.components.length, 2);
 });
 
 test("getDisplayScore: v2 flag without components falls back to legacy", () => {

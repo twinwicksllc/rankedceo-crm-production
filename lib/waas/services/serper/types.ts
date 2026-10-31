@@ -77,6 +77,11 @@ export interface PlaceResult {
   category?: string;
   cid?: string;
   website?: string;
+  /** Business phone as Google lists it (Serper field `phoneNumber`). */
+  phone?: string;
+  thumbnailUrl?: string;
+  /** Opening hours text when Serper returns it. Field name unverified. */
+  hours?: string;
 }
 
 export interface LocalPackCompetitorResult {

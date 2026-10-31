@@ -10,6 +10,7 @@ import { extractCityFromAddress } from "../serper/location-utils";
 import { LocationUnresolvedError, resolveAuditLocation } from "./location";
 import { createPlacesFetcher } from "./local-pack";
 import { discoverCompetitors, mergeCompetitors } from "./competitor-discovery";
+import { analyzeGbp, buildGbpFindings } from "./gbp-analysis";
 import { generateIndustryKeywordPlan } from "../keyword-generator";
 import { collectSiteSignals } from "../keyword-generator/site-scraper";
 import {
@@ -328,6 +329,29 @@ export async function runFullAudit(
     score: onPage?.score ?? null,
   });
 
+  // A3: Google Business Profile / NAP / review analysis from the same shared
+  // places lookup plus the NAP read from the client's homepage. Null (not
+  // measured) when there were no places to look at.
+  const gbp = primaryKeyword
+    ? analyzeGbp({
+        places: discoveryPlaces,
+        targetUrl,
+        siteNap: onPage?.nap ?? null,
+        competitorUrls,
+        keyword: primaryKeyword,
+        location: searchLocation,
+      })
+    : null;
+  const gbpFindings = buildGbpFindings(gbp);
+  auditDebug("gbp:complete", {
+    measured: gbp !== null,
+    found: gbp?.found ?? null,
+    confidence: gbp?.match_confidence ?? null,
+    napStatus: gbp?.nap?.status ?? null,
+    score: gbp?.score ?? null,
+    findings: gbpFindings.map((f) => f.id),
+  });
+
   const competitorLocalityByDomain = new Map<string, boolean | null>();
   competitorUrls.forEach((url) => {
     competitorLocalityByDomain.set(
@@ -413,6 +437,7 @@ export async function runFullAudit(
         ? 100 - gapAnalysis.opportunityScore
         : null,
     localPack: localPack ? positionToPoints(localPack.target.position) : null,
+    gbp: gbp?.score ?? null,
     onPage: onPage?.score ?? null,
     speed: pageSpeed ? performanceScore : null,
     seo: pageSpeed ? seoScore : null,
@@ -603,8 +628,10 @@ export async function runFullAudit(
     opportunities: buildOpportunities({
       missingKeywords: gapAnalysis.missingKeywords,
       speed: pageSpeed?.opportunities ?? [],
+      gbp: gbpFindings,
       onPage: onPage?.findings ?? [],
     }),
+    ...(gbp ? { gbp } : {}),
     provider_meta: providerMeta,
     local_pack: localPack
       ? {

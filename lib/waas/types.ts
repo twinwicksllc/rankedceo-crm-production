@@ -4,6 +4,7 @@
 // =============================================================================
 
 import type { SectionConfig } from "@/lib/waas/templates/types";
+import type { GbpAnalysis } from "./services/audit-engine/gbp-analysis";
 
 // ---------------------------------------------------------------------------
 // ENUMS
@@ -447,6 +448,11 @@ export interface AuditLocalPackPlace {
   rating?: number;
   ratingCount?: number;
   category?: string;
+  cid?: string;
+  website?: string;
+  phone?: string;
+  thumbnailUrl?: string;
+  hours?: string;
 }
 
 export interface AuditLocalPackCompetitor {
@@ -507,6 +513,8 @@ export interface AuditReportData {
   rankings?: AuditRanking[];
   competitors?: AuditCompetitor[];
   competitor_discovery?: AuditCompetitorDiscovery;
+  /** Google Business Profile / NAP / review analysis (A3). Absent when not measured. */
+  gbp?: GbpAnalysis;
   technical_issues?: AuditTechnicalIssue[];
   page_speed?: AuditPageSpeed;
   backlinks?: AuditBacklinks;
