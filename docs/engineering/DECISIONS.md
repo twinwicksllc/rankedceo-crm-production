@@ -430,6 +430,26 @@ Status values: **in force**, **implemented**, **on hold**, **superseded**. Imple
 
 ---
 
+## DEC-0031 - CRM project: restore signed-in access to the RLS helpers and guard the onboarding RPCs (drafted, not applied)
+
+- Date: 2026-10-31
+- Status: on hold. Drafted and tested on a local copy only; waiting for Tommy's approval and a signed-in check in the CRM app.
+- Decision (proposed): in `rankedceo-crm-production` (ref `wcednzaxmxwfiijzmjmx`), grant `authenticated` EXECUTE on `get_current_user_account_id()` and `get_current_user_id()`, add `assert_own_account(uuid)`, and rewrite the five onboarding RPCs (`update_company_info`, `update_onboarding_step`, `complete_onboarding`, `update_preferences`, `skip_onboarding`) to call it before granting them to `authenticated`. `service_role` passes the guard. The conversation RPCs (`get_or_create_conversation`, `add_conversation_message`, `update_conversation_status`) stay revoked.
+- Evidence: VERIFIED by read-only queries run through the Supabase tool on 2026-10-31.
+  - In the CRM project, 33 SECURITY DEFINER functions in `public`, none executable by `anon`. `authenticated` has EXECUTE only on `accept_invitation`, `get_user_org_id`, `is_org_member` and `is_org_owner`.
+  - `get_current_user_account_id()` has ACL `{postgres, service_role}` only, although about 90 RLS policies call it and `supabase/migrations/000018_fix_users_rls_permissions.sql` grants it to `authenticated`. Something revoked it live without a migration in the repo. READ: the five onboarding routes use the user's own session client (`createClient` from `lib/supabase/server`), so they run as `authenticated`.
+  - The five onboarding RPC bodies update `accounts WHERE id = p_account_id` with no ownership check, the same hole that migration 031 closed in `rankedceo-waas`.
+  - Live data is small: 1 user, 9 accounts, 0 duplicate emails, 0 users without an account.
+- Not verified: what a signed-in CRM user actually sees. The permission denied result is inferred from the ACLs; nobody has signed in and tried it.
+- Test: `docs/engineering/checks/crm_grants_local_harness.sql` and `crm_grants_local_tests.sql` on a throwaway local Postgres 16. Before the fix, 10 of 17 checks pass; after, 17 of 17. The harness is not a copy of production: it has a small set of tables and policies.
+- Rollback: `docs/engineering/checks/crm_grants_rollback.sql`. Verified locally to restore the original ACLs and function bodies (bodies compared with whitespace ignored). It restores the broken state, so it is an undo, not a safe end state.
+- Related finding, WaaS project (VERIFIED, same day): `anon` executes only `resolve_tenant_by_hostname` and `get_smile_pool_account_id`, and `assert_own_account` exists, so 031 and 032 look applied. Both anon grants are intended (DEC-0027; `get_smile_pool_account_id` returns a fixed constant).
+- Open: whether to keep the email fallback in `get_current_user_account_id()` and `get_current_user_id()` (`email = auth.jwt() ->> 'email'`); who revoked the live grant and whether on purpose; where to test (local copy done; a Supabase branch was tried and timed out waiting for a cost confirmation).
+- Used in: `docs/engineering/E3_CLIENT_SWITCH_PLAN.md` (before the switch, the target must not carry over missing or open grants).
+- Source: Claude's read-only checks, 2026-10-31. Not yet decided by Tommy.
+
+---
+
 ## Not yet recorded
 
 The numbers **DEC-0002, DEC-0009, DEC-0010 and DEC-0011** are not defined anywhere

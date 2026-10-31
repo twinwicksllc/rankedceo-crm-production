@@ -60,6 +60,8 @@ do $$ declare r record; begin
     execute format('grant execute on function %s to service_role', r.sig);
   end loop; end $$;
 
+grant execute on function public.get_user_org_id(uuid), public.is_org_member(uuid,uuid), public.is_org_owner(uuid,uuid) to authenticated;
+
 -- Policies as on the live CRM (representative subset).
 create policy accounts_select on public.accounts for select to authenticated using (id = get_current_user_account_id());
 create policy accounts_update on public.accounts for update to authenticated using (id = get_current_user_account_id()) with check (id = get_current_user_account_id());

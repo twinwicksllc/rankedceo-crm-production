@@ -6,18 +6,14 @@
 begin;
 
 -- A. Helpers that RLS policies call as the signed-in user.
+--    get_user_org_id, is_org_member and is_org_owner already grant EXECUTE to authenticated
+--    live (VERIFIED 2026-10-31), so they are not touched here.
 --    Revoke from PUBLIC and anon first, then grant to authenticated only.
 revoke all on function public.get_current_user_account_id() from public, anon;
 revoke all on function public.get_current_user_id()         from public, anon;
-revoke all on function public.get_user_org_id(uuid)         from public, anon;
-revoke all on function public.is_org_member(uuid, uuid)     from public, anon;
-revoke all on function public.is_org_owner(uuid, uuid)      from public, anon;
 
 grant execute on function public.get_current_user_account_id() to authenticated, service_role;
 grant execute on function public.get_current_user_id()         to authenticated, service_role;
-grant execute on function public.get_user_org_id(uuid)         to authenticated, service_role;
-grant execute on function public.is_org_member(uuid, uuid)     to authenticated, service_role;
-grant execute on function public.is_org_owner(uuid, uuid)      to authenticated, service_role;
 
 -- B. Ownership guard for the onboarding RPCs. Matches the caller's own account only.
 create or replace function public.assert_own_account(p_account_id uuid)

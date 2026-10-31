@@ -62,9 +62,6 @@ $$;
 -- 2. Put the live ACLs back: owner + service_role only.
 revoke all on function public.get_current_user_account_id()  from public, anon, authenticated;
 revoke all on function public.get_current_user_id()          from public, anon, authenticated;
-revoke all on function public.get_user_org_id(uuid)          from public, anon, authenticated;
-revoke all on function public.is_org_member(uuid, uuid)      from public, anon, authenticated;
-revoke all on function public.is_org_owner(uuid, uuid)       from public, anon, authenticated;
 revoke all on function public.update_company_info(uuid, varchar, varchar, varchar, varchar, varchar, text) from public, anon, authenticated;
 revoke all on function public.update_onboarding_step(uuid, integer)  from public, anon, authenticated;
 revoke all on function public.complete_onboarding(uuid)              from public, anon, authenticated;
@@ -73,14 +70,13 @@ revoke all on function public.skip_onboarding(uuid)                  from public
 
 grant execute on function public.get_current_user_account_id()  to service_role;
 grant execute on function public.get_current_user_id()          to service_role;
-grant execute on function public.get_user_org_id(uuid)          to service_role;
-grant execute on function public.is_org_member(uuid, uuid)      to service_role;
-grant execute on function public.is_org_owner(uuid, uuid)       to service_role;
 grant execute on function public.update_company_info(uuid, varchar, varchar, varchar, varchar, varchar, text) to service_role;
 grant execute on function public.update_onboarding_step(uuid, integer)  to service_role;
 grant execute on function public.complete_onboarding(uuid)              to service_role;
 grant execute on function public.update_preferences(uuid, varchar, jsonb) to service_role;
 grant execute on function public.skip_onboarding(uuid)                  to service_role;
+
+-- (get_user_org_id, is_org_member, is_org_owner already allowed authenticated live and are not changed by the fix or this rollback.)
 
 -- 3. Remove the guard added by the fix.
 drop function if exists public.assert_own_account(uuid);
