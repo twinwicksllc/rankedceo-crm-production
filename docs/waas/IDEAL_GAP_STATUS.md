@@ -2,7 +2,7 @@
 
 Status of every gap in `docs/waas/IDEAL_AUDIT_AND_BUILDER_VISION.md` (the "ideal" target,
 written 2026-10-12 at `main` @ `05cd678`, #265), checked against `main` @ `4d1bd9d`
-(2026-10-21). Method: read the code on `main` (paths cited) and the merged-PR history
+(2026-10-21), and re-checked against `main` @ `0e0da60` (2026-10-31, see the last section). Method: read the code on `main` (paths cited) and the merged-PR history
 through the GitHub API. No Supabase/production data was queried. Anything not shown by
 the code or the PR history is marked "unverified".
 
@@ -95,3 +95,30 @@ consolidation into `rankedceo-waas`), where 029 was the first concrete step.
 This scorecard is a point-in-time snapshot. Update it when a gap in
 `docs/waas/IDEAL_AUDIT_AND_BUILDER_VISION.md` is closed, and bump the `main` ref and date
 at the top.
+
+## Re-check, 2026-10-31 (`main` @ `0e0da60`)
+
+No status changed. Every open item was re-checked by grep against the current code, and
+each one is still open:
+
+- **A3** no GBP, NAP or citation logic in `audit-engine/`.
+- **A4** `WAAS_LOCAL_PACK_ENABLED` still defaults to `false` (`.env.example`).
+- **A6** `domain_authority: 0` and `referring_domains: 0` still hardcoded in `audit-engine/index.ts`.
+- **A7** the audit start form still takes competitor URLs as typed text.
+- **A9** no `crons` in `vercel.json`.
+- **B2** `app/_sites/[site]/` still has only `page.tsx`.
+- **B5** no `<form>` or submit handler in `components/waas/sections/`. The word "lead" appears in section copy only.
+- **B6** no calls to the Vercel domains API in `lib/` or `app/`.
+- **B7** no GA4, GTM or tracking settings in `lib/waas/`, `app/_sites/` or `components/waas/`.
+
+Work since 2026-10-21 that touched the vision's areas but did not close a gap:
+
+- **E3 (still partial), database.** `rankedceo-waas` has migrations 030, 031 and 032 applied and verified (`docs/engineering/DECISIONS.md`, DEC-0027). `anon` can run only the two intended functions there. The CRM project (`wcednzaxmxwfiijzmjmx`) was found to be missing signed-in access to its RLS helper functions and to have unguarded onboarding RPCs. A fix is drafted and tested locally, not applied (DEC-0031, `docs/engineering/checks/crm_grants_*`). Paused until the CRM login is tested by hand.
+- **B5 neighbours.** #332, #333 and #335 fixed the industry landing quote forms and their lead inserts. Those are not the tenant-site builder, so B5 stays open.
+- **Smile.** #331 fixed quote pool and assessment account lookups. No gap in this scorecard.
+
+Not re-verified today: B4 PR 2 (stable ids) state, A8's builder-action half, and B9's
+version history. They are marked as they were on 2026-10-21.
+
+Tally unchanged: 8 fixed, 6 partial, 10 open of 24.
+
